@@ -12,12 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('reservations', function (Blueprint $table) {
-            $table->id();
+            $table->increments('id');
 
-            $table->string('merchant_transaction_id', 64)->nullable()->unique();
+            $table->string('merchant_transaction_id', 64)->nullable();
+            $table->unique('merchant_transaction_id', 'uq_res_merchant_tx');
 
-            $table->unsignedBigInteger('drop_off_time_slot_id');
-            $table->unsignedBigInteger('pick_up_time_slot_id');
+            $table->unsignedInteger('drop_off_time_slot_id');
+            $table->unsignedInteger('pick_up_time_slot_id');
 
             $table->date('reservation_date');
 
@@ -25,7 +26,7 @@ return new class extends Migration
             $table->string('country', 100);
             $table->string('license_plate', 50);
 
-            $table->unsignedBigInteger('vehicle_type_id');
+            $table->unsignedInteger('vehicle_type_id');
 
             $table->string('email');
 
@@ -42,16 +43,15 @@ return new class extends Migration
 
             $table->tinyInteger('email_sent')->default(0);
 
-            // Foreign keys
-            $table->foreign('drop_off_time_slot_id')->references('id')->on('list_of_time_slots');
-            $table->foreign('pick_up_time_slot_id')->references('id')->on('list_of_time_slots');
-            $table->foreign('vehicle_type_id')->references('id')->on('vehicle_types');
+            // Foreign keys (names match dump)
+            $table->foreign('drop_off_time_slot_id', 'fk_res_drop')->references('id')->on('list_of_time_slots');
+            $table->foreign('pick_up_time_slot_id', 'fk_res_pick')->references('id')->on('list_of_time_slots');
+            $table->foreign('vehicle_type_id', 'fk_res_vehicle')->references('id')->on('vehicle_types');
 
-            // Indexes
+            // Indexes (uq_res_merchant_tx already indexes merchant_transaction_id)
             $table->index('reservation_date', 'idx_res_date');
             $table->index('status', 'idx_res_status');
             $table->index('vehicle_type_id', 'idx_res_vehicle');
-            $table->index('merchant_transaction_id', 'idx_res_merchant_tx');
             $table->index(['license_plate', 'reservation_date'], 'idx_res_plate_date');
         });
     }

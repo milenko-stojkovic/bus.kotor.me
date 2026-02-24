@@ -9,11 +9,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('daily_parking_data', function (Blueprint $table) {
-            $table->id();
+            $table->increments('id');
 
             $table->date('date')->index();
-            $table->foreignId('time_slot_id')
-                ->constrained('list_of_time_slots')
+            $table->unsignedInteger('time_slot_id');
+            $table->foreign('time_slot_id', 'fk_daily_slot')
+                ->references('id')->on('list_of_time_slots')
                 ->cascadeOnDelete();
 
             $table->unsignedInteger('capacity');

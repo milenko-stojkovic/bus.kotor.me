@@ -35,6 +35,8 @@ class DailyParkingDataSeeder extends Seeder
             }
         }
 
-        DB::table('daily_parking_data')->insert($rows);
+        foreach (array_chunk($rows, 500) as $chunk) {
+            DB::table('daily_parking_data')->insert($chunk);
+        }
     }
 }

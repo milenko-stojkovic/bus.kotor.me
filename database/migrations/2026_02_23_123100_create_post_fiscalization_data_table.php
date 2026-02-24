@@ -9,13 +9,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('post_fiscalization_data', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedBigInteger('reservation_id');
+            $table->increments('id');
+            $table->unsignedInteger('reservation_id');
             $table->string('merchant_transaction_id', 64);
 
             $table->timestamps();
 
-            $table->foreign('reservation_id')
+            $table->foreign('reservation_id', 'fk_post_fiscal_res')
                   ->references('id')
                   ->on('reservations');
 

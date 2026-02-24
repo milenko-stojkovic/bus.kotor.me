@@ -1,0 +1,93 @@
+<?php
+
+namespace App\Jobs;
+
+use App\Contracts\PaymentResult;
+use App\Contracts\PaymentService;
+use App\Models\Reservation;
+use App\Models\TempData;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
+
+/**
+ * Async payment job. Idempotentan: merchant_transaction_id je idempotency key – ponovni pokušaji ne smeju duplirati rezervacije.
+ * Controller samo dispatch-uje ovaj job; nikad ne poziva gateway direktno.
+ * State machine: pending → success (reservation created) | failed | timeout → late_success.
+ */
+class PaymentJob implements ShouldQueue, ShouldBeUnique
+{
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    public int $tries = 3;
+
+    public int $timeout = 60;
+
+    public function __construct(
+        public int $tempDataId
+    ) {}
+
+    public function handle(PaymentService $paymentService): void
+    {
+        $temp = TempData::find($this->tempDataId);
+        if (! $temp) {
+            return;
+        }
+
+        $idempotencyKey = $temp->merchant_transaction_id;
+        if (Reservation::where('merchant_transaction_id', $idempotencyKey)->exists()) {
+            return;
+        }
+
+        if ($temp->status !== TempData::STATUS_PENDING) {
+            return;
+        }
+
+        $result = $paymentService->pay($temp);
+
+        if ($result->isSuccess()) {
+            $reservation = $this->createReservationFromTempData($temp);
+            $temp->delete();
+            PostFiscalizationJob::dispatch($reservation->id);
+            return;
+        }
+
+        if ($result->isFailed()) {
+            $temp->update(['status' => TempData::STATUS_FAILED]);
+            return;
+        }
+
+        if ($result->isTimeout()) {
+            $temp->update(['status' => TempData::STATUS_LATE_SUCCESS]);
+        }
+    }
+
+    public function uniqueId(): string
+    {
+        $temp = TempData::find($this->tempDataId);
+
+        return $temp?->merchant_transaction_id ?? (string) $this->tempDataId;
+    }
+
+    private function createReservationFromTempData(TempData $temp): Reservation
+    {
+        return Reservation::create([
+            'user_id' => $temp->user_id,
+            'vehicle_id' => null,
+            'merchant_transaction_id' => $temp->merchant_transaction_id,
+            'drop_off_time_slot_id' => $temp->drop_off_time_slot_id,
+            'pick_up_time_slot_id' => $temp->pick_up_time_slot_id,
+            'reservation_date' => $temp->reservation_date,
+            'user_name' => $temp->user_name,
+            'country' => $temp->country,
+            'license_plate' => $temp->license_plate,
+            'vehicle_type_id' => $temp->vehicle_type_id,
+            'email' => $temp->email,
+            'status' => 'paid',
+            'email_sent' => 0,
+        ]);
+    }
+}

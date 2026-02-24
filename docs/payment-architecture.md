@@ -1,0 +1,147 @@
+# Payment arhitektura (redirect na banku, webhook + queue)
+
+Korisnik se **odmah redirect-uje na bank payment page** nakon klika "Pay". Obrada rezultata plaćanja **nikad** u HTTP request-u – isključivo **webhook/callback** + **queue job**.
+
+---
+
+## Payment UX zahtev
+
+1. User klikne "Pay" → **odmah redirect** na bank payment page.
+2. **Flow u HTTP kontroleru:**
+   - validira request
+   - proverava dostupnost (kapacitet)
+   - kreira **temp_data** (pending)
+   - kreira **payment session** sa gatewayem (**sync**)
+   - prima **payment_url**
+   - **redirect** korisnika na **payment_url**
+3. **Nema obrade statusa plaćanja** u HTTP request-u (success/fail obrada samo u webhook + job).
+
+---
+
+## Obrada rezultata (success / fail / late success)
+
+- **Webhook / callback endpoint** – gateway poziva naš URL sa rezultatom.
+- **Queue job** (PaymentCallbackJob) obavlja:
+  - kreiranje rezervacije iz temp_data
+  - fiskalizacija (PostFiscalizationJob)
+  - email (cron SendReservationEmails)
+  - retries, idempotentnost
+
+Nikad kreiranje rezervacije ili fiskalizacija u HTTP request-u – samo validacija payload-a i **dispatch job-a**.
+
+---
+
+## Ako je gateway spor ili nedostupan
+
+- Controller **ne kreira** rezervaciju.
+- Controller vraća **"payment temporarily unavailable"** (503).
+- Nema fallback sync plaćanja – korisnik može ponovo pokušati kasnije.
+
+---
+
+## Striktna pravila za HTTP controller (checkout)
+
+Controller **samo**:
+
+1. **Validira** podatke (CheckoutReservationRequest).
+2. **Proverava dostupnost** (DailyParkingData za datum + termin, availableCapacity >= 1).
+3. **Kreira** zapis u **temp_data** sa **status = pending**.
+4. **Poziva** **PaymentService::createSession($temp)** (sync) – provider iza interfejsa.
+5. Ako **payment_url** → **redirect** na payment_url.
+6. Inače → **503** sa porukom (gateway spor/nedostupan).
+
+Controller **nikad**:
+
+- Ne obrađuje rezultat plaćanja (success/fail) – to radi webhook + job.
+- Ne kreira rezervaciju ni ne poziva fiskalizaciju u request-u.
+
+---
+
+## Webhook endpoint
+
+- **POST /api/payments/callback** – bank callback na **API ruti** (routes/api.php), **ne** na web.
+- **Machine-to-machine only.** Nikad ne koristiti ovaj endpoint za frontend redirect ili UI flow. **Frontend NIKAD ne sme da poziva bank callback.**
+- Nema web middleware (session, CSRF, redirects) – banka ne šalje cookies/CSRF; stateless.
+- Controller: validacija potpisa, validacija payload-a, **dispatch PaymentCallbackJob(payload)**.
+- Vraća samo **202 Accepted** ili **400 Bad Request**. Nikad redirect.
+- User redirect se radi kasnije preko frontend polling-a /payment/result.
+- Za test: fake bank koristi **poseban** endpoint POST /payment/fake-bank/complete (web), ne bank callback.
+
+---
+
+## Queue je obavezna
+
+- **Lokalno:** `php artisan queue:work` mora biti pokrenut; inače PaymentCallbackJob se ne izvršava.
+- **Produkcija:** Supervisor (ili drugi process manager) drži `php artisan queue:work` uvek aktivan.
+
+---
+
+## Provider iza interfejsa
+
+- **PaymentService** (interface): `createSession(TempData): PaymentSessionResult`, `pay(TempData): PaymentResult`.
+- **PaymentSessionResult**: success, payment_url (za redirect), error_message (ako gateway nedostupan).
+- **FakePaymentProvider**: createSession vraća URL na fake bank stranicu (/payment/fake-bank?tx=...); pay() za test state machine.
+- **RealPaymentProvider**: createSession() kasnije poziva pravi gateway; dok nije implementirano vraća unavailable.
+- Config: `config/payment.php` → `provider` = fake | real.
+
+---
+
+## Flow (kratko)
+
+1. **POST /checkout** → validacija, dostupnost, temp_data (pending), createSession(sync) → **redirect na payment_url** ili 503.
+2. Korisnik plaća na bank stranici (ili na fake bank stranici bira Success/Fail).
+3. Gateway (ili fake bank form) šalje **POST /api/payments/callback** sa merchant_transaction_id i status.
+4. Webhook: validacija → **PaymentCallbackJob::dispatch(payload)** → 202.
+5. **PaymentCallbackJob**: na success → Reservation, brisanje temp_data, PostFiscalizationJob; na failed → temp_data.status = failed; na timeout → late_success.
+6. UI može koristiti **GET /reservation-status/{merchant_transaction_id}** (polling) za status.
+
+---
+
+## Fake bank stranica (test)
+
+- **GET /payment/fake-bank?tx={merchant_transaction_id}** – prikazuje stranicu sa dugmićima "Success" i "Fail".
+- Klik šalje POST na **/payment/fake-bank/complete** (poseban test endpoint). **Frontend NIKAD ne poziva bank callback** (/api/payments/callback).
+- Korisnik se redirect-uje na /reservation-status/{merchant_transaction_id}.
+
+---
+
+## Fajlovi
+
+| Fajl | Namena |
+|------|--------|
+| `App\Contracts\PaymentService` | Interface – createSession (sync), pay (za job). |
+| `App\Contracts\PaymentSessionResult` | success, payment_url, error_message. |
+| `App\Contracts\PaymentResult` | success / failed / timeout (za pay()). |
+| `App\Services\Payment\FakePaymentProvider` | createSession → fake bank URL; pay() simulacija. |
+| `App\Services\Payment\RealPaymentProvider` | createSession → unavailable dok nije implementirano. |
+| `App\Jobs\PaymentCallbackJob` | Idempotentan po merchant_transaction_id; rezervacija, fiskalizacija, status. |
+| `App\Jobs\PostFiscalizationJob` | Stub nakon uspešnog plaćanja. |
+| `App\Http\Controllers\CheckoutController` | Validacija, dostupnost, temp_data, createSession, redirect ili 503. |
+| `App\Http\Controllers\Api\PaymentCallbackController` | API callback: validacija potpisa + payload, dispatch job, 202/400. |
+| `config/payment.php` | `provider` = fake \| real. |
+| `App\Http\Controllers\ReservationStatusController` | Polling: GET po merchant_transaction_id. |
+| `App\Http\Controllers\FakeBankCompleteController` | Samo test: POST /payment/fake-bank/complete; frontend ne poziva bank callback. |
+
+---
+
+## Callback handling (CANCEL/ERROR, idempotency, redirect)
+
+V. **docs/payment-callback-handling.md**: validacija potpisa (400 + log), idempotentnost (final status), CANCEL/ERROR → failed + raw payload + oslobodi soft-lock, PaymentFailed event, redirect guest/auth, GET /payment/result.
+
+---
+
+## Concurrency
+
+V. **docs/payment-concurrency.md**: jedinstven merchant_transaction_id, validacija potpisa u callback-u, idempotentnost job-a, nema deljenog stanja, paralelna plaćanja.
+
+---
+
+## Provera (checklist)
+
+- [x] User se redirect-uje na bank payment page odmah nakon "Pay".
+- [x] Controller: validacija, provera dostupnosti, temp_data (pending), createSession (sync), redirect ili 503.
+- [x] Nema obrade statusa plaćanja u HTTP request-u.
+- [x] Rezultat plaćanja: webhook/callback + PaymentCallbackJob (rezervacija, fiskalizacija, email, retries).
+- [x] Ako gateway spor/nedostupan: 503, bez kreiranja rezervacije.
+- [x] Payment provider iza interfejsa (PaymentService, Fake/Real).
+- [x] Queue obavezna za PaymentCallbackJob.

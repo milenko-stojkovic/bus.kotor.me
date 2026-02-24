@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('vehicle_types', function (Blueprint $table) {
-            $table->id();
+            $table->increments('id');
             $table->decimal('price', 10, 2);
         });
     }
