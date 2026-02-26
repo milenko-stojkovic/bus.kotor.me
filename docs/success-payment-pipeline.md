@@ -1,0 +1,62 @@
+# Success payment pipeline (with fiscalization fallback)
+
+Flow nakon bank API SUCCESS callback-a: rezervacija se kreira → **ProcessReservationAfterPaymentJob** pokušava fiskalizaciju; pri uspehu – fiskalni račun i email, pri neuspehu – upis u **post_fiscalization_data** i nefiskalni račun + email. Retry fiskalizacije (cron **post-fiscalization:retry**) pri uspehu šalje kupcu novi fiskalni PDF. Rezervacija je uvek validna.
+
+---
+
+## Flow
+
+1. **pending → processed** (samo bank API callback, PaymentCallbackJob).
+2. Kreira se **reservation** (bez fiscal polja).
+3. Dispatch **ProcessReservationAfterPaymentJob(reservation_id)**.
+
+---
+
+## ProcessReservationAfterPaymentJob
+
+- **Pokušaj fiskalizacije** (poziv fiskalnog API-ja).
+- **Uspeh fiskalizacije:**
+  - ažurira reservation sa fiscal_jir, fiscal_ikof, fiscal_qr, fiscal_operator, fiscal_date;
+  - generiše **fiskalni PDF** račun;
+  - šalje **invoice email** sa fiskalnim PDF-om (from bus@kotor.me).
+- **Neuspeh fiskalizacije:**
+  - upis u **post_fiscalization_data** (reservation_id, merchant_transaction_id, error, attempts, next_retry_at);
+  - generiše **nefiskalni PDF** sa napomenom: *"Račun je važeći kao potvrda o kupovini termina. Fiskalizovani račun biće dostavljen naknadno."*;
+  - šalje email kupcu sa nefiskalnim računom;
+  - **ne** rollback-uje rezervaciju ni plaćanje.
+
+---
+
+## Retry job-a koji je delimično uspeo
+
+- **Scenario:** Job padne posle upisa rezervacije / fiskalizacije, ali pre slanja maila (ili posle PDF-a, pre emaila).
+- **Pravilo:** Svaki korak je **idempotentan** – pri retry-u se ne duplira rad:
+  - **GenerateInvoicePdfJob:** ako već postoji PDF (`reservation.invoice_pdf_path` set i fajl postoji) → ne pravi novi.
+  - **SendInvoiceEmailJob:** ako je mail već poslat (`reservation.invoice_sent_at` set) → ne šalje ponovo.
+- U bazi: **invoice_pdf_path** (put do PDF-a), **invoice_sent_at** (timestamp slanja). ProcessReservationAfterPaymentJob ima **tries = 3** da retry dovrši preostale korake.
+
+---
+
+## Pravila
+
+- **Rezervacija je validna** bez obzira na status fiskalizacije.
+- **Kupac uvek dobija račun** odmah posle uspešnog plaćanja (fiskalni ili nefiskalni).
+- **Retry fiskalizacije** vodi se preko tabele **post_fiscalization_data** (error, attempts, next_retry_at).
+- Callback-i **samo preko API ruta** (POST /api/payments/callback).
+- Idempotentnost po **merchant_transaction_id**; dupli callback-i ne kreiraju duple rezervacije.
+- Podrška za **guest i auth** (user_id nullable).
+- Mail se šalje sa **bus@kotor.me** (MAIL_FROM_ADDRESS).
+- **Guest:** mail na **reservation.email** (snapshot). **Auth:** mail na **users.email** (trenutni nalog).
+
+---
+
+## Provera scenarija
+
+| Scenario | Implementacija |
+|----------|----------------|
+| Payment SUCCESS + fiskal OK | ProcessReservationAfterPaymentJob: callFiscalService → fiscal_jir set → dispatch fiscal PDF + email. |
+| Payment SUCCESS + fiskal FAIL | ProcessReservationAfterPaymentJob: insert post_fiscalization_data, dispatch non-fiscal PDF + email. |
+| Retry fiskalizacije uspe | Cron post-fiscalization:retry: čita post_fiscalization_data (next_retry_at <= now), tryFiscalize → success → applyFiscalDataAndDelete, dispatch fiscal PDF + email. |
+| Dupli callback od banke | PaymentCallbackJob: temp terminal (processed) ili Reservation već postoji → return; nema duple rezervacije. ProcessReservationAfterPaymentJob: ako fiscal_jir već set → return (nema duplog PDF/email). |
+| Guest korisnik | SendInvoiceEmailJob: user_id null → šalje na reservation.email (snapshot). |
+| Auth korisnik | SendInvoiceEmailJob: user_id set → šalje na user.email (users.email). |

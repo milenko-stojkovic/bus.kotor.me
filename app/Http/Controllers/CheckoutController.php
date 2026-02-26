@@ -3,55 +3,110 @@
 namespace App\Http\Controllers;
 
 use App\Contracts\PaymentService;
+use App\Exceptions\NoCapacityException;
+use App\Helpers\LocaleHelper;
 use App\Http\Requests\CheckoutReservationRequest;
 use App\Models\DailyParkingData;
 use App\Models\TempData;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Checkout: validacija, provera dostupnosti, temp_data (pending), sync createSession sa gatewayom.
- * Redirect na payment_url odmah; obrada rezultata plaćanja isključivo preko webhook + queue job.
- * Ako gateway spor/nedostupan → 503, bez kreiranja rezervacije.
+ * Race condition: atomic check + lock (SELECT ... FOR UPDATE) na daily_parking_data da dva korisnika
+ * ne uzmu isti poslednji slot. Rezervacija se pravi tek nakon SUCCESS plaćanja; hold u temp_data sa TTL-om.
+ * Dupli klik: postojeći pending za slot+user ili merchant_transaction_id → postojeći payment link.
  */
 class CheckoutController extends Controller
 {
     /**
-     * Validira, proverava kapacitet, kreira temp_data (pending), kreira payment session (sync).
-     * Redirect na bank payment page; nikad obrada statusa plaćanja u HTTP request-u.
+     * Validira. Atomic claim: transakcija + lockForUpdate na daily_parking_data, provera kapaciteta,
+     * kreiranje temp_data, increment pending. createSession van transakcije.
      */
     public function store(CheckoutReservationRequest $request, PaymentService $paymentService): RedirectResponse|Response|JsonResponse
     {
         $date = $request->validated('reservation_date');
         $dropOffSlotId = $request->validated('drop_off_time_slot_id');
+        $mtid = $request->validated('merchant_transaction_id');
 
-        $daily = DailyParkingData::where('date', $date)
-            ->where('time_slot_id', $dropOffSlotId)
+        // Već postoji pending za isti slot + user/email → vrati postojeći payment link (bez locka)
+        $existingBySlot = $this->findExistingPendingForSlot($request, $date, $dropOffSlotId);
+        if ($existingBySlot) {
+            $session = $paymentService->createSession($existingBySlot);
+            if ($session->success && $session->paymentUrl) {
+                return redirect()->away($session->paymentUrl);
+            }
+        }
+
+        // Već postoji pending za ovaj merchant_transaction_id (dupli klik) → vrati postojeći link
+        $existingByMtid = TempData::where('merchant_transaction_id', $mtid)
+            ->where('status', TempData::STATUS_PENDING)
             ->first();
+        if ($existingByMtid) {
+            $session = $paymentService->createSession($existingByMtid);
+            if ($session->success && $session->paymentUrl) {
+                return redirect()->away($session->paymentUrl);
+            }
+        }
 
-        if (! $daily || $daily->availableCapacity() < 1) {
-            $message = __('No availability for selected slot.');
+        try {
+            $temp = DB::transaction(function () use ($request, $date, $dropOffSlotId, $mtid) {
+                // Atomic: lock red za (date, time_slot) da drugi request sačeka
+                $daily = DailyParkingData::where('date', $date)
+                    ->where('time_slot_id', $dropOffSlotId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $daily || $daily->availableCapacity() < 1) {
+                    throw new NoCapacityException(__('No availability for selected slot.'));
+                }
+
+                $preferredLocale = $request->user()
+                    ? ($request->user()->lang ?? 'en')
+                    : ($request->session()->get('locale') ?: app()->getLocale());
+                if (! LocaleHelper::isValid($preferredLocale)) {
+                    $preferredLocale = 'en';
+                }
+
+                $temp = TempData::create([
+                    'merchant_transaction_id' => $mtid,
+                    'user_id' => $request->user()?->id,
+                    'drop_off_time_slot_id' => $dropOffSlotId,
+                    'pick_up_time_slot_id' => $request->validated('pick_up_time_slot_id'),
+                    'reservation_date' => $date,
+                    'user_name' => $request->validated('user_name'),
+                    'country' => $request->validated('country'),
+                    'license_plate' => $request->validated('license_plate'),
+                    'vehicle_type_id' => $request->validated('vehicle_type_id'),
+                    'email' => $request->validated('email'),
+                    'preferred_locale' => $preferredLocale,
+                    'status' => TempData::STATUS_PENDING,
+                ]);
+
+                $daily->increment('pending');
+
+                return $temp;
+            });
+        } catch (NoCapacityException $e) {
+            $message = $e->getMessage();
             return $request->expectsJson()
                 ? response()->json(['message' => $message], 422)
                 : response($message, 422);
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            // Dupli klik: drugi request ubacio isti merchant_transaction_id → koristi postojeći red
+            $existingByMtid = TempData::where('merchant_transaction_id', $mtid)
+                ->where('status', TempData::STATUS_PENDING)
+                ->first();
+            if ($existingByMtid) {
+                $session = $paymentService->createSession($existingByMtid);
+                if ($session->success && $session->paymentUrl) {
+                    return redirect()->away($session->paymentUrl);
+                }
+            }
+            throw $e;
         }
-
-        $temp = TempData::create([
-            'merchant_transaction_id' => $request->validated('merchant_transaction_id'),
-            'user_id' => $request->user()?->id,
-            'drop_off_time_slot_id' => $dropOffSlotId,
-            'pick_up_time_slot_id' => $request->validated('pick_up_time_slot_id'),
-            'reservation_date' => $date,
-            'user_name' => $request->validated('user_name'),
-            'country' => $request->validated('country'),
-            'license_plate' => $request->validated('license_plate'),
-            'vehicle_type_id' => $request->validated('vehicle_type_id'),
-            'email' => $request->validated('email'),
-            'status' => TempData::STATUS_PENDING,
-        ]);
-
-        $daily->increment('pending');
 
         $session = $paymentService->createSession($temp);
 
@@ -59,10 +114,29 @@ class CheckoutController extends Controller
             return redirect()->away($session->paymentUrl);
         }
 
-        $daily->decrement('pending');
+        // createSession nije uspeo → vrati hold (decrement pending)
+        DailyParkingData::where('date', $date)
+            ->where('time_slot_id', $dropOffSlotId)
+            ->decrement('pending');
         $message = $session->errorMessage ?? 'Payment temporarily unavailable.';
         return $request->expectsJson()
             ? response()->json(['message' => $message], Response::HTTP_SERVICE_UNAVAILABLE)
             : response($message, Response::HTTP_SERVICE_UNAVAILABLE);
+    }
+
+    /** Pending temp_data za isti slot (reservation_date + drop_off) i isti user (user_id ili email). */
+    private function findExistingPendingForSlot(CheckoutReservationRequest $request, string $date, int $dropOffSlotId): ?TempData
+    {
+        $query = TempData::where('reservation_date', $date)
+            ->where('drop_off_time_slot_id', $dropOffSlotId)
+            ->where('status', TempData::STATUS_PENDING);
+
+        if ($request->user()) {
+            $query->where('user_id', $request->user()->id);
+        } else {
+            $query->where('email', $request->validated('email'));
+        }
+
+        return $query->first();
     }
 }

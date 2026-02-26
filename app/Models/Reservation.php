@@ -39,11 +39,14 @@ class Reservation extends Model
         'license_plate',
         'vehicle_type_id',
         'email',
+        'preferred_locale',
         'fiscal_jir',
         'fiscal_ikof',
         'fiscal_qr',
         'fiscal_operator',
         'fiscal_date',
+        'invoice_pdf_path',
+        'invoice_sent_at',
         'status',
         'email_sent',
     ];
@@ -53,14 +56,38 @@ class Reservation extends Model
         return [
             'reservation_date' => 'date',
             'fiscal_date' => 'datetime',
+            'invoice_sent_at' => 'datetime',
             'email_sent' => 'integer', // 0 = nije poslat, 1 = poslata potvrda (integacija sa ReportEmail / notifikacije)
         ];
     }
 
-    /** Označi da je potvrda rezervacije (email) poslata – za integraciju sa slanjem obaveštenja. */
+    /** Označi da je potvrda rezervacije (invoice email) poslata. Idempotentno: ako je invoice_sent_at već set, ne menja se. */
     public function markConfirmationEmailSent(): bool
     {
-        return $this->update(['email_sent' => 1]);
+        if ($this->invoice_sent_at !== null) {
+            return true;
+        }
+
+        return $this->update([
+            'email_sent' => 1,
+            'invoice_sent_at' => now(),
+        ]);
+    }
+
+    /**
+     * Status fiskalizacije: 'completed' | 'failed' | 'pending'.
+     * completed = fiscal_jir set; failed = post_fiscalization_data postoji (retry pipeline); pending = još nije fiskalizovano.
+     */
+    public function fiscalizationStatus(): string
+    {
+        if ($this->fiscal_jir !== null) {
+            return 'completed';
+        }
+        if ($this->postFiscalizationData()->exists()) {
+            return 'failed';
+        }
+
+        return 'pending';
     }
 
     /**
@@ -151,5 +178,11 @@ class Reservation extends Model
     public function postFiscalizationData(): HasOne
     {
         return $this->hasOne(PostFiscalizationData::class, 'reservation_id');
+    }
+
+    /** Nerešeni zapis za retry fiskalizacije (resolved_at null). Za admin "retry" / "mark resolved". */
+    public function postFiscalizationDataUnresolved(): HasOne
+    {
+        return $this->hasOne(PostFiscalizationData::class, 'reservation_id')->whereNull('resolved_at');
     }
 }

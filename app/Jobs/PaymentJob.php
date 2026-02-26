@@ -50,13 +50,13 @@ class PaymentJob implements ShouldQueue, ShouldBeUnique
 
         if ($result->isSuccess()) {
             $reservation = $this->createReservationFromTempData($temp);
-            $temp->delete();
-            PostFiscalizationJob::dispatch($reservation->id);
+            $temp->update(['status' => TempData::STATUS_PROCESSED]);
+            ProcessReservationAfterPaymentJob::dispatch($reservation->id);
             return;
         }
 
         if ($result->isFailed()) {
-            $temp->update(['status' => TempData::STATUS_FAILED]);
+            $temp->update(['status' => TempData::STATUS_CANCELED]);
             return;
         }
 

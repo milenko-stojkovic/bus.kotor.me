@@ -41,6 +41,15 @@ class PaymentCallbackController extends Controller
 
         $rawPayload = $request->all();
 
+        Log::channel('payments')->info('Payment callback accepted', [
+            'merchant_transaction_id' => $validated['merchant_transaction_id'],
+            'status' => $validated['status'],
+            'ip' => $request->ip(),
+        ]);
+        if (config('app.debug')) {
+            Log::channel('payments')->debug('Payment callback payload', ['payload' => $rawPayload]);
+        }
+
         PaymentCallbackJob::dispatch($validated, $rawPayload);
 
         return response()->json(['accepted' => true], 202);

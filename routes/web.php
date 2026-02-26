@@ -1,8 +1,11 @@
 <?php
 
+use App\Http\Controllers\Admin\ReservationActionController;
 use App\Http\Controllers\Admin\ReservationListController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\FakeBankCompleteController;
+use App\Http\Controllers\PaymentReturnController;
 use App\Http\Controllers\PaymentResultController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReservationStatusController;
@@ -11,6 +14,9 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+
+// Guest: manually change UI language (session). Auth uses users.lang.
+Route::get('/locale/{locale}', LocaleController::class)->name('locale.switch');
 
 // Checkout: validacija, dostupnost, temp_data (pending), soft-lock, createSession (sync), redirect na payment_url ili 503
 Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
@@ -23,7 +29,9 @@ Route::get('/reservations/create', function () {
 // Polling endpoint za status rezervacije (UI periodično poziva sa merchant_transaction_id)
 Route::get('/reservation-status/{merchant_transaction_id}', [ReservationStatusController::class, 'show'])->name('reservation.status');
 
-// Frontend success/cancel URL: ping /payment/result?merchant_transaction_id=... → JSON { status, user_type, message?, redirect_guest, redirect_auth }
+// Stranica na koju korisnik stiže nakon redirecta sa banke. Status uvek iz baze (UI nije izvor istine).
+Route::get('/payment/return', PaymentReturnController::class)->name('payment.return');
+// API za status: GET /payment/result?merchant_transaction_id=... → JSON { status, user_type, message?, ... }
 Route::get('/payment/result', PaymentResultController::class)->name('payment.result');
 
 // Bank callback = POST /api/payments/callback (routes/api.php). Machine-to-machine ONLY. Frontend NIKAD ne sme da ga poziva.
@@ -52,9 +60,12 @@ Route::middleware('auth')->group(function () {
         return redirect()->route('dashboard')->with('error', __('Plaćanje nije uspelo.'));
     })->name('profile.reservations');
 
-    // Admin panel: pregled rezervacija (naredna 3h + pretraga), samo čitanje
+    // Admin panel: pregled rezervacija + manual override (retry fiscalization, resend invoice, mark resolved)
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/reservations', [ReservationListController::class, 'index'])->name('reservations.index');
+        Route::post('/reservations/{id}/retry-fiscalization', [ReservationActionController::class, 'retryFiscalization'])->name('reservations.retry-fiscalization');
+        Route::post('/reservations/{id}/resend-invoice', [ReservationActionController::class, 'resendInvoice'])->name('reservations.resend-invoice');
+        Route::post('/reservations/{id}/mark-resolved', [ReservationActionController::class, 'markResolved'])->name('reservations.mark-resolved');
     });
 });
 

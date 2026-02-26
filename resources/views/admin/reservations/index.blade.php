@@ -7,6 +7,12 @@
 
     <div class="py-6">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            @if(session('message'))
+                <div class="mb-4 rounded-md bg-green-50 p-4 text-sm text-green-800">{{ session('message') }}</div>
+            @endif
+            @if(session('error'))
+                <div class="mb-4 rounded-md bg-red-50 p-4 text-sm text-red-800">{{ session('error') }}</div>
+            @endif
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6">
                     <form action="{{ route('admin.reservations.index') }}" method="get" class="mb-6 flex flex-wrap gap-2 items-end">
@@ -41,7 +47,9 @@
                                     <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{{ __('Email') }}</th>
                                     <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{{ __('Tablica') }}</th>
                                     <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{{ __('Status') }}</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{{ __('Fiskalizacija') }}</th>
                                     <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{{ __('Tx ID') }}</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{{ __('Akcije') }}</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
@@ -56,11 +64,38 @@
                                         <td class="px-4 py-2 whitespace-nowrap">
                                             <span class="px-2 py-0.5 rounded text-xs {{ $r->status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' }}">{{ $r->status }}</span>
                                         </td>
+                                        <td class="px-4 py-2 whitespace-nowrap">
+                                            @if($r->fiscalizationStatus() === 'completed')
+                                                <span class="px-2 py-0.5 rounded text-xs bg-green-100 text-green-800">{{ __('OK') }}</span>
+                                            @elseif($r->fiscalizationStatus() === 'failed')
+                                                <span class="px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-800">{{ __('Retry') }}</span>
+                                            @else
+                                                <span class="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600">{{ __('Pending') }}</span>
+                                            @endif
+                                        </td>
                                         <td class="px-4 py-2 text-gray-500 font-mono text-xs">{{ $r->merchant_transaction_id }}</td>
+                                        <td class="px-4 py-2">
+                                            <div class="flex flex-wrap gap-1">
+                                                @if($r->postFiscalizationDataUnresolved)
+                                                    <form action="{{ route('admin.reservations.retry-fiscalization', $r->id) }}" method="post" class="inline">
+                                                        @csrf
+                                                        <button type="submit" class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800 hover:bg-amber-200">{{ __('Retry fiskalizaciju') }}</button>
+                                                    </form>
+                                                    <form action="{{ route('admin.reservations.mark-resolved', $r->id) }}" method="post" class="inline">
+                                                        @csrf
+                                                        <button type="submit" class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200">{{ __('Označi rešeno') }}</button>
+                                                    </form>
+                                                @endif
+                                                <form action="{{ route('admin.reservations.resend-invoice', $r->id) }}" method="post" class="inline">
+                                                    @csrf
+                                                    <button type="submit" class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200">{{ __('Pošalji račun ponovo') }}</button>
+                                                </form>
+                                            </div>
+                                        </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="8" class="px-4 py-8 text-center text-gray-500">
+                                        <td colspan="10" class="px-4 py-8 text-center text-gray-500">
                                             {{ $search !== '' ? __('Nema rezultata pretrage.') : __('Nema rezervacija u naredna 3 sata.') }}
                                         </td>
                                     </tr>

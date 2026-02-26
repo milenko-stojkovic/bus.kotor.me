@@ -20,6 +20,6 @@
             </button>
         </form>
     </div>
-    <p class="text-xs text-gray-500">After clicking, check status at: <a href="{{ route('reservation.status', ['merchant_transaction_id' => $merchant_transaction_id]) }}" class="underline">/reservation-status/{{ $merchant_transaction_id }}</a></p>
+    <p class="text-xs text-gray-500">Nakon klika redirect na <a href="{{ route('payment.return', ['merchant_transaction_id' => $merchant_transaction_id]) }}" class="underline">/payment/return</a> – status se uvek čita iz baze.</p>
 </div>
 </x-guest-layout>

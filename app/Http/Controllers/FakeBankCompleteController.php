@@ -25,7 +25,7 @@ class FakeBankCompleteController extends Controller
         $rawPayload = $request->only(['merchant_transaction_id', 'status']);
         PaymentCallbackJob::dispatch($validated, $rawPayload);
 
-        return redirect()->route('reservation.status', [
+        return redirect()->route('payment.return', [
             'merchant_transaction_id' => $validated['merchant_transaction_id'],
         ]);
     }

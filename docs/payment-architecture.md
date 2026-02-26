@@ -124,6 +124,12 @@ Controller **nikad**:
 
 ---
 
+## Success payment pipeline (fiskalizacija → PDF → email)
+
+V. **docs/success-payment-pipeline.md**: pending → processed → create reservation (bez fiscal polja) → FiscalizeReservationJob → na uspeh fiscal_* + GenerateInvoicePdfJob + SendInvoiceEmailJob; mail sa bus@kotor.me.
+
+---
+
 ## Callback handling (CANCEL/ERROR, idempotency, redirect)
 
 V. **docs/payment-callback-handling.md**: validacija potpisa (400 + log), idempotentnost (final status), CANCEL/ERROR → failed + raw payload + oslobodi soft-lock, PaymentFailed event, redirect guest/auth, GET /payment/result.

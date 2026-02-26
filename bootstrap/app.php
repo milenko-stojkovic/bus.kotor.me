@@ -13,7 +13,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->web(append: [
+            \App\Http\Middleware\SetLocale::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
@@ -21,6 +23,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withSchedule(function (Schedule $schedule): void {
         // Prioritet: fiskalizacija → parking → email
         $schedule->command('reservations:process-pending')->everyFiveMinutes();
+        $schedule->command('payment:check-pending-inquiry')->everyFiveMinutes();
+        $schedule->command('post-fiscalization:retry')->everyTenMinutes();
         $schedule->command('reservations:expire-pending')->everyTenMinutes();
         $schedule->command('reservations:assign-late-success')->everyFifteenMinutes();
         $schedule->command('parking:update-availability')->everyTenMinutes();

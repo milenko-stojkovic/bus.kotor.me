@@ -1,6 +1,6 @@
 # Payment callback handling
 
-**Bank callback mora biti na API ruti (POST /api/payments/callback), ne na web.** Razlozi: banka ne šalje cookies/CSRF; web middleware (session, redirects) može odbiti ili pokvariti callback (dokazano u produkciji V1). Callback je stateless; vraća samo 200/202/400; redirect korisnika kasnije preko frontend polling-a /payment/result.
+**Bank callback mora biti na API ruti (POST /api/payments/callback), ne na web.** Ne oslanjati se na cookies, session ili browser language. Identifikacija samo po merchant_transaction_id. Račun (PDF) je uvek na crnogorskom (cg) – v. docs/language-and-invoice-rules.md. Razlozi: banka ne šalje cookies/CSRF; web middleware (session, redirects) može odbiti ili pokvariti callback (dokazano u produkciji V1). Callback je stateless; vraća samo 200/202/400; redirect korisnika kasnije preko frontend polling-a /payment/result.
 
 **Nikad ne koristiti bank callback za frontend redirect ili UI flow. Bank callback je isključivo machine-to-machine.** Frontend NIKAD ne sme da poziva POST /api/payments/callback. Za test (fake bank) koristi se poseban endpoint: POST /payment/fake-bank/complete.
 
@@ -70,15 +70,29 @@ Job **emituje PaymentFailed** event koji frontend ne prima direktno – frontend
 
 - Callback endpoint je **API** (POST /api/payments/callback); **ne radi redirect**, nema session/cookies.
 - Callback setuje status u bazi (preko job-a); vraća samo 202 ili 400.
-- **Frontend success/cancel URL** (stranica na koju banka vrati korisnika):
-  - Frontend ping-a **GET /payment/result?merchant_transaction_id=...**
-  - Backend vraća JSON: `{ status: "success"|"failed"|"pending", user_type: "guest"|"auth", message?, redirect_guest, redirect_auth }`
-  - Frontend radi redirect na odgovarajuću stranicu i prikazuje poruku.
+- **Success/cancel URL** (stranica na koju banka vrati korisnika): **GET /payment/return?merchant_transaction_id=...**
+  - Stranica **uvek čita status iz baze** (PaymentResultResolver) – UI nije izvor istine.
+  - Ako postoji **reservation** → prikaži success ekran; ako ne → pending / retry ili failed ekran.
+  - API za polling: **GET /payment/result?merchant_transaction_id=...** → JSON `{ status, user_type, message?, redirect_guest, redirect_auth }`.
+
+## 8. User zatvori browser tokom redirecta
+
+- **Scenario:** Korisnik plati → zatvori tab pre nego što vidi redirect → callback dođe normalno.
+- **Pravilo:** Status rezervacije se **uvek** čita iz baze. Kad se korisnik vrati (isti URL sa merchant_transaction_id):
+  - **GET /payment/return?merchant_transaction_id=...** ponovo pita bazu.
+  - Ako postoji **reservation** → prikaži success ekran.
+  - Ako ne → prikaži pending / retry ekran (opciono polling da se osveži kad callback stigne).
+
+---
+
+## Sigurnosni minimum (callback)
+
+- **Rate-limit** callback endpointa: **60 zahteva/min** (middleware `throttle:60,1` na POST /api/payments/callback).
+- **Logovanje payload-a:** uvek se u **payments** channel upisuje minimalni zapis (merchant_transaction_id, status, ip); u **debug režimu** (APP_DEBUG=true) dodatno se loguje ceo payload.
 
 ---
 
 ## Bonus (production safety)
 
 - **Log** svaki CANCEL/ERROR u **payments** channel (storage/logs/payments.log).
-- **Rate limiting** na callback: **throttle 60/min** (sprečavanje brute force callback spam).
 - **Metric:** broj neuspešnih plaćanja – log u payments channel sa merchant_transaction_id; kasnije može se agregirati za monitoring.

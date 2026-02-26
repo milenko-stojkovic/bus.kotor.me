@@ -20,7 +20,7 @@ class ReservationListController extends Controller
         $q = $request->input('q');
 
         $reservations = Reservation::query()
-            ->with(['dropOffTimeSlot', 'pickUpTimeSlot', 'vehicleType', 'user'])
+            ->with(['dropOffTimeSlot', 'pickUpTimeSlot', 'vehicleType', 'user', 'postFiscalizationDataUnresolved'])
             ->when($q !== null && $q !== '', function ($query) use ($q) {
                 $query->where(function ($query) use ($q) {
                     $query->where('email', 'like', '%'.$q.'%')

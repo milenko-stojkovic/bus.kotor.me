@@ -8,7 +8,7 @@ Pravila za bezbedno paralelno plaćanje i obrada callback-a.
 
 - **Svaki pokušaj plaćanja** mora imati **jedinstven** `merchant_transaction_id`.
 - Enforcment:
-  - **Checkout:** `CheckoutReservationRequest` – pravilo `unique:temp_data,merchant_transaction_id` (validacija pre kreiranja temp_data).
+  - **Checkout:** dupli klik → backend vrati postojeći payment link; baza enforcuje unique.
   - **Baza:** `temp_data.merchant_transaction_id` UNIQUE; `reservations.merchant_transaction_id` UNIQUE.
 - `merchant_transaction_id` se šalje gatewayu (npr. Bankart) pri kreiranju sesije i vraća u callback-u – koristi se kao idempotency key.
 
@@ -48,19 +48,31 @@ Idempotency key za queue: `merchant_transaction_id` (ShouldBeUnique → samo jed
 
 ---
 
+## Race condition: dva korisnika isti slot u istoj sekundi
+
+- **Problem:** dva korisnika istovremeno kupuju poslednji slobodan (date, time_slot) → oba vide kapacitet 1, oba kreiraju temp_data i increment pending → overbooking.
+- **Rešenje: atomic check + lock**
+  - U **checkout** se koristi **transakcija** sa **SELECT ... FOR UPDATE** na red `daily_parking_data` (Laravel: `lockForUpdate()`).
+  - Sekvenca: lock red za (date, time_slot_id) → provera `availableCapacity() >= 1` → kreiranje temp_data → increment pending → commit. Drugi request čeka lock, zatim vidi kapacitet 0 → 422.
+  - **Rezervacija** se i dalje pravi **tek nakon SUCCESS** plaćanja (callback). **Hold** slot-a je u temp_data sa TTL-om (cron expire pending).
+- Unique index na (slot_id + date + drop_off + pick_up) ne ograničava kapacitet (više rezervacija po slotu je dozvoljeno); kapacitet se enforcuje preko `daily_parking_data.pending + reserved <= capacity` uz lock.
+
+---
+
 ## Paralelna plaćanja
 
 Sistem podržava **više paralelnih plaćanja** bez konflikata:
 
 - Različiti korisnici / isti korisnik – različiti `merchant_transaction_id` za svaki pokušaj.
 - Callback-i se obrađuju nezavisno (jedan job po merchant_transaction_id).
-- Nema međusobnog blokiranja između plaćanja.
+- Nema međusobnog blokiranja između plaćanja (osim kratkog locka na daily_parking_data pri claim-u slota).
 
 ---
 
 ## Provera (checklist)
 
-- [x] Svaki pokušaj plaćanja ima jedinstven merchant_transaction_id (request validacija + DB unique).
+- [x] Svaki pokušaj plaćanja ima jedinstven merchant_transaction_id (DB unique; dupli klik → postojeći link).
+- [x] Race condition isti slot: atomic lock (SELECT FOR UPDATE) na daily_parking_data u checkout transakciji.
 - [x] merchant_transaction_id se šalje gatewayu i vraća u callback-u.
 - [x] Callback: validacija potpisa pre dispatch-a; invalid → 401, job se ne šalje.
 - [x] Callback: dispatch job-a sa merchant_transaction_id (u payload-u).

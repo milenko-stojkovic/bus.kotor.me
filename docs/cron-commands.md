@@ -16,6 +16,32 @@ Svi cron job-ovi su Laravel Artisan komande. Registruju se u `bootstrap/app.php`
 
 ---
 
+## 1b. RetryPostFiscalization
+
+**Komanda:** `post-fiscalization:retry`
+
+**Opis:** Retry fiskalizacije za rezervacije iz **post_fiscalization_data** gde je **next_retry_at <= now**. Poziva fiskalni API; pri uspehu ažurira reservation fiscal_*, briše slog iz post_fiscalization_data i šalje kupcu **novi fiskalni PDF** i email. Pri neuspehu poveća attempts i postavi next_retry_at.
+
+**Frekvencija:** svakih 10 minuta (bootstrap/app.php).
+
+**Tabele:** post_fiscalization_data, reservations.
+
+---
+
+## 1c. CheckPendingPaymentStatus (timeout callback)
+
+**Komanda:** `payment:check-pending-inquiry`
+
+**Opis:** Proverava **temp_data** sa statusom **pending** starije od X minuta (config `payment.pending_inquiry_after_minutes`, npr. 10). Za svaki poziva **status inquiry** kod banke. Ako banka kaže **SUCCESS** → pokreće **isti flow kao callback** (PaymentSuccessHandler: transakcija, kreiranje rezervacije, temp_data → processed, oslobađanje soft-locka, ProcessReservationAfterPaymentJob). Scenario: callback od banke nikad ne stigne (mreža, firewall, outage).
+
+**Frekvencija:** svakih 5 minuta (bootstrap/app.php).
+
+**Tabele:** temp_data, reservations, daily_parking_data.
+
+**Config:** `config/payment.php` → `pending_inquiry_after_minutes`; env `PAYMENT_PENDING_INQUIRY_AFTER_MINUTES`.
+
+---
+
 ## 2. ExpirePendingReservations
 
 **Komanda:** `reservations:expire-pending`

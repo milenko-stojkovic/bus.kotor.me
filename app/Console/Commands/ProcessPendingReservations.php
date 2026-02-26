@@ -25,7 +25,7 @@ class ProcessPendingReservations extends Command
             //   - kreiraj Reservation iz temp (user_id, snapshot, termini); eventualno PostFiscalizationData ako treba istorija
             //   - upiši fiscal_* u reservation
             //   - $temp->delete();
-            // ako ne uspe: po broju pokušaja ostavi pending ili $temp->update(['status' => TempData::STATUS_FAILED]);
+            // ako ne uspe: po broju pokušaja ostavi pending ili $temp->update(['status' => TempData::STATUS_CANCELED]);
         }
 
         $this->info('Processed '.$rows->count().' pending rows.');

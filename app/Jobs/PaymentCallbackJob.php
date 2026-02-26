@@ -3,24 +3,25 @@
 namespace App\Jobs;
 
 use App\Events\PaymentFailed;
-use App\Models\DailyParkingData;
 use App\Models\Reservation;
 use App\Models\TempData;
+use App\Services\Payment\PaymentSuccessHandler;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 
 /**
- * Obrada rezultata plaćanja iz webhook/callback. Idempotentan po merchant_transaction_id.
+ * Payment state machine. Only API bank callbacks drive transitions.
  *
- * Pravila:
- * - Ako je temp_data.status već failed ili processed → prekinuti (return).
- * - Nikad ne brisati temp_data fizički (audit trail); samo menjati status.
- * - SUCCESS → kreiraj reservation, temp_data.status = processed, oslobodi soft-lock (pending→reserved), PostFiscalizationJob.
- * - CANCEL/ERROR/failed → temp_data.status = failed, sačuvaj raw payload + error, NE kreiraj reservation, oslobodi soft-lock, dispatch PaymentFailed.
+ * Rules:
+ * - All payments start as pending. processed is terminal (no further transitions).
+ * - late_success only when: bank SUCCESS but lock already expired/canceled; never creates reservation.
+ * - processed is idempotent: duplicate SUCCESS callbacks must not create duplicate reservations.
+ * - Every transition logged; all transitions inside DB transaction. Never rely on frontend for state.
  */
 class PaymentCallbackJob implements ShouldQueue, ShouldBeUnique
 {
@@ -31,18 +32,16 @@ class PaymentCallbackJob implements ShouldQueue, ShouldBeUnique
     public int $timeout = 60;
 
     public function __construct(
-        /** Validirani payload: merchant_transaction_id, status (success|failed|timeout|CANCEL|ERROR), error_code?, error_reason? */
         public array $payload,
-        /** Raw callback payload za audit (raw_callback_payload). */
         public array $rawPayload = []
     ) {}
 
     public function handle(): void
     {
         $txId = $this->payload['merchant_transaction_id'] ?? null;
-        $status = $this->normalizeStatus($this->payload['status'] ?? null);
+        $callbackStatus = $this->normalizeStatus($this->payload['status'] ?? null);
 
-        if (! $txId || ! $status) {
+        if (! $txId || ! $callbackStatus) {
             return;
         }
 
@@ -51,7 +50,13 @@ class PaymentCallbackJob implements ShouldQueue, ShouldBeUnique
             return;
         }
 
-        if ($temp->isFinalStatus()) {
+        if ($temp->isTerminal()) {
+            if ($temp->status === TempData::STATUS_PROCESSED) {
+                return;
+            }
+            if ($callbackStatus === 'success' && in_array($temp->status, [TempData::STATUS_CANCELED, TempData::STATUS_EXPIRED], true)) {
+                app(PaymentSuccessHandler::class)->applyLateSuccess($temp, $this->rawPayload, false);
+            }
             return;
         }
 
@@ -59,18 +64,17 @@ class PaymentCallbackJob implements ShouldQueue, ShouldBeUnique
             return;
         }
 
-        if ($status === 'success') {
-            $this->handleSuccess($temp);
+        if ($callbackStatus === 'success') {
+            app(PaymentSuccessHandler::class)->handle($temp, $this->rawPayload);
             return;
         }
 
-        if ($status === 'timeout') {
-            $temp->update(['status' => TempData::STATUS_LATE_SUCCESS]);
-            $this->releaseSoftLock($temp, false);
+        if ($callbackStatus === 'timeout') {
+            app(PaymentSuccessHandler::class)->applyLateSuccess($temp, $this->rawPayload, true);
             return;
         }
 
-        $this->handleFailed($temp);
+        $this->handleCanceled($temp);
     }
 
     private function normalizeStatus(?string $status): ?string
@@ -85,66 +89,28 @@ class PaymentCallbackJob implements ShouldQueue, ShouldBeUnique
         return in_array($status, ['success', 'failed', 'timeout'], true) ? $status : null;
     }
 
-    private function handleSuccess(TempData $temp): void
+    private function handleCanceled(TempData $temp): void
     {
-        $reservation = $this->createReservationFromTempData($temp);
-        $temp->update([
-            'status' => TempData::STATUS_PROCESSED,
-            'raw_callback_payload' => $this->rawPayload,
-        ]);
-        $this->releaseSoftLock($temp, true);
-        PostFiscalizationJob::dispatch($reservation->id);
-    }
-
-    private function handleFailed(TempData $temp): void
-    {
-        $temp->update([
-            'status' => TempData::STATUS_FAILED,
-            'raw_callback_payload' => $this->rawPayload,
-            'callback_error_code' => $this->payload['error_code'] ?? null,
-            'callback_error_reason' => $this->payload['error_reason'] ?? null,
-        ]);
-        $this->releaseSoftLock($temp, false);
-        event(new PaymentFailed($temp));
-    }
-
-    private function releaseSoftLock(TempData $temp, bool $incrementReserved): void
-    {
-        $daily = DailyParkingData::where('date', $temp->reservation_date)
-            ->where('time_slot_id', $temp->drop_off_time_slot_id)
-            ->first();
-
-        if (! $daily) {
-            return;
-        }
-
-        $daily->decrement('pending');
-        if ($incrementReserved) {
-            $daily->increment('reserved');
-        }
+        DB::transaction(function () use ($temp): void {
+            $temp = TempData::where('merchant_transaction_id', $temp->merchant_transaction_id)->lockForUpdate()->first();
+            if (! $temp || $temp->isTerminal()) {
+                return;
+            }
+            $from = $temp->status;
+            $temp->update([
+                'status' => TempData::STATUS_CANCELED,
+                'raw_callback_payload' => $this->rawPayload,
+                'callback_error_code' => $this->payload['error_code'] ?? null,
+                'callback_error_reason' => $this->payload['error_reason'] ?? null,
+            ]);
+            TempData::logStateTransition($temp->merchant_transaction_id, $from, TempData::STATUS_CANCELED, 'CANCEL/ERROR/failed');
+            app(PaymentSuccessHandler::class)->releaseSoftLock($temp, false);
+            event(new PaymentFailed($temp));
+        });
     }
 
     public function uniqueId(): string
     {
         return (string) ($this->payload['merchant_transaction_id'] ?? $this->job?->getJobId() ?? 'payment-callback');
-    }
-
-    private function createReservationFromTempData(TempData $temp): Reservation
-    {
-        return Reservation::create([
-            'user_id' => $temp->user_id,
-            'vehicle_id' => null,
-            'merchant_transaction_id' => $temp->merchant_transaction_id,
-            'drop_off_time_slot_id' => $temp->drop_off_time_slot_id,
-            'pick_up_time_slot_id' => $temp->pick_up_time_slot_id,
-            'reservation_date' => $temp->reservation_date,
-            'user_name' => $temp->user_name,
-            'country' => $temp->country,
-            'license_plate' => $temp->license_plate,
-            'vehicle_type_id' => $temp->vehicle_type_id,
-            'email' => $temp->email,
-            'status' => 'paid',
-            'email_sent' => 0,
-        ]);
     }
 }

@@ -16,6 +16,11 @@
     </head>
     <body class="font-sans text-gray-900 antialiased">
         <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-gray-100">
+            <div class="absolute top-4 right-4 flex gap-2 text-sm">
+                <a href="{{ route('locale.switch', 'cg') }}" class="{{ app()->getLocale() === 'cg' ? 'font-semibold' : 'text-gray-500' }}">CG</a>
+                <span class="text-gray-300">|</span>
+                <a href="{{ route('locale.switch', 'en') }}" class="{{ app()->getLocale() === 'en' ? 'font-semibold' : 'text-gray-500' }}">EN</a>
+            </div>
             <div>
                 <a href="/">
                     <x-application-logo class="w-20 h-20 fill-current text-gray-500" />
