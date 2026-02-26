@@ -14,8 +14,8 @@ class CheckoutReservationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // unique u bazi; dupli klik → backend vrati postojeći payment link (CheckoutController)
-'merchant_transaction_id' => ['required', 'string', 'max:64'],
+            // Opciono: ako frontend pošalje, koristi se za dupli klik; inače backend generiše UUID
+            'merchant_transaction_id' => ['nullable', 'string', 'max:64'],
             'drop_off_time_slot_id' => ['required', 'integer', 'exists:list_of_time_slots,id'],
             'pick_up_time_slot_id' => ['required', 'integer', 'exists:list_of_time_slots,id'],
             'reservation_date' => ['required', 'date', 'after_or_equal:today'],

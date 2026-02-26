@@ -7,6 +7,12 @@
            class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition">
             {{ $result['user_type'] === 'auth' ? __('Moje rezervacije') : __('Nova rezervacija') }}
         </a>
+    @elseif ($result['status'] === 'late_success')
+        <p class="text-amber-700 font-medium">{{ $result['message'] ?? __('Payment was confirmed after the reservation window closed. Please contact support.') }}</p>
+        <a href="{{ $result['user_type'] === 'auth' ? $result['redirect_auth'] : $result['redirect_guest'] }}"
+           class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition">
+            {{ $result['user_type'] === 'auth' ? __('Moje rezervacije') : __('Nova rezervacija') }}
+        </a>
     @elseif ($result['status'] === 'pending')
         <p class="text-amber-700 font-medium">Plaćanje se obrađuje.</p>
         <p class="text-sm text-gray-600">Ako ste završili plaćanje, sačekajte ili osvežite stranicu. Status se uvek čita iz baze.</p>
@@ -33,8 +39,11 @@
             })();
         </script>
     @else
-        <p class="text-red-700 font-medium">{{ $result['message'] ?? __('Plaćanje je otkazano ili nije uspelo. Rezervacija nije sačuvana.') }}</p>
-        <a href="{{ $result['redirect_guest'] }}" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition">
+        <p class="text-red-700 font-medium">{{ $result['message'] ?? __('Plaćanje nije uspelo. Vaši podaci su sačuvani – pokušajte ponovo.') }}</p>
+        @if(!empty($result['error_reason'] ?? null))
+            <p class="text-sm text-gray-600 mt-1">{{ __('Razlog (banka)'): }} {{ $result['error_reason'] }}</p>
+        @endif
+        <a href="{{ $result['redirect_guest'] ?? route('reservations.create') }}" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition">
             {{ __('Nova rezervacija') }}
         </a>
     @endif

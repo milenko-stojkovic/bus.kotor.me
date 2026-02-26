@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\PaymentCallbackController;
+use App\Http\Controllers\Api\RetryReservationController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -10,6 +11,9 @@ use Illuminate\Support\Facades\Route;
 | Security: rate-limited (60/min); every payload logged (minimal always, full in debug).
 |--------------------------------------------------------------------------
 */
+
+Route::get('reservations/retry/{retry_token}', RetryReservationController::class)
+    ->name('api.reservations.retry');
 
 Route::post('payments/callback', [PaymentCallbackController::class, 'handle'])
     ->name('api.payment.callback')

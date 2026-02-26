@@ -33,6 +33,7 @@ class TempData extends Model
 
     protected $fillable = [
         'merchant_transaction_id',
+        'retry_token',
         'user_id',
         'drop_off_time_slot_id',
         'pick_up_time_slot_id',

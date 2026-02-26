@@ -12,12 +12,17 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /**
- * Checkout: validacija, provera dostupnosti, temp_data (pending), sync createSession sa gatewayom.
- * Race condition: atomic check + lock (SELECT ... FOR UPDATE) na daily_parking_data da dva korisnika
- * ne uzmu isti poslednji slot. Rezervacija se pravi tek nakon SUCCESS plaćanja; hold u temp_data sa TTL-om.
- * Dupli klik: postojeći pending za slot+user ili merchant_transaction_id → postojeći payment link.
+ * Checkout: validacija, dostupnost, temp_data (pending), sync createSession, redirect na banku.
+ *
+ * Namjerno V1: createSession se poziva sync u web requestu (nema queue job-a za init).
+ * V. docs/payment-v1-production-audit.md i docs/payment-architecture.md.
+ *
+ * Race condition: lock na daily_parking_data; rezervacija tek nakon SUCCESS callbacka.
+ * Dupli klik: postojeći pending za slot+user → isti payment link.
  */
 class CheckoutController extends Controller
 {
@@ -29,7 +34,6 @@ class CheckoutController extends Controller
     {
         $date = $request->validated('reservation_date');
         $dropOffSlotId = $request->validated('drop_off_time_slot_id');
-        $mtid = $request->validated('merchant_transaction_id');
 
         // Već postoji pending za isti slot + user/email → vrati postojeći payment link (bez locka)
         $existingBySlot = $this->findExistingPendingForSlot($request, $date, $dropOffSlotId);
@@ -40,19 +44,12 @@ class CheckoutController extends Controller
             }
         }
 
-        // Već postoji pending za ovaj merchant_transaction_id (dupli klik) → vrati postojeći link
-        $existingByMtid = TempData::where('merchant_transaction_id', $mtid)
-            ->where('status', TempData::STATUS_PENDING)
-            ->first();
-        if ($existingByMtid) {
-            $session = $paymentService->createSession($existingByMtid);
-            if ($session->success && $session->paymentUrl) {
-                return redirect()->away($session->paymentUrl);
-            }
-        }
+        // merchant_transaction_id i retry_token uvek generiše backend (pre job-a i redirect-a)
+        $merchantTransactionId = Str::uuid()->toString();
+        $retryToken = Str::uuid()->toString();
 
         try {
-            $temp = DB::transaction(function () use ($request, $date, $dropOffSlotId, $mtid) {
+            $temp = DB::transaction(function () use ($request, $date, $dropOffSlotId, $merchantTransactionId, $retryToken) {
                 // Atomic: lock red za (date, time_slot) da drugi request sačeka
                 $daily = DailyParkingData::where('date', $date)
                     ->where('time_slot_id', $dropOffSlotId)
@@ -71,7 +68,8 @@ class CheckoutController extends Controller
                 }
 
                 $temp = TempData::create([
-                    'merchant_transaction_id' => $mtid,
+                    'merchant_transaction_id' => $merchantTransactionId,
+                    'retry_token' => $retryToken,
                     'user_id' => $request->user()?->id,
                     'drop_off_time_slot_id' => $dropOffSlotId,
                     'pick_up_time_slot_id' => $request->validated('pick_up_time_slot_id'),
@@ -87,6 +85,11 @@ class CheckoutController extends Controller
 
                 $daily->increment('pending');
 
+                Log::channel('payments')->info('Payment init', [
+                    'merchant_transaction_id' => $merchantTransactionId,
+                    'retry_token' => $retryToken,
+                ]);
+
                 return $temp;
             });
         } catch (NoCapacityException $e) {
@@ -96,7 +99,7 @@ class CheckoutController extends Controller
                 : response($message, 422);
         } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
             // Dupli klik: drugi request ubacio isti merchant_transaction_id → koristi postojeći red
-            $existingByMtid = TempData::where('merchant_transaction_id', $mtid)
+            $existingByMtid = TempData::where('merchant_transaction_id', $merchantTransactionId)
                 ->where('status', TempData::STATUS_PENDING)
                 ->first();
             if ($existingByMtid) {

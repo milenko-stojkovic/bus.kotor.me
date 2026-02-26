@@ -21,9 +21,12 @@ Route::get('/locale/{locale}', LocaleController::class)->name('locale.switch');
 // Checkout: validacija, dostupnost, temp_data (pending), soft-lock, createSession (sync), redirect na payment_url ili 503
 Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
 
-// Forma za novu rezervaciju (guest redirect nakon failed plaćanja; kasnije vratiti view forme)
-Route::get('/reservations/create', function () {
-    return redirect('/')->with('error', __('Plaćanje je otkazano ili nije uspelo. Rezervacija nije sačuvana.'));
+// Guest nakon failed plaćanja: /reservations?retry_token=... → redirect na / sa query.
+// Frontend na /: ako je retry_token u URL, pozvati GET /api/reservations/retry/{token} i popuniti formu;
+// prikazati session('message') i session('error_reason') ako postoje.
+Route::get('/reservations', function () {
+    $query = request()->getQueryString();
+    return redirect('/' . ($query ? '?' . $query : ''));
 })->name('reservations.create');
 
 // Polling endpoint za status rezervacije (UI periodično poziva sa merchant_transaction_id)

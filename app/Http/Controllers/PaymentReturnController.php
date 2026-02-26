@@ -30,6 +30,18 @@ class PaymentReturnController extends Controller
             return redirect()->route('reservations.create')->with('error', PaymentResultResolver::MESSAGE_FAILED);
         }
 
+        // Failed: redirect guest to /reservations?retry_token=... so form can be auto-filled
+        if ($result['status'] === 'failed' && ($result['user_type'] ?? '') === 'guest' && ! empty($result['retry_token'] ?? null)) {
+            return redirect()->route('reservations.create', ['retry_token' => $result['retry_token']])
+                ->with('message', $result['message'] ?? PaymentResultResolver::MESSAGE_FAILED)
+                ->with('error_reason', $result['error_reason'] ?? null);
+        }
+        if ($result['status'] === 'failed' && ($result['user_type'] ?? '') === 'auth') {
+            return redirect()->route('profile.reservations')
+                ->with('error', $result['message'] ?? PaymentResultResolver::MESSAGE_FAILED)
+                ->with('error_reason', $result['error_reason'] ?? null);
+        }
+
         return view('payment.return', [
             'merchant_transaction_id' => $txId,
             'result' => $result,

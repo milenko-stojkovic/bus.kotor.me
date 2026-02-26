@@ -8,7 +8,10 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Validacija potpisa callback-a od pravog gatewaya (npr. Bankart).
- * Dok nije implementirano: vraća false ako nije podešen secret; kasnije HMAC nad telom zahteva.
+ *
+ * Namjerno (V1): vraća false dok se ne implementira HMAC prema specifikaciji banke.
+ * Svi callbacki su odbijeni kada je provider=real; za test koristiti provider=fake.
+ * V. docs/payment-v1-production-audit.md – sekcija „Namjerna odstupanja“.
  */
 class RealCallbackSignatureValidator implements CallbackSignatureValidator
 {
@@ -21,8 +24,7 @@ class RealCallbackSignatureValidator implements CallbackSignatureValidator
             return false;
         }
 
-        // TODO: implementirati stvarnu proveru potpisa (npr. Bankart HMAC nad raw body + header)
-        // Primer: $signature = $request->header('X-Signature'); return hash_equals($expected, $signature);
+        // TODO: implementirati stvarnu provjeru potpisa (HMAC nad raw body + header prema spec banke)
         Log::channel('payments')->warning('Real callback signature validation not implemented, rejecting callback.');
 
         return false;
