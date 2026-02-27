@@ -37,7 +37,7 @@ Route::get('/payment/return', PaymentReturnController::class)->name('payment.ret
 // API za status: GET /payment/result?merchant_transaction_id=... → JSON { status, user_type, message?, ... }
 Route::get('/payment/result', PaymentResultController::class)->name('payment.result');
 
-// Bank callback = POST /api/payments/callback (routes/api.php). Machine-to-machine ONLY. Frontend NIKAD ne sme da ga poziva.
+// Bank callback = POST /api/payment/callback (routes/api.php). Machine-to-machine ONLY. Frontend NIKAD ne sme da ga poziva.
 
 // Fake bank (samo test): stranica + poseban completion endpoint. Frontend poziva completion, NE bank callback.
 Route::get('/payment/fake-bank', function (\Illuminate\Http\Request $request) {
@@ -47,6 +47,7 @@ Route::get('/payment/fake-bank', function (\Illuminate\Http\Request $request) {
     }
     return view('payment.fake-bank', ['merchant_transaction_id' => $tx]);
 })->name('payment.fake-bank');
+Route::get('/fake-bank/complete', [FakeBankCompleteController::class, 'completeGet'])->name('fake-bank.complete');
 Route::post('/payment/fake-bank/complete', FakeBankCompleteController::class)->name('payment.fake-bank.complete');
 
 Route::get('/dashboard', function () {

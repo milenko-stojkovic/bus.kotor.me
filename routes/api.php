@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\FakeFiscalApiController;
+use App\Http\Controllers\Api\FakeFiscalizationController;
 use App\Http\Controllers\Api\PaymentCallbackController;
 use App\Http\Controllers\Api\RetryReservationController;
 use Illuminate\Support\Facades\Route;
@@ -15,6 +17,14 @@ use Illuminate\Support\Facades\Route;
 Route::get('reservations/retry/{retry_token}', RetryReservationController::class)
     ->name('api.reservations.retry');
 
-Route::post('payments/callback', [PaymentCallbackController::class, 'handle'])
+Route::post('fake-fiscalization', FakeFiscalizationController::class)
+    ->name('api.fake-fiscalization');
+
+Route::post('efiscal/deposit', [FakeFiscalApiController::class, 'deposit'])
+    ->name('api.efiscal.deposit');
+Route::post('efiscal/fiscalReceipt', [FakeFiscalApiController::class, 'fiscalReceipt'])
+    ->name('api.efiscal.fiscal-receipt');
+
+Route::post('payment/callback', [PaymentCallbackController::class, 'handle'])
     ->name('api.payment.callback')
     ->middleware('throttle:60,1');

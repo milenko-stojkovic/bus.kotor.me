@@ -35,7 +35,7 @@ Datum provjere: prema checklisti. Cilj: potvrditi da je implementacija stabilna,
 
 | Zahtjev | Status | Napomena |
 |--------|--------|----------|
-| Callback rute isključivo u routes/api.php | ✅ | `POST /api/payments/callback` u `routes/api.php` |
+| Callback rute isključivo u routes/api.php | ✅ | `POST /api/payment/callback` u `routes/api.php` |
 | Bez session, cookie, CSRF | ✅ | API rute ne koriste web middleware (Laravel default za api.php) |
 | Validira potpis banke | ⚠️ | **RealCallbackSignatureValidator** namjerno vraća `false` dok se ne implementira HMAC prema specifikaciji banke (v. „Namjerna odstupanja“). Za test: **FakeCallbackSignatureValidator** vraća `true`. |
 | Čita merchant_transaction_id, mapira na payment attempt | ✅ | Validacija `merchant_transaction_id` (required, max:64); job pronalazi temp_data po njemu |
@@ -124,7 +124,7 @@ Datum provjere: prema checklisti. Cilj: potvrditi da je implementacija stabilna,
 
 | Zahtjev | Status | Napomena |
 |--------|--------|----------|
-| Callback rute whitelisted | ✅ | Samo POST /api/payments/callback; API bez web middleware |
+| Callback rute whitelisted | ✅ | Samo POST /api/payment/callback; API bez web middleware |
 | Provjera potpisa banke (HMAC/cert/secret) | ⚠️ | **RealCallbackSignatureValidator**: namjerno vraća `false` dok banka ne dostavi spec za potpis (config `payment.callback_secret` / `PAYMENT_CALLBACK_SECRET` postoji). Fake validator za test vraća `true`. |
 | Callback ne ovisi o cookie/session | ✅ | api.php, stateless |
 | Success endpoint se ne može ručno pozvati bez validnog potpisa | ✅ | Jedini "success" je obrada u PaymentCallbackJob nakon validacije u controlleru; bez validnog potpisa controller vraća 400 i job se ne dispatch-uje |

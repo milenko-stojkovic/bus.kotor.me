@@ -23,6 +23,10 @@ class PaymentCallbackController extends Controller
      */
     public function handle(Request $request, CallbackSignatureValidator $signatureValidator): JsonResponse
     {
+        // TODO: Implementirati HMAC verifikaciju callbacka od Bankarta koristeći BANKART_SHARED_SECRET
+        // iz .env i validaciju request path-a (npr. tačno /api/payment/callback). Logika treba da odbije
+        // zahtjev (400) ako potpis ili path nisu validni. Mesto za implementaciju: ispod (ili unutar
+        // CallbackSignatureValidator implementacije za bankart driver).
         if (! $signatureValidator->validate($request)) {
             Log::channel('payments')->warning('Payment callback signature invalid', [
                 'ip' => $request->ip(),

@@ -35,4 +35,22 @@ return [
         ],
     ],
 
+    'bank' => [
+        'driver' => env('BANK_DRIVER', 'fake'), // fake | bankart
+    ],
+
+    'bankart' => [
+        'shared_secret' => env('BANKART_SHARED_SECRET'),
+    ],
+
+    'fiscalization' => [
+        'driver' => env('FISCALIZATION_DRIVER', 'fake'), // fake | real
+    ],
+
+    'fiscal' => [
+        'api_url' => env('FISCAL_API_URL'),
+        'api_token' => env('FISCAL_API_TOKEN'),
+        'driver' => env('FISCALIZATION_DRIVER', 'real'),
+    ],
+
 ];

@@ -21,6 +21,46 @@ Laravel is a web application framework with expressive, elegant syntax. We belie
 
 Laravel is accessible, powerful, and provides tools required for large, robust applications.
 
+## Payment & fiscalization: fake (local) vs real (production)
+
+### Korišćenje fake flow-a lokalno
+
+Za lokalni razvoj i testiranje koriste se simulirani banka i fiskalni servis:
+
+1. U `.env` postavi:
+   ```env
+   BANK_DRIVER=fake
+   FISCALIZATION_DRIVER=fake
+   ```
+2. Pokreni queue worker: `php artisan queue:work` (obrada callbacka i fiskalizacije ide preko jobova).
+3. **Plaćanje:** nakon klika „Plati“ korisnik se prebacuje na fake bank stranicu (`/payment/fake-bank?tx=...`). Klik na **Success** ili **Fail** šalje simulirani callback; možeš i direktno otvoriti `GET /fake-bank/complete?status=success|error|cancel&tx={merchant_transaction_id}` za brzi test.
+4. **Fiskalizacija:** kada je `FISCALIZATION_DRIVER=fake`, aplikacija šalje zahtjev na sopstveni endpoint `POST /api/fake-fiscalization`; odgovor simulira uspeh (ili grešku ako u payload-u pošalješ `forceFail=true`). Lokalno možeš koristiti i **FakeFiscalApiController** (rute `POST /api/efiscal/deposit`, `POST /api/efiscal/fiscalReceipt`) – isti fake API kao eksterni servis.
+
+Rute za test: `POST /payment/fake-bank/complete` (form), `GET /fake-bank/complete?status=...&tx=...`, `POST /api/fake-fiscalization`, `POST /api/efiscal/deposit`, `POST /api/efiscal/fiscalReceipt`. Pravi bank callback je `POST /api/payment/callback` – frontend ga ne poziva.
+
+**Fiskalizacija – driver:**
+
+- **Lokalno:** `FISCALIZATION_DRIVER=fake` → koristi se fake fiskal API (FakeFiscalizationController ili FakeFiscalApiController na `/api/efiscal/*`). Postavi `FISCAL_API_URL=http://localhost/api` i `FISCAL_API_TOKEN=fake-token` u `.env.example` ako pozivaš efiscal rute.
+- **Produkcija:** `FISCALIZATION_DRIVER=real` → koristi se pravi fiskalni servis. U `.env` postavi `FISCAL_API_URL` i `FISCAL_API_TOKEN` na vrednosti od dobavljača.
+
+### Prebacivanje na realni Bankart u produkciji
+
+Za produkciju sa pravim plaćanjem i fiskalizacijom:
+
+1. U `.env` na serveru postavi:
+   ```env
+   BANK_DRIVER=bankart
+   FISCALIZATION_DRIVER=real
+   BANKART_SHARED_SECRET=<vrednost_od_banke>
+   ```
+   Dodatno (prema dogovoru sa Bankartom): `BANKART_API_URL`, `BANKART_API_USERNAME`, `BANKART_API_PASSWORD`, `BANKART_API_KEY`, itd. za iniciranje plaćanja.
+
+2. **Callback:** Bankart šalje rezultat plaćanja na `POST /api/payment/callback`. Potpis se proverava pomoću `BANKART_SHARED_SECRET` (HMAC); path mora biti tačno `/api/payment/callback`. Ne koristi se session/cookie – endpoint je machine-to-machine.
+
+3. **Fiskalizacija:** kada je `FISCALIZATION_DRIVER=real`, `FiscalizationService` poziva pravi fiskalni API preko `config('services.fiscal.api_url')` i `config('services.fiscal.api_token')`. Kada je `fake`, koristi se FakeFiscalApiController (rute `/api/efiscal/deposit`, `/api/efiscal/fiscalReceipt`) ili postojeći `POST /api/fake-fiscalization`.
+
+4. Queue worker mora biti aktivan u produkciji (npr. Supervisor) da se `PaymentCallbackJob` i posle plaćanja fiskalizacija i email obrade.
+
 ## Learning Laravel
 
 Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
