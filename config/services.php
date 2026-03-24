@@ -40,7 +40,16 @@ return [
     ],
 
     'bankart' => [
+        'api_url' => env('BANKART_API_URL'),
+        'api_key' => env('BANKART_API_KEY'),
+        'username' => env('BANKART_USERNAME'),
+        'password' => env('BANKART_PASSWORD'),
         'shared_secret' => env('BANKART_SHARED_SECRET'),
+        'signature_enabled' => filter_var(env('BANKART_SIGNATURE_ENABLED', true), FILTER_VALIDATE_BOOL),
+        'send_customer' => filter_var(env('BANKART_SEND_CUSTOMER', true), FILTER_VALIDATE_BOOL),
+        'billing_address1' => env('BANKART_BILLING_ADDRESS1'),
+        'billing_city' => env('BANKART_BILLING_CITY'),
+        'billing_postcode' => env('BANKART_BILLING_POSTCODE'),
     ],
 
     'fiscalization' => [
