@@ -1,14 +1,17 @@
 <?php
 
 use App\Http\Controllers\Admin\ReservationActionController;
+use App\Http\Controllers\Admin\LateSuccessController;
 use App\Http\Controllers\Admin\ReservationListController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\UserReservationController;
 use App\Http\Controllers\FakeBankCompleteController;
 use App\Http\Controllers\PaymentReturnController;
 use App\Http\Controllers\PaymentResultController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReservationStatusController;
+use App\Http\Controllers\VehicleController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -58,18 +61,31 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
 
-    // Pregled rezervacija korisnika (auth redirect nakon failed plaćanja)
-    Route::get('/profile/reservations', function () {
-        return redirect()->route('dashboard')->with('error', __('Plaćanje nije uspelo.'));
-    })->name('profile.reservations');
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/profile/reservations', [UserReservationController::class, 'index'])->name('profile.reservations');
+    Route::get('/profile/reservations/{id}/invoice', [UserReservationController::class, 'downloadInvoice'])->name('profile.reservations.invoice');
+    Route::prefix('/profile/vehicles')->name('profile.vehicles.')->group(function () {
+        Route::get('/', [VehicleController::class, 'index'])->name('index');
+        Route::post('/', [VehicleController::class, 'store'])->name('store');
+        Route::patch('/{vehicle}', [VehicleController::class, 'update'])->name('update');
+        Route::delete('/{vehicle}', [VehicleController::class, 'destroy'])->name('destroy');
+    });
 
     // Admin panel: pregled rezervacija + manual override (retry fiscalization, resend invoice, mark resolved)
-    Route::prefix('admin')->name('admin.')->group(function () {
+    Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
         Route::get('/reservations', [ReservationListController::class, 'index'])->name('reservations.index');
         Route::post('/reservations/{id}/retry-fiscalization', [ReservationActionController::class, 'retryFiscalization'])->name('reservations.retry-fiscalization');
         Route::post('/reservations/{id}/resend-invoice', [ReservationActionController::class, 'resendInvoice'])->name('reservations.resend-invoice');
         Route::post('/reservations/{id}/mark-resolved', [ReservationActionController::class, 'markResolved'])->name('reservations.mark-resolved');
+
+        Route::prefix('late-success')->name('late-success.')->group(function () {
+            Route::get('/', [LateSuccessController::class, 'index'])->name('index');
+            Route::get('/{id}', [LateSuccessController::class, 'show'])->name('show');
+            Route::post('/{id}/force', [LateSuccessController::class, 'forceCreate'])->name('force');
+            Route::post('/{id}/reject', [LateSuccessController::class, 'reject'])->name('reject');
+        });
     });
 });
 

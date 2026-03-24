@@ -8,6 +8,7 @@ use App\Helpers\LocaleHelper;
 use App\Http\Requests\CheckoutReservationRequest;
 use App\Models\DailyParkingData;
 use App\Models\TempData;
+use App\Models\Vehicle;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
@@ -34,6 +35,7 @@ class CheckoutController extends Controller
     {
         $date = $request->validated('reservation_date');
         $dropOffSlotId = $request->validated('drop_off_time_slot_id');
+        $snapshot = $this->resolveSnapshotInput($request);
 
         // Već postoji pending za isti slot + user/email → vrati postojeći payment link (bez locka)
         $existingBySlot = $this->findExistingPendingForSlot($request, $date, $dropOffSlotId);
@@ -71,14 +73,15 @@ class CheckoutController extends Controller
                     'merchant_transaction_id' => $merchantTransactionId,
                     'retry_token' => $retryToken,
                     'user_id' => $request->user()?->id,
+                    'vehicle_id' => $snapshot['vehicle_id'],
                     'drop_off_time_slot_id' => $dropOffSlotId,
                     'pick_up_time_slot_id' => $request->validated('pick_up_time_slot_id'),
                     'reservation_date' => $date,
-                    'user_name' => $request->validated('user_name'),
-                    'country' => $request->validated('country'),
-                    'license_plate' => $request->validated('license_plate'),
-                    'vehicle_type_id' => $request->validated('vehicle_type_id'),
-                    'email' => $request->validated('email'),
+                    'user_name' => $snapshot['user_name'],
+                    'country' => $snapshot['country'],
+                    'license_plate' => $snapshot['license_plate'],
+                    'vehicle_type_id' => $snapshot['vehicle_type_id'],
+                    'email' => $snapshot['email'],
                     'preferred_locale' => $preferredLocale,
                     'status' => TempData::STATUS_PENDING,
                 ]);
@@ -141,5 +144,38 @@ class CheckoutController extends Controller
         }
 
         return $query->first();
+    }
+
+    /**
+     * Snapshot source of truth: auth user can choose saved vehicle, otherwise manual form input.
+     *
+     * @return array{vehicle_id:int|null,user_name:string,country:string,license_plate:string,vehicle_type_id:int,email:string}
+     */
+    private function resolveSnapshotInput(CheckoutReservationRequest $request): array
+    {
+        $vehicleId = $request->validated('vehicle_id');
+        if ($request->user() && $vehicleId) {
+            $vehicle = Vehicle::query()
+                ->where('user_id', $request->user()->id)
+                ->findOrFail($vehicleId);
+
+            return [
+                'vehicle_id' => $vehicle->id,
+                'user_name' => (string) ($request->user()->name ?? ''),
+                'country' => (string) ($request->user()->country ?? ''),
+                'license_plate' => $vehicle->license_plate,
+                'vehicle_type_id' => (int) $vehicle->vehicle_type_id,
+                'email' => (string) ($request->user()->email ?? ''),
+            ];
+        }
+
+        return [
+            'vehicle_id' => null,
+            'user_name' => (string) $request->validated('user_name'),
+            'country' => (string) $request->validated('country'),
+            'license_plate' => (string) $request->validated('license_plate'),
+            'vehicle_type_id' => (int) $request->validated('vehicle_type_id'),
+            'email' => (string) $request->validated('email'),
+        ];
     }
 }

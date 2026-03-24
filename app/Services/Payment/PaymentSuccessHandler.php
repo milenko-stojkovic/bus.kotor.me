@@ -114,7 +114,7 @@ class PaymentSuccessHandler
     {
         return Reservation::create([
             'user_id' => $temp->user_id,
-            'vehicle_id' => null,
+            'vehicle_id' => $temp->vehicle_id,
             'merchant_transaction_id' => $temp->merchant_transaction_id,
             'drop_off_time_slot_id' => $temp->drop_off_time_slot_id,
             'pick_up_time_slot_id' => $temp->pick_up_time_slot_id,

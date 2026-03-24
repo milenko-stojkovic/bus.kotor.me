@@ -47,6 +47,27 @@
             @endif
         </div>
 
+        <div>
+            <x-input-label for="lang" :value="__('Language')" />
+            <select id="lang" name="lang" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                <option value="cg" @selected(old('lang', $user->lang) === 'cg')>cg</option>
+                <option value="en" @selected(old('lang', $user->lang) === 'en')>en</option>
+            </select>
+            <x-input-error class="mt-2" :messages="$errors->get('lang')" />
+        </div>
+
+        <div>
+            <x-input-label for="company_name" :value="__('Company name')" />
+            <x-text-input id="company_name" name="company_name" type="text" class="mt-1 block w-full" :value="old('company_name', $user->company_name)" autocomplete="organization" />
+            <x-input-error class="mt-2" :messages="$errors->get('company_name')" />
+        </div>
+
+        <div>
+            <x-input-label for="country" :value="__('Country')" />
+            <x-text-input id="country" name="country" type="text" class="mt-1 block w-full" :value="old('country', $user->country)" autocomplete="country-name" />
+            <x-input-error class="mt-2" :messages="$errors->get('country')" />
+        </div>
+
         <div class="flex items-center gap-4">
             <x-primary-button>{{ __('Save') }}</x-primary-button>
 

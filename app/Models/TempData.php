@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Log;
 /**
  * Privremeni podaci pre rezervacije/plaćanja – soft lock. Payment state machine.
  *
- * States: pending | processed | late_success | canceled | expired.
+ * States: pending | processed | late_success | late_manual_review | late_rejected | canceled | expired.
  * Only API bank callbacks (via PaymentCallbackJob) and cron (ExpirePendingReservations) transition state.
  * processed = terminal (reservation created). late_success = terminal (bank SUCCESS but lock expired/canceled).
  * canceled = terminal (bank CANCEL/ERROR). expired = terminal (cron timeout). Audit trail – never delete rows.
@@ -19,12 +19,15 @@ class TempData extends Model
     public const STATUS_PENDING = 'pending';
     public const STATUS_PROCESSED = 'processed';
     public const STATUS_LATE_SUCCESS = 'late_success';
+    public const STATUS_LATE_MANUAL_REVIEW = 'late_manual_review';
+    public const STATUS_LATE_REJECTED = 'late_rejected';
     public const STATUS_CANCELED = 'canceled';
     public const STATUS_EXPIRED = 'expired';
 
     public const TERMINAL_STATES = [
         self::STATUS_PROCESSED,
         self::STATUS_LATE_SUCCESS,
+        self::STATUS_LATE_REJECTED,
         self::STATUS_CANCELED,
         self::STATUS_EXPIRED,
     ];
@@ -35,6 +38,7 @@ class TempData extends Model
         'merchant_transaction_id',
         'retry_token',
         'user_id',
+        'vehicle_id',
         'drop_off_time_slot_id',
         'pick_up_time_slot_id',
         'reservation_date',
@@ -48,6 +52,7 @@ class TempData extends Model
         'raw_callback_payload',
         'callback_error_code',
         'callback_error_reason',
+        'resolution_reason',
     ];
 
     protected function casts(): array
@@ -127,5 +132,10 @@ class TempData extends Model
     public function vehicleType(): BelongsTo
     {
         return $this->belongsTo(VehicleType::class, 'vehicle_type_id');
+    }
+
+    public function vehicle(): BelongsTo
+    {
+        return $this->belongsTo(Vehicle::class, 'vehicle_id')->withDefault();
     }
 }

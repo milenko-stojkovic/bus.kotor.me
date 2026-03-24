@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use Illuminate\Validation\Rule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class CheckoutReservationRequest extends FormRequest
@@ -13,17 +14,25 @@ class CheckoutReservationRequest extends FormRequest
 
     public function rules(): array
     {
+        $authUser = $this->user();
+        $usingSavedVehicle = $authUser !== null && $this->filled('vehicle_id');
+
         return [
             // Opciono: ako frontend pošalje, koristi se za dupli klik; inače backend generiše UUID
             'merchant_transaction_id' => ['nullable', 'string', 'max:64'],
+            'vehicle_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('vehicles', 'id')->where(fn ($q) => $q->where('user_id', $authUser?->id)),
+            ],
             'drop_off_time_slot_id' => ['required', 'integer', 'exists:list_of_time_slots,id'],
             'pick_up_time_slot_id' => ['required', 'integer', 'exists:list_of_time_slots,id'],
             'reservation_date' => ['required', 'date', 'after_or_equal:today'],
-            'user_name' => ['required', 'string', 'max:255'],
-            'country' => ['required', 'string', 'max:100'],
-            'license_plate' => ['required', 'string', 'max:50'],
-            'vehicle_type_id' => ['required', 'integer', 'exists:vehicle_types,id'],
-            'email' => ['required', 'email', 'max:255'],
+            'user_name' => [$usingSavedVehicle ? 'nullable' : 'required', 'string', 'max:255'],
+            'country' => [$usingSavedVehicle ? 'nullable' : 'required', 'string', 'max:100'],
+            'license_plate' => [$usingSavedVehicle ? 'nullable' : 'required', 'string', 'max:50'],
+            'vehicle_type_id' => [$usingSavedVehicle ? 'nullable' : 'required', 'integer', 'exists:vehicle_types,id'],
+            'email' => [$usingSavedVehicle ? 'nullable' : 'required', 'email', 'max:255'],
         ];
     }
 }

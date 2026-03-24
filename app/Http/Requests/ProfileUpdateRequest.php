@@ -17,6 +17,7 @@ class ProfileUpdateRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
+            'lang' => ['required', 'string', Rule::in(['cg', 'en'])],
             'email' => [
                 'required',
                 'string',
@@ -25,6 +26,8 @@ class ProfileUpdateRequest extends FormRequest
                 'max:255',
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
+            'company_name' => ['nullable', 'string', 'max:255'],
+            'country' => ['nullable', 'string', 'max:100'],
         ];
     }
 }
