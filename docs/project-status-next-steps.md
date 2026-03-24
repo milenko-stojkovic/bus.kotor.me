@@ -71,3 +71,12 @@ Ovaj dokument služi kao brz podsetnik "šta je gotovo" i "šta je ostalo" da bi
   - fail/cancel scenario + retry preko `retry_token`
   - fake fiskal fail (`X-Fake-Fail: 1`)
   - fake fiskal timeout (`X-Fake-Timeout: 1`)
+
+## 6) Real callback E2E - uslov za smislen test
+
+- Puni real callback E2E test nema smisla sa lokalnog računara, jer banka traži da real payment/callback pozivi dolaze sa servera gde je hostovan `bus.kotor.me`.
+- Sandbox u klasičnom smislu nije dostupan; test zavisi od bankinog simulation moda.
+- Zato real callback E2E potvrdu planirati tek kada su ispunjena oba uslova:
+  1. V2 aplikacija je podignuta na web server (hostovani domen),
+  2. banka ponovo aktivira `-sim` nalog / simulation mode.
+- Tek tada validirati kompletan tok: real init -> real callback (signature + payload shape) -> V2 state machine -> reservation status.

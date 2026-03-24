@@ -13,6 +13,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Payment state machine. Only API bank callbacks drive transitions.
@@ -42,15 +43,28 @@ class PaymentCallbackJob implements ShouldQueue, ShouldBeUnique
         $callbackStatus = $this->normalizeStatus($this->payload['status'] ?? null);
 
         if (! $txId || ! $callbackStatus) {
+            Log::channel('payments')->warning('Payment callback job skipped: missing tx or unknown status', [
+                'merchant_transaction_id' => $txId,
+                'status' => $this->payload['status'] ?? null,
+            ]);
             return;
         }
 
         $temp = TempData::where('merchant_transaction_id', $txId)->first();
         if (! $temp) {
+            Log::channel('payments')->warning('Payment callback job skipped: temp_data not found', [
+                'merchant_transaction_id' => $txId,
+                'status' => $callbackStatus,
+            ]);
             return;
         }
 
         if ($temp->isTerminal()) {
+            Log::channel('payments')->info('Payment callback job terminal temp_data', [
+                'merchant_transaction_id' => $txId,
+                'status' => $callbackStatus,
+                'temp_status' => $temp->status,
+            ]);
             if ($temp->status === TempData::STATUS_PROCESSED) {
                 return;
             }
@@ -61,6 +75,10 @@ class PaymentCallbackJob implements ShouldQueue, ShouldBeUnique
         }
 
         if (Reservation::where('merchant_transaction_id', $txId)->exists()) {
+            Log::channel('payments')->info('Payment callback job duplicate: reservation already exists', [
+                'merchant_transaction_id' => $txId,
+                'status' => $callbackStatus,
+            ]);
             return;
         }
 
