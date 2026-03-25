@@ -35,6 +35,30 @@ class FakeFiscalApiController extends Controller
 
     private function respond(Request $request): JsonResponse
     {
+        $scenario = $request->string('scenario')->toString();
+        if ($scenario === '') {
+            $scenario = (string) ($request->header('X-Fake-Scenario') ?? '');
+        }
+        if ($scenario === '') {
+            $scenario = (string) ($request->json('scenario') ?? '');
+        }
+        $scenario = trim($scenario);
+
+        if ($scenario === 'timeout') {
+            sleep(10);
+            return response()->json([
+                'IsSucccess' => false,
+                'Error' => [
+                    'ErrorCode' => '504',
+                    'ErrorMessage' => 'Fake timeout (gateway timeout)',
+                ],
+            ], 504);
+        }
+
+        if ($scenario === 'malformed_response') {
+            return response('NOT_JSON_RESPONSE', 200)->header('Content-Type', 'text/plain; charset=utf-8');
+        }
+
         if ($request->header('X-Fake-Timeout') === '1') {
             sleep(10);
             return response()->json([
@@ -69,6 +93,46 @@ class FakeFiscalApiController extends Controller
             ], 422);
         }
 
+        // Scenario-driven fiscal errors (shape aligned with real provider).
+        if ($scenario !== '' && $scenario !== 'success') {
+            $path = $request->path();
+            $isReceipt = str_contains($path, 'fiscalReceipt');
+
+            // deposit_missing (58) is meaningful only on receipt; deposit stays OK.
+            if ($scenario === 'deposit_missing' && ! $isReceipt) {
+                $scenario = 'success';
+            }
+
+            $uuid = Str::uuid()->toString();
+            $error = match ($scenario) {
+                'deposit_missing' => ['code' => '58', 'msg' => 'Deposit missing'],
+                'already_fiscalized' => ['code' => '78', 'msg' => 'Already fiscalized'],
+                'validation_error' => ['code' => '11', 'msg' => 'Validation error'],
+                'provider_down' => ['code' => '500', 'msg' => 'Provider down'],
+                'temporary_service_down' => ['code' => '999', 'msg' => 'Temporary service down'],
+                'tax_server_error' => ['code' => '905', 'msg' => 'Tax server error'],
+                default => ['code' => '500', 'msg' => 'Fake fiscal service error'],
+            };
+
+            $body = [
+                'IsSucccess' => false,
+                'Error' => [
+                    'ErrorCode' => $error['code'],
+                    'ErrorMessage' => $error['msg'],
+                ],
+                'RawMessage' => 'scenario='.$scenario,
+            ];
+
+            // Optional: for 78 provider sometimes includes identifiers.
+            if ($scenario === 'already_fiscalized') {
+                $body['ResponseCode'] = 'FAKE-JIR-'.$uuid;
+                $body['UIDRequest'] = 'FAKE-IKOF-'.$uuid;
+                $body['Url'] = ['Value' => 'https://fake.qr.local/qr/'.$uuid];
+            }
+
+            return response()->json($body, 422);
+        }
+
         $uuid = Str::uuid()->toString();
 
         return response()->json([
@@ -78,6 +142,7 @@ class FakeFiscalApiController extends Controller
             'Url' => [
                 'Value' => 'https://fake.qr.local/qr/'.$uuid,
             ],
+            'RawMessage' => 'OK',
         ]);
     }
 }

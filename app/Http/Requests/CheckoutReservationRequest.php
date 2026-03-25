@@ -7,6 +7,17 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class CheckoutReservationRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        $license = $this->input('license_plate');
+        if (is_string($license)) {
+            $normalized = strtoupper(trim($license));
+            $normalized = preg_replace('/\s+/', '', $normalized) ?? $normalized;
+            $normalized = preg_replace('/[^A-Z0-9]/', '', $normalized) ?? $normalized;
+            $this->merge(['license_plate' => $normalized]);
+        }
+    }
+
     public function authorize(): bool
     {
         return true;
@@ -30,9 +41,18 @@ class CheckoutReservationRequest extends FormRequest
             'reservation_date' => ['required', 'date', 'after_or_equal:today'],
             'user_name' => [$usingSavedVehicle ? 'nullable' : 'required', 'string', 'max:255'],
             'country' => [$usingSavedVehicle ? 'nullable' : 'required', 'string', 'max:100'],
-            'license_plate' => [$usingSavedVehicle ? 'nullable' : 'required', 'string', 'max:50'],
+            'license_plate' => [
+                $usingSavedVehicle ? 'nullable' : 'required',
+                'string',
+                'max:50',
+                'regex:/^[A-Z0-9]+$/',
+            ],
             'vehicle_type_id' => [$usingSavedVehicle ? 'nullable' : 'required', 'integer', 'exists:vehicle_types,id'],
             'email' => [$usingSavedVehicle ? 'nullable' : 'required', 'email', 'max:255'],
+
+            // Guest UX hard requirements (not persisted; audit/UI later).
+            'accept_terms' => ['required', 'accepted'],
+            'accept_privacy' => ['required', 'accepted'],
         ];
     }
 }

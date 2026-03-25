@@ -54,11 +54,16 @@ return [
 
     'fiscalization' => [
         'driver' => env('FISCALIZATION_DRIVER', 'fake'), // fake | real
+        // Optional helper for local QA: scenario passed to fake fiscal endpoints (e.g. deposit_missing, provider_down, tax_server_error).
+        'fake_scenario' => env('FISCAL_FAKE_SCENARIO'),
     ],
 
     'fiscal' => [
         'api_url' => env('FISCAL_API_URL'),
         'api_token' => env('FISCAL_API_TOKEN'),
+        'enu_identifier' => env('FISCAL_ENU_IDENTIFIER'),
+        'user_code' => env('FISCAL_USER_CODE'),
+        'user_name' => env('FISCAL_USER_NAME'),
         'driver' => env('FISCALIZATION_DRIVER', 'real'),
     ],
 

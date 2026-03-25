@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Events\PaymentFailed;
 use App\Models\Reservation;
 use App\Models\TempData;
+use App\Services\Payment\ErrorClassifier;
 use App\Services\Payment\PaymentSuccessHandler;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -115,11 +116,23 @@ class PaymentCallbackJob implements ShouldQueue, ShouldBeUnique
                 return;
             }
             $from = $temp->status;
+
+            $rawCode = $this->payload['error_code']
+                ?? ($this->payload['code'] ?? ($this->payload['errorCode'] ?? null))
+                ?? ($this->rawPayload['code'] ?? ($this->rawPayload['errorCode'] ?? null));
+
+            $rawMessage = $this->payload['error_reason']
+                ?? ($this->payload['message'] ?? ($this->payload['errorMessage'] ?? null))
+                ?? ($this->rawPayload['message'] ?? ($this->rawPayload['errorMessage'] ?? null));
+
+            $classified = app(ErrorClassifier::class)->classify('bankart', $rawCode, $rawMessage, is_array($this->rawPayload) ? $this->rawPayload : null);
+
             $temp->update([
                 'status' => TempData::STATUS_CANCELED,
                 'raw_callback_payload' => $this->rawPayload,
-                'callback_error_code' => $this->payload['error_code'] ?? null,
-                'callback_error_reason' => $this->payload['error_reason'] ?? null,
+                'callback_error_code' => $rawCode,
+                'callback_error_reason' => $rawMessage,
+                'resolution_reason' => $classified['resolution_reason'],
             ]);
             TempData::logStateTransition($temp->merchant_transaction_id, $from, TempData::STATUS_CANCELED, 'CANCEL/ERROR/failed');
             app(PaymentSuccessHandler::class)->releaseSoftLock($temp, false);

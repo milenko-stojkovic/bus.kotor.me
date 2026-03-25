@@ -37,6 +37,23 @@ class ListOfTimeSlot extends Model
         }
     }
 
+    /**
+     * Vraća kraj termina za dati datum (parsira "HH:MM" iz time_slot, npr. "08:00 - 08:20" → 08:20).
+     */
+    public function getEndTimeForDate(Carbon $date): ?Carbon
+    {
+        $parts = explode(' - ', $this->time_slot, 2);
+        $end = trim($parts[1] ?? '');
+        if ($end === '') {
+            return null;
+        }
+        try {
+            return $date->copy()->setTimeFromTimeString($end);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
     /** Dnevni podaci o kapacitetu po ovom terminu (za validaciju). */
     public function dailyParkingData(): HasMany
     {

@@ -51,7 +51,7 @@ class CheckoutController extends Controller
         $retryToken = Str::uuid()->toString();
 
         try {
-            $temp = DB::transaction(function () use ($request, $date, $dropOffSlotId, $merchantTransactionId, $retryToken) {
+            $temp = DB::transaction(function () use ($request, $date, $dropOffSlotId, $merchantTransactionId, $retryToken, $snapshot) {
                 // Atomic: lock red za (date, time_slot) da drugi request sačeka
                 $daily = DailyParkingData::where('date', $date)
                     ->where('time_slot_id', $dropOffSlotId)

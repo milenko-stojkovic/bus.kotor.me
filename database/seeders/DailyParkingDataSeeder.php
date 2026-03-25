@@ -13,13 +13,13 @@ class DailyParkingDataSeeder extends Seeder
         $daysAhead = 90;
 
         $slots = DB::table('list_of_time_slots')->pluck('id')->toArray();
-        $capacity = (int) DB::table('system_config')
+        $capacity = (int) (DB::table('system_config')
             ->where('name', 'available_parking_slots')
-            ->value('value');
+            ->value('value') ?? 9);
 
         $rows = [];
 
-        for ($i = 0; $i < $daysAhead; $i++) {
+        for ($i = 0; $i <= $daysAhead; $i++) {
             $date = Carbon::today()->addDays($i)->toDateString();
 
             foreach ($slots as $slotId) {
@@ -36,7 +36,11 @@ class DailyParkingDataSeeder extends Seeder
         }
 
         foreach (array_chunk($rows, 500) as $chunk) {
-            DB::table('daily_parking_data')->insert($chunk);
+            DB::table('daily_parking_data')->upsert(
+                $chunk,
+                ['date', 'time_slot_id'],
+                ['capacity', 'updated_at']
+            );
         }
     }
 }

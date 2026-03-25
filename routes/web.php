@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\ReservationActionController;
 use App\Http\Controllers\Admin\LateSuccessController;
 use App\Http\Controllers\Admin\ReservationListController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\GuestReservationController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\UserReservationController;
 use App\Http\Controllers\FakeBankCompleteController;
@@ -14,9 +15,7 @@ use App\Http\Controllers\ReservationStatusController;
 use App\Http\Controllers\VehicleController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/', GuestReservationController::class)->name('guest.reserve');
 
 // Guest: manually change UI language (session). Auth uses users.lang.
 Route::get('/locale/{locale}', LocaleController::class)->name('locale.switch');

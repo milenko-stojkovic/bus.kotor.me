@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Contracts\CallbackSignatureValidator;
 use App\Http\Controllers\Controller;
 use App\Jobs\PaymentCallbackJob;
+use App\Models\TempData;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -31,9 +32,12 @@ class PaymentCallbackController extends Controller
         ]);
 
         if (! $signatureValidator->validate($request)) {
+            $txId = $this->extractMerchantTransactionIdFromRequest($request);
+            $this->auditTempDataCallback400($txId, 'invalid_signature', 'Invalid callback signature');
+
             Log::channel('payments')->warning('Payment callback signature invalid', [
                 'ip' => $request->ip(),
-                'merchant_transaction_id' => $request->input('merchant_transaction_id'),
+                'merchant_transaction_id' => $txId,
             ]);
 
             return response()->json(['message' => 'Invalid callback signature.'], 400);
@@ -46,8 +50,12 @@ class PaymentCallbackController extends Controller
         $rawBody = $request->getContent();
         $decoded = json_decode($rawBody, true);
         if (! is_array($decoded)) {
+            $txId = $this->extractMerchantTransactionIdFromRequest($request);
+            $this->auditTempDataCallback400($txId, 'malformed_callback', 'Malformed callback payload');
+
             Log::channel('payments')->warning('Payment callback malformed JSON', [
                 'ip' => $request->ip(),
+                'merchant_transaction_id' => $txId,
             ]);
 
             return response()->json(['message' => 'Malformed callback JSON.'], 400);
@@ -68,8 +76,11 @@ class PaymentCallbackController extends Controller
             'error_reason' => ['nullable', 'string', 'max:500'],
         ]);
         if ($validator->fails()) {
+            $txId = is_string($normalized['merchant_transaction_id'] ?? null) ? $normalized['merchant_transaction_id'] : null;
+            $this->auditTempDataCallback400($txId, 'malformed_callback', 'Malformed callback payload');
+
             Log::channel('payments')->warning('Payment callback payload invalid', [
-                'merchant_transaction_id' => $normalized['merchant_transaction_id'] ?? null,
+                'merchant_transaction_id' => $txId,
                 'status' => $normalized['status'] ?? null,
                 'errors' => $validator->errors()->toArray(),
             ]);
@@ -131,5 +142,57 @@ class PaymentCallbackController extends Controller
             'error_code' => $payload['error_code'] ?? $payload['errorCode'] ?? null,
             'error_reason' => $payload['error_reason'] ?? $payload['errorReason'] ?? null,
         ];
+    }
+
+    private function extractMerchantTransactionIdFromRequest(Request $request): ?string
+    {
+        $txId = $request->input('merchant_transaction_id') ?? $request->input('merchantTransactionId');
+        if (is_string($txId)) {
+            $txId = trim($txId);
+            if ($txId !== '' && mb_strlen($txId) <= 64) {
+                return $txId;
+            }
+        }
+
+        $rawBody = $request->getContent();
+        if (! is_string($rawBody) || trim($rawBody) === '') {
+            return null;
+        }
+        $decoded = json_decode($rawBody, true);
+        if (! is_array($decoded)) {
+            return null;
+        }
+        $txId = $decoded['merchant_transaction_id'] ?? $decoded['merchantTransactionId'] ?? null;
+        if (! is_string($txId)) {
+            return null;
+        }
+        $txId = trim($txId);
+
+        return ($txId !== '' && mb_strlen($txId) <= 64) ? $txId : null;
+    }
+
+    private function auditTempDataCallback400(?string $merchantTransactionId, string $code, string $reason): void
+    {
+        if (! is_string($merchantTransactionId) || $merchantTransactionId === '') {
+            return;
+        }
+
+        $temp = TempData::query()
+            ->where('merchant_transaction_id', $merchantTransactionId)
+            ->first();
+        if (! $temp) {
+            return;
+        }
+
+        $temp->update([
+            'callback_error_code' => $code,
+            'callback_error_reason' => $reason,
+            'resolution_reason' => $code,
+        ]);
+
+        Log::channel('payments')->info('Payment callback 400 audited to temp_data', [
+            'merchant_transaction_id' => $merchantTransactionId,
+            'callback_error_code' => $code,
+        ]);
     }
 }
