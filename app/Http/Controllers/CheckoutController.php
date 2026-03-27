@@ -52,14 +52,25 @@ class CheckoutController extends Controller
 
         try {
             $temp = DB::transaction(function () use ($request, $date, $dropOffSlotId, $merchantTransactionId, $retryToken, $snapshot) {
-                // Atomic: lock red za (date, time_slot) da drugi request sačeka
-                $daily = DailyParkingData::where('date', $date)
-                    ->where('time_slot_id', $dropOffSlotId)
-                    ->lockForUpdate()
-                    ->first();
+                $pickUpSlotId = (int) $request->validated('pick_up_time_slot_id');
+                $slotIds = array_values(array_unique([
+                    (int) $dropOffSlotId,
+                    $pickUpSlotId,
+                ]));
 
-                if (! $daily || $daily->availableCapacity() < 1) {
-                    throw new NoCapacityException(__('No availability for selected slot.'));
+                // Atomic: lock BOTH selected slots (arrival + departure).
+                $dailyRows = DailyParkingData::query()
+                    ->where('date', $date)
+                    ->whereIn('time_slot_id', $slotIds)
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('time_slot_id');
+
+                foreach ($slotIds as $slotId) {
+                    $daily = $dailyRows->get($slotId);
+                    if (! $daily || $daily->availableCapacity() < 1) {
+                        throw new NoCapacityException(__('No availability for selected slot.'));
+                    }
                 }
 
                 $preferredLocale = $request->user()
@@ -75,7 +86,7 @@ class CheckoutController extends Controller
                     'user_id' => $request->user()?->id,
                     'vehicle_id' => $snapshot['vehicle_id'],
                     'drop_off_time_slot_id' => $dropOffSlotId,
-                    'pick_up_time_slot_id' => $request->validated('pick_up_time_slot_id'),
+                    'pick_up_time_slot_id' => $pickUpSlotId,
                     'reservation_date' => $date,
                     'user_name' => $snapshot['user_name'],
                     'country' => $snapshot['country'],
@@ -86,7 +97,14 @@ class CheckoutController extends Controller
                     'status' => TempData::STATUS_PENDING,
                 ]);
 
-                $daily->increment('pending');
+                // Soft-lock capacity for BOTH selected slots (arrival + departure).
+                foreach ($slotIds as $slotId) {
+                    /** @var DailyParkingData|null $row */
+                    $row = $dailyRows->get($slotId);
+                    if ($row) {
+                        $row->increment('pending');
+                    }
+                }
 
                 Log::channel('payments')->info('Payment init', [
                     'merchant_transaction_id' => $merchantTransactionId,
@@ -121,8 +139,13 @@ class CheckoutController extends Controller
         }
 
         // createSession nije uspeo → vrati hold (decrement pending)
-        DailyParkingData::where('date', $date)
-            ->where('time_slot_id', $dropOffSlotId)
+        $slotIds = array_values(array_unique([
+            (int) $dropOffSlotId,
+            (int) $request->validated('pick_up_time_slot_id'),
+        ]));
+        DailyParkingData::query()
+            ->where('date', $date)
+            ->whereIn('time_slot_id', $slotIds)
             ->decrement('pending');
         $message = $session->errorMessage ?? 'Payment temporarily unavailable.';
         return $request->expectsJson()

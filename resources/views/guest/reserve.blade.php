@@ -3,15 +3,16 @@
         $minDate = now()->toDateString();
         $maxDate = now()->addDays(90)->toDateString();
         $locale = app()->getLocale();
-        $isCg = $locale === 'cg';
-
-        $t = fn (string $cg, string $en) => $isCg ? $cg : $en;
+        $ui = fn (string $key) => \App\Support\UiText::t('reservation', $key);
+        $termsTitle = $locale === 'cg' ? 'Uslovi korišćenja' : 'Terms and Conditions';
+        $locationLabel = $locale === 'cg' ? 'Lokacija:' : 'Location:';
+        $termsLinkLabel = $locale === 'cg' ? 'uslovima korišćenja' : 'terms and conditions';
     @endphp
 
     <div class="space-y-6">
         <div class="space-y-1">
-            <h1 class="text-lg font-semibold">{{ $t('Rezervacija (guest)', 'Reservation (guest)') }}</h1>
-            <p class="text-sm text-gray-600">{{ $t('Korak-po-korak: datum → dolazak → odlazak → podaci', 'Step-by-step: date → arrival → departure → details') }}</p>
+            <h1 class="text-lg font-semibold">{{ $ui('title') }}</h1>
+            <p class="text-sm text-gray-600">{{ $ui('step_hint') }}</p>
         </div>
 
         @if (session('message'))
@@ -23,7 +24,7 @@
 
         <form method="GET" action="{{ route('guest.reserve', [], false) }}" class="space-y-4" id="stepForm">
             <div>
-                <x-input-label for="reservation_date" :value="$t('Datum', 'Date')" />
+                <x-input-label for="reservation_date" :value="$ui('date')" />
                 <input
                     id="reservation_date"
                     name="reservation_date"
@@ -37,14 +38,14 @@
             </div>
 
             <div>
-                <x-input-label for="drop_off_time_slot_id" :value="$t('Dolazak (Arrival)', 'Arrival time')" />
+                <x-input-label for="drop_off_time_slot_id" :value="$ui('arrival_time')" />
                 <select
                     id="drop_off_time_slot_id"
                     name="drop_off_time_slot_id"
                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     @disabled(empty($selected_date))
                 >
-                    <option value="">{{ $t('Izaberi termin', 'Select a time slot') }}</option>
+                    <option value="">{{ $ui('select_time_slot') }}</option>
                     @foreach (($arrival_slots ?? []) as $s)
                         <option value="{{ $s['id'] }}" @selected((int)($arrival_id ?? 0) === (int)$s['id']) @disabled((bool)$s['disabled'])>
                             {{ $s['label'] }}
@@ -55,14 +56,14 @@
             </div>
 
             <div>
-                <x-input-label for="pick_up_time_slot_id" :value="$t('Odlazak (Departure)', 'Departure time')" />
+                <x-input-label for="pick_up_time_slot_id" :value="$ui('departure_time')" />
                 <select
                     id="pick_up_time_slot_id"
                     name="pick_up_time_slot_id"
                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     @disabled($departure_disabled ?? true)
                 >
-                    <option value="">{{ $t('Izaberi termin', 'Select a time slot') }}</option>
+                    <option value="">{{ $ui('select_time_slot') }}</option>
                     @foreach (($departure_slots ?? []) as $s)
                         <option value="{{ $s['id'] }}" @selected((int)($departure_id ?? 0) === (int)$s['id']) @disabled((bool)$s['disabled'])>
                             {{ $s['label'] }}
@@ -70,20 +71,20 @@
                     @endforeach
                 </select>
                 <p class="mt-1 text-xs text-gray-500">
-                    {{ $t('Odlazak je onemogućen dok ne izabereš dolazak.', 'Departure is disabled until you choose arrival.') }}
+                    {{ $ui('departure_disabled_hint') }}
                 </p>
                 <x-input-error class="mt-2" :messages="$errors->get('pick_up_time_slot_id')" />
             </div>
 
             <div>
-                <x-input-label for="vehicle_type_id_step" :value="$t('Kategorija vozila', 'Vehicle category')" />
+                <x-input-label for="vehicle_type_id_step" :value="$ui('vehicle_category')" />
                 <select
                     id="vehicle_type_id_step"
                     name="vehicle_type_id"
                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     @disabled(empty($selected_date) || empty($arrival_id) || empty($departure_id))
                 >
-                    <option value="">{{ $t('Izaberi', 'Select') }}</option>
+                    <option value="">{{ $ui('select_vehicle_category') }}</option>
                     @foreach (($vehicle_types ?? []) as $vt)
                         <option value="{{ $vt->id }}" @selected((int)request('vehicle_type_id') === (int)$vt->id)>
                             {{ ($vt->getTranslatedName(app()->getLocale()) ?: ('#'.$vt->id)) . (is_numeric((string) $vt->price) ? (' — '.number_format((float) $vt->price, 2, '.', '').' EUR') : '') }}
@@ -105,26 +106,26 @@
             <div class="rounded-md bg-gray-50 p-3 text-sm text-gray-800">
                 @if (!empty($arrival_id) && !empty($departure_id))
                     @if ($is_free_reservation ?? false)
-                        <strong>{{ $t('Ova rezervacija je besplatna', 'This reservation is free') }}</strong>
+                        <strong>{{ $ui('free_reservation') }}</strong>
                     @else
-                        <strong>{{ $t('Ukupno za plaćanje', 'Total to pay') }}:</strong>
+                        <strong>{{ $ui('total_to_pay') }}:</strong>
                         {{ $paid_amount ?? '—' }} EUR
                     @endif
                 @else
-                    {{ $t('Izaberi dolazak i odlazak da vidiš da li je free ili paid.', 'Select arrival and departure to see if it is free or paid.') }}
+                    {{ \App\Support\UiText::t('reservation', 'step_hint', 'Select arrival and departure to continue.') }}
                 @endif
             </div>
 
             <div>
-                <x-input-label for="user_name" :value="$t('Naziv firme (Company name)', 'Company name')" />
+                <x-input-label for="user_name" :value="$ui('company_name')" />
                 <x-text-input id="user_name" name="user_name" type="text" class="mt-1 block w-full" :value="old('user_name', request('user_name'))" required />
                 <x-input-error class="mt-2" :messages="$errors->get('user_name')" />
             </div>
 
             <div>
-                <x-input-label for="country" :value="$t('Država (Country)', 'Country')" />
+                <x-input-label for="country" :value="$ui('country')" />
                 <select id="country" name="country" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
-                    <option value="">{{ $t('Izaberi', 'Select') }}</option>
+                    <option value="">{{ $ui('select_country') }}</option>
                     @foreach (($countries ?? []) as $code => $labels)
                         @php
                             $label = is_array($labels) ? ($labels[$locale] ?? ($labels['en'] ?? $code)) : (string) $labels;
@@ -136,7 +137,7 @@
             </div>
 
             <div>
-                <x-input-label for="license_plate" :value="$t('Registracija (Registration plates)', 'Registration plates')" />
+                <x-input-label for="license_plate" :value="$ui('registration_plates')" />
                 <x-text-input
                     id="license_plate"
                     name="license_plate"
@@ -152,7 +153,7 @@
             </div>
 
             <div>
-                <x-input-label for="email" :value="$t('Email', 'Email')" />
+                <x-input-label for="email" :value="$ui('email')" />
                 <x-text-input id="email" name="email" type="email" class="mt-1 block w-full" :value="old('email', request('email'))" required />
                 <x-input-error class="mt-2" :messages="$errors->get('email')" />
             </div>
@@ -160,15 +161,28 @@
             <div class="space-y-2">
                 <label class="flex items-start gap-2 text-sm">
                     <input type="checkbox" name="accept_terms" value="1" class="mt-1 rounded border-gray-300" {{ old('accept_terms') ? 'checked' : '' }} required>
-                    <span>{{ $t('Slažem se sa uslovima korišćenja', 'I agree to the terms of service') }}</span>
+                    <span>
+                        {{ $locale === 'cg' ? 'Saglasan/a sam sa' : 'I agree to the' }}
+                        <button type="button" id="openTermsModal" class="underline text-blue-700 hover:text-blue-900">
+                            {{ $termsLinkLabel }}
+                        </button>
+                    </span>
                 </label>
                 <x-input-error class="mt-2" :messages="$errors->get('accept_terms')" />
 
                 <label class="flex items-start gap-2 text-sm">
                     <input type="checkbox" name="accept_privacy" value="1" class="mt-1 rounded border-gray-300" {{ old('accept_privacy') ? 'checked' : '' }} required>
-                    <span>{{ $t('Slažem se sa politikom privatnosti', 'I agree to the privacy policy') }}</span>
+                    <span>{{ $ui('accept_privacy') }}</span>
                 </label>
                 <x-input-error class="mt-2" :messages="$errors->get('accept_privacy')" />
+            </div>
+
+            <div class="text-sm text-gray-700 space-y-1">
+                <div class="font-medium">{{ $locationLabel }}</div>
+                <div class="flex flex-col gap-1">
+                    <a href="https://maps.app.goo.gl/oXD6SEzjyXtm4c586" target="_blank" rel="noopener" class="underline text-blue-700 hover:text-blue-900">Autoboka</a>
+                    <a href="https://maps.app.goo.gl/kPAD6mipzZTjCCYE7" target="_blank" rel="noopener" class="underline text-blue-700 hover:text-blue-900">Puč</a>
+                </div>
             </div>
 
             <button
@@ -177,9 +191,28 @@
                 class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled
             >
-                {{ $t('Rezerviši (Reserve)', 'Reserve') }}
+                {{ $ui('reserve') }}
             </button>
         </form>
+    </div>
+
+    <div id="termsModal" class="fixed inset-0 z-50 hidden" aria-hidden="true" role="dialog" aria-modal="true">
+        <div id="termsOverlay" class="absolute inset-0 bg-black/50"></div>
+        <div class="relative mx-auto mt-10 w-[92%] max-w-2xl rounded-lg bg-white shadow-lg">
+            <div class="flex items-center justify-between border-b px-4 py-3">
+                <h2 class="text-base font-semibold">{{ $termsTitle }}</h2>
+                <button type="button" id="closeTermsModal" class="rounded px-2 py-1 text-sm text-gray-600 hover:bg-gray-100">
+                    {{ $locale === 'cg' ? 'Zatvori' : 'Close' }}
+                </button>
+            </div>
+            <div class="max-h-[70vh] overflow-y-auto px-4 py-3 text-sm text-gray-700 space-y-3">
+                @if ($locale === 'cg')
+                    @include('partials.terms_cg')
+                @else
+                    @include('partials.terms_en')
+                @endif
+            </div>
+        </div>
     </div>
 
     <script>
@@ -239,6 +272,30 @@
                 postForm.addEventListener('change', refresh);
                 refresh();
             }
+
+            const termsModal = document.getElementById('termsModal');
+            const openTerms = document.getElementById('openTermsModal');
+            const closeTerms = document.getElementById('closeTermsModal');
+            const termsOverlay = document.getElementById('termsOverlay');
+
+            function showTermsModal() {
+                if (!termsModal) return;
+                termsModal.classList.remove('hidden');
+                termsModal.setAttribute('aria-hidden', 'false');
+            }
+
+            function hideTermsModal() {
+                if (!termsModal) return;
+                termsModal.classList.add('hidden');
+                termsModal.setAttribute('aria-hidden', 'true');
+            }
+
+            if (openTerms) openTerms.addEventListener('click', showTermsModal);
+            if (closeTerms) closeTerms.addEventListener('click', hideTermsModal);
+            if (termsOverlay) termsOverlay.addEventListener('click', hideTermsModal);
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') hideTermsModal();
+            });
         })();
     </script>
 </x-guest-layout>

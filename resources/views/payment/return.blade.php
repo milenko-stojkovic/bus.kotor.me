@@ -3,6 +3,14 @@
     @if ($result['status'] === 'success')
         <p class="text-green-700 font-medium">Rezervacija je uspešno kreirana.</p>
         <p class="text-sm text-gray-600">Hvala vam na plaćanju. Potvrda će vam stići putem emaila.</p>
+        @if (app()->environment('local') && config('services.fiscalization.driver') === 'fake')
+            <div class="rounded-md bg-blue-50 p-3 text-sm text-blue-800">
+                <div class="font-medium">Fake fiskal scenariji</div>
+                <a href="{{ route('payment.fake-fiscal', ['merchant_transaction_id' => $merchant_transaction_id], false) }}" class="underline">
+                    Otvori panel za izbor scenarija
+                </a>
+            </div>
+        @endif
         <a href="{{ $result['user_type'] === 'auth' ? $result['redirect_auth'] : $result['redirect_guest'] }}"
            class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition">
             {{ $result['user_type'] === 'auth' ? __('Moje rezervacije') : __('Nova rezervacija') }}
@@ -14,10 +22,10 @@
             {{ $result['user_type'] === 'auth' ? __('Moje rezervacije') : __('Nova rezervacija') }}
         </a>
     @elseif ($result['status'] === 'pending')
-        <p class="text-amber-700 font-medium">Plaćanje se obrađuje.</p>
+        <p class="text-amber-700 font-medium">{{ \App\Support\UiText::t('checkout', 'payment_pending', 'Payment pending') }}</p>
         <p class="text-sm text-gray-600">Ako ste završili plaćanje, sačekajte ili osvežite stranicu. Status se uvek čita iz baze.</p>
         <div class="flex flex-wrap gap-2">
-            <a href="{{ url()->current() }}" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition">
+            <a href="{{ request()->fullUrl() }}" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition">
                 Osvežite stranicu
             </a>
             <a href="{{ $result['redirect_guest'] }}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50 focus:outline-none transition">

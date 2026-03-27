@@ -62,6 +62,12 @@ Ovaj dokument služi kao brz podsetnik "šta je gotovo" i "šta je ostalo" da bi
 4. Po potrebi (ako UX traži):
    - migracija sa sync createSession na async init flow
 
+5. Fiskal račun nakon uspešnog retry-a (TODO, ne implementirati sada):
+   - Kada naknadna fiskalizacija uspe (cron `post-fiscalization:retry` ili admin retry), formalizovati generisanje **kompletnog fiskalizovanog računa (PDF)**.
+   - Poslati korisniku **kompletan fiskalizovani račun** (mail) nakon uspešnog retry-a.
+   - Jasno razdvojiti nefiskalni fallback dokument (poslat odmah nakon plaćanja) od naknadno poslatog fiskalizovanog računa.
+   - Ne blokirati slanje fiskalnog računa ako je ranije poslat nefiskalni fallback.
+
 ## 5) Brzi test checklist (lokalno)
 
 - `BANK_DRIVER=fake`, `FISCALIZATION_DRIVER=fake`

@@ -35,12 +35,14 @@ class ExpirePendingReservations extends Command
                 $from = $temp->status;
                 $temp->update(['status' => TempData::STATUS_EXPIRED]);
                 TempData::logStateTransition($temp->merchant_transaction_id, $from, TempData::STATUS_EXPIRED, 'cron: pending expired');
-                $daily = DailyParkingData::where('date', $temp->reservation_date)
-                    ->where('time_slot_id', $temp->drop_off_time_slot_id)
-                    ->first();
-                if ($daily) {
-                    $daily->decrement('pending');
-                }
+                $slotIds = array_values(array_unique([
+                    (int) $temp->drop_off_time_slot_id,
+                    (int) $temp->pick_up_time_slot_id,
+                ]));
+                DailyParkingData::query()
+                    ->where('date', $temp->reservation_date)
+                    ->whereIn('time_slot_id', $slotIds)
+                    ->decrement('pending');
             });
         }
 

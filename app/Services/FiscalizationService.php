@@ -44,6 +44,16 @@ class FiscalizationService
 
         $scenario = (string) (config('services.fiscalization.fake_scenario') ?? '');
         $scenario = trim($scenario);
+        if ($scenario === '') {
+            try {
+                $sessionScenario = request()->session()->get('fiscal_fake_scenario');
+                if (is_string($sessionScenario)) {
+                    $scenario = trim($sessionScenario);
+                }
+            } catch (\Throwable) {
+                // no session/request context (e.g. queue worker)
+            }
+        }
 
         $depositUrl = url(route('api.efiscal.deposit'));
         $receiptUrl = url(route('api.efiscal.fiscal-receipt'));

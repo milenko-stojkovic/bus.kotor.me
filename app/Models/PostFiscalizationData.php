@@ -22,6 +22,7 @@ class PostFiscalizationData extends Model
         'attempts',
         'next_retry_at',
         'resolved_at',
+        'admin_notified_at',
     ];
 
     protected function casts(): array
@@ -29,6 +30,7 @@ class PostFiscalizationData extends Model
         return [
             'next_retry_at' => 'datetime',
             'resolved_at' => 'datetime',
+            'admin_notified_at' => 'datetime',
         ];
     }
 

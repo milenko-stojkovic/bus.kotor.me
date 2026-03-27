@@ -5,9 +5,11 @@ use App\Http\Controllers\Admin\LateSuccessController;
 use App\Http\Controllers\Admin\ReservationListController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\GuestReservationController;
+use App\Http\Controllers\LandingController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\UserReservationController;
 use App\Http\Controllers\FakeBankCompleteController;
+use App\Http\Controllers\FakeFiscalScenarioController;
 use App\Http\Controllers\PaymentReturnController;
 use App\Http\Controllers\PaymentResultController;
 use App\Http\Controllers\ProfileController;
@@ -15,7 +17,8 @@ use App\Http\Controllers\ReservationStatusController;
 use App\Http\Controllers\VehicleController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', GuestReservationController::class)->name('guest.reserve');
+Route::get('/', LandingController::class)->name('landing');
+Route::get('/guest/reserve', GuestReservationController::class)->name('guest.reserve');
 
 // Guest: manually change UI language (session). Auth uses users.lang.
 Route::get('/locale/{locale}', LocaleController::class)->name('locale.switch');
@@ -23,12 +26,12 @@ Route::get('/locale/{locale}', LocaleController::class)->name('locale.switch');
 // Checkout: validacija, dostupnost, temp_data (pending), soft-lock, createSession (sync), redirect na payment_url ili 503
 Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
 
-// Guest nakon failed plaćanja: /reservations?retry_token=... → redirect na / sa query.
-// Frontend na /: ako je retry_token u URL, pozvati GET /api/reservations/retry/{token} i popuniti formu;
+// Guest nakon failed plaćanja: /reservations?retry_token=... → redirect na /guest/reserve sa query.
+// Frontend na /guest/reserve: ako je retry_token u URL, pozvati GET /api/reservations/retry/{token} i popuniti formu;
 // prikazati session('message') i session('error_reason') ako postoje.
 Route::get('/reservations', function () {
     $query = request()->getQueryString();
-    return redirect('/' . ($query ? '?' . $query : ''));
+    return redirect('/guest/reserve' . ($query ? '?' . $query : ''));
 })->name('reservations.create');
 
 // Polling endpoint za status rezervacije (UI periodično poziva sa merchant_transaction_id)
@@ -51,6 +54,12 @@ Route::get('/payment/fake-bank', function (\Illuminate\Http\Request $request) {
 })->name('payment.fake-bank');
 Route::get('/fake-bank/complete', [FakeBankCompleteController::class, 'completeGet'])->name('fake-bank.complete');
 Route::post('/payment/fake-bank/complete', FakeBankCompleteController::class)->name('payment.fake-bank.complete');
+
+// Fake fiscal scenario selector (local only)
+Route::get('/payment/fake-fiscal', [FakeFiscalScenarioController::class, 'index'])->name('payment.fake-fiscal');
+Route::post('/payment/fake-fiscal/apply', [FakeFiscalScenarioController::class, 'apply'])->name('payment.fake-fiscal.apply');
+Route::post('/payment/fake-fiscal/set', [FakeFiscalScenarioController::class, 'set'])->name('payment.fake-fiscal.set');
+Route::post('/payment/fake-fiscal/clear', [FakeFiscalScenarioController::class, 'clear'])->name('payment.fake-fiscal.clear');
 
 Route::get('/dashboard', function () {
     return view('dashboard');

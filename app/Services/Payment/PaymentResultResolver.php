@@ -4,6 +4,7 @@ namespace App\Services\Payment;
 
 use App\Models\Reservation;
 use App\Models\TempData;
+use App\Support\UiText;
 
 /**
  * Jedini izvor istine za status plaćanja: baza (reservation + temp_data).
@@ -12,7 +13,7 @@ use App\Models\TempData;
  */
 class PaymentResultResolver
 {
-    public const MESSAGE_FAILED = 'Plaćanje nije uspelo. Vaši podaci su sačuvani – pokušajte ponovo.';
+    public const MESSAGE_FAILED_FALLBACK = 'Plaćanje nije uspelo. Vaši podaci su sačuvani – pokušajte ponovo.';
 
     /**
      * Vraća status za merchant_transaction_id iz baze.
@@ -21,6 +22,8 @@ class PaymentResultResolver
      */
     public function resolve(string $merchantTransactionId): ?array
     {
+        $locale = app()->getLocale();
+
         $reservation = Reservation::where('merchant_transaction_id', $merchantTransactionId)->first();
         if ($reservation) {
             return [
@@ -43,7 +46,7 @@ class PaymentResultResolver
                 return [
                     'status' => 'failed',
                     'user_type' => $userType,
-                    'message' => self::MESSAGE_FAILED,
+                    'message' => UiText::t('errors', 'payment_failed', self::MESSAGE_FAILED_FALLBACK, $locale),
                     'retry_token' => $temp->retry_token,
                     'error_reason' => $temp->callback_error_reason,
                     'redirect_guest' => $temp->retry_token

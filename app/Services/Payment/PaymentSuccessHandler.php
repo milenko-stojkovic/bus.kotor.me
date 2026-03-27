@@ -96,17 +96,21 @@ class PaymentSuccessHandler
 
     private function doReleaseSoftLock(TempData $temp, bool $incrementReserved): void
     {
-        $daily = DailyParkingData::where('date', $temp->reservation_date)
-            ->where('time_slot_id', $temp->drop_off_time_slot_id)
-            ->first();
+        $slotIds = array_values(array_unique([
+            (int) $temp->drop_off_time_slot_id,
+            (int) $temp->pick_up_time_slot_id,
+        ]));
 
-        if (! $daily) {
-            return;
-        }
+        $rows = DailyParkingData::query()
+            ->where('date', $temp->reservation_date)
+            ->whereIn('time_slot_id', $slotIds)
+            ->get();
 
-        $daily->decrement('pending');
-        if ($incrementReserved) {
-            $daily->increment('reserved');
+        foreach ($rows as $daily) {
+            $daily->decrement('pending');
+            if ($incrementReserved) {
+                $daily->increment('reserved');
+            }
         }
     }
 

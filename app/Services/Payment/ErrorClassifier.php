@@ -128,12 +128,31 @@ class ErrorClassifier
      */
     private function classifyFiscal(?int $code, ?string $message, ?array $payload): array
     {
+        $msg = $message !== null ? strtolower($message) : '';
+
+        // Explicit timeout classification (do NOT notify admin immediately; retryable).
+        if ($msg !== '' && str_contains($msg, 'timeout')) {
+            return [
+                'resolution_reason' => 'timeout',
+                'category' => 'system',
+                'notify_admin' => false,
+                'user_message_key' => 'reservation_confirmed_fiscal_pending',
+                'retryable' => true,
+            ];
+        }
+
         if ($code !== null && $code >= 900 && $code <= 920) {
             return $this->systemRetry('tax_server_error', 'fiscal_pending');
         }
 
         return match ($code) {
-            78 => $this->systemNoRetry('already_fiscalized', 'fiscal_pending'),
+            78 => [
+                'resolution_reason' => 'already_fiscalized',
+                'category' => 'system',
+                'notify_admin' => false,
+                'user_message_key' => 'reservation_confirmed_invoice_later',
+                'retryable' => false,
+            ],
             58 => $this->systemRetry('deposit_missing', 'fiscal_pending'),
             11 => $this->systemNoRetry('validation_error', 'fiscal_pending'),
             44 => $this->systemNoRetry('vat_config_error', 'fiscal_pending'),
@@ -279,6 +298,7 @@ class ErrorClassifier
             'provider_down' => 'reservation_confirmed_fiscal_pending',
             'tax_server_error' => 'reservation_confirmed_fiscal_pending',
             'temporary_service_down' => 'reservation_confirmed_fiscal_pending',
+            'timeout' => 'reservation_confirmed_fiscal_pending',
             'unknown_fiscal_error' => 'reservation_confirmed_fiscal_pending',
 
             default => 'payment_processing_issue',

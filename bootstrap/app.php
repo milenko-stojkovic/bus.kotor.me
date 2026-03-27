@@ -30,6 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('post-fiscalization:retry')->everyTenMinutes();
         $schedule->command('reservations:expire-pending')->everyTenMinutes();
         $schedule->command('reservations:assign-late-success')->everyFifteenMinutes();
+        $schedule->command('parking:sync-days')->dailyAt('00:05');
         $schedule->command('parking:update-availability')->everyTenMinutes();
         $schedule->command('reservations:send-emails')->everyTenMinutes();
         $schedule->command('temp-data:cleanup')->daily();

@@ -23,7 +23,7 @@ class PaymentResultController extends Controller
             return response()->json([
                 'status' => 'failed',
                 'user_type' => 'guest',
-                'message' => PaymentResultResolver::MESSAGE_FAILED,
+                'message' => PaymentResultResolver::MESSAGE_FAILED_FALLBACK,
                 'redirect_guest' => route('reservations.create'),
                 'redirect_auth' => route('profile.reservations'),
             ], 400);
@@ -37,7 +37,7 @@ class PaymentResultController extends Controller
         return response()->json([
             'status' => 'failed',
             'user_type' => 'guest',
-            'message' => PaymentResultResolver::MESSAGE_FAILED,
+            'message' => PaymentResultResolver::MESSAGE_FAILED_FALLBACK,
             'redirect_guest' => route('reservations.create'),
             'redirect_auth' => route('profile.reservations'),
         ], 404);

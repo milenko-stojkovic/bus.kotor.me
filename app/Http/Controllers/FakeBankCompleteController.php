@@ -52,41 +52,21 @@ class FakeBankCompleteController extends Controller
             return redirect('/payment/error')->with('error', 'Transaction not found.');
         }
 
+        // Test-only: bypass signature/controller and dispatch job directly with a real-like raw payload.
         $rawPayload = $this->buildFakeBankartCallbackPayload($temp, $scenario);
 
-        $rawBody = json_encode($rawPayload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-        $contentType = 'application/json; charset=utf-8';
-        $date = gmdate('D, d M Y H:i:s \G\M\T');
-        $path = '/api/payment/callback';
+        $status = $scenario === 'success' ? 'success' : 'failed';
+        $errorCode = $rawPayload['code'] ?? null;
+        $errorReason = $rawPayload['message'] ?? null;
 
-        $server = [
-            'CONTENT_TYPE' => $contentType,
-            'HTTP_CONTENT_TYPE' => $contentType,
-            'HTTP_DATE' => $date,
-        ];
+        PaymentCallbackJob::dispatch([
+            'merchant_transaction_id' => $merchantTransactionId,
+            'status' => $status,
+            'error_code' => $errorCode !== null ? (string) $errorCode : null,
+            'error_reason' => is_string($errorReason) ? $errorReason : null,
+        ], $rawPayload);
 
-        $secret = config('services.bankart.shared_secret');
-        if (! empty($secret)) {
-            $bodyHash = hash('sha512', $rawBody);
-            $message = implode("\n", ['POST', $bodyHash, $contentType, $date, $path]);
-            $signature = base64_encode(hash_hmac('sha512', $message, $secret, true));
-            $server['HTTP_X_SIGNATURE'] = $signature;
-        }
-
-        $fakeRequest = Request::create(url($path), 'POST', [], [], [], $server, $rawBody);
-
-        $callbackController = app(PaymentCallbackController::class);
-        $response = $callbackController->handle($fakeRequest, app(\App\Contracts\CallbackSignatureValidator::class));
-
-        if ($response->getStatusCode() !== 202) {
-            return redirect('/payment/error')->with('error', 'Callback rejected.');
-        }
-
-        return match ($scenario) {
-            'success' => redirect('/payment/success'),
-            'cancel' => redirect('/payment/cancel'),
-            default => redirect('/payment/error'),
-        };
+        return redirect()->route('payment.return', ['merchant_transaction_id' => $merchantTransactionId]);
     }
 
     /**
