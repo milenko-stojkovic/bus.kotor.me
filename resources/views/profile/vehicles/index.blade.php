@@ -5,6 +5,8 @@
 
     <div class="py-6">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-4">
+            @include('profile.partials.panel-tabs')
+
             @if(session('message'))
                 <div class="rounded-md bg-green-50 p-4 text-sm text-green-800">{{ session('message') }}</div>
             @endif

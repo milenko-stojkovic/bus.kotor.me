@@ -27,6 +27,11 @@
             <x-input-label for="email" :value="__('Email')" />
             <x-text-input id="email" name="email" type="email" class="mt-1 block w-full" :value="old('email', $user->email)" required autocomplete="username" />
             <x-input-error class="mt-2" :messages="$errors->get('email')" />
+            <p class="mt-2 text-xs text-gray-600">
+                {{ app()->getLocale() === 'cg'
+                    ? 'Ako promijenite email adresu, za naredna prijavljivanja koristićete novu email adresu.'
+                    : 'If you change your email address, you will use the new email address for future sign-ins.' }}
+            </p>
 
             @if ($user instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! $user->hasVerifiedEmail())
                 <div>
@@ -57,14 +62,17 @@
         </div>
 
         <div>
-            <x-input-label for="company_name" :value="__('Company name')" />
-            <x-text-input id="company_name" name="company_name" type="text" class="mt-1 block w-full" :value="old('company_name', $user->company_name)" autocomplete="organization" />
-            <x-input-error class="mt-2" :messages="$errors->get('company_name')" />
-        </div>
-
-        <div>
             <x-input-label for="country" :value="__('Country')" />
-            <x-text-input id="country" name="country" type="text" class="mt-1 block w-full" :value="old('country', $user->country)" autocomplete="country-name" />
+            @php($countries = (array) config('countries', []))
+            <select id="country" name="country" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
+                <option value="">{{ app()->getLocale() === 'cg' ? 'Izaberite državu' : 'Select country' }}</option>
+                @foreach ($countries as $code => $labels)
+                    @php
+                        $label = is_array($labels) ? ($labels[app()->getLocale()] ?? ($labels['en'] ?? $code)) : (string) $labels;
+                    @endphp
+                    <option value="{{ $code }}" @selected(old('country', $user->country) === $code)>{{ $label }}</option>
+                @endforeach
+            </select>
             <x-input-error class="mt-2" :messages="$errors->get('country')" />
         </div>
 

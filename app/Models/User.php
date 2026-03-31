@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Notifications\NoreplyResetPassword;
+use App\Notifications\NoreplyVerifyEmail;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -49,7 +51,6 @@ class User extends Authenticatable implements MustVerifyEmail
         'email_verified_at',
         'password',
         'lang',
-        'company_name',
         'country',
     ];
 
@@ -74,5 +75,17 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function sendEmailVerificationNotification(): void
+    {
+        $locale = is_string($this->lang) && $this->lang === 'cg' ? 'cg' : 'en';
+        $this->notify((new NoreplyVerifyEmail())->locale($locale));
+    }
+
+    public function sendPasswordResetNotification($token): void
+    {
+        $locale = is_string($this->lang) && $this->lang === 'cg' ? 'cg' : 'en';
+        $this->notify((new NoreplyResetPassword($token))->locale($locale));
     }
 }

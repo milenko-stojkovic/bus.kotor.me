@@ -49,6 +49,17 @@ return [
             'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
         ],
 
+        // Separate mailer for auth/system emails (verification, password reset).
+        'noreply' => [
+            'transport' => 'smtp',
+            'host' => env('MAIL_HOST', '127.0.0.1'),
+            'port' => env('MAIL_PORT', 2525),
+            'encryption' => env('MAIL_ENCRYPTION'),
+            'username' => env('MAIL_NOREPLY_USERNAME'),
+            'password' => env('MAIL_NOREPLY_PASSWORD'),
+            'timeout' => null,
+        ],
+
         'ses' => [
             'transport' => 'ses',
         ],
@@ -113,6 +124,12 @@ return [
     'from' => [
         'address' => env('MAIL_FROM_ADDRESS', 'bus@kotor.me'),
         'name' => env('MAIL_FROM_NAME', 'Bus Kotor'),
+    ],
+
+    // Explicit from for noreply mailer (auth/system).
+    'from_noreply' => [
+        'address' => env('MAIL_FROM_NOREPLY_ADDRESS', 'noreply@kotor.me'),
+        'name' => env('MAIL_FROM_NOREPLY_NAME', 'No reply - Kotor Bus'),
     ],
 
 ];

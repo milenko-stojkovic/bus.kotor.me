@@ -8,11 +8,11 @@ Pregled u skladu sa specifikacijom. Model **TimeSlot** u kodu = **ListOfTimeSlot
 
 | Zahtev | Status |
 |--------|--------|
-| Polja: id, name, email, email_verified_at, password, remember_token, created_at, updated_at | ✅ (Laravel default + migracija company_name, country) |
+| Polja: id, name, email, email_verified_at, password, remember_token, created_at, updated_at | ✅ (Laravel default + migracija country) |
 | User → hasMany(Vehicle), hasMany(Reservation) | ✅ |
 | User → belongsToMany(Role) preko role_user | ✅ |
 | Guest: nullable FK u Vehicle i Reservation (user_id) | ✅ |
-| Fillable: name, email, password | ✅ (+ company_name, country, email_verified_at) |
+| Fillable: name, email, password | ✅ (+ country, email_verified_at, lang) |
 | Casts: email_verified_at → datetime | ✅ |
 
 ---

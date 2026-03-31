@@ -4,7 +4,9 @@
     </x-slot>
 
     <div class="py-6">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-4">
+            @include('profile.partials.panel-tabs')
+
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6">
                     <form method="get" action="{{ route('profile.reservations') }}" class="mb-6 grid grid-cols-1 md:grid-cols-4 gap-3 items-end">

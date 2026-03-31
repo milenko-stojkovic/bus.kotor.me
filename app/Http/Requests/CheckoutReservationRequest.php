@@ -9,6 +9,11 @@ class CheckoutReservationRequest extends FormRequest
 {
     protected function prepareForValidation(): void
     {
+        $name = $this->input('name');
+        if (is_string($name)) {
+            $this->merge(['name' => trim($name)]);
+        }
+
         $license = $this->input('license_plate');
         if (is_string($license)) {
             $normalized = strtoupper(trim($license));
@@ -39,7 +44,7 @@ class CheckoutReservationRequest extends FormRequest
             'drop_off_time_slot_id' => ['required', 'integer', 'exists:list_of_time_slots,id'],
             'pick_up_time_slot_id' => ['required', 'integer', 'exists:list_of_time_slots,id'],
             'reservation_date' => ['required', 'date', 'after_or_equal:today'],
-            'user_name' => [$usingSavedVehicle ? 'nullable' : 'required', 'string', 'max:255'],
+            'name' => [$usingSavedVehicle ? 'nullable' : 'required', 'string', 'min:2', 'max:255'],
             'country' => [$usingSavedVehicle ? 'nullable' : 'required', 'string', 'max:100'],
             'license_plate' => [
                 $usingSavedVehicle ? 'nullable' : 'required',

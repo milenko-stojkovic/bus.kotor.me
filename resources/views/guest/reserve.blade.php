@@ -117,9 +117,9 @@
             </div>
 
             <div>
-                <x-input-label for="user_name" :value="$ui('company_name')" />
-                <x-text-input id="user_name" name="user_name" type="text" class="mt-1 block w-full" :value="old('user_name', request('user_name'))" required />
-                <x-input-error class="mt-2" :messages="$errors->get('user_name')" />
+                <x-input-label for="name" :value="$ui('name')" />
+                <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" :value="old('name', request('name'))" required />
+                <x-input-error class="mt-2" :messages="$errors->get('name')" />
             </div>
 
             <div>

@@ -12,11 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            if (! Schema::hasColumn('users', 'company_name')) {
-                $table->string('company_name', 255)->nullable()->after('email');
-            }
             if (! Schema::hasColumn('users', 'country')) {
-                $table->string('country', 100)->nullable()->after('company_name');
+                $table->string('country', 100)->nullable()->after('email');
             }
         });
     }
@@ -28,9 +25,6 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             $columns = [];
-            if (Schema::hasColumn('users', 'company_name')) {
-                $columns[] = 'company_name';
-            }
             if (Schema::hasColumn('users', 'country')) {
                 $columns[] = 'country';
             }

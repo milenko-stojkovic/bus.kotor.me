@@ -19,7 +19,9 @@ class RegisteredUserController extends Controller
      */
     public function create(): View
     {
-        return view('auth.register');
+        return view('auth.register', [
+            'countries' => (array) config('countries', []),
+        ]);
     }
 
     /**
@@ -30,21 +32,30 @@ class RegisteredUserController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
-            'name' => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'min:2', 'max:255'],
+            'country' => ['required', 'string', 'max:100'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
+        $lang = app()->getLocale();
+        if (! in_array($lang, ['cg', 'en'], true)) {
+            $lang = 'en';
+        }
+
         $user = User::create([
             'name' => $request->name,
+            'country' => $request->country,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'lang' => $lang,
         ]);
 
         event(new Registered($user));
 
         Auth::login($user);
 
-        return redirect(route('dashboard', absolute: false));
+        // New users should verify email before accessing verified-only panel.
+        return redirect()->to(route('verification.notice', [], false));
     }
 }

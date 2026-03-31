@@ -21,6 +21,11 @@ Laravel is a web application framework with expressive, elegant syntax. We belie
 
 Laravel is accessible, powerful, and provides tools required for large, robust applications.
 
+## Project docs (status, TODO, AI handoff)
+
+- **New Cursor chat:** start with [`docs/handoff-new-chat.md`](docs/handoff-new-chat.md) (copy-paste first message template).
+- **TODO / DONE / conventions:** [`docs/project-todo.md`](docs/project-todo.md), [`docs/project-done.md`](docs/project-done.md), [`docs/project-conventions.md`](docs/project-conventions.md) — index: [`docs/project-status-next-steps.md`](docs/project-status-next-steps.md).
+
 ## Payment & fiscalization: fake (local) vs real (production)
 
 ### Korišćenje fake flow-a lokalno

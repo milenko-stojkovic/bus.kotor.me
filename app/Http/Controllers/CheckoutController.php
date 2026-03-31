@@ -194,7 +194,7 @@ class CheckoutController extends Controller
 
         return [
             'vehicle_id' => null,
-            'user_name' => (string) $request->validated('user_name'),
+            'user_name' => (string) $request->validated('name'),
             'country' => (string) $request->validated('country'),
             'license_plate' => (string) $request->validated('license_plate'),
             'vehicle_type_id' => (int) $request->validated('vehicle_type_id'),

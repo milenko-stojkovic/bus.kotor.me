@@ -13,10 +13,11 @@
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @include('partials.password-field-overlay-styles')
     </head>
     <body class="font-sans text-gray-900 antialiased">
         <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-gray-100">
-            <div class="w-full sm:max-w-md flex justify-end px-6">
+            <div class="w-full sm:max-w-lg flex justify-end px-6">
                 <div class="flex gap-2 text-sm">
                 <a href="{{ route('locale.switch', 'cg', false) }}" class="{{ app()->getLocale() === 'cg' ? 'font-semibold' : 'text-gray-500' }}">CG</a>
                 <span class="text-gray-300">|</span>
@@ -29,7 +30,7 @@
                 </a>
             </div>
 
-            <div class="w-full sm:max-w-md mt-6 px-6 py-4 bg-white shadow-md overflow-hidden sm:rounded-lg">
+            <div class="w-full sm:max-w-lg mt-6 px-6 py-4 bg-white shadow-md overflow-hidden sm:rounded-lg">
                 {{ $slot }}
             </div>
         </div>

@@ -15,6 +15,7 @@ use App\Http\Controllers\PaymentResultController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReservationStatusController;
 use App\Http\Controllers\VehicleController;
+use App\Http\Controllers\UserPaymentHistoryController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', LandingController::class)->name('landing');
@@ -74,6 +75,7 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/profile/reservations', [UserReservationController::class, 'index'])->name('profile.reservations');
     Route::get('/profile/reservations/{id}/invoice', [UserReservationController::class, 'downloadInvoice'])->name('profile.reservations.invoice');
+    Route::get('/profile/payments', UserPaymentHistoryController::class)->name('profile.payments');
     Route::prefix('/profile/vehicles')->name('profile.vehicles.')->group(function () {
         Route::get('/', [VehicleController::class, 'index'])->name('index');
         Route::post('/', [VehicleController::class, 'store'])->name('store');
