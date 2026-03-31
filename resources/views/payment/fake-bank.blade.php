@@ -1,7 +1,7 @@
 <x-guest-layout>
 <div class="space-y-4">
     <p class="text-sm text-gray-600">Simulate bank payment (test). Transaction: <code class="bg-gray-100 px-1">{{ $merchant_transaction_id }}</code></p>
-    <p class="text-xs text-amber-600">Frontend nikad ne poziva bank callback (/api/payments/callback). Ovo koristi poseban test endpoint.</p>
+    <p class="text-xs text-amber-600">Frontend nikad ne poziva bank callback (POST /api/payment/callback). Ovo koristi poseban test endpoint.</p>
     <div class="flex flex-col gap-2">
         @php
             $scenarios = [

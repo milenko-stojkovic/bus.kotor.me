@@ -16,9 +16,9 @@ Pravila za bezbedno paralelno plaćanje i obrada callback-a.
 
 ## Callback endpoint
 
-Callback (**POST /api/payments/callback**, API ruta; **samo machine-to-machine**, frontend ga nikad ne poziva) mora:
+Callback (**`POST /api/payment/callback`**, API ruta; **samo machine-to-machine**, frontend ga nikad ne poziva) mora:
 
-1. **Validirati potpis** – pre bilo kakve obrade. Ako potpis nije validan → **401**, job se **ne** dispatch-uje.
+1. **Validirati potpis** – pre bilo kakve obrade. Ako potpis nije validan → **HTTP 400**, job se **ne** dispatch-uje (v. `PaymentCallbackController`; opciono audit u `temp_data`).
    - Implementacija: `CallbackSignatureValidator` (Fake = uvek prolazi; Real = HMAC/secret, dok nije implementirano odbija).
    - Config: `payment.callback_secret` (PAYMENT_CALLBACK_SECRET) za real gateway.
 

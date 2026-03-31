@@ -4,6 +4,8 @@
 
 Ovaj fajl je **kratak smerač**. Detalji su podeljeni da bi novi chat mogao da učita samo ono što treba.
 
+**Princip:** dokumentacija treba da bude **izvor istine, ne zabune** — v. [project-conventions.md](./project-conventions.md) **§ 0**. Tematski fajlovi ispod moraju da prate kod; ako nešto ne štima, ispravi doc ili kod.
+
 | Dokument | Svrha |
 |----------|--------|
 | **[handoff-new-chat.md](./handoff-new-chat.md)** | Tekst za **kopiranje u prvu poruku** novog Cursor chata + kako održavati liste |
@@ -11,7 +13,7 @@ Ovaj fajl je **kratak smerač**. Detalji su podeljeni da bi novi chat mogao da u
 | **[project-done.md](./project-done.md)** | Šta je **urađeno** (dodaj datum kad premestiš iz TODO) |
 | **[project-conventions.md](./project-conventions.md)** | Pravila: prevodi, mail, queue, rute, parking |
 
-**Radni tok:** završi zadatak → stavku iz `project-todo.md` prebaci u `project-done.md` (sa datumom) → ukloni iz TODO.
+**Radni tok:** završi zadatak → stavku iz `project-todo.md` prebaci u `project-done.md` (sa datumom) → ukloni iz TODO → po potrebi ažuriraj **tematski** dokument ispod (da ostane izvor istine sa kodom).
 
 ---
 
@@ -30,8 +32,23 @@ Smislen test sa pravim callback-om obično zahteva **hostovan** domen i bankin m
 
 ## Ostala dokumentacija (dublje u teme)
 
-- [fake-vs-real-contract-parity.md](./fake-vs-real-contract-parity.md)
-- [scheduled-tasks-overview.md](./scheduled-tasks-overview.md)
-- [payment-states.md](./payment-states.md)
-- [workflow-placanje-temp-data.md](./workflow-placanje-temp-data.md)
-- [admin-panel.md](./admin-panel.md)
+Ovi fajlovi treba da prate trenutni kod; v. `project-conventions.md` § 8.
+
+| Oblast | Fajl |
+|--------|------|
+| Callback, idempotentnost, return/result | [payment-callback-handling.md](./payment-callback-handling.md) |
+| Arhitektura plaćanja, queue | [payment-architecture.md](./payment-architecture.md) |
+| Konkurentnost | [payment-concurrency.md](./payment-concurrency.md) |
+| Stanja plaćanja / fiskal | [payment-states.md](./payment-states.md) |
+| temp_data workflow | [workflow-placanje-temp-data.md](./workflow-placanje-temp-data.md) |
+| Uspešan tok (job, PDF) | [success-payment-pipeline.md](./success-payment-pipeline.md) |
+| Jezik, PDF, callback | [language-and-invoice-rules.md](./language-and-invoice-rules.md) |
+| Auth vs guest | [auth-and-guests.md](./auth-and-guests.md) |
+| Admin (spec + šta je urađeno) | [admin-panel.md](./admin-panel.md) |
+| Cron detalji | [cron-commands.md](./cron-commands.md) |
+| Fake vs real | [fake-vs-real-contract-parity.md](./fake-vs-real-contract-parity.md) |
+| Raspored scheduler-a | [scheduled-tasks-overview.md](./scheduled-tasks-overview.md) |
+| Ručni QA payment | [payment-manual-qa-checklist.md](./payment-manual-qa-checklist.md) |
+| Fake QA | [fake-payment-and-fiscal-qa-checklist.md](./fake-payment-and-fiscal-qa-checklist.md) |
+
+Još: [payment-v1-production-audit.md](./payment-v1-production-audit.md), [eloquent-relationships.md](./eloquent-relationships.md), [provera-modela.md](./provera-modela.md).

@@ -1,8 +1,8 @@
 # Payment callback handling
 
-**Bank callback mora biti na API ruti (POST /api/payments/callback), ne na web.** Ne oslanjati se na cookies, session ili browser language. Identifikacija samo po merchant_transaction_id. Račun (PDF) je uvek na crnogorskom (cg) – v. docs/language-and-invoice-rules.md. Razlozi: banka ne šalje cookies/CSRF; web middleware (session, redirects) može odbiti ili pokvariti callback (dokazano u produkciji V1). Callback je stateless; vraća samo 200/202/400; redirect korisnika kasnije preko frontend polling-a /payment/result.
+**Bank callback mora biti na API ruti (`POST /api/payment/callback`), ne na web.** (U kodu: `routes/api.php` → `payment/callback`.) Ne oslanjati se na cookies, session ili browser language. Identifikacija samo po merchant_transaction_id. Račun (PDF) je uvek na crnogorskom (cg) – v. docs/language-and-invoice-rules.md. Razlozi: banka ne šalje cookies/CSRF; web middleware (session, redirects) može odbiti ili pokvariti callback (dokazano u produkciji V1). Callback je stateless; vraća **202** ili **400**; redirect korisnika kasnije preko **GET /payment/return** i/ili **GET /payment/result** (JSON).
 
-**Nikad ne koristiti bank callback za frontend redirect ili UI flow. Bank callback je isključivo machine-to-machine.** Frontend NIKAD ne sme da poziva POST /api/payments/callback. Za test (fake bank) koristi se poseban endpoint: POST /payment/fake-bank/complete.
+**Nikad ne koristiti bank callback za frontend redirect ili UI flow. Bank callback je isključivo machine-to-machine.** Frontend NIKAD ne sme da poziva `POST /api/payment/callback`. Za test (fake bank) koristi se poseban endpoint: `POST /payment/fake-bank/complete` ili `GET /fake-bank/complete` (lokalni QA).
 
 Pravila za validaciju callback-a, idempotentnost, CANCEL/ERROR, notifikacije i redirect.
 
@@ -32,7 +32,7 @@ Ako je status **CANCEL** ili **ERROR** (ili **failed**):
   - **raw_callback_payload** (JSON) u temp_data
   - **callback_error_code** i **callback_error_reason** (ako banka šalje)
 - **NE** kreirati reservation
-- **Osloboditi termin** (soft-lock): decrement `daily_parking_data.pending` za (reservation_date, drop_off_time_slot_id)
+- **Osloboditi termin** (soft-lock): decrement `daily_parking_data.pending` za **oba** slota — `(reservation_date, drop_off_time_slot_id)` i `(reservation_date, pick_up_time_slot_id)` (jednom ako su ID-jevi isti)
 - Emitovati **PaymentFailed** event (log + opciono email)
 
 TempData ostaje u bazi radi audit trail-a; više se ne može koristiti za retry bez nove inicijacije plaćanja.
@@ -50,7 +50,7 @@ TempData ostaje u bazi radi audit trail-a; više se ne može koristiti za retry 
 ## 5. Redirect logika (guest vs auth)
 
 - **Guest:** redirect → **route('reservations.create')** (forma za novu rezervaciju); u session može biti error message i opciono prethodno uneseni podaci.
-- **Auth:** redirect → **route('profile.reservations')** (trenutno vodi na dashboard) sa notifikacijom "Plaćanje nije uspelo".
+- **Auth:** redirect → **route('profile.reservations')** sa notifikacijom „Plaćanje nije uspelo“.
 - **Nikada** ne vraćati korisnika na gateway URL; uvek u aplikaciju sa jasnim statusom.
 
 Frontend: ping **GET /payment/result?merchant_transaction_id=...** → backend vraća JSON: `{ status, user_type, message?, redirect_guest, redirect_auth }`. Na osnovu toga frontend radi redirect na odgovarajuću stranicu i prikazuje poruku.
@@ -68,7 +68,7 @@ Job **emituje PaymentFailed** event koji frontend ne prima direktno – frontend
 
 ## 7. Frontend flow
 
-- Callback endpoint je **API** (POST /api/payments/callback); **ne radi redirect**, nema session/cookies.
+- Callback endpoint je **API** (`POST /api/payment/callback`); **ne radi redirect**, nema session/cookies. Nevažeći potpis / loš JSON / validacija → **HTTP 400**; po mogućstvu audit u `temp_data` (`auditTempDataCallback400`) ako je poznat `merchant_transaction_id`.
 - Callback setuje status u bazi (preko job-a); vraća samo 202 ili 400.
 - **Success/cancel URL** (stranica na koju banka vrati korisnika): **GET /payment/return?merchant_transaction_id=...**
   - Stranica **uvek čita status iz baze** (PaymentResultResolver) – UI nije izvor istine.
@@ -87,7 +87,7 @@ Job **emituje PaymentFailed** event koji frontend ne prima direktno – frontend
 
 ## Sigurnosni minimum (callback)
 
-- **Rate-limit** callback endpointa: **60 zahteva/min** (middleware `throttle:60,1` na POST /api/payments/callback).
+- **Rate-limit** callback endpointa: **60 zahteva/min** (middleware `throttle:60,1` na `POST /api/payment/callback`).
 - **Logovanje payload-a:** uvek se u **payments** channel upisuje minimalni zapis (merchant_transaction_id, status, ip); u **debug režimu** (APP_DEBUG=true) dodatno se loguje ceo payload.
 
 ---

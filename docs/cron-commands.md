@@ -1,6 +1,8 @@
 # Cron / scheduled commands – spisak
 
-Svi cron job-ovi su Laravel Artisan komande. Registruju se u `bootstrap/app.php` preko `withSchedule()`. Prioritet: prvo fiskalizacija, zatim parking slot update, potom email potvrde.
+Svi cron job-ovi su Laravel Artisan komande. Registruju se u `bootstrap/app.php` preko `withSchedule()`. Puna tabela rasporeda: **`docs/scheduled-tasks-overview.md`**.
+
+**Napomena:** `temp_data` se zadržava kao **audit trail** — uspešno plaćanje **ne briše** red (status `processed`).
 
 ---
 
@@ -8,7 +10,7 @@ Svi cron job-ovi su Laravel Artisan komande. Registruju se u `bootstrap/app.php`
 
 **Komanda:** `reservations:process-pending`
 
-**Opis:** Proverava sve slogove u temp_data sa statusom **pending**. Pokušava naknadnu fiskalizaciju za svaki slog koji još nije fiskalizovan. Ako fiskalizacija uspe → upisuje fiscal_jir, fiscal_ikof, fiscal_qr, fiscal_operator, fiscal_date u reservations, briše slog iz temp_data. Ako ne uspe → ostaje pending ili se markira **failed** posle X pokušaja.
+**Opis:** Namenjeno obradi `pending` redova (npr. naknadna fiskalizacija). **Trenutno je komanda u velikoj meri stub** — v. `ProcessPendingReservations.php`. Poslovno pravilo: **`temp_data` se ne briše** na uspehu u glavnom payment toku (status `processed`); bilo kakvo buduće „čišćenje“ mora biti usklađeno sa `docs/workflow-placanje-temp-data.md`.
 
 **Frekvencija:** npr. svakih 5 minuta.
 
@@ -46,7 +48,7 @@ Svi cron job-ovi su Laravel Artisan komande. Registruju se u `bootstrap/app.php`
 
 **Komanda:** `reservations:expire-pending`
 
-**Opis:** Proverava temp_data slogove koji su **pending** duže od definisanog vremena (npr. 30 minuta). Menja status u **failed** ili briše slog automatski.
+**Opis:** Proverava temp_data slogove koji su **pending** duže od praga (`config/reservations.php` → `pending_expire_minutes`). Postavlja status **`expired`**, loguje tranziciju i **smanjuje `pending`** na `daily_parking_data` za **oba** time slota (v. `ExpirePendingReservations`).
 
 **Frekvencija:** svakih 10 minuta.
 
@@ -58,11 +60,21 @@ Svi cron job-ovi su Laravel Artisan komande. Registruju se u `bootstrap/app.php`
 
 **Komanda:** `reservations:assign-late-success`
 
-**Opis:** Proverava temp_data slogove sa statusom **late_success**. Omogućava adminu da ažurira datum, drop-off i pick-up. Upisuje nove termine u reservations koristeći snapshot iz temp_data. Briše slog iz temp_data kad je naknadna rezervacija uspešno kreirana.
+**Opis:** Proverava temp_data slogove sa statusom **late_success**. **Trenutno stub** — v. `AssignLateSuccessReservations.php`. Planirani/automatski tok treba da bude usklađen sa admin flow-om (`LateSuccessController`) i politikom audit trail-a (`temp_data` se ne briše bez eksplicitnog pravila).
 
 **Frekvencija:** po potrebi (ručno ili svakih 5–15 minuta).
 
 **Tabele:** temp_data, reservations.
+
+---
+
+## 3b. SyncDailyParkingDays
+
+**Komanda:** `parking:sync-days`
+
+**Opis:** Osigurava pokrivenost `daily_parking_data` za tekući dan i narednih ~90 dana (`upsert`); briše redove za prošle datume. Ne menja namerno postojeće `reserved` / `pending` za žive redove na način koji krši poslovna pravila — v. `SyncDailyParkingDays`.
+
+**Frekvencija:** dnevno u 00:05 (`bootstrap/app.php`).
 
 ---
 
@@ -90,11 +102,11 @@ Svi cron job-ovi su Laravel Artisan komande. Registruju se u `bootstrap/app.php`
 
 ---
 
-## 6. CleanupOldTempData (opciono)
+## 6. CleanupOldTempData
 
 **Komanda:** `temp-data:cleanup`
 
-**Opis:** Briše slogove u temp_data starije od X dana koji nisu više relevantni. Pomaže u održavanju čistoće baze.
+**Opis:** Trenutna implementacija **ne briše** redove — `temp_data` se čuva za audit. Komanda je rezervisana za buduće arhiviranje ili metrike.
 
 **Frekvencija:** dnevno.
 

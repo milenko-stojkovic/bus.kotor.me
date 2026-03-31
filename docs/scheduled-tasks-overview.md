@@ -24,6 +24,7 @@ Pregled svih trenutno planiranih (scheduled) taskova u projektu.
 | `post-fiscalization:retry` | every 10 minutes | `app/Console/Commands/RetryPostFiscalization.php` | Retry fiskalizacije za `post_fiscalization_data` |
 | `reservations:expire-pending` | every 10 minutes | `app/Console/Commands/ExpirePendingReservations.php` | Pending -> expired, oslobađa soft lock |
 | `reservations:assign-late-success` | every 15 minutes | `app/Console/Commands/AssignLateSuccessReservations.php` | Late success obrada (**trenutno V1 stub**) |
+| `parking:sync-days` | daily at 00:05 | `app/Console/Commands/SyncDailyParkingDays.php` | Sinhronizuje redove `daily_parking_data` za današnji dan + narednih 90 dana; briše stare datume |
 | `parking:update-availability` | every 10 minutes | `app/Console/Commands/UpdateDailyParkingAvailability.php` | Ažurira `daily_parking_data` (**trenutno TODO/stub**) |
 | `reservations:send-emails` | every 10 minutes | `app/Console/Commands/SendReservationEmails.php` | Slanje potvrda rezervacije (osnovni flow, delom TODO) |
 | `temp-data:cleanup` | daily | `app/Console/Commands/CleanupOldTempData.php` | Audit mode: ne briše fizički `temp_data` |
@@ -37,6 +38,7 @@ Možeš ih pokrenuti pojedinačno:
 - `php artisan post-fiscalization:retry`
 - `php artisan reservations:expire-pending`
 - `php artisan reservations:assign-late-success`
+- `php artisan parking:sync-days`
 - `php artisan parking:update-availability`
 - `php artisan reservations:send-emails`
 - `php artisan temp-data:cleanup`

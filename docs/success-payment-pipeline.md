@@ -42,7 +42,7 @@ Flow nakon bank API SUCCESS callback-a: rezervacija se kreira → **ProcessReser
 - **Rezervacija je validna** bez obzira na status fiskalizacije.
 - **Kupac uvek dobija račun** odmah posle uspešnog plaćanja (fiskalni ili nefiskalni).
 - **Retry fiskalizacije** vodi se preko tabele **post_fiscalization_data** (error, attempts, next_retry_at).
-- Callback-i **samo preko API ruta** (POST /api/payments/callback).
+- Callback-i **samo preko API rute** `POST /api/payment/callback`.
 - Idempotentnost po **merchant_transaction_id**; dupli callback-i ne kreiraju duple rezervacije.
 - Podrška za **guest i auth** (user_id nullable).
 - Mail se šalje sa **bus@kotor.me** (MAIL_FROM_ADDRESS).

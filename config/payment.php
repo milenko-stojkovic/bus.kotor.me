@@ -21,7 +21,7 @@ return [
 
     /*
     | URI callbacka za potpis (mora odgovarati onome što banka koristi pri izračunu potpisa).
-    | Npr. Bankart: "/api/payment/callback" ili "/api/payments/callback" – prema dogovoru s bankom.
+    | U ovom projektu: POST /api/payment/callback (routes/api.php). Banka mora biti podešena na isti path.
     */
     'callback_path' => env('PAYMENT_CALLBACK_PATH', '/api/payment/callback'),
 ];

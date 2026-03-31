@@ -6,6 +6,33 @@ Za AI i ljude: držati se ovoga pri novim izmenama da ostane konzistentno.
 
 ---
 
+## 0. Princip: dokumentacija = izvor istine, ne zabune
+
+- **Cilj:** ono što piše u `docs/` treba da bude **proverljivo** i **usklađeno** sa stvarnim ponašanjem aplikacije. Dokument koji kontradiktuje kod ili drugi doc je **greška** dok se ne ispravi.
+- **Hijerarhija:** za tačan tehnički detalj (ruta, status u bazi, redosled jobova) **kod u repou je presudan**. Tematski fajlovi u `docs/` su „izvor istine“ za ljude i AI **samo ako redovno prate taj kod**. Kad promeniš kod — u istom PR-u ili odmah posle ažuriraj pogođeni `.md` (ili eksplicitno napiši u `project-todo.md` da doc kasni, ako mora).
+- **Kontradikcija doc ↔ kod:** ne ostavljati oba stanja; **ili** ispravi dokumentaciju **ili** vrati/popravi kod. Izbegavati **nejasno mešanje** starog i novog u istoj rečenici bez oznake šta još važi.
+- **Sumnja:** ako nisi siguran šta važi, proveri kod (`routes/`, kontroler, model). Ne nagađaj u doc-u. Ako nešto nije implementirano, u doc-u jasno napiši **„nije implementirano / stub“** i na šta se odnosi (npr. ime klase).
+- **Meta-dokumenti** (`handoff-new-chat.md`, `project-todo.md`, `project-done.md`, ovaj fajl, `project-status-next-steps.md`) opisuju proces i konvencije; **ne dupliraju** dugačke tehničke specifikacije — za to služe tematski fajlovi iz indeksa u `project-status-next-steps.md`.
+
+### 0.1 Evolucija u dokumentu („bilo → sada“) — dozvoljena notacija
+
+Ponekad je korisno u **istom** tematskom `.md` fajlu zabeležiti i **istoriju odluke**, ne samo trenutno stanje. To **nije** zabuna ako je struktura jasna.
+
+Preporučeni oblik (naslovi ili bold oznake moraju biti eksplicitni):
+
+1. **Rešenje je bilo ovako (zastarelo / pre promene):** … kratko šta je važilo ranije (ruta, klasa, pravilo).
+2. **Nakon** (pravila, zahteva, PR-a, datuma — šta je pokrenulo promenu): … jedna rečenica konteksta.
+3. **Rešenje sada izgleda ovako (važeće):** … šta **trenutno** važi i mora da se slaže sa kodom.
+
+**Pravila za ovu notaciju:**
+
+- Blok **„sada / važeće“** je ono što AI i novi saradnik tretiraju kao **operativnu istinu**; mora da odgovara kodu.
+- Blok **„bilo / zastarelo“** služi **samo** za uvid u razvoj i odbacivanje loših koncepata — ne implementirati po njemu.
+- Kad zastareli opis više niko ne koristi, može se **skratiti** (npr. jedna rečenica + „v. git istoriju“) da doc ne raste bez kontrole.
+- U `project-done.md` često je dovoljna **jedna** rečenica po promeni; duboki „pre/posle“ zapis ostaje u tematskom fajlu gde ima smisla.
+
+---
+
 ## 1. Jezik i tekstovi
 
 - **`ui_translations`** (grupa + ključ + `locale` + `text`): za **kratke** UI stringove (naslovi, labele, dugmad, kratke poruke, auth kratki tekstovi).
@@ -67,3 +94,11 @@ Posle izmene `.env`: `php artisan config:clear`. Za izmene u Tailwind/JS i dalje
 - Otvoreno: **`docs/project-todo.md`**
 - Završeno: **`docs/project-done.md`**
 - Nova sesija u Cursoru: **`docs/handoff-new-chat.md`**
+
+---
+
+## 8. Tematska dokumentacija u `docs/`
+
+U **`docs/`** postoje dubiji opisi po domenima (payment, fiskal, cron, auth, admin, fake vs real, itd.). Oni moraju da poštuju **§ 0** (nema kontradikcije sa kodom).
+
+**Indeks:** `docs/project-status-next-steps.md` → „Ostala dokumentacija“. Primer česte greške: zastareo URL **`/api/payments/callback`** — u aplikaciji je **`POST /api/payment/callback`**.

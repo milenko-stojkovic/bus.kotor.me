@@ -2,6 +2,8 @@
 
 Stanja plaćanja i fiskalizacije. Rezervacija se **uvek** kreira na **success**; neuspeh fiskalizacije **ne blokira** generisanje računa.
 
+**Povezano:** `docs/workflow-placanje-temp-data.md`, `docs/project-conventions.md`. Greške banke često prolaze kroz **ErrorClassifier** (`resolution_reason`, `temp_data`).
+
 ---
 
 ## Payment states (flow)

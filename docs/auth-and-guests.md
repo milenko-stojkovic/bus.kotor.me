@@ -1,5 +1,7 @@
 # Autentifikovani vs. guest korisnici
 
+**Konvencije (prevodi, mail, panel):** `docs/project-conventions.md`.
+
 ## User model (autentifikovani)
 
 - Autentifikovani korisnici imaju red u tabeli `users`.
@@ -9,8 +11,8 @@
 ## Guest korisnici
 
 - Mogu napraviti rezervaciju **bez naloga** – `user_id` je **NULL** u `reservations` i `temp_data`.
-- Za guest rezervacije svi podaci koji se inače vežu za korisnika ostaju **snapshot** u rezervaciji:
-  - `user_name`, `country`, `email`, `license_plate`, `vehicle_type_id`
+- Za guest rezervacije svi podaci koji se inače vežu za korisnika ostaju **snapshot** u rezervaciji / `temp_data`:
+  - **`user_name`** (kolona u bazi — ime sa forme; u V2 guest formi polje se šalje kao **`name`**, backend mapira u snapshot `user_name`), `country`, `email`, `license_plate`, `vehicle_type_id`
 - Kada guest plati, podaci se čuvaju u tabeli, ali **nema veze sa `users`**.
 
 ## Pravila u kodu
@@ -23,7 +25,7 @@
 
 ## Istorija plaćanja
 
-- **Autentifikovani** – vidi svoje rezervacije prema `user_id` (npr. `$user->reservations`).
+- **Autentifikovani** – vidi svoje rezervacije prema `user_id` (npr. `$user->reservations`); u panelu postoji tab **Istorija plaćanja** (`/profile/payments`) — trenutno placeholder koji upućuje na rezervacije dok se ne uvede poseban pregled transakcija.
 - **Guest** – nema istoriju (osim ako se kasnije ne uvede način da napravi nalog i poveže stari `user_id`).
 
 ## Eloquent relacije

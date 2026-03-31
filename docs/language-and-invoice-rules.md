@@ -1,5 +1,7 @@
 # Language & invoice rules
 
+**Izvor istine za konvencije projekta:** `docs/project-conventions.md` (prevodi, mail, queue). Ovaj fajl precizira jezik za UI, mejl i PDF.
+
 ## 1. UI language
 
 - **Authenticated users:** use **users.lang** (column: `lang`, values: `en`, `cg`). SetLocale middleware applies it.
@@ -12,7 +14,8 @@
 
 - **Authenticated users:** **users.lang** (same as UI).
 - **Guests:** use **reservation.preferred_locale** (set at checkout from session or detected Accept-Language).
-- Emails (subject, body) are **localized** (cg / en). SendInvoiceEmailJob sets `app()->setLocale()` to the recipient’s locale before building content so `__()` returns the correct translations.
+- **Auth sistemski mejlovi** (verifikacija adrese, reset lozinke): šalju se preko mailera **`noreply`**; tekstovi koriste **`users.lang`** preko `UiText` / custom notifikacija (`NoreplyVerifyEmail`, `NoreplyResetPassword`) — v. `docs/project-conventions.md`.
+- Emails (subject, body) za račune/potvrde su **localized** (cg / en). SendInvoiceEmailJob postavlja `app()->setLocale()` na locale primaoca pre sadržaja.
 
 ## 3. Invoice (PDF) & fiscalization
 
@@ -22,7 +25,7 @@
 
 ## 4. Bank callback
 
-- **API routes only** (POST /api/payments/callback). Machine-to-machine.
+- **API only:** `POST /api/payment/callback` (`routes/api.php`). Machine-to-machine.
 - **Do NOT** rely on cookies, session, or browser language.
 - Identify reservation **only** by **merchant_transaction_id** (or internal reference). Language context is **irrelevant** for invoice generation (invoice is always cg).
 - Callback is **stateless technical confirmation** only.

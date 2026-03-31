@@ -1,7 +1,9 @@
 # Payment Manual QA Checklist / Test Matrix
 
-Poslednje ažuriranje: 2026-02-22  
+Poslednje ažuriranje: 2026-03-31  
 Namena: operativni vodič za ručno testiranje payment + fiskalizacija + retry + late manual review flow-a.
+
+**Indeks statusa / TODO / konvencije:** `docs/project-status-next-steps.md`, `docs/project-conventions.md`.
 
 ---
 
@@ -18,7 +20,9 @@ BANK_DRIVER=fake
 FISCALIZATION_DRIVER=fake
 PAYMENT_PROVIDER=fake
 MAIL_MAILER=log
-QUEUE_CONNECTION=database
+# Za QA bez workera koristiti sync (v. docs/project-conventions.md):
+QUEUE_CONNECTION=sync
+# Alternativa: QUEUE_CONNECTION=database + php artisan queue:work
 ```
 
 Za staging QA:

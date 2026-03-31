@@ -59,7 +59,7 @@ Controller **nikad**:
 
 ## Webhook endpoint
 
-- **POST /api/payments/callback** – bank callback na **API ruti** (routes/api.php), **ne** na web.
+- **`POST /api/payment/callback`** – bank callback na **API ruti** (`routes/api.php` → `payment/callback`), **ne** na web.
 - **Machine-to-machine only.** Nikad ne koristiti ovaj endpoint za frontend redirect ili UI flow. **Frontend NIKAD ne sme da poziva bank callback.**
 - Nema web middleware (session, CSRF, redirects) – banka ne šalje cookies/CSRF; stateless.
 - Controller: validacija potpisa, validacija payload-a, **dispatch PaymentCallbackJob(payload)**.
@@ -69,9 +69,9 @@ Controller **nikad**:
 
 ---
 
-## Queue je obavezna
+## Queue
 
-- **Lokalno:** `php artisan queue:work` mora biti pokrenut; inače PaymentCallbackJob se ne izvršava.
+- **Lokalno:** ili `php artisan queue:work`, ili u `.env` **`QUEUE_CONNECTION=sync`** da se jobovi izvrše odmah (preporuka za QA — v. `docs/project-conventions.md`).
 - **Produkcija:** Supervisor (ili drugi process manager) drži `php artisan queue:work` uvek aktivan.
 
 ---
@@ -81,8 +81,8 @@ Controller **nikad**:
 - **PaymentService** (interface): `createSession(TempData): PaymentSessionResult`, `pay(TempData): PaymentResult`.
 - **PaymentSessionResult**: success, payment_url (za redirect), error_message (ako gateway nedostupan).
 - **FakePaymentProvider**: createSession vraća URL na fake bank stranicu (/payment/fake-bank?tx=...); pay() za test state machine.
-- **RealPaymentProvider**: createSession() kasnije poziva pravi gateway; dok nije implementirano vraća unavailable.
-- Config: `config/payment.php` → `provider` = fake | real.
+- **RealPaymentProvider**: createSession() poziva Bankart kada je `BANK_DRIVER=bankart` i `.env` kompletan (v. `.env.example`).
+- Config: `config/payment.php` → driver iz `BANK_DRIVER` (npr. `fake` \| `bankart`).
 
 ---
 
@@ -90,9 +90,9 @@ Controller **nikad**:
 
 1. **POST /checkout** → validacija, dostupnost, temp_data (pending), createSession(sync) → **redirect na payment_url** ili 503.
 2. Korisnik plaća na bank stranici (ili na fake bank stranici bira Success/Fail).
-3. Gateway (ili fake bank form) šalje **POST /api/payments/callback** sa merchant_transaction_id i status.
+3. Gateway (ili fake bank form) šalje **`POST /api/payment/callback`** sa merchant_transaction_id i status.
 4. Webhook: validacija → **PaymentCallbackJob::dispatch(payload)** → 202.
-5. **PaymentCallbackJob**: na success → Reservation, brisanje temp_data, PostFiscalizationJob; na failed → temp_data.status = failed; na timeout → late_success.
+5. **PaymentCallbackJob**: na success → Reservation, **temp_data.status = processed** (red se **ne briše** — audit), `ProcessReservationAfterPaymentJob`; na failed → ažuriranje `temp_data` + **ErrorClassifier**; na timeout → `late_success` gde je predviđeno.
 6. UI može koristiti **GET /reservation-status/{merchant_transaction_id}** (polling) za status.
 
 ---
@@ -100,7 +100,7 @@ Controller **nikad**:
 ## Fake bank stranica (test)
 
 - **GET /payment/fake-bank?tx={merchant_transaction_id}** – prikazuje stranicu sa dugmićima "Success" i "Fail".
-- Klik šalje POST na **/payment/fake-bank/complete** (poseban test endpoint). **Frontend NIKAD ne poziva bank callback** (/api/payments/callback).
+- Klik šalje POST na **/payment/fake-bank/complete** ili GET na **/fake-bank/complete** (test). **Frontend NIKAD ne poziva** `POST /api/payment/callback`.
 - Korisnik se redirect-uje na /reservation-status/{merchant_transaction_id}.
 
 ---
@@ -113,12 +113,12 @@ Controller **nikad**:
 | `App\Contracts\PaymentSessionResult` | success, payment_url, error_message. |
 | `App\Contracts\PaymentResult` | success / failed / timeout (za pay()). |
 | `App\Services\Payment\FakePaymentProvider` | createSession → fake bank URL; pay() simulacija. |
-| `App\Services\Payment\RealPaymentProvider` | createSession → unavailable dok nije implementirano. |
+| `App\Services\Payment\RealPaymentProvider` | createSession → Bankart (real). |
 | `App\Jobs\PaymentCallbackJob` | Idempotentan po merchant_transaction_id; rezervacija, fiskalizacija, status. |
-| `App\Jobs\PostFiscalizationJob` | Stub nakon uspešnog plaćanja. |
+| `App\Jobs\ProcessReservationAfterPaymentJob` | Fiskalizacija + PDF/email posle uspešnog plaćanja (v. success-payment-pipeline.md). |
 | `App\Http\Controllers\CheckoutController` | Validacija, dostupnost, temp_data, createSession, redirect ili 503. |
 | `App\Http\Controllers\Api\PaymentCallbackController` | API callback: validacija potpisa + payload, dispatch job, 202/400. |
-| `config/payment.php` | `provider` = fake \| real. |
+| `config/payment.php` | Bankart/fake driver preko `BANK_DRIVER` i povezane env varijable. |
 | `App\Http\Controllers\ReservationStatusController` | Polling: GET po merchant_transaction_id. |
 | `App\Http\Controllers\FakeBankCompleteController` | Samo test: POST /payment/fake-bank/complete; frontend ne poziva bank callback. |
 

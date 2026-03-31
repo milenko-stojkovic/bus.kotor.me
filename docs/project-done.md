@@ -9,6 +9,9 @@ Hronološki najnovije na vrhu unutar svake sekcije. Pri zatvaranju zadatka dodaj
 ## 2026-03 — UI, auth, dokumentacija pracenja
 
 - **2026-03-31** — Dokumentacija za handoff: `handoff-new-chat.md`, podela **TODO** / **DONE** / **conventions**, indeks u `project-status-next-steps.md`; minimalni lokalni QA `.env` blok u `project-conventions.md`.
+- **2026-03-31** — Revizija tematskih `docs/*.md`: ispravljen URL callback-a na **`POST /api/payment/callback`**, usklađen `temp_data` workflow (nema brisanja na success), scheduler **`parking:sync-days`**, dual-slot soft lock u callback doc, queue `sync` za QA, admin late-success implementacija, `project-conventions` §8 o održavanju dubljih docs.
+- **2026-03-31** — U `project-conventions.md` dodat **§ 0** (dokumentacija = izvor istine, ne zabune; hijerarhija kod ↔ doc; obaveza pri kontradikciji); usklađeni `handoff-new-chat.md` i `project-status-next-steps.md`.
+- **2026-03-31** — **`project-conventions.md` § 0.1:** dozvoljena notacija „rešenje je bilo ovako → nakon … → sada izgleda ovako“ za evoluciju bez zabune; u `handoff` tabela održavanja dopunjena.
 - **2026-03** — **Password eye** unutar polja: grid overlay CSS u `partials/password-field-overlay-styles.blade.php` (guest + app layout); radi bez obaveznog `npm run build`.
 - **2026-03** — **Guest layout** kartica proširena (`sm:max-w-lg`); password polja sa zajedničkim partialom `auth/partials/password-eye-toggle-button.blade.php`.
 - **2026-03** — **Verifikacija emaila** i verify-email ekran po **`user->lang`**; `NoreplyVerifyEmail`; `UiText` ključevi u seederu.
