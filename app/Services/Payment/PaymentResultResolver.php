@@ -18,7 +18,19 @@ class PaymentResultResolver
     /**
      * Vraća status za merchant_transaction_id iz baze.
      *
-     * @return array{status: 'success'|'failed'|'pending'|'late_success', user_type: 'guest'|'auth', message?: string, reservation_id?: int, is_free_reservation?: bool, redirect_guest: string, redirect_auth: string}|null null ako tx ne postoji
+     * @return array{
+     *     status: 'success'|'failed'|'pending'|'late_success',
+     *     user_type: 'guest'|'auth',
+     *     message?: string,
+     *     reservation_id?: int,
+     *     is_free_reservation?: bool,
+     *     fiscal_complete?: bool,
+     *     resolution_reason?: string,
+     *     retry_token?: string|null,
+     *     error_reason?: string|null,
+     *     redirect_guest: string,
+     *     redirect_auth: string
+     * }|null null ako tx ne postoji
      */
     public function resolve(string $merchantTransactionId): ?array
     {
@@ -27,16 +39,16 @@ class PaymentResultResolver
         $reservation = Reservation::where('merchant_transaction_id', $merchantTransactionId)->first();
         if ($reservation) {
             $isFree = $reservation->status === 'free';
+            $fiscalComplete = $isFree || $reservation->fiscal_jir !== null;
 
             return [
                 'status' => 'success',
                 'user_type' => $reservation->user_id ? 'auth' : 'guest',
                 'reservation_id' => $reservation->id,
                 'is_free_reservation' => $isFree,
-                'redirect_guest' => $isFree
-                    ? route('guest.reserve', [], false)
-                    : route('reservations.create'),
-                'redirect_auth' => route('panel.reservations'),
+                'fiscal_complete' => $fiscalComplete,
+                'redirect_guest' => route('guest.reserve', [], false),
+                'redirect_auth' => route('panel.reservations', [], false),
             ];
         }
 
@@ -44,19 +56,24 @@ class PaymentResultResolver
         if ($temp) {
             $userType = $temp->user_id ? 'auth' : 'guest';
             $redirect = [
-                'redirect_guest' => route('reservations.create'),
-                'redirect_auth' => route('panel.reservations'),
+                'redirect_guest' => route('guest.reserve', [], false),
+                'redirect_auth' => route('panel.reservations', [], false),
             ];
             if (in_array($temp->status, [TempData::STATUS_CANCELED, TempData::STATUS_EXPIRED], true)) {
+                $resolutionReason = is_string($temp->resolution_reason) && $temp->resolution_reason !== ''
+                    ? $temp->resolution_reason
+                    : ($temp->status === TempData::STATUS_EXPIRED ? 'transaction_expired' : 'unknown_gateway_error');
+
                 return [
                     'status' => 'failed',
                     'user_type' => $userType,
                     'message' => UiText::t('errors', 'payment_failed', self::MESSAGE_FAILED_FALLBACK, $locale),
+                    'resolution_reason' => $resolutionReason,
                     'retry_token' => $temp->retry_token,
                     'error_reason' => $temp->callback_error_reason,
                     'redirect_guest' => $temp->retry_token
-                        ? route('reservations.create', ['retry_token' => $temp->retry_token])
-                        : route('reservations.create'),
+                        ? route('guest.reserve', ['retry_token' => $temp->retry_token], false)
+                        : route('guest.reserve', [], false),
                     'redirect_auth' => $redirect['redirect_auth'],
                 ];
             }

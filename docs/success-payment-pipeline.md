@@ -9,9 +9,9 @@ Flow nakon bank API SUCCESS callback-a: rezervacija se kreira → **ProcessReser
 Ne idu na banku i **ne** pokreću **ProcessReservationAfterPaymentJob** / fiskalizaciju. Backend odlučuje preko **`FreeReservationRules`**.
 
 - **`PaymentSuccessHandler::handle(..., runFiscalAndInvoicePipeline: false)`** kreira rezervaciju sa **`reservations.status = free`**, šalje **`SendFreeReservationConfirmationJob`** (tekstualni email, bez računa).
-- Redirect: **`guest.reserve`** ili **`panel.reservations`** (flash poruka), ne **`/payment/return`**.
+- Redirect: **`guest.reserve`** ili **`panel.reservations`** sa **`checkout_banner`** (grupa **`checkout_result`**, vidi **`CheckoutResultFlash`**), ne kratkotrajni „success“ ekran na **`/payment/return`**.
 - **`ProcessReservationAfterPaymentJob`** odmah izlazi ako je `status === 'free'` (odbrambeno).
-- Stariji linkovi na **`/payment/return`** za besplatnu rezervaciju: **`PaymentResultResolver`** / view prikazuju poseban tekst (`is_free_reservation`).
+- **Plaćeni tok:** kad postoji rezervacija, **`GET /payment/return`** više ne ostaje na success view-u — radi **redirect** na gore navedene rute sa flash porukom; na **`/payment/return`** ostaje samo **`pending`** (vidi **`payment/return.blade.php`**). **`PaymentResultResolver`** i dalje razlikuje npr. **`fiscal_complete`** (JIR postoji ili ne) radi izbora **success** vs **info** bannera.
 
 ---
 

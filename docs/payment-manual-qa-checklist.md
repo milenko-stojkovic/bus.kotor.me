@@ -80,7 +80,7 @@ Svaki scenario validirati kroz:
 | Preconditions | `BANK_DRIVER=fake`, `FISCALIZATION_DRIVER=fake`, worker aktivan |
 | Steps | 1) Submit checkout form 2) Sačuvaj `merchant_transaction_id` 3) Otvori `/fake-bank/complete?status=success&tx={tx}` 4) Sačekaj worker |
 | Expected DB state | `temp_data.status=processed`; postoji `reservations` red sa istim `merchant_transaction_id`; snapshot polja popunjena |
-| Expected UI | `/payment/return` prikazuje success poruku |
+| Expected UI | Nakon obrade: **redirect** na `guest.reserve` ili `panel.reservations` sa **success/info** `checkout_banner`; na `/payment/return` ostaje samo **pending** sa polling-om dok callback ne završi |
 | Expected logs | "Payment callback accepted", "Payment state transition ... -> processed" |
 | Side effects | `invoice_pdf_path` set; `invoice_sent_at` set; email poslat (ili zabeležen preko `MAIL_MAILER=log`) |
 
@@ -94,7 +94,7 @@ Svaki scenario validirati kroz:
 | Preconditions | Fake bank aktivna; worker aktivan |
 | Steps | `/fake-bank/complete?status=error&tx={tx}` ili `status=cancel` |
 | Expected DB state | `temp_data.status=canceled`; nema novog reda u `reservations`; `callback_error_code/reason` popunjeni ako payload sadrži |
-| Expected UI | Failed poruka |
+| Expected UI | **Redirect** na booking stranicu sa **error** `checkout_banner` (mapiran `resolution_reason`); gost sa `retry_token` na `/guest/reserve?retry_token=...` |
 | Expected logs | "Payment callback accepted", state transition `pending -> canceled` |
 | Side effects | `retry_token` ostaje važeći unutar TTL; slot soft-lock oslobođen |
 

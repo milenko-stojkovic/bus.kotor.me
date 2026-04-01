@@ -13,7 +13,7 @@ use App\Models\TempData;
 use App\Models\Vehicle;
 use App\Services\Payment\PaymentSuccessHandler;
 use App\Services\Reservation\FreeReservationRules;
-use App\Support\UiText;
+use App\Support\CheckoutResultFlash;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
@@ -142,6 +142,7 @@ class CheckoutController extends Controller
             });
         } catch (NoCapacityException $e) {
             $message = $e->getMessage();
+
             return $request->expectsJson()
                 ? response()->json(['message' => $message], 422)
                 : response($message, 422);
@@ -189,6 +190,7 @@ class CheckoutController extends Controller
             ->whereIn('time_slot_id', $slotIds)
             ->decrement('pending');
         $message = $session->errorMessage ?? 'Payment temporarily unavailable.';
+
         return $request->expectsJson()
             ? response()->json(['message' => $message], Response::HTTP_SERVICE_UNAVAILABLE)
             : response($message, Response::HTTP_SERVICE_UNAVAILABLE);
@@ -196,7 +198,6 @@ class CheckoutController extends Controller
 
     private function redirectAfterFreeCheckout(CheckoutReservationRequest $request, bool $created, ?string $merchantTransactionId = null): RedirectResponse
     {
-        $locale = app()->getLocale();
         $url = $request->user()
             ? route('panel.reservations', [], false)
             : route('guest.reserve', [], false);
@@ -207,24 +208,13 @@ class CheckoutController extends Controller
         }
 
         if (! $created) {
-            $msg = UiText::t(
-                'checkout',
-                'free_reservation_failed',
-                'We could not complete your reservation. Please try again.',
-                $locale
-            );
-
-            return redirect()->to($url)->with('error', $msg);
+            return redirect()->to($url)->with('checkout_banner', CheckoutResultFlash::freeReservationFailed());
         }
 
-        $msg = UiText::t(
-            'checkout',
-            'free_reservation_success',
-            'Your free reservation was created. A confirmation email has been sent.',
-            $locale
+        return redirect()->to($url)->with(
+            'checkout_banner',
+            CheckoutResultFlash::forReservationSuccess(true, true),
         );
-
-        return redirect()->to($url)->with('message', $msg);
     }
 
     /** Pending temp_data za isti slot (reservation_date + drop_off) i isti user (user_id ili email). */

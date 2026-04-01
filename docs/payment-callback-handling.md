@@ -71,17 +71,19 @@ Job **emituje PaymentFailed** event koji frontend ne prima direktno – frontend
 - Callback endpoint je **API** (`POST /api/payment/callback`); **ne radi redirect**, nema session/cookies. Nevažeći potpis / loš JSON / validacija → **HTTP 400**; po mogućstvu audit u `temp_data` (`auditTempDataCallback400`) ako je poznat `merchant_transaction_id`.
 - Callback setuje status u bazi (preko job-a); vraća samo 202 ili 400.
 - **Success/cancel URL** (stranica na koju banka vrati korisnika): **GET /payment/return?merchant_transaction_id=...**
-  - Stranica **uvek čita status iz baze** (PaymentResultResolver) – UI nije izvor istine.
-  - Ako postoji **reservation** → prikaži success ekran; ako ne → pending / retry ili failed ekran.
-  - API za polling: **GET /payment/result?merchant_transaction_id=...** → JSON `{ status, user_type, message?, redirect_guest, redirect_auth }`.
+  - Stranica **uvek čita status iz baze** (**`PaymentResultResolver`**) – UI nije izvor istine.
+  - Ako je status **`pending`** → prikaže se stranica sa porukom „u obradi“ i **polling** na **`GET /payment/result`**. Okvir: **`x-guest-layout`** (gost) ili **`x-app-layout`** (ulogovan korisnik).
+  - Ako je **`success` / `failed` / `late_success`** → **HTTP redirect** na **`guest.reserve`** ili **`panel.reservations`** (prema tipu korisnika) sa **`checkout_banner`** flash porukom (**`CheckoutResultFlash`**, **`checkout_result`** u **`ui_translations`**); nema posebnog „result“ template-a za te statuse.
+  - API za polling: **GET /payment/result?merchant_transaction_id=...** → JSON (npr. `status`, `user_type`, `message`, `redirect_guest`, `redirect_auth`, `resolution_reason`, `fiscal_complete`, … prema resolveru).
 
 ## 8. User zatvori browser tokom redirecta
 
 - **Scenario:** Korisnik plati → zatvori tab pre nego što vidi redirect → callback dođe normalno.
-- **Pravilo:** Status rezervacije se **uvek** čita iz baze. Kad se korisnik vrati (isti URL sa merchant_transaction_id):
+- **Pravilo:** Status se **uvek** čita iz baze. Kad se korisnik vrati (isti URL sa `merchant_transaction_id`):
   - **GET /payment/return?merchant_transaction_id=...** ponovo pita bazu.
-  - Ako postoji **reservation** → prikaži success ekran.
-  - Ako ne → prikaži pending / retry ekran (opciono polling da se osveži kad callback stigne).
+  - Ako postoji **reservation** → **redirect** na booking stranicu sa **success/info** `checkout_banner` (plaćeno + fiskal OK ili odložen fiskal).
+  - Ako je još **pending** → ista return stranica + polling dok callback ne završi.
+  - Ako je **failed** / **late_success** → redirect sa odgovarajućom flash porukom.
 
 ---
 

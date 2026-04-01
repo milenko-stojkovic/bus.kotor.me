@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\Reservation\PanelReservationListService;
+use App\Services\Reservation\PanelStatisticsService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -25,8 +26,8 @@ class PanelController extends Controller
         ]);
     }
 
-    public function statistics(): View
+    public function statistics(Request $request, PanelStatisticsService $statisticsService): View
     {
-        return view('panel.statistics');
+        return view('panel.statistics', $statisticsService->overview($request->user()));
     }
 }

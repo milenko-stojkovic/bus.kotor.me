@@ -15,6 +15,8 @@
             <p class="text-sm text-gray-600">{{ $ui('step_hint') }}</p>
         </div>
 
+        @include('partials.checkout-result-banner')
+
         @if (session('message'))
             <div class="rounded-md bg-green-50 p-3 text-sm text-green-800">{{ session('message') }}</div>
         @endif

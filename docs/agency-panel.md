@@ -14,6 +14,7 @@ Prefiks ruta: **`/panel`**, middleware **`auth`** + **`verified`**. Gornja navig
 | `GET /panel/upcoming` | `panel.upcoming` | Predstojeće rezervacije, promena vozila |
 | `GET /panel/realized` | `panel.realized` | Realizovane, link na PDF u novom tabu |
 | `GET /panel/vehicles` | `panel.vehicles` | Vozila |
+| `GET /panel/statistics` | `panel.statistics` | Statistika: ukupno plaćeno, broj realizovanih posjeta, tabela po tablicama |
 | `GET /panel/user` | `panel.user` | Korisnik: ime, jezik, email, lozinka |
 | `PATCH /profile` | `profile.update` | Čuva profil (uključujući lozinku ako je uneta) |
 | `PATCH /panel/reservations/{id}/vehicle` | `panel.reservations.vehicle` | Zamena vozila na upcoming rezervaciji |
@@ -58,6 +59,10 @@ Validacija: **`App\Http\Requests\UpdateReservationVehicleRequest`**.
 **`resources/views/profile/partials/delete-user-form.blade.php`** — stringovi iz **`ui_translations`** (grupa **`user`**, ključevi **`delete_account_*`**, **`cancel`**).
 
 ---
+
+## Statistika (`/panel/statistics`)
+
+Servis **`App\Services\Reservation\PanelStatisticsService`**: koristi **`PanelReservationListService::realizedFor`** za istu definiciju „realized“. **Total paid** = suma **`vehicle_types.price`** snapshota samo za **`reservations.status = paid`**. **Broj posjeta** = broj svih realizovanih rezervacija. **Tabela vozila** = grupisano po **`license_plate` + `vehicle_type_id`**, broj realizovanih po grupi.
 
 ## Veza: besplatne rezervacije
 

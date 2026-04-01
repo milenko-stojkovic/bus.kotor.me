@@ -63,6 +63,83 @@ class UiTranslationsSeeder extends Seeder
             ['group' => 'checkout', 'key' => 'free_return_blurb', 'locale' => 'cg', 'text' => 'Ovo je besplatna rezervacija — nema plaćanja ni fiskalnog računa. Potvrda je poslata na email.'],
             ['group' => 'checkout', 'key' => 'free_return_cta_guest', 'locale' => 'en', 'text' => 'Back to booking'],
             ['group' => 'checkout', 'key' => 'free_return_cta_guest', 'locale' => 'cg', 'text' => 'Nazad na rezervaciju'],
+
+            // checkout_result (payment / fiscal outcome banners on guest.reserve + panel.reservations)
+            ['group' => 'checkout_result', 'key' => 'paid_success_title', 'locale' => 'cg', 'text' => 'Rezervacija je uspješno kreirana.'],
+            ['group' => 'checkout_result', 'key' => 'paid_success_title', 'locale' => 'en', 'text' => 'Your reservation has been created successfully.'],
+            ['group' => 'checkout_result', 'key' => 'paid_success_message', 'locale' => 'cg', 'text' => "Plaćanje je uspješno evidentirano.\nPotvrda će biti dostavljena email-om."],
+            ['group' => 'checkout_result', 'key' => 'paid_success_message', 'locale' => 'en', 'text' => "Payment was processed successfully.\nThe confirmation will be delivered by email."],
+
+            ['group' => 'checkout_result', 'key' => 'fiscal_delayed_title', 'locale' => 'cg', 'text' => 'Rezervacija je uspješno kreirana.'],
+            ['group' => 'checkout_result', 'key' => 'fiscal_delayed_title', 'locale' => 'en', 'text' => 'Your reservation has been created successfully.'],
+            ['group' => 'checkout_result', 'key' => 'fiscal_delayed_message', 'locale' => 'cg', 'text' => "Plaćanje je uspješno evidentirano.\nDošlo je do odlaganja u fiskalizaciji.\nVaša rezervacija ostaje važeća.\nRačun će biti dostavljen naknadno email-om."],
+            ['group' => 'checkout_result', 'key' => 'fiscal_delayed_message', 'locale' => 'en', 'text' => "Payment was processed successfully.\nThere is a delay in fiscalization.\nYour reservation remains valid.\nThe invoice will be sent by email later."],
+
+            ['group' => 'checkout_result', 'key' => 'free_success_title', 'locale' => 'cg', 'text' => 'Besplatna rezervacija je uspješno kreirana.'],
+            ['group' => 'checkout_result', 'key' => 'free_success_title', 'locale' => 'en', 'text' => 'The free reservation has been created successfully.'],
+            ['group' => 'checkout_result', 'key' => 'free_success_message', 'locale' => 'cg', 'text' => 'Potvrda će biti dostavljena email-om.'],
+            ['group' => 'checkout_result', 'key' => 'free_success_message', 'locale' => 'en', 'text' => 'A confirmation will be delivered by email.'],
+
+            ['group' => 'checkout_result', 'key' => 'free_failed_title', 'locale' => 'cg', 'text' => 'Rezervacija nije kreirana'],
+            ['group' => 'checkout_result', 'key' => 'free_failed_title', 'locale' => 'en', 'text' => 'Reservation could not be created'],
+            ['group' => 'checkout_result', 'key' => 'free_failed_message', 'locale' => 'cg', 'text' => 'Nismo mogli da završimo rezervaciju. Pokušajte ponovo.'],
+            ['group' => 'checkout_result', 'key' => 'free_failed_message', 'locale' => 'en', 'text' => 'We could not complete your reservation. Please try again.'],
+
+            ['group' => 'checkout_result', 'key' => 'payment_expired_title', 'locale' => 'cg', 'text' => 'Plaćanje nije završeno.'],
+            ['group' => 'checkout_result', 'key' => 'payment_expired_title', 'locale' => 'en', 'text' => 'Payment was not completed.'],
+            ['group' => 'checkout_result', 'key' => 'payment_expired_message', 'locale' => 'cg', 'text' => "Vrijeme za plaćanje je isteklo.\nMolimo pokušajte ponovo."],
+            ['group' => 'checkout_result', 'key' => 'payment_expired_message', 'locale' => 'en', 'text' => "The payment session has expired.\nPlease try again."],
+
+            ['group' => 'checkout_result', 'key' => 'payment_cancelled_title', 'locale' => 'cg', 'text' => 'Plaćanje je otkazano.'],
+            ['group' => 'checkout_result', 'key' => 'payment_cancelled_title', 'locale' => 'en', 'text' => 'Payment was cancelled.'],
+            ['group' => 'checkout_result', 'key' => 'payment_cancelled_message', 'locale' => 'cg', 'text' => "Rezervacija nije kreirana.\nMožete pokušati ponovo."],
+            ['group' => 'checkout_result', 'key' => 'payment_cancelled_message', 'locale' => 'en', 'text' => "The reservation was not created.\nYou can try again."],
+
+            ['group' => 'checkout_result', 'key' => 'payment_insufficient_funds_title', 'locale' => 'cg', 'text' => 'Plaćanje nije odobreno.'],
+            ['group' => 'checkout_result', 'key' => 'payment_insufficient_funds_title', 'locale' => 'en', 'text' => 'Payment was not approved.'],
+            ['group' => 'checkout_result', 'key' => 'payment_insufficient_funds_message', 'locale' => 'cg', 'text' => "Na računu nema dovoljno sredstava.\nPokušajte ponovo ili koristite drugu karticu."],
+            ['group' => 'checkout_result', 'key' => 'payment_insufficient_funds_message', 'locale' => 'en', 'text' => "There are insufficient funds on the card.\nPlease try again or use a different card."],
+
+            ['group' => 'checkout_result', 'key' => 'payment_declined_title', 'locale' => 'cg', 'text' => 'Plaćanje nije odobreno.'],
+            ['group' => 'checkout_result', 'key' => 'payment_declined_title', 'locale' => 'en', 'text' => 'Payment was not approved.'],
+            ['group' => 'checkout_result', 'key' => 'payment_declined_message', 'locale' => 'cg', 'text' => "Banka je odbila autorizaciju kartice.\nPokušajte ponovo ili koristite drugu karticu."],
+            ['group' => 'checkout_result', 'key' => 'payment_declined_message', 'locale' => 'en', 'text' => "The bank declined the card authorization.\nPlease try again or use a different card."],
+
+            ['group' => 'checkout_result', 'key' => 'payment_3ds_failed_title', 'locale' => 'cg', 'text' => 'Plaćanje nije završeno.'],
+            ['group' => 'checkout_result', 'key' => 'payment_3ds_failed_title', 'locale' => 'en', 'text' => 'Payment was not completed.'],
+            ['group' => 'checkout_result', 'key' => 'payment_3ds_failed_message', 'locale' => 'cg', 'text' => "Potvrda kartice nije uspjela.\nMolimo pokušajte ponovo."],
+            ['group' => 'checkout_result', 'key' => 'payment_3ds_failed_message', 'locale' => 'en', 'text' => "Card authentication failed.\nPlease try again."],
+
+            ['group' => 'checkout_result', 'key' => 'payment_card_validation_title', 'locale' => 'cg', 'text' => 'Plaćanje nije završeno.'],
+            ['group' => 'checkout_result', 'key' => 'payment_card_validation_title', 'locale' => 'en', 'text' => 'Payment was not completed.'],
+            ['group' => 'checkout_result', 'key' => 'payment_card_validation_message', 'locale' => 'cg', 'text' => "Podaci kartice nijesu prihvaćeni.\nProvjerite unos i pokušajte ponovo."],
+            ['group' => 'checkout_result', 'key' => 'payment_card_validation_message', 'locale' => 'en', 'text' => "The card details were not accepted.\nPlease check the data and try again."],
+
+            ['group' => 'checkout_result', 'key' => 'payment_system_error_title', 'locale' => 'cg', 'text' => 'Došlo je do tehničkog problema.'],
+            ['group' => 'checkout_result', 'key' => 'payment_system_error_title', 'locale' => 'en', 'text' => 'A technical issue occurred.'],
+            ['group' => 'checkout_result', 'key' => 'payment_system_error_message', 'locale' => 'cg', 'text' => "Plaćanje trenutno nije bilo moguće završiti.\nMolimo pokušajte ponovo za nekoliko minuta."],
+            ['group' => 'checkout_result', 'key' => 'payment_system_error_message', 'locale' => 'en', 'text' => "The payment could not be completed at the moment.\nPlease try again in a few minutes."],
+
+            ['group' => 'checkout_result', 'key' => 'payment_unconfirmed_title', 'locale' => 'cg', 'text' => 'Rezultat plaćanja nije bilo moguće potvrditi.'],
+            ['group' => 'checkout_result', 'key' => 'payment_unconfirmed_title', 'locale' => 'en', 'text' => 'The payment result could not be confirmed.'],
+            ['group' => 'checkout_result', 'key' => 'payment_unconfirmed_message', 'locale' => 'cg', 'text' => 'Molimo provjerite status rezervacije ili pokušajte ponovo kasnije.'],
+            ['group' => 'checkout_result', 'key' => 'payment_unconfirmed_message', 'locale' => 'en', 'text' => 'Please check the reservation status or try again later.'],
+
+            ['group' => 'checkout_result', 'key' => 'late_success_title', 'locale' => 'cg', 'text' => 'Plaćanje je potvrđeno kasnije'],
+            ['group' => 'checkout_result', 'key' => 'late_success_title', 'locale' => 'en', 'text' => 'Payment confirmed after the window closed'],
+            ['group' => 'checkout_result', 'key' => 'late_success_message', 'locale' => 'cg', 'text' => "Plaćanje je potvrđeno nakon isteka standardnog roka.\nMolimo kontaktirajte podršku radi provjere rezervacije."],
+            ['group' => 'checkout_result', 'key' => 'late_success_message', 'locale' => 'en', 'text' => "Payment was confirmed after the reservation window closed.\nPlease contact support to verify your reservation."],
+
+            ['group' => 'checkout_result', 'key' => 'payment_pending_title', 'locale' => 'cg', 'text' => 'Plaćanje se obrađuje'],
+            ['group' => 'checkout_result', 'key' => 'payment_pending_title', 'locale' => 'en', 'text' => 'Your payment is being processed'],
+            ['group' => 'checkout_result', 'key' => 'payment_pending_message', 'locale' => 'cg', 'text' => "Ako ste završili plaćanje na banci, sačekajte trenutak i osvježite stranicu.\nStatus se uvijek čita sa našeg servera."],
+            ['group' => 'checkout_result', 'key' => 'payment_pending_message', 'locale' => 'en', 'text' => "If you already completed payment at the bank, wait a moment and refresh this page.\nStatus is always read from our server."],
+
+            ['group' => 'checkout_result', 'key' => 'refresh_page', 'locale' => 'cg', 'text' => 'Osvježi stranicu'],
+            ['group' => 'checkout_result', 'key' => 'refresh_page', 'locale' => 'en', 'text' => 'Refresh page'],
+            ['group' => 'checkout_result', 'key' => 'back_to_booking', 'locale' => 'cg', 'text' => 'Nazad na rezervaciju'],
+            ['group' => 'checkout_result', 'key' => 'back_to_booking', 'locale' => 'en', 'text' => 'Back to booking'],
+
             ['group' => 'emails', 'key' => 'free_reservation_subject', 'locale' => 'en', 'text' => 'Free reservation confirmed #%1$d'],
             ['group' => 'emails', 'key' => 'free_reservation_subject', 'locale' => 'cg', 'text' => 'Besplatna rezervacija potvrđena #%1$d'],
             ['group' => 'emails', 'key' => 'free_reservation_body', 'locale' => 'en', 'text' => "Hello,\n\nYour free parking reservation #%1\$d is confirmed for %2\$s.\nNo payment was required — this email is not a fiscal invoice.\n\nThank you."],
@@ -281,6 +358,23 @@ class UiTranslationsSeeder extends Seeder
             ['group' => 'panel', 'key' => 'page_statistics_title', 'locale' => 'cg', 'text' => 'Statistika'],
             ['group' => 'panel', 'key' => 'page_statistics_placeholder', 'locale' => 'en', 'text' => 'Content coming soon.'],
             ['group' => 'panel', 'key' => 'page_statistics_placeholder', 'locale' => 'cg', 'text' => 'Sadržaj uskoro.'],
+
+            ['group' => 'statistics', 'key' => 'title', 'locale' => 'en', 'text' => 'Statistics'],
+            ['group' => 'statistics', 'key' => 'title', 'locale' => 'cg', 'text' => 'Statistika'],
+            ['group' => 'statistics', 'key' => 'total_paid', 'locale' => 'en', 'text' => 'Total paid'],
+            ['group' => 'statistics', 'key' => 'total_paid', 'locale' => 'cg', 'text' => 'Ukupno plaćeno'],
+            ['group' => 'statistics', 'key' => 'number_of_visits', 'locale' => 'en', 'text' => 'Number of visits'],
+            ['group' => 'statistics', 'key' => 'number_of_visits', 'locale' => 'cg', 'text' => 'Broj posjeta'],
+            ['group' => 'statistics', 'key' => 'vehicles_usage', 'locale' => 'en', 'text' => 'Vehicles usage'],
+            ['group' => 'statistics', 'key' => 'vehicles_usage', 'locale' => 'cg', 'text' => 'Korišćenje vozila'],
+            ['group' => 'statistics', 'key' => 'registration_plates', 'locale' => 'en', 'text' => 'Registration plates'],
+            ['group' => 'statistics', 'key' => 'registration_plates', 'locale' => 'cg', 'text' => 'Registarske tablice'],
+            ['group' => 'statistics', 'key' => 'vehicle_category', 'locale' => 'en', 'text' => 'Vehicle category'],
+            ['group' => 'statistics', 'key' => 'vehicle_category', 'locale' => 'cg', 'text' => 'Kategorija vozila'],
+            ['group' => 'statistics', 'key' => 'visits', 'locale' => 'en', 'text' => 'Visits'],
+            ['group' => 'statistics', 'key' => 'visits', 'locale' => 'cg', 'text' => 'Posjete'],
+            ['group' => 'statistics', 'key' => 'no_data', 'locale' => 'en', 'text' => 'No data yet.'],
+            ['group' => 'statistics', 'key' => 'no_data', 'locale' => 'cg', 'text' => 'Još nema podataka.'],
 
             ['group' => 'panel', 'key' => 'booking_section_title', 'locale' => 'en', 'text' => 'New reservation'],
             ['group' => 'panel', 'key' => 'booking_section_title', 'locale' => 'cg', 'text' => 'Nova rezervacija'],

@@ -1,6 +1,6 @@
 # Fake payment + fake fiscalization — QA checklist
 
-Poslednje ažuriranje: 2026-03-26  
+Poslednje ažuriranje: 2026-04-01  
 Namena: brz, praktičan checklist za ručno testiranje **fake bank** scenarija i **fake fiskal** scenarija (lokalno), uključujući DB verifikacije.
 
 ---
@@ -36,6 +36,11 @@ Ako koristiš `QUEUE_CONNECTION=database`, moraš imati aktivan worker:
 - **Return page**: `GET /payment/return?merchant_transaction_id=<tx>`
 - **Fake fiskal panel (scenario)**: `GET /payment/fake-fiscal` (vidljivo u local okruženju)
 
+### 1.4 Šta očekivati na `/payment/return` (UX)
+
+- Dok je **`temp_data.status = pending`**: stranica prikazuje poruku „plaćanje se obrađuje“, **polling** na `/payment/result`, dugmad osveži / nazad. **Layout:** gost → guest okvir; ulogovan korisnik → panel (**`x-app-layout`**).
+- Kad callback kreira rezervaciju ili završi neuspeh: sledeći **reload** ili dolazak na return URL vodi na **redirect** — korisnik završava na **`/guest/reserve`** ili **`/panel/reservations`** sa **flash bannerom** (`checkout_banner`, grupe `checkout_result`), a ne na dugom „success“ ekranu na `/payment/return`.
+
 ---
 
 ## 2) “Happy path” (success → reservation → fake fiscal)
@@ -66,7 +71,7 @@ limit 5;
   - Otvori `GET /payment/fake-bank?merchant_transaction_id=<tx>`
   - Klikni scenario **success** (ili direktno):
     - `GET /fake-bank/complete?tx=<tx>&scenario=success`
-  - Završi na `GET /payment/return?merchant_transaction_id=<tx>`
+  - Završi na `GET /payment/return?merchant_transaction_id=<tx>` (možeš kratko videti **pending** ekran dok job ne obradi callback; zatim **redirect** na guest/panel sa zelenom ili info porukom).
 
 - **Expected DB**
   - `temp_data.status = processed`

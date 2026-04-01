@@ -8,6 +8,9 @@ Hronološki najnovije na vrhu unutar svake sekcije. Pri zatvaranju zadatka dodaj
 
 ## 2026-04 — Agency panel, besplatan checkout, dokumentacija
 
+- **2026-04-01** — **Checkout ishod (UX):** `CheckoutResultFlash`, session **`checkout_banner`**, grupa **`checkout_result`** u `UiTranslationsSeeder`; banner partial na `guest.reserve` / `panel.reservations`; `PaymentReturnController` redirect + flash za success/failed/late_success; `PaymentResultResolver` (`fiscal_complete`, `resolution_reason`, redirect na `guest.reserve` / `panel.reservations`). Dokumentacija: `project-conventions.md` §5, `payment-callback-handling.md`, `success-payment-pipeline.md`, QA checklist-ovi.
+- **2026-04-01** — **`/payment/return` layout:** pending ekran — **`x-guest-layout`** vs **`x-app-layout`** prema `auth()->check()`; zajednički sadržaj u `payment/partials/return-pending-body.blade.php`.
+- **2026-04-01** — **Statistic tab:** `PanelStatisticsService` (total paid na plaćenim realized, broj posjeta, tabela po tablicama/kategoriji); `ui_translations` grupa **`statistics`**; ažuriran `docs/agency-panel.md`.
 - **2026-04-01** — **`docs/agency-panel.md`**: rute `/panel`, upcoming/realized, promena vozila, User tab, brisanje naloga; indeks u `project-status-next-steps.md` i pokazivač u `project-conventions.md` §8.
 - **2026-04-01** — **Besplatne rezervacije:** `FreeReservationRules`, `PaymentSuccessHandler` sa granom bez fiskala, `SendFreeReservationConfirmationJob`, `reservations.status = free`, `GenerateInvoicePdfJob::forceRegenerate` za zamenu vozila.
 - **2026-04-01** — **Agency panel R3:** `PanelReservationListService`, upcoming/realized tabele, PATCH vozila, PDF inline `panel.reservations.invoice.view`.
@@ -60,8 +63,10 @@ Hronološki najnovije na vrhu unutar svake sekcije. Pri zatvaranju zadatka dodaj
 | Greške / klasifikacija | `app/Services/Payment/ErrorClassifier.php` |
 | Fiskal | `app/Services/FiscalizationService.php` |
 | UI tekst | `app/Support/UiText.php`, `database/seeders/UiTranslationsSeeder.php` |
+| Checkout flash / plaćanje UX | `app/Support/CheckoutResultFlash.php`, `PaymentReturnController`, `partials/checkout-result-banner.blade.php` |
 | Noreply notifikacije | `app/Notifications/NoreplyVerifyEmail.php`, `NoreplyResetPassword.php` |
 | Agency panel (dok.) | `docs/agency-panel.md` |
 | Besplatan termin / checkout | `app/Services/Reservation/FreeReservationRules.php`, `app/Jobs/SendFreeReservationConfirmationJob.php` |
 | Panel upcoming/realized | `app/Services/Reservation/PanelReservationListService.php`, `app/Http/Controllers/PanelController.php` |
+| Panel statistika | `app/Services/Reservation/PanelStatisticsService.php` |
 | Profil (panel user) | `app/Http/Controllers/ProfileController.php`, `resources/views/panel/partials/user-settings-form.blade.php` |

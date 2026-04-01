@@ -50,13 +50,13 @@ Datum provjere: prema checklisti. Cilj: potvrditi da je implementacija stabilna,
 |--------|--------|----------|
 | cancel/error: oslobađa rezervisani slot (lock) | ✅ | **releaseSoftLock** dekrementira `daily_parking_data.pending`; red u temp_data **ostaje** (audit). Nema brisanja redova. |
 | Oslobađaju se slotovi / privremeni lock-ovi | ✅ | `PaymentSuccessHandler::releaseSoftLock($temp, false)` u `handleCanceled` |
-| Guest vraćen na formu; auth na profil | ✅ | `PaymentReturnController` redirect: guest → `/reservations?retry_token=...`, auth → `profile.reservations` |
+| Guest vraćen na formu; auth na panel | ✅ | `PaymentReturnController`: redirect na **`guest.reserve`** (ili `?retry_token=`), auth → **`panel.reservations`**; flash **`checkout_banner`** (`CheckoutResultFlash` / `checkout_result`). Ruta **`/reservations`** i dalje redirectuje na guest reserve sa query stringom. |
 | Poruka lokalizovana (cg/en) | ✅ | `__()` u view-u i resolveru; SetLocale za web |
 | failed: oznaka failed, nema upisa u reservations, dozvoljen retry | ✅ | status canceled/expired; retry_token i GET /api/reservations/retry/{token}; novi pokušaj = novi merchant_transaction_id |
 | late_success: sistem prepoznaje kasni odgovor banke | ✅ | `PaymentCallbackJob` → `applyLateSuccess`; temp_data → late_success |
 | late_success: ako nije validna – incident za manual review | ⚠️ | **AssignLateSuccessReservations** je namjerno **stub**: late_success redovi ostaju u temp_data za admin pregled; automatsko kreiranje rezervacije nije u V1 (v. „Namjerna odstupanja“). |
 | late_success: ako validna – normalan success flow | ⚠️ | Isto: cron ne kreira rezervaciju u V1; planirano za kasniju fazu ili ručnu obradu. |
-| UI: late_success ne prikazuje se kao "pending" | ✅ | **Ispravljeno:** `PaymentResultResolver` sada vraća `status: 'late_success'` s porukom; view ima zaseban blok. |
+| UI: late_success ne prikazuje se kao "pending" | ✅ | `PaymentResultResolver` vraća `status: 'late_success'`; `PaymentReturnController` radi **redirect** sa **`checkout_banner`** (info), ne meša se u pending ekran. |
 
 **Zaključak:** Cancel/error i failed flow su konzistentni. late_success je prepoznat i prikazan; obrada (kreiranje rezervacije / incident) je u planu (cron stub).
 
