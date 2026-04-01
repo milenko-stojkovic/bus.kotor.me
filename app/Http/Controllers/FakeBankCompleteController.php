@@ -2,44 +2,54 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Api\PaymentCallbackController;
 use App\Jobs\PaymentCallbackJob;
+use App\Jobs\ProcessReservationAfterPaymentJob;
+use App\Models\Reservation;
 use App\Models\TempData;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 /**
- * SAMO za test: simulacija banke (fake bank). Dva endpointa:
- *
- * 1) GET /fake-bank/complete?scenario=success|cancel|expired|declined|insufficient_funds|3ds_failed|system_error&tx={merchant_transaction_id}
- *    (backward compat: status=success|error|cancel)
- *    - Pronalazi transakciju po tx, gradi fake Bankart callback payload, interno poziva
- *    - PaymentCallbackController@handle, zatim redirect na /payment/success|error|cancel.
- *
- * 2) POST /payment/fake-bank/complete (merchant_transaction_id, status=success|failed)
- *    - Dispatch PaymentCallbackJob, redirect na payment.return.
- *
- * Bank callback = POST /api/payment/callback = machine-to-machine only.
+ * SAMO test: kombinovana fake banka + fake fiskal u jednom submitu (ili GET complete sa opcionim fiscal_scenario).
+ * Pravi callback ne poziva ovo — machine-to-machine ostaje POST /api/payment/callback.
  */
 class FakeBankCompleteController extends Controller
 {
+    /** @var array<int, string> */
+    private const FISCAL_SCENARIOS = [
+        'success',
+        'deposit_missing',
+        'already_fiscalized',
+        'validation_error',
+        'provider_down',
+        'tax_server_error',
+        'temporary_service_down',
+        'timeout',
+        'malformed_response',
+    ];
+
+    private const BANK_SCENARIOS_RULE = 'success,cancel,expired,declined,insufficient_funds,3ds_failed,system_error';
+
     /**
-     * GET /fake-bank/complete?scenario=...&tx=...
-     * Generiše fake Bankart callback, poziva PaymentCallbackController@handle, redirect.
+     * GET /fake-bank/complete?tx=...&scenario=...&fiscal_scenario=... (fiscal_scenario podrazumijeva success).
      */
     public function completeGet(Request $request): RedirectResponse
     {
+        $this->assertFakeBankDriver();
+
         $validated = $request->validate([
-            'scenario' => ['nullable', 'string', 'in:success,cancel,expired,declined,insufficient_funds,3ds_failed,system_error'],
+            'scenario' => ['nullable', 'string', 'in:'.self::BANK_SCENARIOS_RULE],
             'status' => ['nullable', 'string', 'in:success,error,cancel'],
             'tx' => ['required', 'string', 'max:64'],
+            'fiscal_scenario' => ['nullable', 'string', 'in:'.implode(',', self::FISCAL_SCENARIOS)],
         ], [], [
             'tx' => 'merchant_transaction_id',
         ]);
 
         $merchantTransactionId = $validated['tx'];
-        $scenario = $validated['scenario']
+        $bankScenario = $validated['scenario']
             ?? match ($validated['status'] ?? null) {
                 'success' => 'success',
                 'cancel' => 'cancel',
@@ -47,55 +57,99 @@ class FakeBankCompleteController extends Controller
                 default => 'success',
             };
 
+        $fiscalScenario = $validated['fiscal_scenario'] ?? 'success';
+
+        return $this->runFakeQaCompletion($merchantTransactionId, $bankScenario, $fiscalScenario);
+    }
+
+    /**
+     * POST /payment/fake-bank/complete — jedna forma: bank_scenario + fiscal_scenario (fiscal važi samo kad je bank success).
+     */
+    public function completeForm(Request $request): RedirectResponse
+    {
+        $this->assertFakeBankDriver();
+
+        $validated = $request->validate([
+            'merchant_transaction_id' => ['required', 'string', 'max:64'],
+            'bank_scenario' => ['required', 'string', 'in:'.self::BANK_SCENARIOS_RULE],
+            'fiscal_scenario' => [
+                'nullable',
+                'string',
+                'in:'.implode(',', self::FISCAL_SCENARIOS),
+                Rule::requiredIf(fn () => $request->input('bank_scenario') === 'success'),
+            ],
+        ]);
+
+        $fiscal = $validated['bank_scenario'] === 'success'
+            ? (string) ($validated['fiscal_scenario'] ?? 'success')
+            : null;
+
+        return $this->runFakeQaCompletion(
+            trim($validated['merchant_transaction_id']),
+            $validated['bank_scenario'],
+            $fiscal
+        );
+    }
+
+    private function assertFakeBankDriver(): void
+    {
+        abort_unless(
+            (config('services.bank.driver') ?? config('payment.provider', 'fake')) === 'fake',
+            404
+        );
+    }
+
+    private function runFakeQaCompletion(string $merchantTransactionId, string $bankScenario, ?string $fiscalScenario): RedirectResponse
+    {
         $temp = TempData::where('merchant_transaction_id', $merchantTransactionId)->first();
         if (! $temp) {
             return redirect('/payment/error')->with('error', 'Transaction not found.');
         }
 
-        // Test-only: bypass signature/controller and dispatch job directly with a real-like raw payload.
-        $rawPayload = $this->buildFakeBankartCallbackPayload($temp, $scenario);
+        $rawPayload = $this->buildFakeBankartCallbackPayload($temp, $bankScenario);
 
-        $status = $scenario === 'success' ? 'success' : 'failed';
+        $status = $bankScenario === 'success' ? 'success' : 'failed';
         $errorCode = $rawPayload['code'] ?? null;
         $errorReason = $rawPayload['message'] ?? null;
 
-        PaymentCallbackJob::dispatch([
+        $payload = [
             'merchant_transaction_id' => $merchantTransactionId,
             'status' => $status,
             'error_code' => $errorCode !== null ? (string) $errorCode : null,
             'error_reason' => is_string($errorReason) ? $errorReason : null,
-        ], $rawPayload);
+        ];
+
+        PaymentCallbackJob::dispatchSync($payload, $rawPayload);
+
+        $this->runDeferredFakeFiscalPipeline($merchantTransactionId, $bankScenario === 'success', $fiscalScenario);
 
         return redirect()->route('payment.return', ['merchant_transaction_id' => $merchantTransactionId]);
     }
 
     /**
-     * POST /payment/fake-bank/complete – form submit (Success/Fail dugme).
+     * Kad su oba drivera fake, PaymentSuccessHandler ne šalje ProcessReservationAfterPaymentJob — šaljemo ovdje sa scenarijem iz forme.
      */
-    public function __invoke(Request $request): RedirectResponse
+    private function runDeferredFakeFiscalPipeline(string $merchantTransactionId, bool $bankSuccess, ?string $fiscalScenario): void
     {
-        $validated = $request->validate([
-            'merchant_transaction_id' => ['required', 'string', 'max:64'],
-            'status' => ['required', 'string', 'in:success,failed'],
-        ]);
+        if (! $bankSuccess) {
+            return;
+        }
 
-        // Backward-compatible: this path dispatches job directly. Keep it simple but provide raw payload in real shape.
-        $scenario = $validated['status'] === 'success' ? 'success' : 'system_error';
-        $temp = TempData::where('merchant_transaction_id', $validated['merchant_transaction_id'])->first();
-        $rawPayload = $temp ? $this->buildFakeBankartCallbackPayload($temp, $scenario) : [
-            'result' => $scenario === 'success' ? 'OK' : 'ERROR',
-            'merchantTransactionId' => $validated['merchant_transaction_id'],
-        ];
+        $bankFake = (config('services.bank.driver') ?? config('payment.provider', 'fake')) === 'fake';
+        $fiscalFake = config('services.fiscalization.driver') === 'fake';
+        if (! $bankFake || ! $fiscalFake) {
+            return;
+        }
 
-        PaymentCallbackJob::dispatch([
-            'merchant_transaction_id' => $validated['merchant_transaction_id'],
-            'status' => $scenario === 'success' ? 'success' : 'failed',
-            // Keep error_code/reason empty here; job will fall back to rawPayload code/message if needed.
-        ], $rawPayload);
+        $scenario = is_string($fiscalScenario) && $fiscalScenario !== '' ? $fiscalScenario : 'success';
 
-        return redirect()->route('payment.return', [
-            'merchant_transaction_id' => $validated['merchant_transaction_id'],
-        ]);
+        $reservation = Reservation::query()
+            ->where('merchant_transaction_id', $merchantTransactionId)
+            ->first();
+
+        if ($reservation && $reservation->status === 'paid') {
+            ProcessReservationAfterPaymentJob::dispatchSync($reservation->id, $scenario);
+        }
     }
 
     private function buildFakeBankartCallbackPayload(TempData $temp, string $scenario): array

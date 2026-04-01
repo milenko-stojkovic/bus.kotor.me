@@ -14,7 +14,7 @@ Fokus: contract parity (payload/response shape + failure semantika), bez menjanj
 Usklađen je fake bank callback i fake fiskal response da budu što bliži real provider shape-u, tako da prelaz `BANK_DRIVER=fake <-> bankart` i `FISCALIZATION_DRIVER=fake <-> real` bude “bezbolan” (bez menjanja core flow-a).
 
 - Fake Bankart callback (GET flow) sada šalje realističan Bankart payload shape (`result`, `uuid`, `merchantTransactionId`, `purchaseId`, `transactionType`, `paymentMethod`, `amount`, `currency`, plus `code/message/adapterCode/...` na fail).
-- Dodat je jednostavan scenario input kroz `?scenario=...` i UI dugmad na fake bank stranici.
+- Scenario banke + fiskala: jedna QA forma na **`/payment/fake-bank`** (POST) ili `?scenario=` / `?fiscal_scenario=` na **GET** `/fake-bank/complete`.
 - `PaymentCallbackJob` sada može da klasifikuje grešku i kad `code/message` postoje samo u raw payload-u (kao kod real Bankart callback-a).
 - Fake fiskal sada podržava scenario-driven real-like odgovore direktno na `/api/efiscal/deposit` i `/api/efiscal/fiscalReceipt` (isti shape kao real), uključujući `deposit_missing (58)` i ostale kodove.
 - Fake fiskal u app flow-u sada radi `deposit → receipt` (i retry za 58), isto kao real.
@@ -37,9 +37,9 @@ Usklađen je fake bank callback i fake fiskal response da budu što bliži real 
 
 ### 3.1 Fake Bankart (callback)
 
-Pokrećeš preko fake bank stranice (dugmad) ili direktno:
+Pokrećeš preko **`GET /payment/fake-bank?tx=...`** (forma) ili direktno:
 
-- URL: `GET /fake-bank/complete?tx=<merchant_transaction_id>&scenario=<scenario>`
+- URL: `GET /fake-bank/complete?tx=<merchant_transaction_id>&scenario=<bank_scenario>&fiscal_scenario=<fiscal_scenario>` (fiskal opciono, default success)
 
 Scenariji:
 

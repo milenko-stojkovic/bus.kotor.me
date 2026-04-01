@@ -120,6 +120,7 @@ class Reservation extends Model
 
         if (empty($todaySlotIds) && empty($tomorrowSlotIds)) {
             $query->whereRaw('1 = 0');
+
             return;
         }
 

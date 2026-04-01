@@ -8,7 +8,7 @@ Flow nakon bank API SUCCESS callback-a: rezervacija se kreira → **ProcessReser
 
 Ne idu na banku i **ne** pokreću **ProcessReservationAfterPaymentJob** / fiskalizaciju. Backend odlučuje preko **`FreeReservationRules`**.
 
-- **`PaymentSuccessHandler::handle(..., runFiscalAndInvoicePipeline: false)`** kreira rezervaciju sa **`reservations.status = free`**, šalje **`SendFreeReservationConfirmationJob`** (tekstualni email, bez računa).
+- **`PaymentSuccessHandler::handle(..., runFiscalAndInvoicePipeline: false)`** kreira rezervaciju sa **`reservations.status = free`**, šalje **`SendFreeReservationConfirmationJob`** (email + **PDF potvrda** iz šablona `pdf/free-reservation-confirmation`, **`FreeReservationPdfGenerator`**, DomPDF). Sadržaj PDF-a **samo cg**; podnožje: *„Ova potvrda je automatski generisana od strane sistema Opštine Kotor.“* (bez teksta o fiskalnom dokumentu). PDF se čuva u **`storage/app/invoices/{id}.pdf`** i upisuje **`invoice_pdf_path`**. Logo: **`public/images/logo_kotor.png`** (opciono).
 - Redirect: **`guest.reserve`** ili **`panel.reservations`** sa **`checkout_banner`** (grupa **`checkout_result`**, vidi **`CheckoutResultFlash`**), ne kratkotrajni „success“ ekran na **`/payment/return`**.
 - **`ProcessReservationAfterPaymentJob`** odmah izlazi ako je `status === 'free'` (odbrambeno).
 - **Plaćeni tok:** kad postoji rezervacija, **`GET /payment/return`** više ne ostaje na success view-u — radi **redirect** na gore navedene rute sa flash porukom; na **`/payment/return`** ostaje samo **`pending`** (vidi **`payment/return.blade.php`**). **`PaymentResultResolver`** i dalje razlikuje npr. **`fiscal_complete`** (JIR postoji ili ne) radi izbora **success** vs **info** bannera.
@@ -19,7 +19,9 @@ Ne idu na banku i **ne** pokreću **ProcessReservationAfterPaymentJob** / fiskal
 
 1. **pending → processed** (samo bank API callback, PaymentCallbackJob).
 2. Kreira se **reservation** (bez fiscal polja).
-3. Dispatch **ProcessReservationAfterPaymentJob(reservation_id)**.
+3. Dispatch **ProcessReservationAfterPaymentJob(reservation_id)** (opciono sa **`fakeFiscalScenario`** kad fiskal driver šalje scenario iz kombinovane fake QA forme).
+   - **Izuzetak:** ako su **`BANK_DRIVER=fake`** i **`FISCALIZATION_DRIVER=fake`**, job se **ne** šalje iz **`PaymentSuccessHandler`** — isti zahtev ga pokreće **`FakeBankCompleteController`** odmah poslije **`PaymentCallbackJob`**, sa scenarijem sa forme (jedan submit = bank + fiskal ishod).
+   - **`dispatchSync`** lanac PDF + email i dalje zavisi od **`FAKE_PAYMENT_E2E_SYNC`** i fake banke (v. job).
 
 ---
 
@@ -28,12 +30,12 @@ Ne idu na banku i **ne** pokreću **ProcessReservationAfterPaymentJob** / fiskal
 - **Pokušaj fiskalizacije** (poziv fiskalnog API-ja).
 - **Uspeh fiskalizacije:**
   - ažurira reservation sa fiscal_jir, fiscal_ikof, fiscal_qr, fiscal_operator, fiscal_date;
-  - generiše **fiskalni PDF** račun;
-  - šalje **invoice email** sa fiskalnim PDF-om (from bus@kotor.me).
+  - **`GenerateInvoicePdfJob`** → **`PaidInvoicePdfGenerator`**: PDF iz šablona **`pdf/paid-invoice`** (DomPDF, izgled kao V1), sadržaj **samo cg**; QR iz **`fiscal_qr`** URL-a (**`endroid/qr-code`**), logo **`public/images/logo_kotor.png`**; u podnožju tekst o **fiskalnom dokumentu** samo kad je **`isFiscal`**;
+  - šalje **invoice email** sa PDF-om (from bus@kotor.me).
 - **Neuspeh fiskalizacije:**
   - upis u **post_fiscalization_data** (reservation_id, merchant_transaction_id, error, attempts, next_retry_at);
-  - generiše **nefiskalni PDF** sa napomenom: *"Račun je važeći kao potvrda o kupovini termina. Fiskalizovani račun biće dostavljen naknadno."*;
-  - šalje email kupcu sa nefiskalnim računom;
+  - isti PDF šablon sa **`isFiscal = false`**: umjesto IKOF/JIR/QR prikazuje se **`GenerateInvoicePdfJob::NON_FISCAL_NOTE`**;
+  - šalje email kupcu sa nefiskalnim PDF-om;
   - **ne** rollback-uje rezervaciju ni plaćanje.
 
 ---

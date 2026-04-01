@@ -1,30 +1,112 @@
 <x-guest-layout>
-<div class="space-y-4">
-    <p class="text-sm text-gray-600">Simulate bank payment (test). Transaction: <code class="bg-gray-100 px-1">{{ $merchant_transaction_id }}</code></p>
-    <p class="text-xs text-amber-600">Frontend nikad ne poziva bank callback (POST /api/payment/callback). Ovo koristi poseban test endpoint.</p>
-    <div class="flex flex-col gap-2">
-        @php
-            $scenarios = [
-                ['id' => 'success', 'label' => 'Success', 'cls' => 'bg-green-600 hover:bg-green-500 focus:bg-green-700 focus:ring-green-500', 'bg' => '#16a34a'],
-                ['id' => 'cancel', 'label' => 'Cancel (user_cancelled)', 'cls' => 'bg-slate-600 hover:bg-slate-500 focus:bg-slate-700 focus:ring-slate-500', 'bg' => '#475569'],
-                ['id' => 'expired', 'label' => 'Expired (transaction_expired)', 'cls' => 'bg-amber-600 hover:bg-amber-500 focus:bg-amber-700 focus:ring-amber-500', 'bg' => '#d97706'],
-                ['id' => 'declined', 'label' => 'Declined (authorization_declined)', 'cls' => 'bg-red-600 hover:bg-red-500 focus:bg-red-700 focus:ring-red-500', 'bg' => '#dc2626'],
-                ['id' => 'insufficient_funds', 'label' => 'Insufficient funds', 'cls' => 'bg-red-600 hover:bg-red-500 focus:bg-red-700 focus:ring-red-500', 'bg' => '#dc2626'],
-                ['id' => '3ds_failed', 'label' => '3DS failed', 'cls' => 'bg-red-600 hover:bg-red-500 focus:bg-red-700 focus:ring-red-500', 'bg' => '#dc2626'],
-                ['id' => 'system_error', 'label' => 'System error', 'cls' => 'bg-purple-600 hover:bg-purple-500 focus:bg-purple-700 focus:ring-purple-500', 'bg' => '#7c3aed'],
-            ];
-        @endphp
-
-        @foreach ($scenarios as $s)
-            <a
-                href="{{ route('fake-bank.complete', ['tx' => $merchant_transaction_id, 'scenario' => $s['id']], false) }}"
-                class="inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-offset-2 transition ease-in-out duration-150 {{ $s['cls'] }}"
-                style="background: {{ $s['bg'] }}; color: #fff; text-decoration: none;"
-            >
-                {{ $s['label'] }}
-            </a>
-        @endforeach
+<div class="space-y-6">
+    <div class="space-y-1">
+        <h1 class="text-lg font-semibold">Fake QA (banka + fiskal)</h1>
+        <p class="text-sm text-gray-600">Jedan submit. Ako banka nije success, fiskal se ignoriše. Važi kada su <code class="bg-gray-100 px-1">BANK_DRIVER=fake</code> i <code class="bg-gray-100 px-1">FISCALIZATION_DRIVER=fake</code>.</p>
     </div>
-    <p class="text-xs text-gray-500">Nakon klika redirect na <a href="{{ route('payment.return', ['merchant_transaction_id' => $merchant_transaction_id]) }}" class="underline">/payment/return</a> – status se uvek čita iz baze.</p>
+    <p class="text-xs text-amber-700">Ne poziva se pravi bank callback — test endpoint.</p>
+
+    <form id="fake-qa-form" method="POST" action="{{ route('payment.fake-bank.complete', [], false) }}" class="space-y-6">
+        @csrf
+        <input type="hidden" name="merchant_transaction_id" value="{{ $merchant_transaction_id }}">
+
+        <fieldset class="space-y-2 rounded-md border border-gray-200 p-4">
+            <legend class="text-sm font-semibold text-gray-900 px-1">A — Fake Bankart</legend>
+            @php
+                $bankScenarios = [
+                    ['id' => 'success', 'label' => 'Success'],
+                    ['id' => 'cancel', 'label' => 'Cancel (user_cancelled)'],
+                    ['id' => 'expired', 'label' => 'Expired'],
+                    ['id' => 'declined', 'label' => 'Declined'],
+                    ['id' => 'insufficient_funds', 'label' => 'Insufficient funds'],
+                    ['id' => '3ds_failed', 'label' => '3DS failed'],
+                    ['id' => 'system_error', 'label' => 'System error'],
+                ];
+            @endphp
+            @foreach ($bankScenarios as $s)
+                <label class="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="radio" name="bank_scenario" value="{{ $s['id'] }}" class="rounded-full border-gray-300 text-indigo-600 focus:ring-indigo-500 js-bank-scenario"
+                        {{ $loop->first ? 'checked' : '' }}>
+                    <span>{{ $s['label'] }}</span>
+                </label>
+            @endforeach
+        </fieldset>
+
+        <fieldset id="fiscal-fieldset" class="space-y-2 rounded-md border border-gray-200 p-4">
+            <legend class="text-sm font-semibold text-gray-900 px-1">B — Fake fiskalizacija</legend>
+            <p id="fiscal-hint" class="text-xs text-gray-500 hidden">Dostupno samo kada je banka Success.</p>
+            @php
+                $fiscalScenarios = [
+                    ['id' => 'success', 'label' => 'Success'],
+                    ['id' => 'deposit_missing', 'label' => 'Deposit missing (58)'],
+                    ['id' => 'already_fiscalized', 'label' => 'Already fiscalized (78)'],
+                    ['id' => 'validation_error', 'label' => 'Validation error (11)'],
+                    ['id' => 'provider_down', 'label' => 'Provider down (500)'],
+                    ['id' => 'tax_server_error', 'label' => 'Tax server error'],
+                    ['id' => 'temporary_service_down', 'label' => 'Temporary service down (999)'],
+                    ['id' => 'timeout', 'label' => 'Timeout'],
+                    ['id' => 'malformed_response', 'label' => 'Malformed response'],
+                ];
+            @endphp
+            @foreach ($fiscalScenarios as $fs)
+                <label class="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="radio" name="fiscal_scenario" value="{{ $fs['id'] }}" class="rounded-full border-gray-300 text-indigo-600 focus:ring-indigo-500 js-fiscal-scenario"
+                        {{ $fs['id'] === 'success' ? 'checked' : '' }}>
+                    <span>{{ $fs['label'] }}</span>
+                </label>
+            @endforeach
+        </fieldset>
+
+        <button type="submit" class="inline-flex items-center justify-center px-4 py-2 bg-gray-900 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-800">
+            Potvrdi (banka + fiskal)
+        </button>
+    </form>
+
+    <p class="text-xs text-gray-500">Nakon submita: redirect na <a href="{{ route('payment.return', ['merchant_transaction_id' => $merchant_transaction_id]) }}" class="underline">/payment/return</a></p>
 </div>
+
+<script>
+(function () {
+    var form = document.getElementById('fake-qa-form');
+    if (!form) return;
+    var fiscalInputs = form.querySelectorAll('.js-fiscal-scenario');
+    var fiscalFs = document.getElementById('fiscal-fieldset');
+    var fiscalHint = document.getElementById('fiscal-hint');
+
+    function selectedBank() {
+        var r = form.querySelector('input[name="bank_scenario"]:checked');
+        return r ? r.value : '';
+    }
+
+    function syncFiscalEnabled() {
+        var ok = selectedBank() === 'success';
+        fiscalInputs.forEach(function (el) {
+            el.disabled = !ok;
+        });
+        if (fiscalFs) {
+            fiscalFs.classList.toggle('opacity-40', !ok);
+            fiscalFs.classList.toggle('pointer-events-none', !ok);
+        }
+        if (fiscalHint) {
+            fiscalHint.classList.toggle('hidden', ok);
+        }
+    }
+
+    form.querySelectorAll('.js-bank-scenario').forEach(function (el) {
+        el.addEventListener('change', syncFiscalEnabled);
+    });
+
+    form.addEventListener('submit', function (e) {
+        if (selectedBank() === 'success') {
+            var picked = form.querySelector('input[name="fiscal_scenario"]:checked');
+            if (!picked || picked.disabled) {
+                e.preventDefault();
+                alert('Izaberite fiskal scenario.');
+            }
+        }
+    });
+
+    syncFiscalEnabled();
+})();
+</script>
 </x-guest-layout>

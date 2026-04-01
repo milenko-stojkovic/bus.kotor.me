@@ -3,11 +3,13 @@
 namespace App\Jobs;
 
 use App\Models\Reservation;
+use App\Services\Pdf\PaidInvoicePdfGenerator;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -34,7 +36,7 @@ class GenerateInvoicePdfJob implements ShouldQueue
         public bool $forceRegenerate = false
     ) {}
 
-    public function handle(): void
+    public function handle(PaidInvoicePdfGenerator $pdfGenerator): void
     {
         $reservation = Reservation::find($this->reservationId);
         if (! $reservation) {
@@ -59,18 +61,18 @@ class GenerateInvoicePdfJob implements ShouldQueue
                 return;
             }
 
-            $dir = 'invoices';
-            Storage::makeDirectory($dir);
-            $path = $dir.'/'.$this->reservationId.'.pdf';
+            $relativePath = $pdfGenerator->generateAndStore($reservation, $this->isFiscal);
 
-            $content = $this->isFiscal
-                ? $this->buildFiscalContent($reservation)
-                : $this->buildNonFiscalContent($reservation);
+            if ($relativePath === null) {
+                Log::channel('single')->warning('GenerateInvoicePdfJob: PDF generation returned null', [
+                    'reservation_id' => $this->reservationId,
+                    'is_fiscal' => $this->isFiscal,
+                ]);
 
-            // TODO: replace with real PDF generation (e.g. dompdf/snappy); for now store text placeholder
-            Storage::put($path, $content);
+                return;
+            }
 
-            $reservation->update(['invoice_pdf_path' => $path]);
+            $reservation->update(['invoice_pdf_path' => $relativePath]);
         } finally {
             app()->setLocale($previousLocale);
         }
@@ -89,31 +91,5 @@ class GenerateInvoicePdfJob implements ShouldQueue
         }
 
         return self::invoicePath($reservation->id);
-    }
-
-    private function buildFiscalContent(Reservation $reservation): string
-    {
-        $lines = [
-            'Potvrda rezervacije #'.$reservation->id,
-            'Datum: '.$reservation->reservation_date->format('Y-m-d'),
-            'Tablice: '.$reservation->license_plate,
-            'JIR: '.($reservation->fiscal_jir ?? '-'),
-            'IKOF: '.($reservation->fiscal_ikof ?? '-'),
-        ];
-
-        return implode("\n", $lines);
-    }
-
-    private function buildNonFiscalContent(Reservation $reservation): string
-    {
-        $lines = [
-            'Potvrda rezervacije #'.$reservation->id,
-            'Datum: '.$reservation->reservation_date->format('Y-m-d'),
-            'Tablice: '.$reservation->license_plate,
-            '',
-            self::NON_FISCAL_NOTE,
-        ];
-
-        return implode("\n", $lines);
     }
 }

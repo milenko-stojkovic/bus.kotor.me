@@ -1,7 +1,7 @@
 # Fake payment + fake fiscalization — QA checklist
 
 Poslednje ažuriranje: 2026-04-01  
-Namena: brz, praktičan checklist za ručno testiranje **fake bank** scenarija i **fake fiskal** scenarija (lokalno), uključujući DB verifikacije.
+Namena: brz, praktičan checklist za ručno testiranje **kombinovane fake QA forme** (banka + fiskal na `/payment/fake-bank`, jedan submit) i povezanih scenarija, uključujući DB verifikacije.
 
 ---
 
@@ -31,10 +31,9 @@ Ako koristiš `QUEUE_CONNECTION=database`, moraš imati aktivan worker:
 
 - **Početna (guest UX)**: `GET /`
 - **Checkout init**: `POST /checkout`
-- **Simulacija banke (UI)**: `GET /payment/fake-bank?merchant_transaction_id=<tx>`
-- **Fake bank complete**: `GET /fake-bank/complete?tx=<tx>&scenario=<scenario>`
+- **Kombinovana fake QA forma (banka + fiskal)**: `GET /payment/fake-bank?tx=<tx>` → **POST** `/payment/fake-bank/complete` (`bank_scenario`, `fiscal_scenario` ako je bank success)
+- **Backward compat GET**: `GET /fake-bank/complete?tx=<tx>&scenario=<bank>&fiscal_scenario=<fiscal>` (fiskal podrazumijeva `success`)
 - **Return page**: `GET /payment/return?merchant_transaction_id=<tx>`
-- **Fake fiskal panel (scenario)**: `GET /payment/fake-fiscal` (vidljivo u local okruženju)
 
 ### 1.4 Šta očekivati na `/payment/return` (UX)
 
@@ -43,7 +42,7 @@ Ako koristiš `QUEUE_CONNECTION=database`, moraš imati aktivan worker:
 
 ---
 
-## 2) “Happy path” (success → reservation → fake fiscal)
+## 2) “Happy path” (success → reservation → fiskal u istom submitu)
 
 ### 2.1 Kreiraj novi pokušaj plaćanja (pending)
 
@@ -65,13 +64,13 @@ order by id desc
 limit 5;
 ```
 
-### 2.2 Simuliraj uspešno plaćanje (fake bank: success)
+### 2.2 Simuliraj uspešno plaćanje (bank success + fiskal scenario na istoj formi)
 
 - **Steps**
-  - Otvori `GET /payment/fake-bank?merchant_transaction_id=<tx>`
-  - Klikni scenario **success** (ili direktno):
-    - `GET /fake-bank/complete?tx=<tx>&scenario=success`
-  - Završi na `GET /payment/return?merchant_transaction_id=<tx>` (možeš kratko videti **pending** ekran dok job ne obradi callback; zatim **redirect** na guest/panel sa zelenom ili info porukom).
+  - Otvori `GET /payment/fake-bank?tx=<tx>`
+  - Izaberi **bank_scenario = success**, zatim **fiskal scenario** (npr. success), jedan **Submit**
+  - Ili GET: `GET /fake-bank/complete?tx=<tx>&scenario=success&fiscal_scenario=deposit_missing`
+  - Završi na `GET /payment/return?merchant_transaction_id=<tx>`. Callback + `ProcessReservationAfterPaymentJob` (sa izabranim fiskal scenarijem) obrađuju se u istom zahtjevu prije redirecta kada je **`FAKE_PAYMENT_E2E_SYNC=true`**.
 
 - **Expected DB**
   - `temp_data.status = processed`
@@ -162,21 +161,19 @@ where merchant_transaction_id = @tx;
 
 Fake fiskal driver u app-u radi “real-like” flow: **deposit → receipt**.
 
-Scenario možeš setovati preko panela:
-
-- `GET /payment/fake-fiscal` → set/clear scenario (session), plus prikaz `env` default-a (`FISCAL_FAKE_SCENARIO`)
+Scenario biraš na **istoj** stranici kao banka (`/payment/fake-bank`, sekcija B) ili query `fiscal_scenario` na GET complete. Opciono i dalje važi **`FISCAL_FAKE_SCENARIO`** u .env / session u `FiscalizationService` kada job nema eksplicitan scenario (nije slučaj ovog kombinovanog submita).
 
 ### 4.1 Fiskal success
 
-- **Setup**: scenario `success`
-- **Steps**: uradi payment success (sekcija 2.2)
+- **Setup**: na formi bank **success** + fiskal **success**
+- **Steps**: kao sekcija 2.2
 - **Expected DB**
   - `reservations.fiscal_jir` / `fiscal_ikof` popunjeni
 
 ### 4.2 Fiskal “deposit_missing (58)” na receipt-u
 
-- **Setup**: scenario `deposit_missing`
-- **Steps**: uradi payment success
+- **Setup**: bank **success**, fiskal **deposit_missing**
+- **Steps**: jedan POST sa oba izbora
 - **Expected behavior**
   - Rezervacija je kreirana (payment success)
   - Fiskalizacija se tretira kao “pending/needs retry” (npr. zapis u `post_fiscalization_data` ako se koristi u ovoj grani)
@@ -184,8 +181,8 @@ Scenario možeš setovati preko panela:
 
 ### 4.3 Fiskal timeout / provider_down / validation_error
 
-- **Setup**: scenario `timeout` ili `provider_down` ili `validation_error`
-- **Steps**: uradi payment success
+- **Setup**: bank **success** + odgovarajući fiskal scenario
+- **Steps**: jedan POST
 - **Expected behavior**
   - Rezervacija ostaje validna
   - Fiskal polja na reservation ostaju null
@@ -203,10 +200,9 @@ Scenario možeš setovati preko panela:
 
 - Očisti view cache: `php artisan view:clear`
 
-### 5.3 Fake fiskal panel se ne vidi posle success
+### 5.3 Fiskal opcije sive / disabled
 
-- Panel je zasebna ruta: `GET /payment/fake-fiscal`
-- Proveri da je `APP_ENV=local` (panel je tipično ograničen na local).
+- Na formi mora biti izabrana banka **Success** da bi fiskal radio dugmad bila aktivna (ili koristi GET complete sa `fiscal_scenario`).
 
 ---
 

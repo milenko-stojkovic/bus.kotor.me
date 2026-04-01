@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Reservation;
+use App\Support\UiText;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -62,12 +63,22 @@ class SendInvoiceEmailJob implements ShouldQueue
 
         $fullPath = GenerateInvoicePdfJob::fullPathForReservation($reservation);
 
+        $subjectTemplate = UiText::t(
+            'emails',
+            'paid_invoice_email_subject',
+            'Reservation confirmation #%1$d',
+            $emailLocale
+        );
+        $subject = sprintf($subjectTemplate, $reservation->id);
+
+        $body = $this->buildConfirmationText($reservation, $emailLocale);
+
         Mail::raw(
-            $this->buildConfirmationText($reservation),
-            function ($message) use ($reservation, $email, $fromAddress, $fromName, $fullPath): void {
+            $body,
+            function ($message) use ($reservation, $email, $fromAddress, $fromName, $fullPath, $subject): void {
                 $message->to($email)
                     ->from($fromAddress, $fromName)
-                    ->subject(__('Reservation confirmation').' #'.$reservation->id);
+                    ->subject($subject);
                 if (file_exists($fullPath)) {
                     $message->attach($fullPath, [
                         'as' => 'invoice-'.$reservation->id.'.pdf',
@@ -82,16 +93,28 @@ class SendInvoiceEmailJob implements ShouldQueue
         $reservation->markConfirmationEmailSent();
     }
 
-    private function buildConfirmationText(Reservation $reservation): string
+    private function buildConfirmationText(Reservation $reservation, string $emailLocale): string
     {
-        $text = __('Reservation confirmed.')."\n"
-            .__('Reservation ID').': '.$reservation->id."\n"
-            .__('Date').': '.$reservation->reservation_date->format('Y-m-d')."\n";
+        $jirSuffix = '';
         if ($reservation->fiscal_jir) {
-            $text .= __('JIR').': '.$reservation->fiscal_jir."\n";
+            $jirSuffix = "\n\n".sprintf(
+                UiText::t('emails', 'paid_invoice_email_jir_line', 'JIR: %1$s', $emailLocale),
+                $reservation->fiscal_jir
+            );
         }
-        $text .= "\n".__('Invoice is attached.');
 
-        return $text;
+        $bodyTemplate = UiText::t(
+            'emails',
+            'paid_invoice_email_body',
+            "Hello,\n\nYour paid parking reservation #%1\$d is confirmed for date %2\$s.%3\$s\n\nA PDF copy of your invoice or confirmation is attached.\n\nThank you.",
+            $emailLocale
+        );
+
+        return sprintf(
+            $bodyTemplate,
+            $reservation->id,
+            $reservation->reservation_date->format('Y-m-d'),
+            $jirSuffix
+        );
     }
 }

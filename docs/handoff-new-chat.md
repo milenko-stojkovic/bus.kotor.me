@@ -64,4 +64,4 @@ Tematski fajlovi (payment-states, callback, concurrency, cron, auth/guest, admin
 
 ---
 
-Poslednje ažuriranje ovog fajla: 2026-03-31 (dodata napomena o održavanju tematskih docs)
+Poslednje ažuriranje ovog fajla: 2026-04-02 (indeks docs i dalje aktuelan)

@@ -1,6 +1,6 @@
 # Project DONE (urađeno)
 
-**Poslednje ažuriranje:** 2026-04-01  
+**Poslednje ažuriranje:** 2026-04-02  
 
 Hronološki najnovije na vrhu unutar svake sekcije. Pri zatvaranju zadatka dodaj red sa **datumom** (`YYYY-MM-DD`) i kratak opis; istu stavku ukloni iz `docs/project-todo.md`.
 
@@ -8,6 +8,7 @@ Hronološki najnovije na vrhu unutar svake sekcije. Pri zatvaranju zadatka dodaj
 
 ## 2026-04 — Agency panel, besplatan checkout, dokumentacija
 
+- **2026-04-02** — **Fake QA pojednostavljenje:** jedna forma na `/payment/fake-bank` (banka + fiskal, jedan POST); uklonjen poseban korak `/payment/fake-fiscal` i kolona `fiscal_interactive_pending`; `FakeBankCompleteController` nakon uspješnog callbacka (oba drivera fake) pokreće `ProcessReservationAfterPaymentJob` sa scenarijem iz forme; migracija drop kolone; ažurirani `payment-architecture.md`, `success-payment-pipeline.md`, `payment-callback-handling.md`, `fake-payment-and-fiscal-qa-checklist.md`, `README.md`.
 - **2026-04-01** — **Checkout ishod (UX):** `CheckoutResultFlash`, session **`checkout_banner`**, grupa **`checkout_result`** u `UiTranslationsSeeder`; banner partial na `guest.reserve` / `panel.reservations`; `PaymentReturnController` redirect + flash za success/failed/late_success; `PaymentResultResolver` (`fiscal_complete`, `resolution_reason`, redirect na `guest.reserve` / `panel.reservations`). Dokumentacija: `project-conventions.md` §5, `payment-callback-handling.md`, `success-payment-pipeline.md`, QA checklist-ovi.
 - **2026-04-01** — **`/payment/return` layout:** pending ekran — **`x-guest-layout`** vs **`x-app-layout`** prema `auth()->check()`; zajednički sadržaj u `payment/partials/return-pending-body.blade.php`.
 - **2026-04-01** — **Statistic tab:** `PanelStatisticsService` (total paid na plaćenim realized, broj posjeta, tabela po tablicama/kategoriji); `ui_translations` grupa **`statistics`**; ažuriran `docs/agency-panel.md`.
@@ -37,7 +38,7 @@ Hronološki najnovije na vrhu unutar svake sekcije. Pri zatvaranju zadatka dodaj
 - **2026-03** — **Terms** modal + lokacije (Google maps linkovi); terms partiali `terms_cg` / `terms_en` sa `mailto:bus@kotor.me`.
 - **2026-03** — **`daily_parking_data`**: `pending`/`reserved` za **oba** slota (drop_off + pick_up); `CheckoutController`, `PaymentSuccessHandler`, `ExpirePendingReservations`.
 - **2026-03** — Komanda **`parking:sync-days`** (sync dana + brisanje prošlih), u scheduleru.
-- **2026-03** — **Fake bank** complete tok sa real-like payloadom / queue sync napomena; fake fiscal panel (scenario, apply, redirect).
+- **2026-03** — **Fake bank** complete tok sa real-like payloadom / queue sync napomena. *(Od 2026-04-02: fiskal scenariji na istoj stranici kao banka — v. stavku 2026-04-02.)*
 - **2026-03** — **Post-fiscalization** pravila: `post_fiscalization_data`, `admin_notified_at`, `AdminFiscalizationAlertService`, retry komanda proširena.
 
 ## Ranije (payment / fiskal / backend)

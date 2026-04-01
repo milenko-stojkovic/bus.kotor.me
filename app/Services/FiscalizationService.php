@@ -17,18 +17,20 @@ use Throwable;
 class FiscalizationService
 {
     private const FISCAL_DEPOSIT_ENDPOINT = '/api/efiscal/deposit';
+
     private const FISCAL_RECEIPT_ENDPOINT = '/api/efiscal/fiscalReceipt';
+
     private const DOCUMENT_CONFIG_KEY = 'document_number';
 
     /**
      * Poziv fiskalnog API-ja. Na uspeh vraća niz sa fiscal_jir (i ostalim poljima); na neuspeh ['error' => string].
      */
-    public function tryFiscalize(Reservation $reservation): array
+    public function tryFiscalize(Reservation $reservation, ?string $forcedFakeScenario = null): array
     {
         $driver = config('services.fiscalization.driver', 'fake');
 
         if ($driver === 'fake') {
-            return $this->callFakeFiscalization($reservation);
+            return $this->callFakeFiscalization($reservation, $forcedFakeScenario);
         }
 
         return $this->callRealFiscalization($reservation);
@@ -37,20 +39,26 @@ class FiscalizationService
     /**
      * POST na naš fake endpoint (isti payload kao za real servis).
      */
-    private function callFakeFiscalization(Reservation $reservation): array
+    private function callFakeFiscalization(Reservation $reservation, ?string $forcedFakeScenario = null): array
     {
         // Align fake flow with real provider contract: deposit -> receipt (same shape as real).
         $payload = $this->buildFiscalPayload($reservation);
 
-        $scenario = (string) (config('services.fiscalization.fake_scenario') ?? '');
-        $scenario = trim($scenario);
+        $scenario = '';
+        if ($forcedFakeScenario !== null && trim($forcedFakeScenario) !== '') {
+            $scenario = trim($forcedFakeScenario);
+        }
+        if ($scenario === '') {
+            $scenario = (string) (config('services.fiscalization.fake_scenario') ?? '');
+            $scenario = trim($scenario);
+        }
         if ($scenario === '') {
             try {
                 $sessionScenario = request()->session()->get('fiscal_fake_scenario');
                 if (is_string($sessionScenario)) {
                     $scenario = trim($sessionScenario);
                 }
-            } catch (\Throwable) {
+            } catch (Throwable) {
                 // no session/request context (e.g. queue worker)
             }
         }
@@ -70,6 +78,7 @@ class FiscalizationService
         $depositData = $depositResp->json();
         if (! $depositResp->successful() || ! is_array($depositData)) {
             $classified = app(ErrorClassifier::class)->classify('fiscal', 500, 'Invalid fiscal deposit response.', is_array($depositData) ? $depositData : null);
+
             return [
                 'error' => 'Invalid fiscal deposit response.',
                 ...$classified,
@@ -86,6 +95,7 @@ class FiscalizationService
                 ?? $depositResp->reason()
                 ?? 'Fiscal deposit error';
             $classified = app(ErrorClassifier::class)->classify('fiscal', $errorCode, is_string($errorMessage) ? $errorMessage : null, $depositData);
+
             return [
                 'error' => (string) $errorMessage,
                 ...$classified,
@@ -100,6 +110,7 @@ class FiscalizationService
         $data = $receiptResp->json();
         if (! $receiptResp->successful() || ! is_array($data)) {
             $classified = app(ErrorClassifier::class)->classify('fiscal', 500, 'Invalid fiscal service response.', is_array($data) ? $data : null);
+
             return [
                 'error' => 'Invalid fiscal service response.',
                 ...$classified,
@@ -114,6 +125,7 @@ class FiscalizationService
             $qr = $data['Url']['Value'] ?? null;
             if (! is_string($jir) || $jir === '' || ! is_string($ikof) || $ikof === '') {
                 $classified = app(ErrorClassifier::class)->classify('fiscal', 500, 'Fiscal service success without required fields.', $data);
+
                 return [
                     'error' => 'Fiscal service success without required fields.',
                     ...$classified,
@@ -198,6 +210,7 @@ class FiscalizationService
             ]);
 
             $classified = app(ErrorClassifier::class)->classify('fiscal', 500, 'Fiscal service not configured.', null);
+
             return [
                 'error' => 'Fiscal service not configured.',
                 ...$classified,
@@ -214,6 +227,7 @@ class FiscalizationService
             ]);
 
             $classified = app(ErrorClassifier::class)->classify('fiscal', 11, 'Fiscal deposit identity not configured.', null);
+
             return [
                 'error' => 'Fiscal deposit identity not configured.',
                 ...$classified,
@@ -268,6 +282,7 @@ class FiscalizationService
             ]);
 
             $classified = app(ErrorClassifier::class)->classify('fiscal', 500, 'Fiscal service unavailable.', null);
+
             return [
                 'error' => 'Fiscal service unavailable.',
                 ...$classified,
@@ -283,6 +298,7 @@ class FiscalizationService
             ]);
 
             $classified = app(ErrorClassifier::class)->classify('fiscal', 500, 'Invalid fiscal service response.', null);
+
             return [
                 'error' => 'Invalid fiscal service response.',
                 ...$classified,
@@ -307,6 +323,7 @@ class FiscalizationService
                 ]);
 
                 $classified = app(ErrorClassifier::class)->classify('fiscal', 500, 'Fiscal service success without required fields.', null);
+
                 return [
                     'error' => 'Fiscal service success without required fields.',
                     ...$classified,
@@ -379,6 +396,7 @@ class FiscalizationService
                     'message' => $e->getMessage(),
                 ]);
                 $retryClassified = app(ErrorClassifier::class)->classify('fiscal', 500, 'Fiscal service unavailable.', null);
+
                 return [
                     'error' => 'Fiscal service unavailable.',
                     ...$retryClassified,
@@ -399,6 +417,7 @@ class FiscalizationService
                             'merchant_transaction_id' => $reservation->merchant_transaction_id,
                             'status' => $retryResp->status(),
                         ]);
+
                         return [
                             'fiscal_jir' => $jir,
                             'fiscal_ikof' => $ikof,
@@ -501,6 +520,7 @@ class FiscalizationService
                 'message' => $e->getMessage(),
             ]);
             $classified = app(ErrorClassifier::class)->classify('fiscal', 500, 'Fiscal deposit unavailable.', null);
+
             return [
                 'error' => 'Fiscal deposit unavailable.',
                 ...$classified,
@@ -515,6 +535,7 @@ class FiscalizationService
                 'status' => $response->status(),
             ]);
             $classified = app(ErrorClassifier::class)->classify('fiscal', 500, 'Invalid fiscal deposit response.', null);
+
             return [
                 'error' => 'Invalid fiscal deposit response.',
                 ...$classified,
@@ -529,6 +550,7 @@ class FiscalizationService
                 'merchant_transaction_id' => $reservation->merchant_transaction_id,
                 'status' => $response->status(),
             ]);
+
             return null;
         }
 
@@ -548,6 +570,7 @@ class FiscalizationService
         ]);
 
         $classified = app(ErrorClassifier::class)->classify('fiscal', $errorCode, is_string($errorMessage) ? $errorMessage : null, null);
+
         return [
             'error' => (string) $errorMessage,
             ...$classified,

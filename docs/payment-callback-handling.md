@@ -2,7 +2,7 @@
 
 **Bank callback mora biti na API ruti (`POST /api/payment/callback`), ne na web.** (U kodu: `routes/api.php` → `payment/callback`.) Ne oslanjati se na cookies, session ili browser language. Identifikacija samo po merchant_transaction_id. Račun (PDF) je uvek na crnogorskom (cg) – v. docs/language-and-invoice-rules.md. Razlozi: banka ne šalje cookies/CSRF; web middleware (session, redirects) može odbiti ili pokvariti callback (dokazano u produkciji V1). Callback je stateless; vraća **202** ili **400**; redirect korisnika kasnije preko **GET /payment/return** i/ili **GET /payment/result** (JSON).
 
-**Nikad ne koristiti bank callback za frontend redirect ili UI flow. Bank callback je isključivo machine-to-machine.** Frontend NIKAD ne sme da poziva `POST /api/payment/callback`. Za test (fake bank) koristi se poseban endpoint: `POST /payment/fake-bank/complete` ili `GET /fake-bank/complete` (lokalni QA).
+**Nikad ne koristiti bank callback za frontend redirect ili UI flow. Bank callback je isključivo machine-to-machine.** Frontend NIKAD ne sme da poziva `POST /api/payment/callback`. Za test (fake bank + fake fiskal u jednom koraku) koristi se **`POST /payment/fake-bank/complete`** (`bank_scenario`, `fiscal_scenario` kad je bank success) ili **`GET /fake-bank/complete`** sa query parametrima (lokalni QA). Ne koristiti `POST /api/payment/callback` iz browsera.
 
 Pravila za validaciju callback-a, idempotentnost, CANCEL/ERROR, notifikacije i redirect.
 

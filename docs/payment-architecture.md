@@ -92,16 +92,17 @@ Controller **nikad**:
 2. Korisnik plaća na bank stranici (ili na fake bank stranici bira Success/Fail).
 3. Gateway (ili fake bank form) šalje **`POST /api/payment/callback`** sa merchant_transaction_id i status.
 4. Webhook: validacija → **PaymentCallbackJob::dispatch(payload)** → 202.
-5. **PaymentCallbackJob**: na success → Reservation, **temp_data.status = processed** (red se **ne briše** — audit), `ProcessReservationAfterPaymentJob`; na failed → ažuriranje `temp_data` + **ErrorClassifier**; na timeout → `late_success` gde je predviđeno.
+5. **PaymentCallbackJob**: na success → Reservation, **temp_data.status = processed** (red se **ne briše** — audit); **`ProcessReservationAfterPaymentJob`** se šalje iz handlera osim kada su **`BANK_DRIVER=fake`** i **`FISCALIZATION_DRIVER=fake`** — tada ga odmah nakon callbacka u istom HTTP zahtjevu pokreće **`FakeBankCompleteController`** sa fiskal scenarijem iz kombinovane QA forme (v. ispod). Na failed → ažuriranje `temp_data` + **ErrorClassifier**; na timeout → `late_success` gde je predviđeno.
 6. UI može koristiti **GET /reservation-status/{merchant_transaction_id}** (polling) za status.
 
 ---
 
-## Fake bank stranica (test)
+## Fake QA stranica (test — banka + fiskal u jednom koraku)
 
-- **GET /payment/fake-bank?tx={merchant_transaction_id}** – prikazuje stranicu sa dugmićima "Success" i "Fail".
-- Klik šalje POST na **/payment/fake-bank/complete** ili GET na **/fake-bank/complete** (test). **Frontend NIKAD ne poziva** `POST /api/payment/callback`.
-- Korisnik se redirect-uje na /reservation-status/{merchant_transaction_id}.
+- **GET /payment/fake-bank?tx={merchant_transaction_id}** — jedna forma: **bank_scenario** (A) + **fiscal_scenario** (B, aktivno samo kad je banka success), jedan **POST /payment/fake-bank/complete**.
+- **GET /fake-bank/complete?tx=...&scenario=...&fiscal_scenario=...** — backward compat (bez `fiscal_scenario` podrazumijeva fiskal **success**).
+- **Frontend NIKAD ne poziva** `POST /api/payment/callback`.
+- Nakon complete: redirect na **`/payment/return?merchant_transaction_id=...`**, zatim uobičajeni banner + redirect na guest/panel.
 
 ---
 
@@ -120,7 +121,7 @@ Controller **nikad**:
 | `App\Http\Controllers\Api\PaymentCallbackController` | API callback: validacija potpisa + payload, dispatch job, 202/400. |
 | `config/payment.php` | Bankart/fake driver preko `BANK_DRIVER` i povezane env varijable. |
 | `App\Http\Controllers\ReservationStatusController` | Polling: GET po merchant_transaction_id. |
-| `App\Http\Controllers\FakeBankCompleteController` | Samo test: POST /payment/fake-bank/complete; frontend ne poziva bank callback. |
+| `App\Http\Controllers\FakeBankCompleteController` | Samo test: POST kombinovana forma + GET complete; `dispatchSync` callback; kad su oba drivera fake i bank success → `ProcessReservationAfterPaymentJob` sa izabranim fiskal scenarijem. |
 
 ---
 

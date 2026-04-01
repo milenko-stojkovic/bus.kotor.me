@@ -47,7 +47,7 @@ Za staging QA:
 ## 1.4 Ključne rute za QA
 
 - Checkout: `POST /checkout`
-- Fake bank complete: `GET /fake-bank/complete?status=...&tx=...`
+- Fake QA (banka + fiskal): `GET /payment/fake-bank?tx=...` → `POST /payment/fake-bank/complete`; ili `GET /fake-bank/complete?tx=...&scenario=...&fiscal_scenario=...`
 - Payment result: `GET /payment/result?merchant_transaction_id=...`
 - Retry API: `GET /api/reservations/retry/{retry_token}`
 - Fake fiscal API:
@@ -76,9 +76,9 @@ Svaki scenario validirati kroz:
 
 | Polje | Vrednost |
 |---|---|
-| Scenario | Guest checkout -> fake bank success -> success pipeline |
-| Preconditions | `BANK_DRIVER=fake`, `FISCALIZATION_DRIVER=fake`, worker aktivan |
-| Steps | 1) Submit checkout form 2) Sačuvaj `merchant_transaction_id` 3) Otvori `/fake-bank/complete?status=success&tx={tx}` 4) Sačekaj worker |
+| Scenario | Guest checkout -> fake QA forma (bank success + fiskal success) -> success pipeline |
+| Preconditions | `BANK_DRIVER=fake`, `FISCALIZATION_DRIVER=fake`; za sync obradu bez workera `FAKE_PAYMENT_E2E_SYNC=true` i `QUEUE_CONNECTION=sync` (ili `queue:work`) |
+| Steps | 1) Submit checkout 2) Sačuvaj `merchant_transaction_id` 3) Otvori `/payment/fake-bank?tx={tx}` 4) Izaberi bank **success** + fiskal **success**, **Submit** (ili GET complete sa `fiscal_scenario`) |
 | Expected DB state | `temp_data.status=processed`; postoji `reservations` red sa istim `merchant_transaction_id`; snapshot polja popunjena |
 | Expected UI | Nakon obrade: **redirect** na `guest.reserve` ili `panel.reservations` sa **success/info** `checkout_banner`; na `/payment/return` ostaje samo **pending** sa polling-om dok callback ne završi |
 | Expected logs | "Payment callback accepted", "Payment state transition ... -> processed" |
@@ -92,7 +92,7 @@ Svaki scenario validirati kroz:
 |---|---|
 | Scenario | Bank cancel/error callback |
 | Preconditions | Fake bank aktivna; worker aktivan |
-| Steps | `/fake-bank/complete?status=error&tx={tx}` ili `status=cancel` |
+| Steps | Na formi izaberi bank scenario **cancel** / **expired** / … (ne success), **Submit**; ili `GET /fake-bank/complete?tx={tx}&scenario=cancel` |
 | Expected DB state | `temp_data.status=canceled`; nema novog reda u `reservations`; `callback_error_code/reason` popunjeni ako payload sadrži |
 | Expected UI | **Redirect** na booking stranicu sa **error** `checkout_banner` (mapiran `resolution_reason`); gost sa `retry_token` na `/guest/reserve?retry_token=...` |
 | Expected logs | "Payment callback accepted", state transition `pending -> canceled` |

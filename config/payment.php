@@ -8,6 +8,13 @@ return [
     'provider' => env('PAYMENT_PROVIDER', 'fake'),
 
     /*
+    | Kada je BANK_DRIVER=fake: pokreni callback + fiskal + PDF + email sinhrono (isti HTTP zahtjev kao
+    | fake-bank complete), bez obaveznog queue workera. Isključi (false) ako namerno koristiš database/redis
+    | queue i php artisan queue:work za test.
+    */
+    'fake_e2e_sync' => filter_var(env('FAKE_PAYMENT_E2E_SYNC', true), FILTER_VALIDATE_BOOLEAN),
+
+    /*
     | Callback signing secret (real gateway). Koristi se za validaciju potpisa webhook/callback zahteva.
     | Bankart: isti secret kao za HMAC potpis = BANKART_SHARED_SECRET. Fallback na PAYMENT_CALLBACK_SECRET.
     */

@@ -61,7 +61,15 @@ class PaymentSuccessHandler
             TempData::logStateTransition($temp->merchant_transaction_id, $from, TempData::STATUS_PROCESSED, 'SUCCESS');
             $this->doReleaseSoftLock($temp, true);
             if ($runFiscalAndInvoicePipeline) {
-                ProcessReservationAfterPaymentJob::dispatch($reservation->id);
+                $bankFake = (config('services.bank.driver') ?? config('payment.provider', 'fake')) === 'fake';
+                $fiscalFake = config('services.fiscalization.driver') === 'fake';
+                if ($bankFake && $fiscalFake) {
+                    // Kombinovana fake QA forma: ProcessReservationAfterPaymentJob poslije callbacka u FakeBankCompleteController.
+                } elseif ($this->fakeBankWantsE2eSync()) {
+                    ProcessReservationAfterPaymentJob::dispatchSync($reservation->id);
+                } else {
+                    ProcessReservationAfterPaymentJob::dispatch($reservation->id);
+                }
             } else {
                 SendFreeReservationConfirmationJob::dispatch($reservation->id);
             }
@@ -122,6 +130,18 @@ class PaymentSuccessHandler
                 $daily->increment('reserved');
             }
         }
+    }
+
+    /** Sinhroni E2E za fake banku: fiskal/PDF/mejl bez workera (v. config payment.fake_e2e_sync). */
+    private function fakeBankWantsE2eSync(): bool
+    {
+        if (! config('payment.fake_e2e_sync')) {
+            return false;
+        }
+
+        $driver = config('services.bank.driver') ?? config('payment.provider', 'fake');
+
+        return $driver === 'fake';
     }
 
     private function createReservationFromTempData(TempData $temp, string $status = 'paid'): Reservation

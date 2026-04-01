@@ -15,7 +15,7 @@
 - **Authenticated users:** **users.lang** (same as UI).
 - **Guests:** use **reservation.preferred_locale** (set at checkout from session or detected Accept-Language).
 - **Auth sistemski mejlovi** (verifikacija adrese, reset lozinke): šalju se preko mailera **`noreply`**; tekstovi koriste **`users.lang`** preko `UiText` / custom notifikacija (`NoreplyVerifyEmail`, `NoreplyResetPassword`) — v. `docs/project-conventions.md`.
-- Emails (subject, body) za račune/potvrde su **localized** (cg / en). SendInvoiceEmailJob postavlja `app()->setLocale()` na locale primaoca pre sadržaja.
+- Emails (subject, body) za plaćene račune/potvrde i besplatnu potvrdu su **localized** (cg / en) preko **`UiText`** grupe **`emails`** i eksplicitnog **`$emailLocale`** (isti izvor kao UI: `users.lang` / `reservation.preferred_locale`). `SendInvoiceEmailJob` i dalje postavlja `app()->setLocale()` radi konzistentnosti okruženja.
 
 ## 3. Invoice (PDF) & fiscalization
 

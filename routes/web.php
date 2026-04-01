@@ -1,20 +1,19 @@
 <?php
 
-use App\Http\Controllers\Admin\ReservationActionController;
 use App\Http\Controllers\Admin\LateSuccessController;
+use App\Http\Controllers\Admin\ReservationActionController;
 use App\Http\Controllers\Admin\ReservationListController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\FakeBankCompleteController;
 use App\Http\Controllers\GuestReservationController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\PanelController;
-use App\Http\Controllers\UserReservationController;
-use App\Http\Controllers\FakeBankCompleteController;
-use App\Http\Controllers\FakeFiscalScenarioController;
-use App\Http\Controllers\PaymentReturnController;
 use App\Http\Controllers\PaymentResultController;
+use App\Http\Controllers\PaymentReturnController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReservationStatusController;
+use App\Http\Controllers\UserReservationController;
 use App\Http\Controllers\VehicleController;
 use Illuminate\Support\Facades\Route;
 
@@ -32,7 +31,8 @@ Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.s
 // prikazati session('message') i session('error_reason') ako postoje.
 Route::get('/reservations', function () {
     $query = request()->getQueryString();
-    return redirect('/guest/reserve' . ($query ? '?' . $query : ''));
+
+    return redirect('/guest/reserve'.($query ? '?'.$query : ''));
 })->name('reservations.create');
 
 // Polling endpoint za status rezervacije (UI periodično poziva sa merchant_transaction_id)
@@ -51,16 +51,11 @@ Route::get('/payment/fake-bank', function (\Illuminate\Http\Request $request) {
     if (! $tx) {
         return redirect('/')->with('error', 'Missing transaction id');
     }
+
     return view('payment.fake-bank', ['merchant_transaction_id' => $tx]);
 })->name('payment.fake-bank');
 Route::get('/fake-bank/complete', [FakeBankCompleteController::class, 'completeGet'])->name('fake-bank.complete');
-Route::post('/payment/fake-bank/complete', FakeBankCompleteController::class)->name('payment.fake-bank.complete');
-
-// Fake fiscal scenario selector (local only)
-Route::get('/payment/fake-fiscal', [FakeFiscalScenarioController::class, 'index'])->name('payment.fake-fiscal');
-Route::post('/payment/fake-fiscal/apply', [FakeFiscalScenarioController::class, 'apply'])->name('payment.fake-fiscal.apply');
-Route::post('/payment/fake-fiscal/set', [FakeFiscalScenarioController::class, 'set'])->name('payment.fake-fiscal.set');
-Route::post('/payment/fake-fiscal/clear', [FakeFiscalScenarioController::class, 'clear'])->name('payment.fake-fiscal.clear');
+Route::post('/payment/fake-bank/complete', [FakeBankCompleteController::class, 'completeForm'])->name('payment.fake-bank.complete');
 
 Route::get('/dashboard', function () {
     return redirect()->route('panel.reservations');

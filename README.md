@@ -41,7 +41,7 @@ Za lokalni razvoj i testiranje koriste se simulirani banka i fiskalni servis:
 3. **Plaćanje:** nakon klika „Plati“ korisnik se prebacuje na fake bank stranicu (`/payment/fake-bank?tx=...`). Klik na **Success** ili **Fail** šalje simulirani callback; možeš i direktno otvoriti `GET /fake-bank/complete?status=success|error|cancel&tx={merchant_transaction_id}` za brzi test.
 4. **Fiskalizacija:** kada je `FISCALIZATION_DRIVER=fake`, aplikacija šalje zahtjev na sopstveni endpoint `POST /api/fake-fiscalization`; odgovor simulira uspeh (ili grešku ako u payload-u pošalješ `forceFail=true`). Lokalno možeš koristiti i **FakeFiscalApiController** (rute `POST /api/efiscal/deposit`, `POST /api/efiscal/fiscalReceipt`) – isti fake API kao eksterni servis.
 
-Rute za test: `POST /payment/fake-bank/complete` (form), `GET /fake-bank/complete?status=...&tx=...`, `POST /api/fake-fiscalization`, `POST /api/efiscal/deposit`, `POST /api/efiscal/fiscalReceipt`. Pravi bank callback je `POST /api/payment/callback` – frontend ga ne poziva.
+Rute za test: `GET /payment/fake-bank?tx=...` (banka + fiskal jedna forma), `POST /payment/fake-bank/complete`, `GET /fake-bank/complete?tx=...&scenario=...&fiscal_scenario=...`, `POST /api/fake-fiscalization`, `POST /api/efiscal/deposit`, `POST /api/efiscal/fiscalReceipt`. Pravi bank callback je `POST /api/payment/callback` – frontend ga ne poziva.
 
 **Fiskalizacija – driver:**
 

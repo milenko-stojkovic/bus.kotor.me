@@ -47,6 +47,13 @@ Preporučeni oblik (naslovi ili bold oznake moraju biti eksplicitni):
 - **Default SMTP** (`MAIL_*`): **`bus@kotor.me`** — korisnička komunikacija, računi, admin alerti koji nisu „no reply“.
 - **Mailer `noreply`** (`MAIL_NOREPLY_*`, `MAIL_FROM_NOREPLY_*`): verifikacija emaila, reset lozinke — vidi `config/mail.php`.
 
+### PDF računi i potvrde (izdavač: Opština Kotor)
+
+- Tekst u PDF šablonima (**fiskalni račun**, **nefiskalni račun**, **besplatna potvrda**) je **isključivo na crnogorskom (cg, latinica)** — **nema en varijante** u samom dokumentu; smisao je zvaničnog izdavača u Crnoj Gori.
+- **Fiskalni račun** (`pdf/paid-invoice`, `isFiscal`): donji pravni red *„Ovaj račun je generisan automatski i važi kao fiskalni dokument.“*
+- **Nefiskalni račun** (isti šablon, `isFiscal = false`): *„Ova potvrda je automatski generisana od strane sistema Opštine Kotor.“* (nije fiskalni dokument u tom smislu).
+- **Besplatna potvrda** (`pdf/free-reservation-confirmation`): isti potvrdni tekst u podnožju (bez rečenice o fiskalnom dokumentu).
+
 ---
 
 ## 3. Lokalni razvoj (Windows / Laragon)
