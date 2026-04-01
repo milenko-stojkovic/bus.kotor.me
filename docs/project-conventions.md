@@ -1,6 +1,6 @@
 # Konvencije projekta (bus.kotor.me)
 
-**Poslednje ažuriranje:** 2026-03-31  
+**Poslednje ažuriranje:** 2026-04-01  
 
 Za AI i ljude: držati se ovoga pri novim izmenama da ostane konzistentno.
 
@@ -51,9 +51,13 @@ Preporučeni oblik (naslovi ili bold oznake moraju biti eksplicitni):
 
 ## 3. Lokalni razvoj (Windows / Laragon)
 
-- Za **`php artisan`**, ako shell ne pronalazi PHP, koristi punu putanju, npr.  
-  `C:\laragon\bin\php\php-8.3.xx-Win32-vs16-x64\php.exe artisan ...`
-- **Queue:** za lokalni QA bez workera, **`QUEUE_CONNECTION=sync`** u `.env`; inače `database` + `php artisan queue:work`.
+- **`php` često nije u PATH-u** u Cursor terminalu. Za **`php artisan`** koristi **jedno od**:
+  1. **Skripta u rootu repoa:** `.\laragon-artisan.ps1 test` (ili bilo koji artisan argument) — bira najnoviji `php.exe` pod `C:\laragon\bin\php\`.
+  2. **Eksplicitna putanja** (primer sa ovog računara; folder verzije proveri sa `dir C:\laragon\bin\php`):  
+     `C:\laragon\bin\php\php-8.3.30-Win32-vs16-x64\php.exe artisan ...`
+- **Sintaksa (`php -l`):** ne pokretati gol `php -l` ako Windows nudi „Open with…“ — koristi **`.\laragon-php.ps1 -l putanja\do\fajla.php`** (ista Laragon putanja kao za artisan).
+- **AI / automatizacija:** u ovom projektu na Windowsu **ne oslanjati se** na gol `php` / `php artisan` u shellu dok se ne potvrdi da `php` postoji u PATH-u; preferirati **`.\laragon-php.ps1`**, **`.\laragon-artisan.ps1`**, ili punu putanju iznad.
+- **Queue:** za lokalni QA bez workera, **`QUEUE_CONNECTION=sync`** u `.env`; inače `database` + `php artisan queue:work` (i tu istu PHP putanju ako treba).
 
 ### Minimalni `.env` za lokalni QA (fake tok, bez workera)
 
@@ -63,7 +67,7 @@ FISCALIZATION_DRIVER=fake
 QUEUE_CONNECTION=sync
 ```
 
-Posle izmene `.env`: `php artisan config:clear`. Za izmene u Tailwind/JS i dalje `npm run dev` ili `npm run build` kada menjaš utility klase u Blade-u.
+Posle izmene `.env`: `.\laragon-artisan.ps1 config:clear` (ili ista PHP putanja + `artisan config:clear`). Za izmene u Tailwind/JS i dalje `npm run dev` ili `npm run build` kada menjaš utility klase u Blade-u.
 
 ---
 
@@ -102,3 +106,12 @@ Posle izmene `.env`: `php artisan config:clear`. Za izmene u Tailwind/JS i dalje
 U **`docs/`** postoje dubiji opisi po domenima (payment, fiskal, cron, auth, admin, fake vs real, itd.). Oni moraju da poštuju **§ 0** (nema kontradikcije sa kodom).
 
 **Indeks:** `docs/project-status-next-steps.md` → „Ostala dokumentacija“. Primer česte greške: zastareo URL **`/api/payments/callback`** — u aplikaciji je **`POST /api/payment/callback`**.
+
+**Agency panel** (`/panel`, rezervacije, upcoming/realized, korisnik): **[agency-panel.md](./agency-panel.md)**.
+
+---
+
+## 9. Agency panel (kratko)
+
+- Rute pod prefiksom **`/panel`**, vidi **`docs/agency-panel.md`** (rezervacije, vozila, upcoming/realized, korisnik, invoice).
+- Korisnički tab: **`/panel/user`** — forma u `panel/partials/user-settings-form.blade.php`, **`PATCH /profile`**; brisanje naloga koristi **`user.delete_account_*`** u **`ui_translations`**.

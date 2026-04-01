@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Autentifikovani korisnik. user_id u reservations/temp_data može biti null (guest rezervacija).
@@ -38,6 +39,15 @@ class User extends Authenticatable implements MustVerifyEmail
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class, 'role_user');
+    }
+
+    public function isAdmin(): bool
+    {
+        if ($this->roles()->where('name', 'admin')->exists()) {
+            return true;
+        }
+
+        return DB::table('admins')->where('email', $this->email)->exists();
     }
 
     /**

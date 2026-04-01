@@ -4,7 +4,18 @@ Flow nakon bank API SUCCESS callback-a: rezervacija se kreira → **ProcessReser
 
 ---
 
-## Flow
+## Besplatne rezervacije (checkout — guest i auth)
+
+Ne idu na banku i **ne** pokreću **ProcessReservationAfterPaymentJob** / fiskalizaciju. Backend odlučuje preko **`FreeReservationRules`**.
+
+- **`PaymentSuccessHandler::handle(..., runFiscalAndInvoicePipeline: false)`** kreira rezervaciju sa **`reservations.status = free`**, šalje **`SendFreeReservationConfirmationJob`** (tekstualni email, bez računa).
+- Redirect: **`guest.reserve`** ili **`panel.reservations`** (flash poruka), ne **`/payment/return`**.
+- **`ProcessReservationAfterPaymentJob`** odmah izlazi ako je `status === 'free'` (odbrambeno).
+- Stariji linkovi na **`/payment/return`** za besplatnu rezervaciju: **`PaymentResultResolver`** / view prikazuju poseban tekst (`is_free_reservation`).
+
+---
+
+## Flow (plaćeni tok — kao ranije)
 
 1. **pending → processed** (samo bank API callback, PaymentCallbackJob).
 2. Kreira se **reservation** (bez fiscal polja).

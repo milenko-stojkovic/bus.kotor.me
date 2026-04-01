@@ -3,6 +3,7 @@
 namespace App\Services\Payment;
 
 use App\Jobs\ProcessReservationAfterPaymentJob;
+use App\Jobs\SendFreeReservationConfirmationJob;
 use App\Models\DailyParkingData;
 use App\Models\Reservation;
 use App\Models\TempData;
@@ -11,17 +12,21 @@ use Illuminate\Support\Facades\DB;
 /**
  * Zajednički flow za SUCCESS plaćanja: callback ili status inquiry (timeout callback).
  * Jedna transakcija: lock temp_data, provera rezervacije, kreiranje rezervacije, temp → processed, release soft-lock, dispatch ProcessReservationAfterPaymentJob.
+ * Besplatna rezervacija (checkout): ista transakcija, status rezervacije `free`, bez fiskalizacije — samo SendFreeReservationConfirmationJob.
  * Ako lock nije validan → prelaz u late_success (bez kreiranja rezervacije).
  */
 class PaymentSuccessHandler
 {
     /**
-     * Primeni SUCCESS: kreira rezervaciju, temp_data → processed, oslobodi lock, dispatch posle plaćanja.
+     * Primeni SUCCESS: kreira rezervaciju, temp_data → processed, oslobodi lock.
+     * Ako je $runFiscalAndInvoicePipeline true (plaćeno): ProcessReservationAfterPaymentJob (fiskalizacija, PDF, mail sa računom).
+     * Ako je false (besplatno): status `free`, samo potvrda emailom bez računa / fiskalizacije.
+     *
      * Ako lock nije validan, prelazi u late_success i vraća false.
      *
      * @return bool true ako je rezervacija kreirana, false inače (late_success ili već postoji)
      */
-    public function handle(TempData $temp, array $rawPayload): bool
+    public function handle(TempData $temp, array $rawPayload, bool $runFiscalAndInvoicePipeline = true): bool
     {
         if (! $temp->isLockValidForProcessed()) {
             $this->transitionToLateSuccess($temp, false, $rawPayload);
@@ -30,7 +35,7 @@ class PaymentSuccessHandler
         }
 
         $created = false;
-        DB::transaction(function () use ($temp, $rawPayload, &$created): void {
+        DB::transaction(function () use ($temp, $rawPayload, $runFiscalAndInvoicePipeline, &$created): void {
             $temp = TempData::where('merchant_transaction_id', $temp->merchant_transaction_id)->lockForUpdate()->first();
             if (! $temp || Reservation::where('merchant_transaction_id', $temp->merchant_transaction_id)->exists()) {
                 return;
@@ -46,7 +51,8 @@ class PaymentSuccessHandler
                 return;
             }
 
-            $reservation = $this->createReservationFromTempData($temp);
+            $reservationStatus = $runFiscalAndInvoicePipeline ? 'paid' : 'free';
+            $reservation = $this->createReservationFromTempData($temp, $reservationStatus);
             $from = $temp->status;
             $temp->update([
                 'status' => TempData::STATUS_PROCESSED,
@@ -54,7 +60,11 @@ class PaymentSuccessHandler
             ]);
             TempData::logStateTransition($temp->merchant_transaction_id, $from, TempData::STATUS_PROCESSED, 'SUCCESS');
             $this->doReleaseSoftLock($temp, true);
-            ProcessReservationAfterPaymentJob::dispatch($reservation->id);
+            if ($runFiscalAndInvoicePipeline) {
+                ProcessReservationAfterPaymentJob::dispatch($reservation->id);
+            } else {
+                SendFreeReservationConfirmationJob::dispatch($reservation->id);
+            }
             $created = true;
         });
 
@@ -114,7 +124,7 @@ class PaymentSuccessHandler
         }
     }
 
-    private function createReservationFromTempData(TempData $temp): Reservation
+    private function createReservationFromTempData(TempData $temp, string $status = 'paid'): Reservation
     {
         return Reservation::create([
             'user_id' => $temp->user_id,
@@ -129,7 +139,7 @@ class PaymentSuccessHandler
             'vehicle_type_id' => $temp->vehicle_type_id,
             'email' => $temp->email,
             'preferred_locale' => $temp->preferred_locale,
-            'status' => 'paid',
+            'status' => $status,
             'email_sent' => 0,
         ]);
     }

@@ -80,6 +80,9 @@ class Reservation extends Model
      */
     public function fiscalizationStatus(): string
     {
+        if ($this->status === 'free') {
+            return 'not_applicable';
+        }
         if ($this->fiscal_jir !== null) {
             return 'completed';
         }

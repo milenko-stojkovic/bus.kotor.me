@@ -69,6 +69,8 @@
                                                 <span class="px-2 py-0.5 rounded text-xs bg-green-100 text-green-800">{{ __('OK') }}</span>
                                             @elseif($r->fiscalizationStatus() === 'failed')
                                                 <span class="px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-800">{{ __('Retry') }}</span>
+                                            @elseif($r->fiscalizationStatus() === 'not_applicable')
+                                                <span class="px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-600">—</span>
                                             @else
                                                 <span class="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600">{{ __('Pending') }}</span>
                                             @endif

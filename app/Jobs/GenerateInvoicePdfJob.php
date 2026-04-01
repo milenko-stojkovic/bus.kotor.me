@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Storage;
 /**
  * Generates invoice PDF for reservation. Fiscal (with fiscal data) or non-fiscal (with note).
  * Idempotent: ako već postoji PDF (invoice_pdf_path set i fajl postoji) – ne pravi novi (retry safe).
+ * forceRegenerate: obriši postojeći fajl i generiši ponovo (npr. promjena tablica u panelu).
  *
  * Invoice (PDF) & fiscalization: ALWAYS in Montenegrin (cg). Legal requirement (local government issuer).
  * Do NOT use app locale or __() for invoice content – all strings are hardcoded in Montenegrin.
@@ -29,7 +30,8 @@ class GenerateInvoicePdfJob implements ShouldQueue
 
     public function __construct(
         public int $reservationId,
-        public bool $isFiscal = true
+        public bool $isFiscal = true,
+        public bool $forceRegenerate = false
     ) {}
 
     public function handle(): void
@@ -44,9 +46,16 @@ class GenerateInvoicePdfJob implements ShouldQueue
         app()->setLocale('cg');
 
         try {
-            // Idempotent: ako već postoji PDF – ne pravi novi
             $path = $reservation->invoice_pdf_path;
-            if ($path && Storage::exists($path)) {
+
+            if ($this->forceRegenerate && $path) {
+                Storage::delete($path);
+                $reservation->update(['invoice_pdf_path' => null]);
+                $path = null;
+            }
+
+            // Idempotent: ako već postoji PDF – ne pravi novi
+            if (! $this->forceRegenerate && $path && Storage::exists($path)) {
                 return;
             }
 
@@ -87,6 +96,7 @@ class GenerateInvoicePdfJob implements ShouldQueue
         $lines = [
             'Potvrda rezervacije #'.$reservation->id,
             'Datum: '.$reservation->reservation_date->format('Y-m-d'),
+            'Tablice: '.$reservation->license_plate,
             'JIR: '.($reservation->fiscal_jir ?? '-'),
             'IKOF: '.($reservation->fiscal_ikof ?? '-'),
         ];
@@ -99,6 +109,7 @@ class GenerateInvoicePdfJob implements ShouldQueue
         $lines = [
             'Potvrda rezervacije #'.$reservation->id,
             'Datum: '.$reservation->reservation_date->format('Y-m-d'),
+            'Tablice: '.$reservation->license_plate,
             '',
             self::NON_FISCAL_NOTE,
         ];

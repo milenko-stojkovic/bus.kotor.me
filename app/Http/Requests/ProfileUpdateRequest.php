@@ -5,16 +5,39 @@ namespace App\Http\Requests;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 class ProfileUpdateRequest extends FormRequest
 {
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if (! filled($this->input('password'))) {
+            $this->merge([
+                'password' => null,
+                'password_confirmation' => null,
+                'current_password' => null,
+            ]);
+        }
+    }
+
     /**
-     * Get the validation rules that apply to the request.
-     *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
+        $passwordRules = ['nullable', 'string', 'confirmed', Password::defaults()];
+        $currentPasswordRules = ['nullable', 'string'];
+
+        if (filled($this->input('password'))) {
+            $passwordRules = ['required', 'string', 'confirmed', Password::defaults()];
+            $currentPasswordRules = ['required', 'current_password'];
+        }
+
         return [
             'name' => ['required', 'string', 'min:2', 'max:255'],
             'lang' => ['required', 'string', Rule::in(['cg', 'en'])],
@@ -27,6 +50,8 @@ class ProfileUpdateRequest extends FormRequest
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
             'country' => ['required', 'string', 'max:100'],
+            'current_password' => $currentPasswordRules,
+            'password' => $passwordRules,
         ];
     }
 }

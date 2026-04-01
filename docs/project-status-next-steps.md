@@ -1,6 +1,6 @@
 # Project status — indeks
 
-**Poslednje ažuriranje:** 2026-03-31
+**Poslednje ažuriranje:** 2026-04-01
 
 Ovaj fajl je **kratak smerač**. Detalji su podeljeni da bi novi chat mogao da učita samo ono što treba.
 
@@ -44,6 +44,7 @@ Ovi fajlovi treba da prate trenutni kod; v. `project-conventions.md` § 8.
 | Uspešan tok (job, PDF) | [success-payment-pipeline.md](./success-payment-pipeline.md) |
 | Jezik, PDF, callback | [language-and-invoice-rules.md](./language-and-invoice-rules.md) |
 | Auth vs guest | [auth-and-guests.md](./auth-and-guests.md) |
+| Agency panel (rezervacije, upcoming/realized, user) | [agency-panel.md](./agency-panel.md) |
 | Admin (spec + šta je urađeno) | [admin-panel.md](./admin-panel.md) |
 | Cron detalji | [cron-commands.md](./cron-commands.md) |
 | Fake vs real | [fake-vs-real-contract-parity.md](./fake-vs-real-contract-parity.md) |

@@ -18,7 +18,7 @@ class PaymentResultResolver
     /**
      * Vraća status za merchant_transaction_id iz baze.
      *
-     * @return array{status: 'success'|'failed'|'pending'|'late_success', user_type: 'guest'|'auth', message?: string, reservation_id?: int, redirect_guest: string, redirect_auth: string}|null null ako tx ne postoji
+     * @return array{status: 'success'|'failed'|'pending'|'late_success', user_type: 'guest'|'auth', message?: string, reservation_id?: int, is_free_reservation?: bool, redirect_guest: string, redirect_auth: string}|null null ako tx ne postoji
      */
     public function resolve(string $merchantTransactionId): ?array
     {
@@ -26,12 +26,17 @@ class PaymentResultResolver
 
         $reservation = Reservation::where('merchant_transaction_id', $merchantTransactionId)->first();
         if ($reservation) {
+            $isFree = $reservation->status === 'free';
+
             return [
                 'status' => 'success',
                 'user_type' => $reservation->user_id ? 'auth' : 'guest',
                 'reservation_id' => $reservation->id,
-                'redirect_guest' => route('reservations.create'),
-                'redirect_auth' => route('profile.reservations'),
+                'is_free_reservation' => $isFree,
+                'redirect_guest' => $isFree
+                    ? route('guest.reserve', [], false)
+                    : route('reservations.create'),
+                'redirect_auth' => route('panel.reservations'),
             ];
         }
 
@@ -40,7 +45,7 @@ class PaymentResultResolver
             $userType = $temp->user_id ? 'auth' : 'guest';
             $redirect = [
                 'redirect_guest' => route('reservations.create'),
-                'redirect_auth' => route('profile.reservations'),
+                'redirect_auth' => route('panel.reservations'),
             ];
             if (in_array($temp->status, [TempData::STATUS_CANCELED, TempData::STATUS_EXPIRED], true)) {
                 return [

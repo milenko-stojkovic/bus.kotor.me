@@ -32,12 +32,14 @@ class CheckoutReservationRequest extends FormRequest
     {
         $authUser = $this->user();
         $usingSavedVehicle = $authUser !== null && $this->filled('vehicle_id');
+        $panelAuthBooking = $authUser !== null && $this->boolean('auth_panel_booking');
 
         return [
             // Opciono: ako frontend pošalje, koristi se za dupli klik; inače backend generiše UUID
             'merchant_transaction_id' => ['nullable', 'string', 'max:64'],
+            'auth_panel_booking' => ['nullable', 'boolean'],
             'vehicle_id' => [
-                'nullable',
+                $panelAuthBooking ? 'required' : 'nullable',
                 'integer',
                 Rule::exists('vehicles', 'id')->where(fn ($q) => $q->where('user_id', $authUser?->id)),
             ],

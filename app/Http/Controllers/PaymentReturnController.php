@@ -37,7 +37,7 @@ class PaymentReturnController extends Controller
                 ->with('error_reason', $result['error_reason'] ?? null);
         }
         if ($result['status'] === 'failed' && ($result['user_type'] ?? '') === 'auth') {
-            return redirect()->route('profile.reservations')
+            return redirect()->route('panel.reservations')
                 ->with('error', $result['message'] ?? PaymentResultResolver::MESSAGE_FAILED)
                 ->with('error_reason', $result['error_reason'] ?? null);
         }

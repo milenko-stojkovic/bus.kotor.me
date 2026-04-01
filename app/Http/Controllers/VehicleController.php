@@ -6,6 +6,7 @@ use App\Http\Requests\StoreVehicleRequest;
 use App\Http\Requests\UpdateVehicleRequest;
 use App\Models\Vehicle;
 use App\Models\VehicleType;
+use App\Support\UiText;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -23,7 +24,7 @@ class VehicleController extends Controller
 
         $vehicleTypes = VehicleType::query()->with('translations')->orderBy('id')->get();
 
-        return view('profile.vehicles.index', [
+        return view('panel.vehicles', [
             'vehicles' => $vehicles,
             'vehicleTypes' => $vehicleTypes,
         ]);
@@ -33,7 +34,12 @@ class VehicleController extends Controller
     {
         $request->user()->vehicles()->create($request->validated());
 
-        return redirect()->route('profile.vehicles.index')->with('message', __('Vozilo je dodato.'));
+        $locale = $request->user()->lang ?? app()->getLocale();
+
+        return redirect()->route('panel.vehicles')->with(
+            'message',
+            UiText::t('panel', 'vehicle_added', 'Vehicle added.', $locale)
+        );
     }
 
     public function update(UpdateVehicleRequest $request, int $vehicle): RedirectResponse
@@ -41,7 +47,12 @@ class VehicleController extends Controller
         $model = $this->ownedVehicleOrFail($request, $vehicle);
         $model->update($request->validated());
 
-        return redirect()->route('profile.vehicles.index')->with('message', __('Vozilo je ažurirano.'));
+        $locale = $request->user()->lang ?? app()->getLocale();
+
+        return redirect()->route('panel.vehicles')->with(
+            'message',
+            UiText::t('panel', 'vehicle_updated', 'Vehicle updated.', $locale)
+        );
     }
 
     public function destroy(Request $request, int $vehicle): RedirectResponse
@@ -49,7 +60,12 @@ class VehicleController extends Controller
         $model = $this->ownedVehicleOrFail($request, $vehicle);
         $model->delete();
 
-        return redirect()->route('profile.vehicles.index')->with('message', __('Vozilo je obrisano.'));
+        $locale = $request->user()->lang ?? app()->getLocale();
+
+        return redirect()->route('panel.vehicles')->with(
+            'message',
+            UiText::t('panel', 'vehicle_removed', 'Vehicle removed.', $locale)
+        );
     }
 
     private function ownedVehicleOrFail(Request $request, int $id): Vehicle

@@ -47,6 +47,10 @@ class ProcessReservationAfterPaymentJob implements ShouldQueue
             return;
         }
 
+        if ($reservation->status === 'free') {
+            return;
+        }
+
         $result = app(FiscalizationService::class)->tryFiscalize($reservation);
 
         if (isset($result['fiscal_jir'])) {

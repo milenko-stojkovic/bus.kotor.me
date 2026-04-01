@@ -7,6 +7,7 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\GuestReservationController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\PanelController;
 use App\Http\Controllers\UserReservationController;
 use App\Http\Controllers\FakeBankCompleteController;
 use App\Http\Controllers\FakeFiscalScenarioController;
@@ -15,7 +16,6 @@ use App\Http\Controllers\PaymentResultController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReservationStatusController;
 use App\Http\Controllers\VehicleController;
-use App\Http\Controllers\UserPaymentHistoryController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', LandingController::class)->name('landing');
@@ -63,25 +63,37 @@ Route::post('/payment/fake-fiscal/set', [FakeFiscalScenarioController::class, 's
 Route::post('/payment/fake-fiscal/clear', [FakeFiscalScenarioController::class, 'clear'])->name('payment.fake-fiscal.clear');
 
 Route::get('/dashboard', function () {
-    return view('dashboard');
+    return redirect()->route('panel.reservations');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::redirect('/profile', '/panel/user')->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
+Route::middleware(['auth', 'verified'])->prefix('panel')->name('panel.')->group(function () {
+    Route::get('/reservations', [UserReservationController::class, 'index'])->name('reservations');
+    Route::get('/reservations/{id}/invoice/view', [UserReservationController::class, 'showInvoice'])->name('reservations.invoice.view');
+    Route::get('/reservations/{id}/invoice', [UserReservationController::class, 'downloadInvoice'])->name('reservations.invoice');
+    Route::patch('/reservations/{id}/vehicle', [UserReservationController::class, 'updateVehicle'])->name('reservations.vehicle');
+    Route::get('/user', [ProfileController::class, 'panel'])->name('user');
+    Route::get('/vehicles', [VehicleController::class, 'index'])->name('vehicles');
+    Route::post('/vehicles', [VehicleController::class, 'store'])->name('vehicles.store');
+    Route::patch('/vehicles/{vehicle}', [VehicleController::class, 'update'])->name('vehicles.update');
+    Route::delete('/vehicles/{vehicle}', [VehicleController::class, 'destroy'])->name('vehicles.destroy');
+    Route::get('/upcoming', [PanelController::class, 'upcoming'])->name('upcoming');
+    Route::get('/realized', [PanelController::class, 'realized'])->name('realized');
+    Route::get('/statistics', [PanelController::class, 'statistics'])->name('statistics');
+});
+
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/profile/reservations', [UserReservationController::class, 'index'])->name('profile.reservations');
-    Route::get('/profile/reservations/{id}/invoice', [UserReservationController::class, 'downloadInvoice'])->name('profile.reservations.invoice');
-    Route::get('/profile/payments', UserPaymentHistoryController::class)->name('profile.payments');
-    Route::prefix('/profile/vehicles')->name('profile.vehicles.')->group(function () {
-        Route::get('/', [VehicleController::class, 'index'])->name('index');
-        Route::post('/', [VehicleController::class, 'store'])->name('store');
-        Route::patch('/{vehicle}', [VehicleController::class, 'update'])->name('update');
-        Route::delete('/{vehicle}', [VehicleController::class, 'destroy'])->name('destroy');
-    });
+    Route::redirect('/profile/reservations', '/panel/reservations')->name('profile.reservations');
+    Route::get('/profile/reservations/{id}/invoice', function (int $id) {
+        return redirect()->route('panel.reservations.invoice', ['id' => $id]);
+    })->whereNumber('id')->name('profile.reservations.invoice');
+    Route::redirect('/profile/payments', '/panel/statistics')->name('profile.payments');
+    Route::redirect('/profile/vehicles', '/panel/vehicles')->name('profile.vehicles.index');
 
     // Admin panel: pregled rezervacija + manual override (retry fiscalization, resend invoice, mark resolved)
     Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {

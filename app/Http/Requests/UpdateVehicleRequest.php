@@ -12,6 +12,17 @@ class UpdateVehicleRequest extends FormRequest
         return $this->user() !== null;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $license = $this->input('license_plate');
+        if (is_string($license)) {
+            $normalized = strtoupper(trim($license));
+            $normalized = preg_replace('/\s+/', '', $normalized) ?? $normalized;
+            $normalized = preg_replace('/[^A-Z0-9]/', '', $normalized) ?? $normalized;
+            $this->merge(['license_plate' => $normalized]);
+        }
+    }
+
     public function rules(): array
     {
         $vehicleId = (int) $this->route('vehicle');
@@ -21,6 +32,7 @@ class UpdateVehicleRequest extends FormRequest
                 'required',
                 'string',
                 'max:50',
+                'regex:/^[A-Z0-9]+$/',
                 Rule::unique('vehicles')
                     ->ignore($vehicleId)
                     ->where(fn ($q) => $q->where('user_id', $this->user()->id)),

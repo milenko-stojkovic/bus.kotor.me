@@ -25,7 +25,7 @@ class PaymentResultController extends Controller
                 'user_type' => 'guest',
                 'message' => PaymentResultResolver::MESSAGE_FAILED_FALLBACK,
                 'redirect_guest' => route('reservations.create'),
-                'redirect_auth' => route('profile.reservations'),
+                'redirect_auth' => route('panel.reservations'),
             ], 400);
         }
 
@@ -39,7 +39,7 @@ class PaymentResultController extends Controller
             'user_type' => 'guest',
             'message' => PaymentResultResolver::MESSAGE_FAILED_FALLBACK,
             'redirect_guest' => route('reservations.create'),
-            'redirect_auth' => route('profile.reservations'),
+            'redirect_auth' => route('panel.reservations'),
         ], 404);
     }
 }

@@ -7,8 +7,13 @@ use App\Exceptions\NoCapacityException;
 use App\Helpers\LocaleHelper;
 use App\Http\Requests\CheckoutReservationRequest;
 use App\Models\DailyParkingData;
+use App\Models\ListOfTimeSlot;
+use App\Models\Reservation;
 use App\Models\TempData;
 use App\Models\Vehicle;
+use App\Services\Payment\PaymentSuccessHandler;
+use App\Services\Reservation\FreeReservationRules;
+use App\Support\UiText;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
@@ -24,6 +29,7 @@ use Illuminate\Support\Str;
  *
  * Race condition: lock na daily_parking_data; rezervacija tek nakon SUCCESS callbacka.
  * Dupli klik: postojeći pending za slot+user → isti payment link.
+ * Free rezervacije: bez createSession; PaymentSuccessHandler bez fiskalizacije; redirect na guest.reserve / panel.reservations.
  */
 class CheckoutController extends Controller
 {
@@ -31,15 +37,37 @@ class CheckoutController extends Controller
      * Validira. Atomic claim: transakcija + lockForUpdate na daily_parking_data, provera kapaciteta,
      * kreiranje temp_data, increment pending. createSession van transakcije.
      */
-    public function store(CheckoutReservationRequest $request, PaymentService $paymentService): RedirectResponse|Response|JsonResponse
-    {
+    public function store(
+        CheckoutReservationRequest $request,
+        PaymentService $paymentService,
+        PaymentSuccessHandler $successHandler,
+    ): RedirectResponse|Response|JsonResponse {
         $date = $request->validated('reservation_date');
-        $dropOffSlotId = $request->validated('drop_off_time_slot_id');
+        $dropOffSlotId = (int) $request->validated('drop_off_time_slot_id');
+        $pickUpSlotId = (int) $request->validated('pick_up_time_slot_id');
+
+        $arrivalSlot = ListOfTimeSlot::query()->find($dropOffSlotId);
+        $departureSlot = ListOfTimeSlot::query()->find($pickUpSlotId);
+        if (! $arrivalSlot || ! $departureSlot) {
+            return $request->expectsJson()
+                ? response()->json(['message' => __('Invalid time slots.')], 422)
+                : response(__('Invalid time slots.'), 422);
+        }
+
+        $isFree = FreeReservationRules::isFreeReservation($arrivalSlot, $departureSlot);
         $snapshot = $this->resolveSnapshotInput($request);
 
-        // Već postoji pending za isti slot + user/email → vrati postojeći payment link (bez locka)
-        $existingBySlot = $this->findExistingPendingForSlot($request, $date, $dropOffSlotId);
+        // Već postoji pending za iste slotove + user/email
+        $existingBySlot = $this->findExistingPendingForSlot($request, $date, $dropOffSlotId, $pickUpSlotId);
         if ($existingBySlot) {
+            $exArrival = ListOfTimeSlot::query()->find($existingBySlot->drop_off_time_slot_id);
+            $exDeparture = ListOfTimeSlot::query()->find($existingBySlot->pick_up_time_slot_id);
+            if ($exArrival && $exDeparture && FreeReservationRules::isFreeReservation($exArrival, $exDeparture)) {
+                $created = $successHandler->handle($existingBySlot, ['source' => 'free_checkout', 'context' => 'existing_pending'], false);
+
+                return $this->redirectAfterFreeCheckout($request, $created, $existingBySlot->merchant_transaction_id);
+            }
+
             $session = $paymentService->createSession($existingBySlot);
             if ($session->success && $session->paymentUrl) {
                 return redirect()->away($session->paymentUrl);
@@ -51,8 +79,7 @@ class CheckoutController extends Controller
         $retryToken = Str::uuid()->toString();
 
         try {
-            $temp = DB::transaction(function () use ($request, $date, $dropOffSlotId, $merchantTransactionId, $retryToken, $snapshot) {
-                $pickUpSlotId = (int) $request->validated('pick_up_time_slot_id');
+            $temp = DB::transaction(function () use ($request, $date, $dropOffSlotId, $pickUpSlotId, $merchantTransactionId, $retryToken, $snapshot) {
                 $slotIds = array_values(array_unique([
                     (int) $dropOffSlotId,
                     $pickUpSlotId,
@@ -124,12 +151,26 @@ class CheckoutController extends Controller
                 ->where('status', TempData::STATUS_PENDING)
                 ->first();
             if ($existingByMtid) {
+                $exA = ListOfTimeSlot::query()->find($existingByMtid->drop_off_time_slot_id);
+                $exD = ListOfTimeSlot::query()->find($existingByMtid->pick_up_time_slot_id);
+                if ($exA && $exD && FreeReservationRules::isFreeReservation($exA, $exD)) {
+                    $created = $successHandler->handle($existingByMtid, ['source' => 'free_checkout', 'context' => 'idempotent'], false);
+
+                    return $this->redirectAfterFreeCheckout($request, $created, $existingByMtid->merchant_transaction_id);
+                }
+
                 $session = $paymentService->createSession($existingByMtid);
                 if ($session->success && $session->paymentUrl) {
                     return redirect()->away($session->paymentUrl);
                 }
             }
             throw $e;
+        }
+
+        if ($isFree) {
+            $created = $successHandler->handle($temp, ['source' => 'free_checkout'], false);
+
+            return $this->redirectAfterFreeCheckout($request, $created, $temp->merchant_transaction_id);
         }
 
         $session = $paymentService->createSession($temp);
@@ -141,7 +182,7 @@ class CheckoutController extends Controller
         // createSession nije uspeo → vrati hold (decrement pending)
         $slotIds = array_values(array_unique([
             (int) $dropOffSlotId,
-            (int) $request->validated('pick_up_time_slot_id'),
+            $pickUpSlotId,
         ]));
         DailyParkingData::query()
             ->where('date', $date)
@@ -153,11 +194,49 @@ class CheckoutController extends Controller
             : response($message, Response::HTTP_SERVICE_UNAVAILABLE);
     }
 
-    /** Pending temp_data za isti slot (reservation_date + drop_off) i isti user (user_id ili email). */
-    private function findExistingPendingForSlot(CheckoutReservationRequest $request, string $date, int $dropOffSlotId): ?TempData
+    private function redirectAfterFreeCheckout(CheckoutReservationRequest $request, bool $created, ?string $merchantTransactionId = null): RedirectResponse
     {
+        $locale = app()->getLocale();
+        $url = $request->user()
+            ? route('panel.reservations', [], false)
+            : route('guest.reserve', [], false);
+
+        if (! $created && is_string($merchantTransactionId) && $merchantTransactionId !== ''
+            && Reservation::where('merchant_transaction_id', $merchantTransactionId)->exists()) {
+            $created = true;
+        }
+
+        if (! $created) {
+            $msg = UiText::t(
+                'checkout',
+                'free_reservation_failed',
+                'We could not complete your reservation. Please try again.',
+                $locale
+            );
+
+            return redirect()->to($url)->with('error', $msg);
+        }
+
+        $msg = UiText::t(
+            'checkout',
+            'free_reservation_success',
+            'Your free reservation was created. A confirmation email has been sent.',
+            $locale
+        );
+
+        return redirect()->to($url)->with('message', $msg);
+    }
+
+    /** Pending temp_data za isti slot (reservation_date + drop_off) i isti user (user_id ili email). */
+    private function findExistingPendingForSlot(
+        CheckoutReservationRequest $request,
+        string $date,
+        int $dropOffSlotId,
+        int $pickUpSlotId,
+    ): ?TempData {
         $query = TempData::where('reservation_date', $date)
             ->where('drop_off_time_slot_id', $dropOffSlotId)
+            ->where('pick_up_time_slot_id', $pickUpSlotId)
             ->where('status', TempData::STATUS_PENDING);
 
         if ($request->user()) {

@@ -1,10 +1,18 @@
 # Project DONE (urađeno)
 
-**Poslednje ažuriranje:** 2026-03-31  
+**Poslednje ažuriranje:** 2026-04-01  
 
 Hronološki najnovije na vrhu unutar svake sekcije. Pri zatvaranju zadatka dodaj red sa **datumom** (`YYYY-MM-DD`) i kratak opis; istu stavku ukloni iz `docs/project-todo.md`.
 
 ---
+
+## 2026-04 — Agency panel, besplatan checkout, dokumentacija
+
+- **2026-04-01** — **`docs/agency-panel.md`**: rute `/panel`, upcoming/realized, promena vozila, User tab, brisanje naloga; indeks u `project-status-next-steps.md` i pokazivač u `project-conventions.md` §8.
+- **2026-04-01** — **Besplatne rezervacije:** `FreeReservationRules`, `PaymentSuccessHandler` sa granom bez fiskala, `SendFreeReservationConfirmationJob`, `reservations.status = free`, `GenerateInvoicePdfJob::forceRegenerate` za zamenu vozila.
+- **2026-04-01** — **Agency panel R3:** `PanelReservationListService`, upcoming/realized tabele, PATCH vozila, PDF inline `panel.reservations.invoice.view`.
+- **2026-04-01** — **User tab:** jedna forma (`panel/partials/user-settings-form`), `ProfileUpdateRequest` + lozinka, `UiText` grupa `user`, delete account CG kroz `ui_translations`.
+- **2026-04-01** — **`laragon-php.ps1`** + `laragon-artisan.ps1` refaktor (PHP putanja na Windowsu); dokumentovano u `project-conventions.md` §3.
 
 ## 2026-03 — UI, auth, dokumentacija pracenja
 
@@ -53,3 +61,7 @@ Hronološki najnovije na vrhu unutar svake sekcije. Pri zatvaranju zadatka dodaj
 | Fiskal | `app/Services/FiscalizationService.php` |
 | UI tekst | `app/Support/UiText.php`, `database/seeders/UiTranslationsSeeder.php` |
 | Noreply notifikacije | `app/Notifications/NoreplyVerifyEmail.php`, `NoreplyResetPassword.php` |
+| Agency panel (dok.) | `docs/agency-panel.md` |
+| Besplatan termin / checkout | `app/Services/Reservation/FreeReservationRules.php`, `app/Jobs/SendFreeReservationConfirmationJob.php` |
+| Panel upcoming/realized | `app/Services/Reservation/PanelReservationListService.php`, `app/Http/Controllers/PanelController.php` |
+| Profil (panel user) | `app/Http/Controllers/ProfileController.php`, `resources/views/panel/partials/user-settings-form.blade.php` |
