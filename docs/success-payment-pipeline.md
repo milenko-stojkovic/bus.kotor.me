@@ -45,8 +45,13 @@ Ne idu na banku i **ne** pokreću **ProcessReservationAfterPaymentJob** / fiskal
 - **Scenario:** Job padne posle upisa rezervacije / fiskalizacije, ali pre slanja maila (ili posle PDF-a, pre emaila).
 - **Pravilo:** Svaki korak je **idempotentan** – pri retry-u se ne duplira rad:
   - **GenerateInvoicePdfJob:** ako već postoji PDF (`reservation.invoice_pdf_path` set i fajl postoji) → ne pravi novi.
-  - **SendInvoiceEmailJob:** ako je mail već poslat (`reservation.invoice_sent_at` set) → ne šalje ponovo.
+  - **SendInvoiceEmailJob:** ako je mail već poslat (`reservation.invoice_sent_at` set) → ne šalje ponovo; dodatno koristi DB lock da se isti mail ne pošalje duplo u slučaju paralelnih workera/retry-a.
 - U bazi: **invoice_pdf_path** (put do PDF-a), **invoice_sent_at** (timestamp slanja). ProcessReservationAfterPaymentJob ima **tries = 3** da retry dovrši preostale korake.
+
+Napomena (PDF + email robustnost):
+
+- Folder za PDF: **`storage/app/invoices`** se kreira automatski (generatori koriste filesystem `mkdir`), ali aplikacija i dalje mora imati write permissions na `storage/`.
+- **Email bez attachmenta se ne šalje:** `SendInvoiceEmailJob` proverava da PDF postoji; ako ne postoji, pokuša sinhrono da ga generiše, a ako i dalje ne postoji – preskače slanje (da korisnik ne dobije “prazan” email).
 
 ---
 

@@ -12,8 +12,13 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            // SQLite doesn't support ALTER TABLE ... MODIFY, and this migration is MySQL-specific.
+            return;
+        }
+
         Schema::table('vehicles', function (Blueprint $table) {
-            $table->dropForeign('fk_vehicles_user');
+            $table->dropForeign(['user_id']);
         });
 
         DB::statement('ALTER TABLE vehicles MODIFY user_id BIGINT UNSIGNED NULL');
@@ -27,8 +32,12 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
+
         Schema::table('vehicles', function (Blueprint $table) {
-            $table->dropForeign('fk_vehicles_user');
+            $table->dropForeign(['user_id']);
         });
 
         DB::statement('ALTER TABLE vehicles MODIFY user_id BIGINT UNSIGNED NOT NULL');

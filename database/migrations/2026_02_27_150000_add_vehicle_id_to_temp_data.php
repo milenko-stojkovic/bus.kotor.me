@@ -9,6 +9,17 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            // MySQL-only recovery steps below rely on information_schema and ALTER TABLE ... MODIFY.
+            if (! Schema::hasColumn('temp_data', 'vehicle_id')) {
+                Schema::table('temp_data', function (Blueprint $table) {
+                    $table->unsignedInteger('vehicle_id')->nullable()->after('user_id');
+                });
+            }
+
+            return;
+        }
+
         if (! Schema::hasColumn('temp_data', 'vehicle_id')) {
             Schema::table('temp_data', function (Blueprint $table) {
                 $table->unsignedInteger('vehicle_id')->nullable()->after('user_id');
@@ -37,6 +48,16 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            Schema::table('temp_data', function (Blueprint $table) {
+                if (Schema::hasColumn('temp_data', 'vehicle_id')) {
+                    $table->dropColumn('vehicle_id');
+                }
+            });
+
+            return;
+        }
+
         $dbName = DB::getDatabaseName();
         $fkExists = DB::table('information_schema.TABLE_CONSTRAINTS')
             ->where('TABLE_SCHEMA', $dbName)
@@ -46,7 +67,7 @@ return new class extends Migration
 
         Schema::table('temp_data', function (Blueprint $table) use ($fkExists) {
             if ($fkExists) {
-                $table->dropForeign('fk_temp_vehicle_id');
+                $table->dropForeign(['vehicle_id']);
             }
             if (Schema::hasColumn('temp_data', 'vehicle_id')) {
                 $table->dropColumn('vehicle_id');

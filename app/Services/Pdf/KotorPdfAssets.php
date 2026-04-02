@@ -40,7 +40,7 @@ final class KotorPdfAssets
             $qrCode = QrCode::create($verificationUrl)
                 ->setEncoding(new Encoding('UTF-8'))
                 ->setErrorCorrectionLevel(ErrorCorrectionLevel::Medium)
-                ->setSize(110)
+                ->setSize(160)
                 ->setMargin(2)
                 ->setRoundBlockSizeMode(RoundBlockSizeMode::Margin);
 

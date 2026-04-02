@@ -35,12 +35,12 @@ return new class extends Migration
     {
         Schema::table('reservations', function (Blueprint $table) {
             if (Schema::hasColumn('reservations', 'user_id')) {
-                $table->dropForeign('fk_res_user');
+                $table->dropForeign(['user_id']);
                 $table->dropIndex('idx_res_user');
                 $table->dropColumn('user_id');
             }
             if (Schema::hasColumn('reservations', 'vehicle_id')) {
-                $table->dropForeign('fk_res_vehicle_v2');
+                $table->dropForeign(['vehicle_id']);
                 $table->dropColumn('vehicle_id');
             }
         });

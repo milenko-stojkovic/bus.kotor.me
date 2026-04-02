@@ -83,6 +83,8 @@ Za “app fake driver” (kada je `FISCALIZATION_DRIVER=fake`) možeš setovati:
 - Failure semantika: scenariji mapiraju na realistične `code/adapterCode` vrednosti koje `ErrorClassifier` razume.
 - Fiskal response shape: `IsSucccess`, `ResponseCode`, `UIDRequest`, `Url.Value`, `Error.ErrorCode/ErrorMessage`, opcioni `RawMessage`.
 - Deposit pre receipt: fake flow sada radi deposit → receipt (i retry na 58) kao real.
+- Fiskal “interni broj” u PDF-u: fake fiskal u success response-u vraća verifikacioni URL (`Url.Value`) koji sadrži `ord=<DocumentNumber>` i `crtd=<YYYY-...>` tako da PDF može da parsira **Interni broj = `ord/YYYY`** iz `reservations.fiscal_qr` (kao u V1).
+- Operator: fake fiskal vraća `Operator` (echo iz `ENUIdentifier` poslatog u request-u), pa se `reservations.fiscal_operator` popunjava isto kao kod real integracije.
 
 ---
 

@@ -41,8 +41,20 @@ class FiscalizationService
      */
     private function callFakeFiscalization(Reservation $reservation, ?string $forcedFakeScenario = null): array
     {
+        $documentNumber = $this->nextDocumentNumber();
+
         // Align fake flow with real provider contract: deposit -> receipt (same shape as real).
-        $payload = $this->buildFiscalPayload($reservation);
+        $payload = [
+            ...$this->buildFiscalPayload($reservation),
+            // Real provider identity; include in fake payload so the fake service can echo it back.
+            'ENUIdentifier' => (string) config('services.fiscal.enu_identifier'),
+            // Make fake closer to real: pass document number so fiscal_qr can include ord=...
+            'DocumentNumber' => $documentNumber,
+            // Used by fake verify URL to embed year (crtd=...).
+            'CreatedAt' => ($reservation->created_at ?? now())->toIso8601String(),
+            // Used by fake verify URL (prc=...); not critical for internal number parsing, but keeps URL realistic.
+            'Price' => (float) ($reservation->vehicleType?->price ?? 0),
+        ];
 
         $scenario = '';
         if ($forcedFakeScenario !== null && trim($forcedFakeScenario) !== '') {

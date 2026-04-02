@@ -35,6 +35,34 @@ class FakeFiscalApiController extends Controller
 
     private function respond(Request $request): JsonResponse
     {
+        // Keep fake simulation close to real: Operator should come from request identity (ENUIdentifier),
+        // not from server-side config.
+        $operator = $request->input('ENUIdentifier')
+            ?? $request->json('ENUIdentifier')
+            ?? null;
+
+        $documentNumber = $request->input('DocumentNumber') ?? $request->json('DocumentNumber') ?? null;
+        $documentNumber = is_numeric($documentNumber) ? (int) $documentNumber : null;
+        $createdAt = $request->input('CreatedAt') ?? $request->json('CreatedAt') ?? null;
+        $createdAt = is_string($createdAt) && $createdAt !== '' ? $createdAt : now()->toIso8601String();
+        $price = $request->input('Price') ?? $request->json('Price') ?? null;
+        $price = is_numeric($price) ? number_format((float) $price, 2, '.', '') : '50.00';
+
+        $buildVerifyUrl = function (string $iic, string $operator, ?int $documentNumber, string $createdAt, string $price): string {
+            $params = [
+                'iic' => $iic,
+                'tin' => '02012936',
+                'crtd' => $createdAt,
+                'ord' => $documentNumber ?? random_int(10000, 99999),
+                'bu' => 'ml068la705',
+                'cr' => $operator,
+                'sw' => 'to030bx579',
+                'prc' => $price,
+            ];
+
+            return 'https://mapr.tax.gov.me/ic/#/verify?'.http_build_query($params);
+        };
+
         $scenario = $request->string('scenario')->toString();
         if ($scenario === '') {
             $scenario = (string) ($request->header('X-Fake-Scenario') ?? '');
@@ -127,7 +155,13 @@ class FakeFiscalApiController extends Controller
             if ($scenario === 'already_fiscalized') {
                 $body['ResponseCode'] = 'FAKE-JIR-'.$uuid;
                 $body['UIDRequest'] = 'FAKE-IKOF-'.$uuid;
-                $body['Url'] = ['Value' => 'https://fake.qr.local/qr/'.$uuid];
+                if (is_string($operator) && $operator !== '') {
+                    $body['Url'] = ['Value' => $buildVerifyUrl($body['UIDRequest'], $operator, $documentNumber, $createdAt, $price)];
+                }
+            }
+
+            if (is_string($operator) && $operator !== '') {
+                $body['Operator'] = $operator;
             }
 
             return response()->json($body, 422);
@@ -135,14 +169,18 @@ class FakeFiscalApiController extends Controller
 
         $uuid = Str::uuid()->toString();
 
-        return response()->json([
+        $body = [
             'IsSucccess' => true,
             'ResponseCode' => 'FAKE-JIR-'.$uuid,
             'UIDRequest' => 'FAKE-IKOF-'.$uuid,
-            'Url' => [
-                'Value' => 'https://fake.qr.local/qr/'.$uuid,
-            ],
             'RawMessage' => 'OK',
-        ]);
+        ];
+
+        if (is_string($operator) && $operator !== '') {
+            $body['Operator'] = $operator;
+            $body['Url'] = ['Value' => $buildVerifyUrl($body['UIDRequest'], $operator, $documentNumber, $createdAt, $price)];
+        }
+
+        return response()->json($body);
     }
 }

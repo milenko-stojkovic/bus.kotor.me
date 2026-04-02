@@ -28,7 +28,7 @@ return new class extends Migration
     {
         Schema::table('temp_data', function (Blueprint $table) {
             if (Schema::hasColumn('temp_data', 'user_id')) {
-                $table->dropForeign('fk_temp_user');
+                $table->dropForeign(['user_id']);
                 $table->dropColumn('user_id');
             }
         });

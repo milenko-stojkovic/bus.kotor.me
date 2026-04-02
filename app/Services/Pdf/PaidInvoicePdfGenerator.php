@@ -53,10 +53,16 @@ class PaidInvoicePdfGenerator
                 'nonFiscalNote' => GenerateInvoicePdfJob::NON_FISCAL_NOTE,
             ])->setPaper('a4', 'portrait');
 
-            $dir = 'invoices';
-            Storage::makeDirectory($dir);
-            $relativePath = $dir.'/'.$reservation->id.'.pdf';
-            $fullPath = storage_path('app/'.$relativePath);
+            $dir = storage_path('app/invoices');
+            if (! is_dir($dir)) {
+                @mkdir($dir, 0755, true);
+            }
+            if (! is_dir($dir)) {
+                throw new \RuntimeException('Failed to create invoices directory: '.$dir);
+            }
+
+            $relativePath = 'invoices/'.$reservation->id.'.pdf';
+            $fullPath = $dir.DIRECTORY_SEPARATOR.$reservation->id.'.pdf';
             $pdf->save($fullPath);
 
             return $relativePath;

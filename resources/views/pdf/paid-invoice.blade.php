@@ -14,7 +14,10 @@
         .table th, .table td { padding: 2px 4px; text-align: left; }
         .table th { border-bottom: 1px solid #000; }
         .footer { margin-top: 15px; font-size: 12px; }
-        .qr { text-align: center; margin: 6px 0 3px 0; }
+        .qr { text-align: center; margin: 0; }
+        .qr-block { display: inline-block; width: 160px; }
+        .qr-img { width: 160px; height: 160px; }
+        .qr-www { display: inline-block; width: 160px; }
         .small { font-size: 11px; }
         .totals-table { width: 100%; font-size: 11px; margin-top: 4px; }
         .totals-table td { padding: 2px 0; }
@@ -37,7 +40,7 @@
                     <p>
                         <span class="small">
                             PIB: 02012936<br>
-                            PDV broj: 92/31 02634 4
+                            PDV BROJ: 92/31 02634 4
                         </span>
                     </p>
                 </div>
@@ -82,12 +85,12 @@
         </tr>
     </table>
     <div class="small" style="margin-top:4px;">
-        Oslobođenje (oslobođeno od javnog interesa, čl.26 Zakon o PDV-u)
+        Oslobođeno od PDV-a po osnovu Zakona o PDV-u, čl. 26.
     </div>
     <div class="line"></div>
 
     @if ($isFiscal)
-        <div class="small">
+        <div class="small" style="margin-bottom:0;">
             IKOF: <span class="bold">{{ $reservation->fiscal_ikof ?? '—' }}</span><br>
             JIKR: <span class="bold">{{ $reservation->fiscal_jir ?? '—' }}</span><br>
             @if (! empty($internalNumber))
@@ -96,7 +99,9 @@
         </div>
         <div class="qr">
             @if (! empty($qrDataUri))
-                <img src="{{ $qrDataUri }}" style="width:110px; height:110px;" alt="">
+                <div class="qr-block">
+                    <img src="{{ $qrDataUri }}" class="qr-img" alt="">
+                </div>
             @endif
         </div>
     @else
@@ -105,8 +110,8 @@
         </div>
     @endif
 
-    <div class="footer center small" style="margin-top:8px;">
-        www.primatech.me<br>
+    <div class="footer center small" style="margin-top:0;">
+        <span class="qr-www">www.primatech.me</span><br>
         <span style="font-size:10px;">
             @if ($isFiscal)
                 Ovaj račun je generisan automatski i važi kao fiskalni dokument.
@@ -144,7 +149,7 @@
             <span class="bold">Tip vozila:</span> {{ $vehicleLine }}
         </div>
         <div class="small" style="margin-bottom:2px;">
-            <span class="bold">Datum rezervacije:</span> {{ $reservation->reservation_date->format('d.m.Y') }}
+            <span class="bold">Datum rezervacije:</span> {{ ($reservation->created_at ?? now())->format('d.m.Y') }}
         </div>
         <div class="small" style="margin-bottom:2px;">
             <span class="bold">Vrijeme dolaska:</span> {{ $reservation->dropOffTimeSlot->time_slot ?? 'N/A' }}

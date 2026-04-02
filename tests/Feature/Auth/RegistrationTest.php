@@ -2,7 +2,10 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\User;
+use App\Notifications\NoreplyVerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class RegistrationTest extends TestCase
@@ -18,6 +21,8 @@ class RegistrationTest extends TestCase
 
     public function test_new_users_can_register(): void
     {
+        Notification::fake();
+
         $response = $this->post('/register', [
             'name' => 'Test User',
             'country' => 'ME',
@@ -27,6 +32,8 @@ class RegistrationTest extends TestCase
         ]);
 
         $this->assertAuthenticated();
+        $user = User::where('email', 'test@example.com')->firstOrFail();
+        Notification::assertSentTo($user, NoreplyVerifyEmail::class);
         $response->assertRedirect(route('verification.notice', absolute: false));
     }
 }

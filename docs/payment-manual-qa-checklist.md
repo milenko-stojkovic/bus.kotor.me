@@ -1,6 +1,6 @@
 # Payment Manual QA Checklist / Test Matrix
 
-Poslednje ažuriranje: 2026-03-31  
+Poslednje ažuriranje: 2026-04-02  
 Namena: operativni vodič za ručno testiranje payment + fiskalizacija + retry + late manual review flow-a.
 
 **Indeks statusa / TODO / konvencije:** `docs/project-status-next-steps.md`, `docs/project-conventions.md`.
@@ -296,13 +296,15 @@ Napomena: za QA obavezno evidentirati da li u trenutnoj grani koda postoji autom
 
 - Proveri da je `GenerateInvoicePdfJob` izvršen.
 - Proveri `reservations.invoice_pdf_path`.
-- Proveri write permissions za `storage/app/invoices`.
+- Proveri write permissions za `storage/` (PDF ide u `storage/app/invoices/{id}.pdf`).
+- Napomena: folder `storage/app/invoices` se kreira automatski, ali ne može ako `storage/` nije writable.
 
 ## 4.5 Email nije poslat
 
 - Proveri `SendInvoiceEmailJob`.
 - Proveri `MAIL_MAILER`, `MAIL_FROM_ADDRESS`.
 - Proveri `reservations.invoice_sent_at` i mail log (`MAIL_MAILER=log`).
+- Napomena: `SendInvoiceEmailJob` ne šalje mail ako PDF attachment ne postoji (da se izbegne mail bez računa).
 
 ## 4.6 Late success ne ulazi u admin review
 

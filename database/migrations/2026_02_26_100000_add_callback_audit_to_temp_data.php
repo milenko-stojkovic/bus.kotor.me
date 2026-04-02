@@ -18,13 +18,17 @@ return new class extends Migration
             $table->text('callback_error_reason')->nullable()->after('callback_error_code');
         });
 
-        DB::statement("ALTER TABLE temp_data MODIFY COLUMN status ENUM('pending', 'failed', 'late_success', 'processed') DEFAULT 'pending'");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE temp_data MODIFY COLUMN status ENUM('pending', 'failed', 'late_success', 'processed') DEFAULT 'pending'");
+        }
     }
 
     public function down(): void
     {
         DB::table('temp_data')->where('status', 'processed')->update(['status' => 'failed']);
-        DB::statement("ALTER TABLE temp_data MODIFY COLUMN status ENUM('pending', 'failed', 'late_success') DEFAULT 'pending'");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE temp_data MODIFY COLUMN status ENUM('pending', 'failed', 'late_success') DEFAULT 'pending'");
+        }
         Schema::table('temp_data', function (Blueprint $table) {
             $table->dropColumn(['raw_callback_payload', 'callback_error_code', 'callback_error_reason']);
         });

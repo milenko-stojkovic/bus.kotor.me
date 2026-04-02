@@ -9,6 +9,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 /**
@@ -31,13 +33,35 @@ class SendInvoiceEmailJob implements ShouldQueue
 
     public function handle(): void
     {
-        $reservation = Reservation::find($this->reservationId);
-        if (! $reservation) {
-            return;
-        }
+        /** @var Reservation|null $reservation */
+        $reservation = null;
+        $claimed = false;
 
-        // Idempotent: ako je mail već poslat – ne šalji ponovo
-        if ($reservation->invoice_sent_at !== null) {
+        DB::transaction(function () use (&$reservation, &$claimed): void {
+            $reservation = Reservation::query()
+                ->whereKey($this->reservationId)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $reservation) {
+                return;
+            }
+
+            // Idempotent: ako je mail već poslat – ne šalji ponovo
+            if ($reservation->invoice_sent_at !== null) {
+                return;
+            }
+
+            // Prevent double-send from concurrent workers / retries in-flight.
+            if ((int) $reservation->email_sent === 2) {
+                return;
+            }
+
+            $reservation->update(['email_sent' => 2]); // sending
+            $claimed = true;
+        });
+
+        if (! $reservation || ! $claimed) {
             return;
         }
 
@@ -45,6 +69,7 @@ class SendInvoiceEmailJob implements ShouldQueue
             ? ($reservation->user?->email ?? $reservation->email)
             : $reservation->email;
         if (empty($email)) {
+            $reservation->update(['email_sent' => 0]);
             return;
         }
 
@@ -61,7 +86,31 @@ class SendInvoiceEmailJob implements ShouldQueue
         $fromAddress = config('mail.from.address');
         $fromName = config('mail.from.name');
 
+        // Ensure PDF exists before sending email; otherwise users get an email without attachment.
         $fullPath = GenerateInvoicePdfJob::fullPathForReservation($reservation);
+        if (! file_exists($fullPath)) {
+            try {
+                GenerateInvoicePdfJob::dispatchSync($reservation->id, $this->isFiscal);
+                $reservation->refresh();
+                $fullPath = GenerateInvoicePdfJob::fullPathForReservation($reservation);
+            } catch (\Throwable $e) {
+                Log::channel('single')->error('SendInvoiceEmailJob: PDF generation failed before email send', [
+                    'reservation_id' => $reservation->id,
+                    'is_fiscal' => $this->isFiscal,
+                    'message' => $e->getMessage(),
+                ]);
+            }
+        }
+        if (! file_exists($fullPath)) {
+            Log::channel('single')->warning('SendInvoiceEmailJob: PDF missing, skipping email send', [
+                'reservation_id' => $reservation->id,
+                'is_fiscal' => $this->isFiscal,
+                'expected_path' => $fullPath,
+            ]);
+            $reservation->update(['email_sent' => 0]);
+            app()->setLocale($previousLocale);
+            return;
+        }
 
         $subjectTemplate = UiText::t(
             'emails',
@@ -73,20 +122,24 @@ class SendInvoiceEmailJob implements ShouldQueue
 
         $body = $this->buildConfirmationText($reservation, $emailLocale);
 
-        Mail::raw(
-            $body,
-            function ($message) use ($reservation, $email, $fromAddress, $fromName, $fullPath, $subject): void {
-                $message->to($email)
-                    ->from($fromAddress, $fromName)
-                    ->subject($subject);
-                if (file_exists($fullPath)) {
+        try {
+            Mail::raw(
+                $body,
+                function ($message) use ($reservation, $email, $fromAddress, $fromName, $fullPath, $subject): void {
+                    $message->to($email)
+                        ->from($fromAddress, $fromName)
+                        ->subject($subject);
                     $message->attach($fullPath, [
                         'as' => 'invoice-'.$reservation->id.'.pdf',
                         'mime' => 'application/pdf',
                     ]);
                 }
-            }
-        );
+            );
+        } catch (\Throwable $e) {
+            $reservation->update(['email_sent' => 0]);
+            app()->setLocale($previousLocale);
+            throw $e;
+        }
 
         app()->setLocale($previousLocale);
 

@@ -61,7 +61,8 @@ class ProcessReservationAfterPaymentJob implements ShouldQueue
                 'fiscal_jir' => $result['fiscal_jir'],
                 'fiscal_ikof' => $result['fiscal_ikof'],
                 'fiscal_qr' => $result['fiscal_qr'] ?? null,
-                'fiscal_operator' => $result['fiscal_operator'] ?? null,
+                // V1 stored ENU identifier in fiscal_operator; V2 prefers provider Operator but falls back to ENU.
+                'fiscal_operator' => $result['fiscal_operator'] ?? (config('services.fiscal.enu_identifier') ?: null),
                 'fiscal_date' => $result['fiscal_date'] ?? now(),
             ]);
             $this->dispatchPdfAndEmail($reservation->id, true);
@@ -161,10 +162,9 @@ class ProcessReservationAfterPaymentJob implements ShouldQueue
     private function dispatchPdfAndEmail(int $reservationId, bool $isFiscal): void
     {
         if ($this->fakeBankWantsE2eSync()) {
-            Bus::chain([
-                new GenerateInvoicePdfJob($reservationId, $isFiscal),
-                new SendInvoiceEmailJob($reservationId, $isFiscal),
-            ])->dispatchSync();
+            // Laravel 12 PendingChain has no dispatchSync(); run steps synchronously.
+            GenerateInvoicePdfJob::dispatchSync($reservationId, $isFiscal);
+            SendInvoiceEmailJob::dispatchSync($reservationId, $isFiscal);
 
             return;
         }
