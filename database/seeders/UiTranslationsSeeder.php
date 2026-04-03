@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class UiTranslationsSeeder extends Seeder
@@ -458,5 +459,10 @@ class UiTranslationsSeeder extends Seeder
             ['group', 'key', 'locale'],
             ['text', 'updated_at']
         );
+
+        // Invalidate UiText cache (group maps + any-locale fallbacks) so new texts apply immediately.
+        Cache::forget('ui_translations:group=panel:locale=cg');
+        Cache::forget('ui_translations:group=panel:locale=en');
+        Cache::forget('ui_translations:any:group=panel:key=vehicle_remove_blocked_upcoming');
     }
 }
