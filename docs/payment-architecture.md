@@ -92,7 +92,7 @@ Controller **nikad**:
 2. Korisnik plaća na bank stranici (ili na fake bank stranici bira Success/Fail).
 3. Gateway (ili fake bank form) šalje **`POST /api/payment/callback`** sa merchant_transaction_id i status.
 4. Webhook: validacija → **PaymentCallbackJob::dispatch(payload)** → 202.
-5. **PaymentCallbackJob**: na success → Reservation, **temp_data.status = processed** (red se **ne briše** — audit); **`ProcessReservationAfterPaymentJob`** iz **`PaymentSuccessHandler`**: za **async** webhook uvek kada treba fiskal/mejl pipeline (uključujući **oba fake** drivera). Izuzetak: **`FakeBankCompleteController`** šalje **`PaymentCallbackJob::dispatchSync(..., deferFakeBankFiscalPipeline: true)`** — handler tada **ne** dispatchuje pipeline; odmah posle toga ista forma šalje **`ProcessReservationAfterPaymentJob`** sa **fiskal scenarijem** (da se ne duplira). Na failed → ažuriranje `temp_data` + **ErrorClassifier**; na timeout → `late_success` gde je predviđeno.
+5. **PaymentCallbackJob**: na success → Reservation, **temp_data.status = processed** (red se **ne briše** — audit); **`ProcessReservationAfterPaymentJob`** iz **`PaymentSuccessHandler`**: za **async** webhook uvek kada treba fiskal/mejl pipeline (uključujući **oba fake** drivera). Izuzetak: **`FakeBankCompleteController`** šalje callback preko **`QueueMode::dispatchPaymentCallbackSyncForFakeQaForm`** (`deferFakeBankFiscalPipeline: true`) — handler tada **ne** dispatchuje pipeline; odmah posle toga forma šalje **`ProcessReservationAfterPaymentJob`** preko **`QueueMode::dispatchForFakeE2e`** (sync vs queue prema **`FAKE_PAYMENT_E2E_SYNC`** i oba fake drivera). Na failed → ažuriranje `temp_data` + **ErrorClassifier**; na timeout → `late_success` gde je predviđeno.
 6. UI može koristiti **GET /reservation-status/{merchant_transaction_id}** (polling) za status.
 
 ---
@@ -121,7 +121,8 @@ Controller **nikad**:
 | `App\Http\Controllers\Api\PaymentCallbackController` | API callback: validacija potpisa + payload, dispatch job, 202/400. |
 | `config/payment.php` | Bankart/fake driver preko `BANK_DRIVER` i povezane env varijable. |
 | `App\Http\Controllers\ReservationStatusController` | Polling: GET po merchant_transaction_id. |
-| `App\Http\Controllers\FakeBankCompleteController` | Samo test: POST kombinovana forma + GET complete; `dispatchSync` callback; kad su oba drivera fake i bank success → `ProcessReservationAfterPaymentJob` sa izabranim fiskal scenarijem. |
+| `App\Support\QueueMode` | Centralno: **`useSyncForFake()`** (oba fake + `payment.fake_e2e_sync`); **`dispatchForFakeE2e($job)`** (sync ili `dispatch`); **`dispatchPaymentCallbackSyncForFakeQaForm`** (uvijek sync u fake formi). |
+| `App\Http\Controllers\FakeBankCompleteController` | Samo test: POST kombinovana forma + GET complete; callback uvijek sync preko `QueueMode`; kad su oba drivera fake i bank success → `ProcessReservationAfterPaymentJob` preko `QueueMode::dispatchForFakeE2e`. |
 
 ---
 

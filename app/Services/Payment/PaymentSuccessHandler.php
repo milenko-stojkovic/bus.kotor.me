@@ -7,6 +7,7 @@ use App\Jobs\SendFreeReservationConfirmationJob;
 use App\Models\DailyParkingData;
 use App\Models\Reservation;
 use App\Models\TempData;
+use App\Support\QueueMode;
 use App\Support\ReservationInvoiceAmount;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -74,15 +75,10 @@ class PaymentSuccessHandler
                 $fiscalFake = config('services.fiscalization.driver') === 'fake';
                 if ($bankFake && $fiscalFake) {
                     if (! $deferFakeBankFiscalPipeline) {
-                        if ($this->fakeBankWantsE2eSync()) {
-                            ProcessReservationAfterPaymentJob::dispatchSync($reservation->id);
-                        } else {
-                            ProcessReservationAfterPaymentJob::dispatch($reservation->id);
-                        }
+                        QueueMode::dispatchForFakeE2e(new ProcessReservationAfterPaymentJob($reservation->id));
                     }
-                } elseif ($this->fakeBankWantsE2eSync()) {
-                    ProcessReservationAfterPaymentJob::dispatchSync($reservation->id);
                 } else {
+                    // Real bank ili real fiskal: uvijek red (FAKE_PAYMENT_E2E_SYNC se ne primjenjuje na miješane tokove).
                     ProcessReservationAfterPaymentJob::dispatch($reservation->id);
                 }
             } else {
@@ -145,18 +141,6 @@ class PaymentSuccessHandler
                 $daily->increment('reserved');
             }
         }
-    }
-
-    /** Sinhroni E2E za fake banku: fiskal/PDF/mejl bez workera (v. config payment.fake_e2e_sync). */
-    private function fakeBankWantsE2eSync(): bool
-    {
-        if (! config('payment.fake_e2e_sync')) {
-            return false;
-        }
-
-        $driver = config('services.bank.driver') ?? config('payment.provider', 'fake');
-
-        return $driver === 'fake';
     }
 
     private function createReservationFromTempData(TempData $temp, string $status = 'paid'): Reservation

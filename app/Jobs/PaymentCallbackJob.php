@@ -46,7 +46,7 @@ class PaymentCallbackJob implements ShouldQueue, ShouldBeUnique
         public array $payload,
         public array $rawPayload = [],
         /**
-         * true samo za FakeBankCompleteController::dispatchSync — fiskal/mejl pipeline ide odmah posle callbacka sa scenarijem iz forme.
+         * true samo za FakeBankCompleteController ({@see \App\Support\QueueMode::dispatchPaymentCallbackSyncForFakeQaForm}) — pipeline sa scenarijem ide odmah posle callbacka u istom zahtjevu.
          * false za async webhook: mora dispatch ProcessReservationAfterPaymentJob iz PaymentSuccessHandler.
          */
         public bool $deferFakeBankFiscalPipeline = false,

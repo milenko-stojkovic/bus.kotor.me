@@ -6,6 +6,7 @@ use App\Jobs\PaymentCallbackJob;
 use App\Jobs\ProcessReservationAfterPaymentJob;
 use App\Models\Reservation;
 use App\Models\TempData;
+use App\Support\QueueMode;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -119,7 +120,9 @@ class FakeBankCompleteController extends Controller
             'error_reason' => is_string($errorReason) ? $errorReason : null,
         ];
 
-        PaymentCallbackJob::dispatchSync($payload, $rawPayload, deferFakeBankFiscalPipeline: true);
+        QueueMode::dispatchPaymentCallbackSyncForFakeQaForm(
+            new PaymentCallbackJob($payload, $rawPayload, deferFakeBankFiscalPipeline: true)
+        );
 
         $this->runDeferredFakeFiscalPipeline($merchantTransactionId, $bankScenario === 'success', $fiscalScenario);
 
@@ -148,7 +151,7 @@ class FakeBankCompleteController extends Controller
             ->first();
 
         if ($reservation && $reservation->status === 'paid') {
-            ProcessReservationAfterPaymentJob::dispatchSync($reservation->id, $scenario);
+            QueueMode::dispatchForFakeE2e(new ProcessReservationAfterPaymentJob($reservation->id, $scenario));
         }
     }
 

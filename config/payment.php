@@ -8,9 +8,9 @@ return [
     'provider' => env('PAYMENT_PROVIDER', 'fake'),
 
     /*
-    | Kada je BANK_DRIVER=fake: pokreni callback + fiskal + PDF + email sinhrono (isti HTTP zahtjev kao
-    | fake-bank complete), bez obaveznog queue workera. Isključi (false) ako namerno koristiš database/redis
-    | queue i php artisan queue:work za test.
+    | Kada su BANK_DRIVER=fake i FISCALIZATION_DRIVER=fake: {@see \App\Support\QueueMode::dispatchForFakeE2e}
+    | koristi dispatch_sync umjesto reda za ProcessReservationAfterPaymentJob / SendInvoiceEmailJob (isti
+    | HTTP zahtjev kao fake-bank complete). false = uvijek database/redis queue. Ne utiče na real bankart/fiskal.
     */
     'fake_e2e_sync' => filter_var(env('FAKE_PAYMENT_E2E_SYNC', true), FILTER_VALIDATE_BOOLEAN),
 

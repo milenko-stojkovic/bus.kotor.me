@@ -6,6 +6,7 @@ use App\Models\PostFiscalizationData;
 use App\Models\Reservation;
 use App\Services\AdminFiscalizationAlertService;
 use App\Services\FiscalizationService;
+use App\Support\QueueMode;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -196,23 +197,6 @@ class ProcessReservationAfterPaymentJob implements ShouldQueue
 
     private function dispatchInvoiceEmail(int $reservationId, bool $isFiscal): void
     {
-        if ($this->fakeBankWantsE2eSync()) {
-            SendInvoiceEmailJob::dispatchSync($reservationId, $isFiscal);
-
-            return;
-        }
-
-        SendInvoiceEmailJob::dispatch($reservationId, $isFiscal);
-    }
-
-    private function fakeBankWantsE2eSync(): bool
-    {
-        if (! config('payment.fake_e2e_sync')) {
-            return false;
-        }
-
-        $driver = config('services.bank.driver') ?? config('payment.provider', 'fake');
-
-        return $driver === 'fake';
+        QueueMode::dispatchForFakeE2e(new SendInvoiceEmailJob($reservationId, $isFiscal));
     }
 }

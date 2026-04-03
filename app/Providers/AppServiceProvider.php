@@ -82,6 +82,16 @@ class AppServiceProvider extends ServiceProvider
         });
 
         if ($this->app->environment('production')) {
+            if (filter_var(config('payment.fake_e2e_sync'), FILTER_VALIDATE_BOOLEAN)) {
+                Cache::remember('bootstrap_warn_fake_e2e_sync_production', 86_400, function (): bool {
+                    Log::channel('payments')->warning('FAKE_PAYMENT_E2E_SYNC is enabled in production', [
+                        'hint' => 'Set FAKE_PAYMENT_E2E_SYNC=false in production.',
+                    ]);
+
+                    return true;
+                });
+            }
+
             $bank = (string) config('services.bank.driver', 'fake');
             $fiscal = (string) config('services.fiscalization.driver', 'fake');
             if ($bank === 'fake' || $fiscal === 'fake') {
