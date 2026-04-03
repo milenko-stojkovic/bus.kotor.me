@@ -1,6 +1,6 @@
 # Konvencije projekta (bus.kotor.me)
 
-**Poslednje ažuriranje:** 2026-04-02  
+**Poslednje ažuriranje:** 2026-04-03  
 
 Za AI i ljude: držati se ovoga pri novim izmenama da ostane konzistentno.
 
@@ -68,6 +68,18 @@ Preporučeni oblik (naslovi ili bold oznake moraju biti eksplicitni):
 - **AI / automatizacija:** u ovom projektu na Windowsu **ne oslanjati se** na gol `php` / `php artisan` u shellu dok se ne potvrdi da `php` postoji u PATH-u; preferirati **`.\laragon-php.ps1`**, **`.\laragon-artisan.ps1`**, ili punu putanju iznad.
 - **Queue:** za lokalni QA bez workera, **`QUEUE_CONNECTION=sync`** u `.env`; inače `database` + `php artisan queue:work` (i tu istu PHP putanju ako treba).
 
+### Frontend (Vite / Tailwind) — build, ne zavisnost od dev servera
+
+- **`npm run build`** generiše **`public/build/*`**. Laravel tada učitava **statičke** CSS/JS; UI treba da izgleda **isto kao u dev modu** i da **radi bez** pokrenutog Vite servera.
+- **`npm run dev`** (Vite na npr. `localhost:5173`) je samo za **aktivan** rad na `resources/css` / `resources/js` / utility klasama u Blade-u. Ako nešto radi **samo** uz `npm run dev`, a bez builda ne — to je **bug**.
+- Za lokalni **production-like** test: posle izmena fronta uraditi **`npm run build`**, ne oslanjati se na trajno držanje `npm run dev`.
+
+### Lokalni HTTPS (Laragon)
+
+- Aplikacija se može servirati preko **HTTPS** (npr. **`https://bus.kotor.me.test`**, Apache SSL + Laragon cert).
+- U **`.env`** postaviti **`APP_URL=https://bus.kotor.me.test`** (ili odgovarajući HTTPS host) da **`url()` / `route()` / asseti** budu **HTTPS-safe**.
+- Izbegavati **hardcoded `http://`** u kodu gde to utiče na korisničke linkove ili očekivanja okruženja.
+
 ### Minimalni `.env` za lokalni QA (fake tok, bez workera)
 
 ```env
@@ -76,7 +88,7 @@ FISCALIZATION_DRIVER=fake
 QUEUE_CONNECTION=sync
 ```
 
-Posle izmene `.env`: `.\laragon-artisan.ps1 config:clear` (ili ista PHP putanja + `artisan config:clear`). Za izmene u Tailwind/JS i dalje `npm run dev` ili `npm run build` kada menjaš utility klase u Blade-u.
+Posle izmene `.env`: `.\laragon-artisan.ps1 config:clear` (ili ista PHP putanja + `artisan config:clear`). Za izmene u Tailwind/JS vidi podsekciju **Frontend** iznad (`npm run dev` tokom rada, **`npm run build` pre provere bez Vite-a ili pre deploy-a).
 
 ---
 
