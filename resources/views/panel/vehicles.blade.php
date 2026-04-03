@@ -26,7 +26,7 @@
                 <div class="p-6">
                     <form method="post" action="{{ route('panel.vehicles.store', [], false) }}" id="addVehicleForm" class="space-y-3">
                         @csrf
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="grid grid-cols-2 gap-3">
                             <div>
                                 <x-input-label for="add_license_plate" :value="$ui('registration_plates')" />
                                 <x-text-input
