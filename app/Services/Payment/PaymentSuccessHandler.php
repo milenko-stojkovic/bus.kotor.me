@@ -26,9 +26,10 @@ class PaymentSuccessHandler
      *
      * Ako lock nije validan, prelazi u late_success i vraća false.
      *
+     * @param  bool  $deferFakeBankFiscalPipeline  Kada su banka i fiskal fake: true = ne šalji ProcessReservation… (forma u FakeBankCompleteController šalje sa scenarijem); false = webhook/async callback, pipeline ovde.
      * @return bool true ako je rezervacija kreirana, false inače (late_success ili već postoji)
      */
-    public function handle(TempData $temp, array $rawPayload, bool $runFiscalAndInvoicePipeline = true): bool
+    public function handle(TempData $temp, array $rawPayload, bool $runFiscalAndInvoicePipeline = true, bool $deferFakeBankFiscalPipeline = false): bool
     {
         if (! $temp->isLockValidForProcessed()) {
             $this->transitionToLateSuccess($temp, false, $rawPayload);
@@ -37,7 +38,7 @@ class PaymentSuccessHandler
         }
 
         $created = false;
-        DB::transaction(function () use ($temp, $rawPayload, $runFiscalAndInvoicePipeline, &$created): void {
+        DB::transaction(function () use ($temp, $rawPayload, $runFiscalAndInvoicePipeline, $deferFakeBankFiscalPipeline, &$created): void {
             $temp = TempData::where('merchant_transaction_id', $temp->merchant_transaction_id)->lockForUpdate()->first();
             if (! $temp || Reservation::where('merchant_transaction_id', $temp->merchant_transaction_id)->exists()) {
                 return;
@@ -72,7 +73,13 @@ class PaymentSuccessHandler
                 $bankFake = (config('services.bank.driver') ?? config('payment.provider', 'fake')) === 'fake';
                 $fiscalFake = config('services.fiscalization.driver') === 'fake';
                 if ($bankFake && $fiscalFake) {
-                    // Kombinovana fake QA forma: ProcessReservationAfterPaymentJob poslije callbacka u FakeBankCompleteController.
+                    if (! $deferFakeBankFiscalPipeline) {
+                        if ($this->fakeBankWantsE2eSync()) {
+                            ProcessReservationAfterPaymentJob::dispatchSync($reservation->id);
+                        } else {
+                            ProcessReservationAfterPaymentJob::dispatch($reservation->id);
+                        }
+                    }
                 } elseif ($this->fakeBankWantsE2eSync()) {
                     ProcessReservationAfterPaymentJob::dispatchSync($reservation->id);
                 } else {

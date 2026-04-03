@@ -119,7 +119,7 @@ class FakeBankCompleteController extends Controller
             'error_reason' => is_string($errorReason) ? $errorReason : null,
         ];
 
-        PaymentCallbackJob::dispatchSync($payload, $rawPayload);
+        PaymentCallbackJob::dispatchSync($payload, $rawPayload, deferFakeBankFiscalPipeline: true);
 
         $this->runDeferredFakeFiscalPipeline($merchantTransactionId, $bankScenario === 'success', $fiscalScenario);
 

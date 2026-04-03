@@ -92,7 +92,7 @@ Controller **nikad**:
 2. Korisnik plaća na bank stranici (ili na fake bank stranici bira Success/Fail).
 3. Gateway (ili fake bank form) šalje **`POST /api/payment/callback`** sa merchant_transaction_id i status.
 4. Webhook: validacija → **PaymentCallbackJob::dispatch(payload)** → 202.
-5. **PaymentCallbackJob**: na success → Reservation, **temp_data.status = processed** (red se **ne briše** — audit); **`ProcessReservationAfterPaymentJob`** se šalje iz handlera osim kada su **`BANK_DRIVER=fake`** i **`FISCALIZATION_DRIVER=fake`** — tada ga odmah nakon callbacka u istom HTTP zahtjevu pokreće **`FakeBankCompleteController`** sa fiskal scenarijem iz kombinovane QA forme (v. ispod). Na failed → ažuriranje `temp_data` + **ErrorClassifier**; na timeout → `late_success` gde je predviđeno.
+5. **PaymentCallbackJob**: na success → Reservation, **temp_data.status = processed** (red se **ne briše** — audit); **`ProcessReservationAfterPaymentJob`** iz **`PaymentSuccessHandler`**: za **async** webhook uvek kada treba fiskal/mejl pipeline (uključujući **oba fake** drivera). Izuzetak: **`FakeBankCompleteController`** šalje **`PaymentCallbackJob::dispatchSync(..., deferFakeBankFiscalPipeline: true)`** — handler tada **ne** dispatchuje pipeline; odmah posle toga ista forma šalje **`ProcessReservationAfterPaymentJob`** sa **fiskal scenarijem** (da se ne duplira). Na failed → ažuriranje `temp_data` + **ErrorClassifier**; na timeout → `late_success` gde je predviđeno.
 6. UI može koristiti **GET /reservation-status/{merchant_transaction_id}** (polling) za status.
 
 ---

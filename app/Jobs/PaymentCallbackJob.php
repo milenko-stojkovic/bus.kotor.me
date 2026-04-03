@@ -44,7 +44,12 @@ class PaymentCallbackJob implements ShouldQueue, ShouldBeUnique
 
     public function __construct(
         public array $payload,
-        public array $rawPayload = []
+        public array $rawPayload = [],
+        /**
+         * true samo za FakeBankCompleteController::dispatchSync — fiskal/mejl pipeline ide odmah posle callbacka sa scenarijem iz forme.
+         * false za async webhook: mora dispatch ProcessReservationAfterPaymentJob iz PaymentSuccessHandler.
+         */
+        public bool $deferFakeBankFiscalPipeline = false,
     ) {}
 
     public function handle(): void
@@ -102,7 +107,7 @@ class PaymentCallbackJob implements ShouldQueue, ShouldBeUnique
         }
 
         if ($callbackStatus === 'success') {
-            app(PaymentSuccessHandler::class)->handle($temp, $this->rawPayload);
+            app(PaymentSuccessHandler::class)->handle($temp, $this->rawPayload, true, $this->deferFakeBankFiscalPipeline);
             return;
         }
 
