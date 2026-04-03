@@ -8,9 +8,13 @@ return [
     'provider' => env('PAYMENT_PROVIDER', 'fake'),
 
     /*
-    | Kada su BANK_DRIVER=fake i FISCALIZATION_DRIVER=fake: {@see \App\Support\QueueMode::dispatchForFakeE2e}
-    | koristi dispatch_sync umjesto reda za ProcessReservationAfterPaymentJob / SendInvoiceEmailJob (isti
-    | HTTP zahtjev kao fake-bank complete). false = uvijek database/redis queue. Ne utiče na real bankart/fiskal.
+    | Prekidač za fake QA pipeline (oba drivera fake): sync vs queue. Ne utiče na real bankart/fiskal.
+    |
+    | - true  = fake QA sync režim: {@see \App\Support\QueueMode::dispatchForFakeE2e} → dispatch_sync za pipeline jobove;
+    |           worker nije bitan za taj happy path (QUEUE_CONNECTION može biti database — i dalje se koristi sync za te dispatche).
+    | - false = fake QA queue režim (uz QUEUE_CONNECTION=database|redis): isti jobovi idu na red → potreban queue:work.
+    |
+    | QUEUE_CONNECTION=database samo omogućava red; ne garantuje ga ako kod pozove dispatch_sync (npr. ovaj flag true ili inline callback na formi).
     */
     'fake_e2e_sync' => filter_var(env('FAKE_PAYMENT_E2E_SYNC', true), FILTER_VALIDATE_BOOLEAN),
 

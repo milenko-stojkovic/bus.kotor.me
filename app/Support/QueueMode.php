@@ -5,8 +5,15 @@ namespace App\Support;
 /**
  * Centralna odluka sync vs queue za fake bank + fake fiskal QA ({@see config('payment.fake_e2e_sync')} / FAKE_PAYMENT_E2E_SYNC).
  *
- * Pravilo: sync samo kada su oba drivera fake i flag je true. Inače {@see dispatch()} (red).
- * Real bankart / real fiskal nikad ne koriste ovaj sync — {@see useSyncForFake()} je tada uvijek false.
+ * Terminologija (oba drivera fake):
+ * - **Fake QA queue režim:** `QUEUE_CONNECTION=database` (ili redis), `FAKE_PAYMENT_E2E_SYNC=false` → pipeline jobovi
+ *   (`ProcessReservationAfterPaymentJob`, `SendInvoiceEmailJob` gdje se koristi ovaj helper) idu {@see dispatch()} → potreban worker.
+ * - **Fake QA sync režim:** `FAKE_PAYMENT_E2E_SYNC=true` → isti pipeline ide `dispatch_sync`; worker nije bitan za taj tok.
+ *
+ * `QUEUE_CONNECTION=database` samo omogućava red; ne garantuje ga ako se negdje koristi `dispatch_sync` (ovaj helper kad je sync režim,
+ * ili {@see dispatchPaymentCallbackSyncForFakeQaForm} za fake-bank formu — callback uvijek inline).
+ *
+ * Real bankart / real fiskal: {@see useSyncForFake()} je uvijek false; koristi se običan {@see dispatch()}.
  */
 final class QueueMode
 {

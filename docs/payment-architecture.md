@@ -104,6 +104,15 @@ Controller **nikad**:
 - **Frontend NIKAD ne poziva** `POST /api/payment/callback`.
 - Nakon complete: redirect na **`/payment/return?merchant_transaction_id=...`**, zatim uobičajeni banner + redirect na guest/panel.
 
+### Fake QA: sync vs queue režim (terminologija)
+
+Pretpostavka: **`BANK_DRIVER=fake`**, **`FISCALIZATION_DRIVER=fake`**.
+
+- **Fake QA queue režim:** **`QUEUE_CONNECTION=database`** (ili redis), **`FAKE_PAYMENT_E2E_SYNC=false`**. **`PaymentCallbackJob`** (async webhook), **`ProcessReservationAfterPaymentJob`**, **`SendInvoiceEmailJob`** (preko **`QueueMode::dispatchForFakeE2e`**) idu na **red** — potreban **`queue:work`**.
+- **Fake QA sync režim:** **`FAKE_PAYMENT_E2E_SYNC=true`**. Pipeline jobovi iz **`QueueMode`** idu **`dispatch_sync`** — **worker nije bitan** za taj tok (čak i ako je `QUEUE_CONNECTION=database`, sync i dalje zaobilazi red za te dispatche).
+
+**`FAKE_PAYMENT_E2E_SYNC`** = prekidač sync vs queue za fake QA pipeline. **`QUEUE_CONNECTION=database`** samo omogućava red; ne garantuje ga ako se koristi **`dispatch_sync`** (sync režim ili uvijek-sync **`QueueMode::dispatchPaymentCallbackSyncForFakeQaForm`** na fake-bank formi).
+
 ---
 
 ## Fajlovi

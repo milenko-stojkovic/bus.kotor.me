@@ -72,6 +72,17 @@ Preporučeni oblik (naslovi ili bold oznake moraju biti eksplicitni):
 - **AI / automatizacija (Cursor agent, skripte):** iz korena repoa **`.\laragon-artisan.ps1`** ili **`.\laragon-artisan.cmd`** (npr. `test`, `migrate`, `queue:work`) — **ne** `php artisan ...` osim ako je `php` u PATH-u. Isto **`.\laragon-php.ps1`** / **`.\laragon-php.cmd`** umesto `php` za `-l`. Kada korisnik ima strogu Execution Policy, u primerima predložiti **`.cmd`**.
 - **Queue:** za lokalni QA bez workera, **`QUEUE_CONNECTION=sync`** u `.env` — tada **nema** posebnog workera (jobovi se izvršavaju u istom zahtevu). Za **`database`** / **`redis`** mora da radi **`queue:work`** (npr. **`.\laragon-artisan.cmd queue:work --tries=1`**). **Provera da li worker radi (Windows):** u Task Manageru pogledati **`php.exe`** i komandnu liniju da sadrži `artisan queue:work`, ili u PowerShellu npr. `Get-CimInstance Win32_Process -Filter "Name = 'php.exe'" | Select-Object CommandLine`. Ako se poslovi gomilaju, proveri tabelu **`jobs`** (driver `database`). **Test mejlova:** uz `sync` dovoljno je **`MAIL_MAILER=log`** (ili Mailtrap); uz asinhroni red pokreni worker pre akcije koja dispatchuje mejl.
 
+### Fake QA: sync vs queue režim
+
+Pretpostavka: **`BANK_DRIVER=fake`** i **`FISCALIZATION_DRIVER=fake`**.
+
+| Režim | Tipičan `.env` | Ponašanje |
+|--------|----------------|-----------|
+| **Fake QA queue** | `QUEUE_CONNECTION=database`, **`FAKE_PAYMENT_E2E_SYNC=false`** | **`PaymentCallbackJob`**, **`ProcessReservationAfterPaymentJob`**, **`SendInvoiceEmailJob`** (gdje ih šalje **`QueueMode`**) idu na **red** → potreban **`queue:work`**. |
+| **Fake QA sync** | npr. `QUEUE_CONNECTION=database`, **`FAKE_PAYMENT_E2E_SYNC=true`** | Isti fake pipeline za te jobove ide **`dispatch_sync`** → **worker nije bitan** za taj happy path. |
+
+**`FAKE_PAYMENT_E2E_SYNC`** je prekidač sync vs queue za fake QA pipeline (**`App\Support\QueueMode`**). **`QUEUE_CONNECTION=database`** samo **omogućava** perzistentni red; **ne garantuje** red ako kod koristi **`dispatch_sync`** (npr. kad je sync režim uključen, ili **`QueueMode::dispatchPaymentCallbackSyncForFakeQaForm`** na fake-bank formi — callback uvek inline u istom HTTP zahtevu).
+
 ### Frontend (Vite / Tailwind) — build, ne zavisnost od dev servera
 
 - **`npm run build`** generiše **`public/build/*`**. Laravel tada učitava **statičke** CSS/JS; UI treba da izgleda **isto kao u dev modu** i da **radi bez** pokrenutog Vite servera.
@@ -90,8 +101,11 @@ Preporučeni oblik (naslovi ili bold oznake moraju biti eksplicitni):
 ```env
 BANK_DRIVER=fake
 FISCALIZATION_DRIVER=fake
+FAKE_PAYMENT_E2E_SYNC=true
 QUEUE_CONNECTION=sync
 ```
+
+Za **fake QA queue** režim (worker + `jobs`): `QUEUE_CONNECTION=database`, **`FAKE_PAYMENT_E2E_SYNC=false`**. Vidi podsekciju **Fake QA: sync vs queue režim** iznad.
 
 Posle izmene `.env`: `.\laragon-artisan.ps1 config:clear` (ili ista PHP putanja + `artisan config:clear`). Za izmene u Tailwind/JS vidi podsekciju **Frontend** iznad (`npm run dev` tokom rada, **`npm run build` pre provere bez Vite-a ili pre deploy-a).
 
