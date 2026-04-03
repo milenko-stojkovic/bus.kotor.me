@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * Rezervacija može biti autentifikovana (user_id set) ili guest (user_id null).
  *
  * Snapshot polja (podaci korisnika/vozila u trenutku rezervacije; ostaju i ako se kasnije promene):
- * user_name, country, license_plate, vehicle_type_id, email.
+ * user_name, country, license_plate, vehicle_type_id, email, invoice_amount (iznos računa u trenutku kupovine).
  *
  * email vs users.email: Ostaje duplirano. Guest nema user pa mora imati email ovde; user može kasnije promeniti
  * email u profilu – rezervacija mora imati email kakav je bio u trenutku kupovine. Nemoj uklanjati.
@@ -45,7 +45,7 @@ class Reservation extends Model
         'fiscal_qr',
         'fiscal_operator',
         'fiscal_date',
-        'invoice_pdf_path',
+        'invoice_amount',
         'invoice_sent_at',
         'status',
         'email_sent',
@@ -57,6 +57,7 @@ class Reservation extends Model
             'reservation_date' => 'date',
             'fiscal_date' => 'datetime',
             'invoice_sent_at' => 'datetime',
+            'invoice_amount' => 'decimal:2',
             'email_sent' => 'integer', // 0 = nije poslat, 1 = poslata potvrda (integacija sa ReportEmail / notifikacije)
         ];
     }

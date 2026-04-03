@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Jobs\ProcessReservationAfterPaymentJob;
 use App\Models\Reservation;
 use App\Models\TempData;
+use App\Support\ReservationInvoiceAmount;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -88,6 +89,7 @@ class LateSuccessController extends Controller
                 'email' => $temp->email,
                 'preferred_locale' => $temp->preferred_locale,
                 'status' => 'paid',
+                'invoice_amount' => ReservationInvoiceAmount::snapshotForNewReservation('paid', $temp->vehicle_type_id),
                 'email_sent' => 0,
             ]);
 

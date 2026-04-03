@@ -10,11 +10,13 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 /**
  * Besplatna rezervacija: potvrda na email sa PDF prilogom (potvrda besplatne rezervacije, cg).
- * Idempotentno (invoice_sent_at). PDF se čuva u storage kao paid (invoice_pdf_path).
+ * PDF se generiše u privremenom fajlu pri slanju; ne čuva se u storage/app.
+ * Idempotentno (invoice_sent_at).
  */
 class SendFreeReservationConfirmationJob implements ShouldQueue
 {
@@ -28,7 +30,7 @@ class SendFreeReservationConfirmationJob implements ShouldQueue
         public int $reservationId
     ) {}
 
-    public function handle(): void
+    public function handle(FreeReservationPdfGenerator $pdfGenerator): void
     {
         $reservation = Reservation::find($this->reservationId);
         if (! $reservation || $reservation->status !== 'free') {
@@ -78,24 +80,44 @@ class SendFreeReservationConfirmationJob implements ShouldQueue
             $reservation->reservation_date->format('Y-m-d')
         );
 
-        $pdfPath = app(FreeReservationPdfGenerator::class)->generateAndStore($reservation);
-        if ($pdfPath !== null) {
-            $reservation->update(['invoice_pdf_path' => $pdfPath]);
-        }
-        $fullPdfPath = $pdfPath !== null ? storage_path('app/'.$pdfPath) : null;
+        $pdfBinary = $pdfGenerator->renderBinary($reservation);
+        if ($pdfBinary === null || $pdfBinary === '') {
+            Log::channel('single')->warning('SendFreeReservationConfirmationJob: PDF generation failed', [
+                'reservation_id' => $reservation->id,
+            ]);
+            app()->setLocale($previousLocale);
 
-        Mail::raw($body, function ($message) use ($email, $fromAddress, $fromName, $subject, $reservation, $fullPdfPath): void {
-            $message->to($email)
-                ->from($fromAddress, $fromName)
-                ->subject($subject);
-            if ($fullPdfPath && is_readable($fullPdfPath)) {
-                $message->attach($fullPdfPath, [
+            return;
+        }
+
+        $tmpPath = tempnam(sys_get_temp_dir(), 'bus_free_');
+        if ($tmpPath === false) {
+            Log::channel('single')->error('SendFreeReservationConfirmationJob: tempnam failed', [
+                'reservation_id' => $reservation->id,
+            ]);
+            app()->setLocale($previousLocale);
+
+            return;
+        }
+
+        try {
+            file_put_contents($tmpPath, $pdfBinary);
+            Mail::raw($body, function ($message) use ($email, $fromAddress, $fromName, $subject, $reservation, $tmpPath): void {
+                $message->to($email)
+                    ->from($fromAddress, $fromName)
+                    ->subject($subject);
+                $message->attach($tmpPath, [
                     'as' => 'potvrda-besplatna-rezervacija-'.$reservation->id.'.pdf',
                     'mime' => 'application/pdf',
                 ]);
-            }
-        });
+            });
+        } catch (\Throwable $e) {
+            @unlink($tmpPath);
+            app()->setLocale($previousLocale);
+            throw $e;
+        }
 
+        @unlink($tmpPath);
         app()->setLocale($previousLocale);
 
         $reservation->markConfirmationEmailSent();

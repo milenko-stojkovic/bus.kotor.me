@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Jobs\GenerateInvoicePdfJob;
 use App\Jobs\SendInvoiceEmailJob;
 use App\Models\PostFiscalizationData;
 use App\Models\Reservation;
@@ -41,9 +40,7 @@ class ReservationActionController extends Controller
 
         if (isset($result['fiscal_jir'])) {
             $post->applyFiscalDataAndDelete($result);
-            GenerateInvoicePdfJob::withChain([
-                new SendInvoiceEmailJob($reservation->id, true),
-            ])->dispatch($reservation->id, true);
+            SendInvoiceEmailJob::dispatch($reservation->id, true);
 
             return redirect()->back()->with('message', __('Fiskalizacija uspešna, fiskalni račun i email su poslati.'));
         }
@@ -67,11 +64,12 @@ class ReservationActionController extends Controller
             return redirect()->back()->with('error', __('Rezervacija nije pronađena.'));
         }
 
-        $reservation->update(['invoice_sent_at' => null]);
+        $reservation->update([
+            'invoice_sent_at' => null,
+            'email_sent' => 0,
+        ]);
         $isFiscal = $reservation->fiscal_jir !== null;
-        GenerateInvoicePdfJob::withChain([
-            new SendInvoiceEmailJob($reservation->id, $isFiscal),
-        ])->dispatch($reservation->id, $isFiscal);
+        SendInvoiceEmailJob::dispatch($reservation->id, $isFiscal);
 
         return redirect()->back()->with('message', __('Račun (PDF + email) je ponovo u redu za slanje.'));
     }

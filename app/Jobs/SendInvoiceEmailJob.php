@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Reservation;
+use App\Services\Pdf\PaidInvoicePdfGenerator;
 use App\Support\UiText;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\Mail;
 
 /**
  * Sends invoice/confirmation email to customer. Fiscal or non-fiscal PDF attached.
+ * PDF se generiše u memoriji / privremenom fajlu pri slanju; ne čuva se u storage/app.
  * Idempotent: ako je mail već poslat (invoice_sent_at set) – ne šalji ponovo (retry safe).
  * Mail must be sent from bus@kotor.me (MAIL_FROM_ADDRESS).
  */
@@ -31,7 +33,7 @@ class SendInvoiceEmailJob implements ShouldQueue
         public bool $isFiscal = true
     ) {}
 
-    public function handle(): void
+    public function handle(PaidInvoicePdfGenerator $pdfGenerator): void
     {
         /** @var Reservation|null $reservation */
         $reservation = null;
@@ -47,12 +49,10 @@ class SendInvoiceEmailJob implements ShouldQueue
                 return;
             }
 
-            // Idempotent: ako je mail već poslat – ne šalji ponovo
             if ($reservation->invoice_sent_at !== null) {
                 return;
             }
 
-            // Prevent double-send from concurrent workers / retries in-flight.
             if ((int) $reservation->email_sent === 2) {
                 return;
             }
@@ -70,10 +70,10 @@ class SendInvoiceEmailJob implements ShouldQueue
             : $reservation->email;
         if (empty($email)) {
             $reservation->update(['email_sent' => 0]);
+
             return;
         }
 
-        // Email language: auth -> user.lang; guest -> reservation.preferred_locale (set at checkout from browser/session)
         $emailLocale = $reservation->user_id
             ? ($reservation->user?->lang ?? 'en')
             : ($reservation->preferred_locale ?? 'en');
@@ -86,29 +86,26 @@ class SendInvoiceEmailJob implements ShouldQueue
         $fromAddress = config('mail.from.address');
         $fromName = config('mail.from.name');
 
-        // Ensure PDF exists before sending email; otherwise users get an email without attachment.
-        $fullPath = GenerateInvoicePdfJob::fullPathForReservation($reservation);
-        if (! file_exists($fullPath)) {
-            try {
-                GenerateInvoicePdfJob::dispatchSync($reservation->id, $this->isFiscal);
-                $reservation->refresh();
-                $fullPath = GenerateInvoicePdfJob::fullPathForReservation($reservation);
-            } catch (\Throwable $e) {
-                Log::channel('single')->error('SendInvoiceEmailJob: PDF generation failed before email send', [
-                    'reservation_id' => $reservation->id,
-                    'is_fiscal' => $this->isFiscal,
-                    'message' => $e->getMessage(),
-                ]);
-            }
-        }
-        if (! file_exists($fullPath)) {
-            Log::channel('single')->warning('SendInvoiceEmailJob: PDF missing, skipping email send', [
+        $pdfBinary = $pdfGenerator->renderBinary($reservation, $this->isFiscal);
+        if ($pdfBinary === null || $pdfBinary === '') {
+            Log::channel('single')->warning('SendInvoiceEmailJob: PDF generation failed, skipping email send', [
                 'reservation_id' => $reservation->id,
                 'is_fiscal' => $this->isFiscal,
-                'expected_path' => $fullPath,
             ]);
             $reservation->update(['email_sent' => 0]);
             app()->setLocale($previousLocale);
+
+            return;
+        }
+
+        $tmpPath = tempnam(sys_get_temp_dir(), 'bus_inv_');
+        if ($tmpPath === false) {
+            Log::channel('single')->error('SendInvoiceEmailJob: tempnam failed', [
+                'reservation_id' => $reservation->id,
+            ]);
+            $reservation->update(['email_sent' => 0]);
+            app()->setLocale($previousLocale);
+
             return;
         }
 
@@ -123,13 +120,14 @@ class SendInvoiceEmailJob implements ShouldQueue
         $body = $this->buildConfirmationText($reservation, $emailLocale);
 
         try {
+            file_put_contents($tmpPath, $pdfBinary);
             Mail::raw(
                 $body,
-                function ($message) use ($reservation, $email, $fromAddress, $fromName, $fullPath, $subject): void {
+                function ($message) use ($reservation, $email, $fromAddress, $fromName, $tmpPath, $subject): void {
                     $message->to($email)
                         ->from($fromAddress, $fromName)
                         ->subject($subject);
-                    $message->attach($fullPath, [
+                    $message->attach($tmpPath, [
                         'as' => 'invoice-'.$reservation->id.'.pdf',
                         'mime' => 'application/pdf',
                     ]);
@@ -138,9 +136,11 @@ class SendInvoiceEmailJob implements ShouldQueue
         } catch (\Throwable $e) {
             $reservation->update(['email_sent' => 0]);
             app()->setLocale($previousLocale);
+            @unlink($tmpPath);
             throw $e;
         }
 
+        @unlink($tmpPath);
         app()->setLocale($previousLocale);
 
         $reservation->markConfirmationEmailSent();

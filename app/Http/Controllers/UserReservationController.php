@@ -3,17 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateReservationVehicleRequest;
-use App\Jobs\GenerateInvoicePdfJob;
 use App\Jobs\SendInvoiceEmailJob;
 use App\Models\Reservation;
 use App\Models\Vehicle;
+use App\Services\Pdf\FreeReservationPdfGenerator;
+use App\Services\Pdf\PaidInvoicePdfGenerator;
 use App\Services\Reservation\ReservationBookingPageData;
 use App\Support\UiText;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class UserReservationController extends Controller
 {
@@ -24,39 +24,58 @@ class UserReservationController extends Controller
         return view('panel.reservations', $booking);
     }
 
-    public function downloadInvoice(Request $request, int $id): BinaryFileResponse
+    public function downloadInvoice(Request $request, int $id): StreamedResponse
     {
         $reservation = Reservation::query()
             ->where('user_id', $request->user()->id)
             ->whereKey($id)
             ->firstOrFail();
 
-        abort_unless($reservation->invoice_pdf_path, 404);
-        abort_unless(Storage::exists($reservation->invoice_pdf_path), 404);
+        $binary = $this->pdfBinaryForReservation($reservation);
+        abort_if($binary === null || $binary === '', 404);
 
-        return response()->download(
-            storage_path('app/'.$reservation->invoice_pdf_path),
-            'invoice-'.$reservation->id.'.pdf'
+        return response()->streamDownload(
+            static function () use ($binary): void {
+                echo $binary;
+            },
+            'invoice-'.$reservation->id.'.pdf',
+            [
+                'Content-Type' => 'application/pdf',
+            ]
         );
     }
 
     /**
-     * PDF u browser tabu (inline), ista autorizacija kao download.
+     * PDF u browser tabu (inline), generisan na zahtev.
      */
-    public function showInvoice(Request $request, int $id): BinaryFileResponse
+    public function showInvoice(Request $request, int $id): \Illuminate\Http\Response
     {
         $reservation = Reservation::query()
             ->where('user_id', $request->user()->id)
             ->whereKey($id)
             ->firstOrFail();
 
-        abort_unless($reservation->invoice_pdf_path, 404);
-        $fullPath = storage_path('app/'.$reservation->invoice_pdf_path);
-        abort_unless(is_file($fullPath), 404);
+        $binary = $this->pdfBinaryForReservation($reservation);
+        abort_if($binary === null || $binary === '', 404);
 
-        return response()->file($fullPath, [
+        return response($binary, 200, [
+            'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="invoice-'.$reservation->id.'.pdf"',
         ]);
+    }
+
+    private function pdfBinaryForReservation(Reservation $reservation): ?string
+    {
+        if ($reservation->status === 'free') {
+            return app(FreeReservationPdfGenerator::class)->renderBinary($reservation);
+        }
+        if ($reservation->status === 'paid') {
+            $isFiscal = $reservation->fiscal_jir !== null;
+
+            return app(PaidInvoicePdfGenerator::class)->renderBinary($reservation, $isFiscal);
+        }
+
+        return null;
     }
 
     public function updateVehicle(UpdateReservationVehicleRequest $request, int $id): RedirectResponse
@@ -78,20 +97,14 @@ class UserReservationController extends Controller
         $reservation->refresh();
 
         if ($reservation->status === 'paid') {
-            if ($reservation->invoice_pdf_path && Storage::exists($reservation->invoice_pdf_path)) {
-                Storage::delete($reservation->invoice_pdf_path);
-            }
             $reservation->update([
-                'invoice_pdf_path' => null,
                 'invoice_sent_at' => null,
                 'email_sent' => 0,
             ]);
             $reservation->refresh();
 
             $isFiscal = $reservation->fiscal_jir !== null;
-            GenerateInvoicePdfJob::withChain([
-                new SendInvoiceEmailJob($reservation->id, $isFiscal),
-            ])->dispatch($reservation->id, $isFiscal, true);
+            SendInvoiceEmailJob::dispatch($reservation->id, $isFiscal);
         }
 
         $locale = app()->getLocale();

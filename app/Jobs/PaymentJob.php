@@ -6,6 +6,7 @@ use App\Contracts\PaymentResult;
 use App\Contracts\PaymentService;
 use App\Models\Reservation;
 use App\Models\TempData;
+use App\Support\ReservationInvoiceAmount;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -87,6 +88,7 @@ class PaymentJob implements ShouldQueue, ShouldBeUnique
             'vehicle_type_id' => $temp->vehicle_type_id,
             'email' => $temp->email,
             'status' => 'paid',
+            'invoice_amount' => ReservationInvoiceAmount::snapshotForNewReservation('paid', $temp->vehicle_type_id),
             'email_sent' => 0,
         ]);
     }

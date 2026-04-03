@@ -21,7 +21,7 @@
 
 - **Always in Montenegrin (cg).** Legal requirement (local government issuer).
 - **Never** generate invoice in en or any other language.
-- GenerateInvoicePdfJob uses **hardcoded Montenegrin strings** for PDF content and sets `app()->setLocale('cg')` inside the job so any future use of locale is cg. Do not rely on app locale from request/callback for invoice content.
+- **PaidInvoicePdfGenerator** / **FreeReservationPdfGenerator** use **hardcoded Montenegrin strings** for PDF content and set `app()->setLocale('cg')` while rendering. Do not rely on app locale from request/callback for invoice content.
 
 ## 4. Bank callback
 
@@ -45,5 +45,5 @@
 | UI (guest)     | session('locale') or Accept-Language| app locale             |
 | Email (auth)   | users.lang                          | SendInvoiceEmailJob    |
 | Email (guest)  | reservation.preferred_locale        | SendInvoiceEmailJob    |
-| Invoice PDF    | always **cg**                       | GenerateInvoicePdfJob  |
+| Invoice PDF    | always **cg**                       | PaidInvoicePdfGenerator  |
 | Bank callback  | N/A (no locale)                    | Identify by merchant_transaction_id only |

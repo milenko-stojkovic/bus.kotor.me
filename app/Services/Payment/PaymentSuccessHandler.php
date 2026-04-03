@@ -7,6 +7,7 @@ use App\Jobs\SendFreeReservationConfirmationJob;
 use App\Models\DailyParkingData;
 use App\Models\Reservation;
 use App\Models\TempData;
+use App\Support\ReservationInvoiceAmount;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -160,6 +161,7 @@ class PaymentSuccessHandler
             'email' => $temp->email,
             'preferred_locale' => $temp->preferred_locale,
             'status' => $status,
+            'invoice_amount' => ReservationInvoiceAmount::snapshotForNewReservation($status, $temp->vehicle_type_id),
             'email_sent' => 0,
         ]);
     }

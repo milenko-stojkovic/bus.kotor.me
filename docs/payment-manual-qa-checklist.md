@@ -82,7 +82,7 @@ Svaki scenario validirati kroz:
 | Expected DB state | `temp_data.status=processed`; postoji `reservations` red sa istim `merchant_transaction_id`; snapshot polja popunjena |
 | Expected UI | Nakon obrade: **redirect** na `guest.reserve` ili `panel.reservations` sa **success/info** `checkout_banner`; na `/payment/return` ostaje samo **pending** sa polling-om dok callback ne završi |
 | Expected logs | "Payment callback accepted", "Payment state transition ... -> processed" |
-| Side effects | `invoice_pdf_path` set; `invoice_sent_at` set; email poslat (ili zabeležen preko `MAIL_MAILER=log`) |
+| Side effects | `invoice_amount` snapshot set; `invoice_sent_at` set; email poslat (ili zabeležen preko `MAIL_MAILER=log`); PDF nije u `storage/` |
 
 ---
 
@@ -294,17 +294,16 @@ Napomena: za QA obavezno evidentirati da li u trenutnoj grani koda postoji autom
 
 ## 4.4 PDF nije generisan
 
-- Proveri da je `GenerateInvoicePdfJob` izvršen.
-- Proveri `reservations.invoice_pdf_path`.
-- Proveri write permissions za `storage/` (PDF ide u `storage/app/invoices/{id}.pdf`).
-- Napomena: folder `storage/app/invoices` se kreira automatski, ali ne može ako `storage/` nije writable.
+- Proveri da je **`SendInvoiceEmailJob`** (ili panel **`PaidInvoicePdfGenerator`**) izvršen bez greške u logu (`Paid invoice PDF failed`).
+- Proveri `reservations.invoice_amount` (mora biti postavljen za plaćene).
+- PDF se ne čuva trajno; privremeni fajl za mail koristi sistemski temp dir (`sys_get_temp_dir()`).
 
 ## 4.5 Email nije poslat
 
 - Proveri `SendInvoiceEmailJob`.
 - Proveri `MAIL_MAILER`, `MAIL_FROM_ADDRESS`.
 - Proveri `reservations.invoice_sent_at` i mail log (`MAIL_MAILER=log`).
-- Napomena: `SendInvoiceEmailJob` ne šalje mail ako PDF attachment ne postoji (da se izbegne mail bez računa).
+- Napomena: `SendInvoiceEmailJob` ne šalje mail ako **`renderBinary`** ne vrati PDF (da se izbegne mail bez računa).
 
 ## 4.6 Late success ne ulazi u admin review
 
@@ -323,7 +322,7 @@ from temp_data
 where merchant_transaction_id = :tx;
 
 -- Reservation po tx
-select id, merchant_transaction_id, status, fiscal_jir, invoice_pdf_path, invoice_sent_at
+select id, merchant_transaction_id, status, fiscal_jir, invoice_amount, invoice_sent_at
 from reservations
 where merchant_transaction_id = :tx;
 

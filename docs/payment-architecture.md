@@ -127,7 +127,7 @@ Controller **nikad**:
 
 ## Success payment pipeline (fiskalizacija → PDF → email)
 
-V. **docs/success-payment-pipeline.md**: pending → processed → create reservation (bez fiscal polja) → FiscalizeReservationJob → na uspeh fiscal_* + GenerateInvoicePdfJob + SendInvoiceEmailJob; mail sa bus@kotor.me.
+V. **docs/success-payment-pipeline.md**: pending → processed → create reservation (bez fiscal polja, sa **invoice_amount** snapshot) → ProcessReservationAfterPaymentJob → na uspeh fiscal_* + SendInvoiceEmailJob (PDF on-the-fly); mail sa bus@kotor.me.
 
 ---
 

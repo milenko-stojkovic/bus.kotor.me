@@ -39,9 +39,6 @@
                                 </thead>
                                 <tbody class="divide-y divide-gray-200">
                                     @foreach ($reservations as $r)
-                                        @php
-                                            $hasPdf = $r->invoice_pdf_path && \Illuminate\Support\Facades\Storage::exists($r->invoice_pdf_path);
-                                        @endphp
                                         <tr>
                                             <td class="px-3 py-2 whitespace-nowrap text-gray-900">{{ $r->reservation_date?->format('Y-m-d') }}</td>
                                             <td class="px-3 py-2 text-gray-700">{{ $r->dropOffTimeSlot?->time_slot ?? '—' }}</td>
@@ -51,21 +48,19 @@
                                                 @if ($r->status === 'free')
                                                     {{ $ui('free_reservation', 'Free') }}
                                                 @else
-                                                    {{ number_format((float) ($r->vehicleType->price ?? 0), 2, '.', '') }} €
+                                                    {{ number_format((float) ($r->invoice_amount ?? 0), 2, '.', '') }} €
                                                 @endif
                                             </td>
                                             <td class="px-3 py-2 text-right whitespace-nowrap">
-                                                @if ($hasPdf)
+                                                @if (in_array($r->status, ['paid', 'free'], true))
                                                     <a
-                                                        href="{{ route('panel.reservations.invoice.view', $r->id, false) }}"
+                                                        href="{{ route('panel.reservations.invoice.view', ['id' => $r->id], false) }}"
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         class="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-indigo-700 bg-white hover:bg-gray-50"
                                                     >
                                                         {{ $p('reservations_pdf', 'PDF') }}
                                                     </a>
-                                                @elseif ($r->status === 'paid')
-                                                    <span class="text-gray-500 text-xs">{{ $p('invoice_pending_short', 'Pending') }}</span>
                                                 @else
                                                     <span class="text-gray-400">—</span>
                                                 @endif

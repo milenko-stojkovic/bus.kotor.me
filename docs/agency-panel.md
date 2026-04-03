@@ -37,7 +37,7 @@ Servis: **`App\Services\Reservation\PanelReservationListService`**.
 ## Promena vozila (samo upcoming)
 
 - Dozvoljeno samo vozilo istog korisnika čiji je **`vehicle_types.price` ≤** cene kategorije na rezervaciji (snapshot **`vehicle_type_id`** se **ne** menja).
-- **Plaćena** rezervacija: briše se stari PDF ako postoji, **`GenerateInvoicePdfJob`** sa **`forceRegenerate`**, zatim **`SendInvoiceEmailJob`**.
+- **Plaćena** rezervacija: reset **`invoice_sent_at`** / **`email_sent`**, zatim **`SendInvoiceEmailJob`** (PDF se generiše u jobu, bez trajnog skladišta).
 - **Besplatna** (`reservations.status = free`): samo **`license_plate`** / **`vehicle_id`**, bez fiskal/PDF mejla.
 
 Validacija: **`App\Http\Requests\UpdateReservationVehicleRequest`**.

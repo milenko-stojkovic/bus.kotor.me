@@ -8,7 +8,7 @@ Flow nakon bank API SUCCESS callback-a: rezervacija se kreira → **ProcessReser
 
 Ne idu na banku i **ne** pokreću **ProcessReservationAfterPaymentJob** / fiskalizaciju. Backend odlučuje preko **`FreeReservationRules`**.
 
-- **`PaymentSuccessHandler::handle(..., runFiscalAndInvoicePipeline: false)`** kreira rezervaciju sa **`reservations.status = free`**, šalje **`SendFreeReservationConfirmationJob`** (email + **PDF potvrda** iz šablona `pdf/free-reservation-confirmation`, **`FreeReservationPdfGenerator`**, DomPDF). Sadržaj PDF-a **samo cg**; podnožje: *„Ova potvrda je automatski generisana od strane sistema Opštine Kotor.“* (bez teksta o fiskalnom dokumentu). PDF se čuva u **`storage/app/invoices/{id}.pdf`** i upisuje **`invoice_pdf_path`**. Logo: **`public/images/logo_kotor.png`** (opciono).
+- **`PaymentSuccessHandler::handle(..., runFiscalAndInvoicePipeline: false)`** kreira rezervaciju sa **`reservations.status = free`**, **`invoice_amount = 0`**, šalje **`SendFreeReservationConfirmationJob`** (email + **PDF potvrda** iz šablona `pdf/free-reservation-confirmation`, **`FreeReservationPdfGenerator`**, DomPDF). Sadržaj PDF-a **samo cg**; podnožje: *„Ova potvrda je automatski generisana od strane sistema Opštine Kotor.“* (bez teksta o fiskalnom dokumentu). PDF se **ne** čuva trajno na disku: generiše se u memoriji, piše u **privremeni fajl** za `Mail::attach`, pa se briše. Logo: **`public/images/logo_kotor.png`** (opciono).
 - Redirect: **`guest.reserve`** ili **`panel.reservations`** sa **`checkout_banner`** (grupa **`checkout_result`**, vidi **`CheckoutResultFlash`**), ne kratkotrajni „success“ ekran na **`/payment/return`**.
 - **`ProcessReservationAfterPaymentJob`** odmah izlazi ako je `status === 'free'` (odbrambeno).
 - **Plaćeni tok:** kad postoji rezervacija, **`GET /payment/return`** više ne ostaje na success view-u — radi **redirect** na gore navedene rute sa flash porukom; na **`/payment/return`** ostaje samo **`pending`** (vidi **`payment/return.blade.php`**). **`PaymentResultResolver`** i dalje razlikuje npr. **`fiscal_complete`** (JIR postoji ili ne) radi izbora **success** vs **info** bannera.
@@ -21,7 +21,7 @@ Ne idu na banku i **ne** pokreću **ProcessReservationAfterPaymentJob** / fiskal
 2. Kreira se **reservation** (bez fiscal polja).
 3. Dispatch **ProcessReservationAfterPaymentJob(reservation_id)** (opciono sa **`fakeFiscalScenario`** kad fiskal driver šalje scenario iz kombinovane fake QA forme).
    - **Izuzetak:** ako su **`BANK_DRIVER=fake`** i **`FISCALIZATION_DRIVER=fake`**, job se **ne** šalje iz **`PaymentSuccessHandler`** — isti zahtev ga pokreće **`FakeBankCompleteController`** odmah poslije **`PaymentCallbackJob`**, sa scenarijem sa forme (jedan submit = bank + fiskal ishod).
-   - **`dispatchSync`** lanac PDF + email i dalje zavisi od **`FAKE_PAYMENT_E2E_SYNC`** i fake banke (v. job).
+   - **`dispatchSync`** za **`SendInvoiceEmailJob`** i dalje zavisi od **`FAKE_PAYMENT_E2E_SYNC`** i fake banke (v. job).
 
 ---
 
@@ -30,28 +30,28 @@ Ne idu na banku i **ne** pokreću **ProcessReservationAfterPaymentJob** / fiskal
 - **Pokušaj fiskalizacije** (poziv fiskalnog API-ja).
 - **Uspeh fiskalizacije:**
   - ažurira reservation sa fiscal_jir, fiscal_ikof, fiscal_qr, fiscal_operator, fiscal_date;
-  - **`GenerateInvoicePdfJob`** → **`PaidInvoicePdfGenerator`**: PDF iz šablona **`pdf/paid-invoice`** (DomPDF, izgled kao V1), sadržaj **samo cg**; QR iz **`fiscal_qr`** URL-a (**`endroid/qr-code`**), logo **`public/images/logo_kotor.png`**; u podnožju tekst o **fiskalnom dokumentu** samo kad je **`isFiscal`**;
-  - šalje **invoice email** sa PDF-om (from bus@kotor.me).
+  - **`SendInvoiceEmailJob`**: **`PaidInvoicePdfGenerator::renderBinary`** → PDF iz šablona **`pdf/paid-invoice`** (DomPDF, izgled kao V1), iznos iz **`reservations.invoice_amount`** (snapshot pri kreiranju); sadržaj **samo cg**; QR iz **`fiscal_qr`** URL-a (**`endroid/qr-code`**), logo **`public/images/logo_kotor.png`**; u podnožju tekst o **fiskalnom dokumentu** samo kad je **`isFiscal`**; privremeni fajl za attachment;
+  - šalje **invoice email** (from bus@kotor.me).
 - **Neuspeh fiskalizacije:**
   - upis u **post_fiscalization_data** (reservation_id, merchant_transaction_id, error, attempts, next_retry_at);
-  - isti PDF šablon sa **`isFiscal = false`**: umjesto IKOF/JIR/QR prikazuje se **`GenerateInvoicePdfJob::NON_FISCAL_NOTE`**;
-  - šalje email kupcu sa nefiskalnim PDF-om;
+  - isti PDF šablon sa **`isFiscal = false`**: umjesto IKOF/JIR/QR prikazuje se **`PaidInvoicePdfGenerator::NON_FISCAL_NOTE`**;
+  - šalje email kupcu sa nefiskalnim PDF-om (isto: generisanje u memoriji + temp fajl);
   - **ne** rollback-uje rezervaciju ni plaćanje.
 
 ---
 
 ## Retry job-a koji je delimično uspeo
 
-- **Scenario:** Job padne posle upisa rezervacije / fiskalizacije, ali pre slanja maila (ili posle PDF-a, pre emaila).
+- **Scenario:** Job padne posle upisa rezervacije / fiskalizacije, ali pre slanja maila.
 - **Pravilo:** Svaki korak je **idempotentan** – pri retry-u se ne duplira rad:
-  - **GenerateInvoicePdfJob:** ako već postoji PDF (`reservation.invoice_pdf_path` set i fajl postoji) → ne pravi novi.
-  - **SendInvoiceEmailJob:** ako je mail već poslat (`reservation.invoice_sent_at` set) → ne šalje ponovo; dodatno koristi DB lock da se isti mail ne pošalje duplo u slučaju paralelnih workera/retry-a.
-- U bazi: **invoice_pdf_path** (put do PDF-a), **invoice_sent_at** (timestamp slanja). ProcessReservationAfterPaymentJob ima **tries = 3** da retry dovrši preostale korake.
+  - **SendInvoiceEmailJob:** ako je mail već poslat (`reservation.invoice_sent_at` set) → ne šalje ponovo; DB lock + `email_sent` da se isti mail ne pošalje duplo u slučaju paralelnih workera/retry-a.
+  - **ProcessReservationAfterPaymentJob:** ako je **`fiscal_jir`** već upisan a **`invoice_sent_at`** još nije — ponovo se šalje samo **`SendInvoiceEmailJob`** (PDF se svaki put generiše na zahtev).
+- U bazi: **`invoice_amount`** (decimal snapshot iznosa), **`invoice_sent_at`** (timestamp slanja). ProcessReservationAfterPaymentJob ima **tries = 3** da retry dovrši preostale korake.
 
 Napomena (PDF + email robustnost):
 
-- Folder za PDF: **`storage/app/invoices`** se kreira automatski (generatori koriste filesystem `mkdir`), ali aplikacija i dalje mora imati write permissions na `storage/`.
-- **Email bez attachmenta se ne šalje:** `SendInvoiceEmailJob` proverava da PDF postoji; ako ne postoji, pokuša sinhrono da ga generiše, a ako i dalje ne postoji – preskače slanje (da korisnik ne dobije “prazan” email).
+- PDF se **ne** drži u **`storage/app`**; **`SendInvoiceEmailJob`** / **`SendFreeReservationConfirmationJob`** generišu binarni PDF pa ga privremeno snime za `attach`.
+- **Email bez attachmenta se ne šalje:** ako **`renderBinary`** vrati prazno, job resetuje **`email_sent`** i **ne** poziva **`markConfirmationEmailSent`**.
 
 ---
 

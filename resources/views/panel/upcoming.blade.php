@@ -61,7 +61,7 @@
                                         @php
                                             $allowed = $vehicles->filter(
                                                 fn ($v) => (float) ($v->vehicleType->price ?? 0)
-                                                    <= (float) ($r->vehicleType->price ?? 0) + 0.000001
+                                                    <= (float) ($r->invoice_amount ?? 0) + 0.000001
                                             );
                                             $formId = 'upcoming-veh-form-'.$r->id;
                                             $initialVehicleId = $r->vehicle_id ?? $allowed->first()?->id;

@@ -11,24 +11,22 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 
 /**
  * Payment states: pending → success → [fiscalization_failed → post_fiscalization_data].
  *
  * Reservations are created on success (even if fiscalization fails). Failed fiscalization must not
- * block invoice generation: we always dispatch PDF + email (fiscal or non-fiscal).
+ * block invoice generation: we always dispatch email (fiscal or non-fiscal PDF generisan u jobu).
  *
- * Try fiscalization. On SUCCESS: update reservation fiscal_*, generate fiscal PDF, send invoice.
- * On FAILURE (fiscalization_failed): insert post_fiscalization_data, generate non-fiscal PDF + email.
+ * Try fiscalization. On SUCCESS: update reservation fiscal_*, send invoice email.
+ * On FAILURE (fiscalization_failed): insert post_fiscalization_data, send non-fiscal PDF email.
  * Do NOT rollback reservation.
  */
 class ProcessReservationAfterPaymentJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    /** Retry: delimično uspeo (npr. PDF kreiran, mail nije) – idempotentni koraci preskoče duplikat. */
     public int $tries = 3;
 
     public int $timeout = 90;
@@ -47,6 +45,11 @@ class ProcessReservationAfterPaymentJob implements ShouldQueue
         }
 
         if ($reservation->fiscal_jir !== null) {
+            if ($reservation->invoice_sent_at !== null) {
+                return;
+            }
+            $this->dispatchInvoiceEmail($reservation->id, true);
+
             return;
         }
 
@@ -61,11 +64,10 @@ class ProcessReservationAfterPaymentJob implements ShouldQueue
                 'fiscal_jir' => $result['fiscal_jir'],
                 'fiscal_ikof' => $result['fiscal_ikof'],
                 'fiscal_qr' => $result['fiscal_qr'] ?? null,
-                // V1 stored ENU identifier in fiscal_operator; V2 prefers provider Operator but falls back to ENU.
                 'fiscal_operator' => $result['fiscal_operator'] ?? (config('services.fiscal.enu_identifier') ?: null),
                 'fiscal_date' => $result['fiscal_date'] ?? now(),
             ]);
-            $this->dispatchPdfAndEmail($reservation->id, true);
+            $this->dispatchInvoiceEmail($reservation->id, true);
 
             return;
         }
@@ -156,22 +158,18 @@ class ProcessReservationAfterPaymentJob implements ShouldQueue
         }
 
         $post->save();
-        $this->dispatchPdfAndEmail($reservation->id, false);
+        $this->dispatchInvoiceEmail($reservation->id, false);
     }
 
-    private function dispatchPdfAndEmail(int $reservationId, bool $isFiscal): void
+    private function dispatchInvoiceEmail(int $reservationId, bool $isFiscal): void
     {
         if ($this->fakeBankWantsE2eSync()) {
-            // Laravel 12 PendingChain has no dispatchSync(); run steps synchronously.
-            GenerateInvoicePdfJob::dispatchSync($reservationId, $isFiscal);
             SendInvoiceEmailJob::dispatchSync($reservationId, $isFiscal);
 
             return;
         }
 
-        GenerateInvoicePdfJob::withChain([
-            new SendInvoiceEmailJob($reservationId, $isFiscal),
-        ])->dispatch($reservationId, $isFiscal);
+        SendInvoiceEmailJob::dispatch($reservationId, $isFiscal);
     }
 
     private function fakeBankWantsE2eSync(): bool

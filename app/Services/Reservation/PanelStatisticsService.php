@@ -30,7 +30,7 @@ final class PanelStatisticsService
         $locale = app()->getLocale();
 
         $paidRealized = $realized->filter(fn (Reservation $r) => $r->status === 'paid');
-        $totalPaid = (float) $paidRealized->sum(fn (Reservation $r) => (float) ($r->vehicleType?->price ?? 0));
+        $totalPaid = (float) $paidRealized->sum(fn (Reservation $r) => (float) ($r->invoice_amount ?? 0));
 
         $visitCount = $realized->count();
 

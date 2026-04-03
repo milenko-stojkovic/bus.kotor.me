@@ -2,7 +2,6 @@
 
 namespace App\Console\Commands;
 
-use App\Jobs\GenerateInvoicePdfJob;
 use App\Jobs\SendInvoiceEmailJob;
 use App\Models\PostFiscalizationData;
 use App\Services\AdminFiscalizationAlertService;
@@ -43,9 +42,7 @@ class RetryPostFiscalization extends Command
 
             if (isset($result['fiscal_jir'])) {
                 $post->applyFiscalDataAndDelete($result);
-                GenerateInvoicePdfJob::withChain([
-                    new SendInvoiceEmailJob($reservation->id, true),
-                ])->dispatch($reservation->id, true);
+                SendInvoiceEmailJob::dispatch($reservation->id, true);
                 $this->info('Fiscalized reservation '.$reservation->id.', sent fiscal PDF.');
                 continue;
             }
