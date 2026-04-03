@@ -615,9 +615,15 @@ class FiscalizationService
     {
         $t = HttpOutboundConfig::fiscal($endpoint);
 
-        return Http::acceptJson()
+        $req = Http::acceptJson()
             ->contentType('application/json')
             ->connectTimeout($t['connect_timeout'])
             ->timeout($t['timeout']);
+
+        if (! $t['verify_ssl']) {
+            $req = $req->withoutVerifying();
+        }
+
+        return $req;
     }
 }

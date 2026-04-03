@@ -19,11 +19,15 @@ final class HttpOutboundConfig
 
     /**
      * @param  'deposit'|'receipt'  $endpoint
-     * @return array{connect_timeout: float, timeout: float}
+     * @return array{connect_timeout: float, timeout: float, verify_ssl: bool}
      */
     public static function fiscal(string $endpoint): array
     {
-        return self::merge('fiscal', $endpoint);
+        $out = self::merge('fiscal', $endpoint);
+        $f = config('http-outbound.fiscal', []);
+        $out['verify_ssl'] = (bool) ($f['verify_ssl'] ?? true);
+
+        return $out;
     }
 
     private static function merge(string $service, string $endpoint): array

@@ -31,6 +31,8 @@ return [
     'fiscal' => [
         'connect_timeout' => (float) env('FISCAL_HTTP_CONNECT_TIMEOUT', 5),
         'timeout' => (float) env('FISCAL_HTTP_TIMEOUT', 25),
+        // false samo lokalno (npr. Laragon HTTPS + self-signed); u produkciji uvek true (podrazumevano).
+        'verify_ssl' => filter_var(env('FISCAL_HTTP_VERIFY_SSL', true), FILTER_VALIDATE_BOOLEAN),
         'deposit' => [
             'connect_timeout' => env('FISCAL_DEPOSIT_HTTP_CONNECT_TIMEOUT'),
             'timeout' => env('FISCAL_DEPOSIT_HTTP_TIMEOUT'),

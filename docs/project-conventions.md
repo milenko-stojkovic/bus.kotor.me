@@ -82,6 +82,7 @@ Preporučeni oblik (naslovi ili bold oznake moraju biti eksplicitni):
 
 - Aplikacija se može servirati preko **HTTPS** (npr. **`https://bus.kotor.me.test`**, Apache SSL + Laragon cert).
 - U **`.env`** postaviti **`APP_URL=https://bus.kotor.me.test`** (ili odgovarajući HTTPS host) da **`url()` / `route()` / asseti** budu **HTTPS-safe**.
+- **Fake fiskal** (`FISCALIZATION_DRIVER=fake`) zove istu aplikaciju preko HTTPS; ako je cert **self-signed**, cURL javlja **„SSL certificate problem: self-signed certificate“ (60)**. U **`.env`** privremeno stavi **`FISCAL_HTTP_VERIFY_SSL=false`**, zatim **`php artisan config:clear`**. U produkciji ostavi **`true`** (podrazumevano) — ne isključuj verifikaciju prema pravom fiskalnom API-ju.
 - Izbegavati **hardcoded `http://`** u kodu gde to utiče na korisničke linkove ili očekivanja okruženja.
 
 ### Minimalni `.env` za lokalni QA (fake tok, bez workera)
