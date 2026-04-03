@@ -6,6 +6,7 @@ use App\Http\Requests\StoreVehicleRequest;
 use App\Http\Requests\UpdateVehicleRequest;
 use App\Models\Vehicle;
 use App\Models\VehicleType;
+use App\Services\Reservation\PanelReservationListService;
 use App\Support\UiText;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -55,12 +56,28 @@ class VehicleController extends Controller
         );
     }
 
-    public function destroy(Request $request, int $vehicle): RedirectResponse
+    public function destroy(Request $request, int $vehicle, PanelReservationListService $lists): RedirectResponse
     {
         $model = $this->ownedVehicleOrFail($request, $vehicle);
-        $model->delete();
-
         $locale = $request->user()->lang ?? app()->getLocale();
+
+        $usedInUpcoming = $lists->upcomingFor($request->user())
+            ->contains(fn ($r) => (int) ($r->vehicle_id ?? 0) === (int) $model->id);
+
+        if ($usedInUpcoming) {
+            return redirect()
+                ->route('panel.vehicles')
+                ->withErrors([
+                    'vehicle_remove_blocked' => UiText::t(
+                        'panel',
+                        'vehicle_remove_blocked_upcoming',
+                        'This vehicle is used in upcoming reservations. Please switch those reservations to another vehicle before removing it.',
+                        $locale
+                    ),
+                ]);
+        }
+
+        $model->delete();
 
         return redirect()->route('panel.vehicles')->with(
             'message',

@@ -385,6 +385,8 @@ class UiTranslationsSeeder extends Seeder
             ['group' => 'panel', 'key' => 'vehicle_change_success', 'locale' => 'cg', 'text' => 'Vozilo je ažurirano. Novi račun biće poslat na email.'],
             ['group' => 'panel', 'key' => 'vehicle_change_success_free', 'locale' => 'en', 'text' => 'Vehicle updated.'],
             ['group' => 'panel', 'key' => 'vehicle_change_success_free', 'locale' => 'cg', 'text' => 'Vozilo je ažurirano.'],
+            ['group' => 'panel', 'key' => 'vehicle_remove_blocked_upcoming', 'locale' => 'en', 'text' => 'You can’t remove this vehicle because it is used in upcoming reservations. Please switch those reservations to another vehicle first.'],
+            ['group' => 'panel', 'key' => 'vehicle_remove_blocked_upcoming', 'locale' => 'cg', 'text' => 'Ne možete ukloniti ovo vozilo jer je u upotrebi u predstojećim rezervacijama. Molimo prvo zamijenite vozila na tim rezervacijama.'],
             ['group' => 'panel', 'key' => 'page_statistics_title', 'locale' => 'en', 'text' => 'Statistic'],
             ['group' => 'panel', 'key' => 'page_statistics_title', 'locale' => 'cg', 'text' => 'Statistika'],
             ['group' => 'panel', 'key' => 'page_statistics_placeholder', 'locale' => 'en', 'text' => 'Content coming soon.'],
