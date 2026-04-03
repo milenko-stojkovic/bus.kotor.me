@@ -34,6 +34,10 @@ class ErrorClassifier
             'notify_admin' => $result['notify_admin'],
             'retryable' => $result['retryable'],
             'user_message_key' => $result['user_message_key'],
+            'merchant_transaction_id' => is_array($payload)
+                ? ($payload['merchant_transaction_id'] ?? $payload['merchantTransactionId'] ?? null)
+                : null,
+            'reservation_id' => is_array($payload) ? ($payload['reservation_id'] ?? null) : null,
         ]);
 
         return $result;

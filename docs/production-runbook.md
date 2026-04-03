@@ -12,7 +12,8 @@ Operativni koraci posle deploy-a ili pri prvom puštanju u produkciju. Detalji t
 - [ ] **`QUEUE_CONNECTION=database`** (ili redis) — ne `sync` u produkciji za callback/fiskal/email.
 - [ ] **`SESSION_SECURE_COOKIE=true`** ako je sajt isključivo preko HTTPS.
 - [ ] Mail: `MAIL_*` / `MAIL_NOREPLY_*` za stvarni SMTP; testirati slanje na stagingu.
-- [ ] Opciono: `BANKART_HTTP_CONNECT_TIMEOUT`, `BANKART_HTTP_TIMEOUT`, `FISCAL_HTTP_CONNECT_TIMEOUT`, `FISCAL_HTTP_TIMEOUT` (vidi `config/http-outbound.php`).
+- [ ] Opciono: timeout env za Bankart/fiskal — vidi `config/http-outbound.php` (uključujući per-endpoint: `BANKART_CREATE_SESSION_*`, `FISCAL_DEPOSIT_*`, `FISCAL_RECEIPT_*`, budući `BANKART_STATUS_INQUIRY_*`).
+- [ ] `PAYMENT_STALE_PENDING_WARN_AFTER_MINUTES` — prag za log `payment_pending_too_long` (default 12).
 
 ---
 
@@ -21,6 +22,7 @@ Operativni koraci posle deploy-a ili pri prvom puštanju u produkciju. Detalji t
 ```bash
 php artisan migrate --force
 npm ci && npm run build
+php artisan queue:restart
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
@@ -34,8 +36,17 @@ php artisan event:cache
 ## Queue worker
 
 - [ ] Pokrenuti **`php artisan queue:work`** (ili systemd/supervisor) sa istim `APP_ENV` / `.env` kao web.
-- [ ] Posle izmene koda: **restart worker-a** (inace stari kod u memoriji).
-- [ ] Worker timeout na procesu treba da bude **veći** od najdužeg joba (npr. ≥ **130s** zbog `ProcessReservationAfterPaymentJob`).
+- [ ] **Restart policy:** proces mora da se podigne ponovo posle pada (systemd `Restart=always` ili ekvivalent).
+- [ ] **Memorija:** ograniči `--memory` (npr. `php artisan queue:work --memory=512`) da worker ne raste beskonačno; kombinuj sa restart policy.
+- [ ] Posle **deploy-a:** **`php artisan queue:restart`** (ili potpuni restart servisa) — signal svim workerima da završe trenutni job i učitaju novi kod.
+- [ ] Timeout **supervisor/systemd** oko workera treba da bude **veći** od najdužeg joba (npr. ≥ **130s** zbog `ProcessReservationAfterPaymentJob`).
+- [ ] **Email `EMAIL_SENDING`:** ako job baci izuzetak ili istroši retry-eve, `failed()` / `catch` vraća **`email_sent`** na **`EMAIL_NOT_SENT`** — nema trajnog „zaglavljenog“ slanja u bazi.
+
+### Kako proveriti da worker radi
+
+- Proces: `ps aux | grep "queue:work"` (ili lista servisa u systemd).
+- Posle starta u **production** u `payments.log` treba **jednom** po procesu: **`queue_worker_booted`** (PID u kontekstu).
+- Test job: npr. kratki test checkout sa queue ≠ `sync` i provera da se job obradi (`jobs` tabela se čisti ili `failed_jobs` ostaje prazno).
 
 ---
 

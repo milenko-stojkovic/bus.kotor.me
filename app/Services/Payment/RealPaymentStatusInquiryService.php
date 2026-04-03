@@ -3,22 +3,27 @@
 namespace App\Services\Payment;
 
 use App\Contracts\PaymentStatusInquiryService;
-use Illuminate\Support\Facades\Log;
+use App\Support\HttpOutboundConfig;
 
 /**
- * Pravi gateway – status inquiry API. Ako banka kaže SUCCESS, cron pokreće isti flow kao callback.
- * TODO: HTTP poziv ka bankinom status inquiry endpoint-u; parsiranje odgovora (success/failed).
+ * Bankart status inquiry — hook za budući HTTP poziv.
+ *
+ * Kada implementiraš:
+ * 1. Postavi {@see isImplemented()} na true.
+ * 2. Koristi timeoute: {@see HttpOutboundConfig::bankart('status_inquiry')}.
+ * 3. Vrati 'success' | 'failed' | null — bez automatske promene statusa van {@see \App\Console\Commands\CheckPendingPaymentStatus}.
+ * 4. Ne menjaj temp_data ovde direktno; success flow ostaje {@see \App\Services\Payment\PaymentSuccessHandler::handle()}.
  */
 class RealPaymentStatusInquiryService implements PaymentStatusInquiryService
 {
+    public function isImplemented(): bool
+    {
+        return false;
+    }
+
     public function inquire(string $merchantTransactionId): ?string
     {
-        // TODO: call bank status inquiry endpoint, return 'success' | 'failed' | null
-        Log::channel('payments')->warning('payment_status_inquiry_not_implemented', [
-            'merchant_transaction_id' => $merchantTransactionId,
-            'hint' => 'Pending recovery via bank inquiry is a no-op until Bankart status API is wired.',
-        ]);
-
+        // Skeleton: Http::...->connectTimeout(...HttpOutboundConfig::bankart('status_inquiry'))...
         return null;
     }
 }

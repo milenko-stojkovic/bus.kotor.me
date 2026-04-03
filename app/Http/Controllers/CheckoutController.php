@@ -135,6 +135,9 @@ class CheckoutController extends Controller
 
                 Log::channel('payments')->info('Payment init', [
                     'merchant_transaction_id' => $merchantTransactionId,
+                    'temp_data_id' => $temp->id,
+                    'user_id' => $temp->user_id,
+                    'reservation_id' => null,
                     'retry_token' => $retryToken,
                 ]);
 

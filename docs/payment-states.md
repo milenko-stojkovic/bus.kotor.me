@@ -35,7 +35,7 @@ Stanja plaćanja i fiskalizacije. Rezervacija se **uvek** kreira na **success**;
 
 ## Timeout callback (status inquiry)
 
-- Ako **callback od banke nikad ne stigne** (mreža, firewall, kratki outage), cron **payment:check-pending-inquiry** proverava pending starije od X min i **direktno kod banke** (status inquiry endpoint) pita status.
+- Ako **callback od banke nikad ne stigne**, cron **payment:check-pending-inquiry** loguje **`payment_pending_too_long`** za pending starije od praga (**bez automatske promene statusa**). Kada **`PaymentStatusInquiryService::isImplemented()`** bude true, ista komanda može pozvati bankin status inquiry i na SUCCESS pokrenuti isti flow kao callback.
 - Ako banka kaže **SUCCESS** → pokreće se **isti flow kao callback** (PaymentSuccessHandler: rezervacija, temp_data → processed, ProcessReservationAfterPaymentJob).
 - Konfiguracija: `payment.pending_inquiry_after_minutes` (npr. 10). Status inquiry je iza interfejsa `PaymentStatusInquiryService` (fake vraća null; real poziva bank API – TODO).
 

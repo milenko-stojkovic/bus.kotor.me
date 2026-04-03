@@ -14,6 +14,7 @@ use App\Services\Payment\FakePaymentStatusInquiryService;
 use App\Services\Payment\RealCallbackSignatureValidator;
 use App\Services\Payment\RealPaymentProvider;
 use App\Services\Payment\RealPaymentStatusInquiryService;
+use Illuminate\Queue\Events\WorkerStarting;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
@@ -56,6 +57,20 @@ class AppServiceProvider extends ServiceProvider
     {
         Event::listen(PaymentFailed::class, LogPaymentFailed::class);
         Event::listen(PaymentFailed::class, NotifyUserPaymentFailed::class);
+
+        Event::listen(WorkerStarting::class, function (): void {
+            if (! app()->environment('production')) {
+                return;
+            }
+            static $logged = false;
+            if ($logged) {
+                return;
+            }
+            $logged = true;
+            Log::channel('payments')->info('queue_worker_booted', [
+                'pid' => getmypid(),
+            ]);
+        });
 
         if ($this->app->environment('production')) {
             $bank = (string) config('services.bank.driver', 'fake');

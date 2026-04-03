@@ -55,15 +55,20 @@ class PaymentCallbackJob implements ShouldQueue, ShouldBeUnique
         if (! $txId || ! $callbackStatus) {
             Log::channel('payments')->warning('Payment callback job skipped: missing tx or unknown status', [
                 'merchant_transaction_id' => $txId,
+                'reservation_id' => null,
                 'status' => $this->payload['status'] ?? null,
             ]);
             return;
         }
 
+        $txId = (string) $txId;
+        $reservationIdEarly = $this->reservationIdForMerchantTx($txId);
+
         $temp = TempData::where('merchant_transaction_id', $txId)->first();
         if (! $temp) {
             Log::channel('payments')->warning('Payment callback job skipped: temp_data not found', [
                 'merchant_transaction_id' => $txId,
+                'reservation_id' => $reservationIdEarly,
                 'status' => $callbackStatus,
             ]);
             return;
@@ -72,6 +77,8 @@ class PaymentCallbackJob implements ShouldQueue, ShouldBeUnique
         if ($temp->isTerminal()) {
             Log::channel('payments')->info('Payment callback job terminal temp_data', [
                 'merchant_transaction_id' => $txId,
+                'temp_data_id' => $temp->id,
+                'reservation_id' => $reservationIdEarly,
                 'status' => $callbackStatus,
                 'temp_status' => $temp->status,
             ]);
@@ -87,6 +94,8 @@ class PaymentCallbackJob implements ShouldQueue, ShouldBeUnique
         if (Reservation::where('merchant_transaction_id', $txId)->exists()) {
             Log::channel('payments')->info('Payment callback job duplicate: reservation already exists', [
                 'merchant_transaction_id' => $txId,
+                'temp_data_id' => $temp->id,
+                'reservation_id' => $this->reservationIdForMerchantTx($txId),
                 'status' => $callbackStatus,
             ]);
             return;
@@ -154,10 +163,24 @@ class PaymentCallbackJob implements ShouldQueue, ShouldBeUnique
         return (string) ($this->payload['merchant_transaction_id'] ?? $this->job?->getJobId() ?? 'payment-callback');
     }
 
+    private function reservationIdForMerchantTx(string $merchantTransactionId): ?int
+    {
+        $id = Reservation::query()->where('merchant_transaction_id', $merchantTransactionId)->value('id');
+
+        return $id !== null ? (int) $id : null;
+    }
+
     public function failed(?Throwable $e): void
     {
+        $mtid = $this->payload['merchant_transaction_id'] ?? null;
+        $mtid = is_string($mtid) ? $mtid : null;
+        $reservationId = $mtid !== null && $mtid !== ''
+            ? Reservation::query()->where('merchant_transaction_id', $mtid)->value('id')
+            : null;
+
         Log::channel('payments')->error('payment_callback_job_exhausted', [
-            'merchant_transaction_id' => $this->payload['merchant_transaction_id'] ?? null,
+            'merchant_transaction_id' => $mtid,
+            'reservation_id' => $reservationId,
             'message' => $e?->getMessage(),
             'exception' => $e !== null ? $e::class : null,
         ]);

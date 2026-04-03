@@ -27,6 +27,12 @@ return [
     'pending_inquiry_after_minutes' => (int) env('PAYMENT_PENDING_INQUIRY_AFTER_MINUTES', 10),
 
     /*
+    | temp_data u pending duže od ovoga: log WARNING `payment_pending_too_long` (bez promene statusa).
+    | Throttle u kešu po temp_data id da log ne flood-uje scheduler.
+    */
+    'stale_pending_warn_after_minutes' => (int) env('PAYMENT_STALE_PENDING_WARN_AFTER_MINUTES', 12),
+
+    /*
     | URI callbacka za potpis (mora odgovarati onome što banka koristi pri izračunu potpisa).
     | U ovom projektu: POST /api/payment/callback (routes/api.php). Banka mora biti podešena na isti path.
     */

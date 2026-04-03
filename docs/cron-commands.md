@@ -34,13 +34,13 @@ Svi cron job-ovi su Laravel Artisan komande. Registruju se u `bootstrap/app.php`
 
 **Komanda:** `payment:check-pending-inquiry`
 
-**Opis:** Proverava **temp_data** sa statusom **pending** starije od X minuta (config `payment.pending_inquiry_after_minutes`, npr. 10). Za svaki poziva **status inquiry** kod banke. Ako banka kaže **SUCCESS** → pokreće **isti flow kao callback** (PaymentSuccessHandler: transakcija, kreiranje rezervacije, temp_data → processed, oslobađanje soft-locka, ProcessReservationAfterPaymentJob). Scenario: callback od banke nikad ne stigne (mreža, firewall, outage).
+**Opis:** (1) Za **temp_data** u **pending** starije od **`payment.stale_pending_warn_after_minutes`** (npr. 12) — log **`payment_pending_too_long`** u `payments` (throttle keš po slogu; **bez promene statusa**). (2) Samo ako je **`PaymentStatusInquiryService::isImplemented()`** = true: za pending starije od **`payment.pending_inquiry_after_minutes`** poziva **inquire()** kod banke; **SUCCESS** → isti flow kao callback (**PaymentSuccessHandler**). Dok inquiry nije implementiran, korak (2) se preskače.
 
 **Frekvencija:** svakih 5 minuta (bootstrap/app.php).
 
 **Tabele:** temp_data, reservations, daily_parking_data.
 
-**Config:** `config/payment.php` → `pending_inquiry_after_minutes`; env `PAYMENT_PENDING_INQUIRY_AFTER_MINUTES`.
+**Config:** `stale_pending_warn_after_minutes` (`PAYMENT_STALE_PENDING_WARN_AFTER_MINUTES`); `pending_inquiry_after_minutes` (`PAYMENT_PENDING_INQUIRY_AFTER_MINUTES`).
 
 ---
 

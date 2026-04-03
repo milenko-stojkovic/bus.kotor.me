@@ -185,8 +185,10 @@ class ProcessReservationAfterPaymentJob implements ShouldQueue
 
     public function failed(?Throwable $e): void
     {
+        $mtid = Reservation::query()->whereKey($this->reservationId)->value('merchant_transaction_id');
         Log::channel('payments')->error('process_reservation_after_payment_job_exhausted', [
             'reservation_id' => $this->reservationId,
+            'merchant_transaction_id' => $mtid,
             'message' => $e?->getMessage(),
             'exception' => $e !== null ? $e::class : null,
         ]);

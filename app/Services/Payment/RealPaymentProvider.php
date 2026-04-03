@@ -6,6 +6,7 @@ use App\Contracts\PaymentResult;
 use App\Contracts\PaymentService;
 use App\Contracts\PaymentSessionResult;
 use App\Models\TempData;
+use App\Support\HttpOutboundConfig;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -110,14 +111,14 @@ class RealPaymentProvider implements PaymentService
             $headers['X-Signature'] = (string) $signature;
         }
 
-        $httpCfg = config('http-outbound.bankart', []);
+        $httpCfg = HttpOutboundConfig::bankart('create_session');
 
         try {
             $response = Http::withBasicAuth($username, $password)
                 ->withHeaders($headers)
                 ->withBody($rawBody, $contentType)
-                ->connectTimeout((float) ($httpCfg['connect_timeout'] ?? 5))
-                ->timeout((float) ($httpCfg['timeout'] ?? 25))
+                ->connectTimeout($httpCfg['connect_timeout'])
+                ->timeout($httpCfg['timeout'])
                 ->post($url);
         } catch (Throwable $e) {
             Log::channel('payments')->error('Bankart init request failed', [

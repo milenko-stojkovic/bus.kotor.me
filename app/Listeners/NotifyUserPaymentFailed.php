@@ -24,6 +24,8 @@ class NotifyUserPaymentFailed
         // Za sada samo log (da ne puca ako Mailable ne postoji)
         Log::channel('payments')->info('Payment failed notification (email would be sent)', [
             'merchant_transaction_id' => $temp->merchant_transaction_id,
+            'temp_data_id' => $temp->id,
+            'user_id' => $temp->user_id,
             'email' => $email,
         ]);
     }

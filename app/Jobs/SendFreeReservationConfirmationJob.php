@@ -46,8 +46,10 @@ class SendFreeReservationConfirmationJob implements ShouldQueue
         Reservation::query()->whereKey($this->reservationId)->update([
             'email_sent' => Reservation::EMAIL_NOT_SENT,
         ]);
+        $mtid = Reservation::query()->whereKey($this->reservationId)->value('merchant_transaction_id');
         Log::channel('payments')->error('free_reservation_email_job_exhausted', [
             'reservation_id' => $this->reservationId,
+            'merchant_transaction_id' => $mtid,
             'message' => $e?->getMessage(),
             'exception' => $e !== null ? $e::class : null,
         ]);
@@ -153,11 +155,13 @@ class SendFreeReservationConfirmationJob implements ShouldQueue
             Log::channel('payments')->info('free_reservation_email_sent', [
                 'reservation_id' => $reservation->id,
                 'merchant_transaction_id' => $reservation->merchant_transaction_id,
+                'user_id' => $reservation->user_id,
             ]);
         } catch (Throwable $e) {
             Log::channel('payments')->warning('free_reservation_email_send_failed', [
                 'reservation_id' => $reservation->id,
                 'merchant_transaction_id' => $reservation->merchant_transaction_id,
+                'user_id' => $reservation->user_id,
                 'message' => $e->getMessage(),
                 'exception' => $e::class,
             ]);

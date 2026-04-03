@@ -85,8 +85,13 @@ class PaymentJob implements ShouldQueue, ShouldBeUnique
 
     public function failed(?Throwable $e): void
     {
+        $temp = TempData::find($this->tempDataId);
         Log::channel('payments')->error('payment_job_exhausted', [
             'temp_data_id' => $this->tempDataId,
+            'merchant_transaction_id' => $temp?->merchant_transaction_id,
+            'reservation_id' => $temp !== null
+                ? Reservation::query()->where('merchant_transaction_id', $temp->merchant_transaction_id)->value('id')
+                : null,
             'message' => $e?->getMessage(),
             'exception' => $e !== null ? $e::class : null,
         ]);
