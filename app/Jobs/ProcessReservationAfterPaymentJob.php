@@ -12,6 +12,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -23,11 +24,16 @@ use Throwable;
  *
  * Try fiscalization. On SUCCESS: update reservation fiscal_*, send invoice email.
  * On FAILURE (fiscalization_failed): insert post_fiscalization_data, send non-fiscal PDF email.
+ * On job exhausted ({@see failed()}): ako nema JIR-a i nema nerešenog post sloga, kreira se minimalni post red
+ * ({@see RESOLUTION_JOB_FAILED_BEFORE_FISCAL}) da UX ne ostane na paid_processing zauvijek.
  * Do NOT rollback reservation.
  */
 class ProcessReservationAfterPaymentJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    /** Marker u `post_fiscalization_data.error` kad job iscrpi pokušaje prije JIR-a i prije normalnog post sloga (UX: fiscal_delayed_known). */
+    public const RESOLUTION_JOB_FAILED_BEFORE_FISCAL = 'job_failed_before_fiscal_completion';
 
     public int $tries = 3;
 
@@ -193,6 +199,35 @@ class ProcessReservationAfterPaymentJob implements ShouldQueue
             'message' => $e?->getMessage(),
             'exception' => $e !== null ? $e::class : null,
         ]);
+
+        DB::transaction(function () use ($e): void {
+            $reservation = Reservation::query()->whereKey($this->reservationId)->lockForUpdate()->first();
+            if ($reservation === null || $reservation->status === 'free' || $reservation->fiscal_jir !== null) {
+                return;
+            }
+            if ($reservation->postFiscalizationDataUnresolved()->exists()) {
+                return;
+            }
+
+            $detail = $e !== null ? $e::class.': '.($e->getMessage() !== '' ? $e->getMessage() : '(no message)') : 'unknown';
+            $error = self::RESOLUTION_JOB_FAILED_BEFORE_FISCAL.' | '.$detail;
+
+            PostFiscalizationData::create([
+                'reservation_id' => $reservation->id,
+                'merchant_transaction_id' => $reservation->merchant_transaction_id,
+                'error' => $error,
+                'attempts' => $this->tries,
+                'next_retry_at' => now(),
+            ]);
+
+            Log::channel('payments')->warning('process_reservation_failed_marked_delayed', [
+                'reservation_id' => $reservation->id,
+                'merchant_transaction_id' => $reservation->merchant_transaction_id,
+                'message' => $e?->getMessage(),
+                'exception' => $e !== null ? $e::class : null,
+                'resolution_marker' => self::RESOLUTION_JOB_FAILED_BEFORE_FISCAL,
+            ]);
+        });
     }
 
     private function dispatchInvoiceEmail(int $reservationId, bool $isFiscal): void

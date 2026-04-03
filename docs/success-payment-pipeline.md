@@ -27,6 +27,7 @@ Ne idu na banku i **ne** pokreću **ProcessReservationAfterPaymentJob** / fiskal
 
 ## ProcessReservationAfterPaymentJob
 
+- **`failed()` (iscrpljeni pokušaji):** ako nema **`fiscal_jir`**, rezervacija nije **`free`**, i nema nerešenog **`post_fiscalization_data`**, upisuje se minimalni nerešen slog sa markerom **`job_failed_before_fiscal_completion`** u **`error`**, **`next_retry_at = now()`** (cron retry), log **`process_reservation_failed_marked_delayed`** — UX prelazi na **`fiscal_delayed_*`**.
 - **Pokušaj fiskalizacije** (poziv fiskalnog API-ja).
 - **Uspeh fiskalizacije:**
   - ažurira reservation sa fiscal_jir, fiscal_ikof, fiscal_qr, fiscal_operator, fiscal_date;
