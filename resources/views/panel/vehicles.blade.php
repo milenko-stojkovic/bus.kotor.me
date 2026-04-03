@@ -26,8 +26,8 @@
                 <div class="p-6">
                     <form method="post" action="{{ route('panel.vehicles.store', [], false) }}" id="addVehicleForm" class="space-y-3">
                         @csrf
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
+                        <div class="flex gap-3 items-end">
+                            <div class="flex-none w-44">
                                 <x-input-label for="add_license_plate" :value="$ui('registration_plates')" />
                                 <x-text-input
                                     id="add_license_plate"
@@ -40,7 +40,7 @@
                                     pattern="[A-Z0-9]+"
                                 />
                             </div>
-                            <div>
+                            <div class="flex-none w-80">
                                 <x-input-label for="add_vehicle_type_id" :value="$ui('vehicle_category')" />
                                 <select id="add_vehicle_type_id" name="vehicle_type_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                                     <option value="">{{ $ui('select_vehicle_category') }}</option>
