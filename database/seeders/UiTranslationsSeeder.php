@@ -71,6 +71,11 @@ class UiTranslationsSeeder extends Seeder
             ['group' => 'checkout_result', 'key' => 'paid_success_message', 'locale' => 'cg', 'text' => "Plaćanje je uspješno evidentirano.\nPotvrda će biti dostavljena email-om."],
             ['group' => 'checkout_result', 'key' => 'paid_success_message', 'locale' => 'en', 'text' => "Payment was processed successfully.\nThe confirmation will be delivered by email."],
 
+            ['group' => 'checkout_result', 'key' => 'paid_processing_title', 'locale' => 'cg', 'text' => 'Rezervacija je uspješno kreirana.'],
+            ['group' => 'checkout_result', 'key' => 'paid_processing_title', 'locale' => 'en', 'text' => 'Your reservation has been created successfully.'],
+            ['group' => 'checkout_result', 'key' => 'paid_processing_message', 'locale' => 'cg', 'text' => "Plaćanje je uspješno evidentirano.\nPotvrda se obrađuje i biće dostavljena email-om."],
+            ['group' => 'checkout_result', 'key' => 'paid_processing_message', 'locale' => 'en', 'text' => "Payment was processed successfully.\nYour confirmation is being processed and will be sent by email."],
+
             ['group' => 'checkout_result', 'key' => 'fiscal_delayed_title', 'locale' => 'cg', 'text' => 'Rezervacija je uspješno kreirana.'],
             ['group' => 'checkout_result', 'key' => 'fiscal_delayed_title', 'locale' => 'en', 'text' => 'Your reservation has been created successfully.'],
             ['group' => 'checkout_result', 'key' => 'fiscal_delayed_message', 'locale' => 'cg', 'text' => "Plaćanje je uspješno evidentirano.\nDošlo je do odlaganja u fiskalizaciji.\nVaša rezervacija ostaje važeća.\nRačun će biti dostavljen naknadno email-om."],

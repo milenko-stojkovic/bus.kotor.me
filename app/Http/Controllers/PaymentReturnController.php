@@ -60,6 +60,7 @@ class PaymentReturnController extends Controller
         $banner = CheckoutResultFlash::forReservationSuccess(
             (bool) ($result['is_free_reservation'] ?? false),
             (bool) ($result['fiscal_complete'] ?? true),
+            (bool) ($result['fiscal_delayed_known'] ?? false),
         );
 
         return redirect()->to($destination)->with('checkout_banner', $banner);

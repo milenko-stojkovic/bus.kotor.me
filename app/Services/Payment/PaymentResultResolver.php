@@ -25,6 +25,7 @@ class PaymentResultResolver
      *     reservation_id?: int,
      *     is_free_reservation?: bool,
      *     fiscal_complete?: bool,
+     *     fiscal_delayed_known?: bool,
      *     resolution_reason?: string,
      *     retry_token?: string|null,
      *     error_reason?: string|null,
@@ -40,6 +41,10 @@ class PaymentResultResolver
         if ($reservation) {
             $isFree = $reservation->status === 'free';
             $fiscalComplete = $isFree || $reservation->fiscal_jir !== null;
+            // Nakon plaćanja: bez JIR-a i bez nerešenog post_fiscal sloga = pipeline (queue/sync job) još može raditi — nije „fiskal odložen“.
+            $fiscalDelayedKnown = ! $isFree
+                && $reservation->fiscal_jir === null
+                && $reservation->postFiscalizationDataUnresolved()->exists();
 
             return [
                 'status' => 'success',
@@ -47,6 +52,7 @@ class PaymentResultResolver
                 'reservation_id' => $reservation->id,
                 'is_free_reservation' => $isFree,
                 'fiscal_complete' => $fiscalComplete,
+                'fiscal_delayed_known' => $fiscalDelayedKnown,
                 'redirect_guest' => route('guest.reserve', [], false),
                 'redirect_auth' => route('panel.reservations', [], false),
             ];

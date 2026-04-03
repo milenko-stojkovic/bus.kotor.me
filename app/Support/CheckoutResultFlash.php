@@ -14,9 +14,11 @@ final class CheckoutResultFlash
     /**
      * Paid or free reservation after payment pipeline (reservation row exists).
      *
+     * @param  bool  $fiscalDelayedKnown  true kada postoji nerešen {@see \App\Models\PostFiscalizationData} (stvarno odložena/neuspjela fiskalizacija), ne samo „JIR još nije upisan“.
+     *
      * @return Banner
      */
-    public static function forReservationSuccess(bool $isFreeReservation, bool $fiscalComplete): array
+    public static function forReservationSuccess(bool $isFreeReservation, bool $fiscalComplete, bool $fiscalDelayedKnown = false): array
     {
         if ($isFreeReservation) {
             return self::wrap('success', 'free_success_title', 'free_success_message');
@@ -26,7 +28,11 @@ final class CheckoutResultFlash
             return self::wrap('success', 'paid_success_title', 'paid_success_message');
         }
 
-        return self::wrap('info', 'fiscal_delayed_title', 'fiscal_delayed_message');
+        if ($fiscalDelayedKnown) {
+            return self::wrap('info', 'fiscal_delayed_title', 'fiscal_delayed_message');
+        }
+
+        return self::wrap('info', 'paid_processing_title', 'paid_processing_message');
     }
 
     /**
