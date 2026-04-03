@@ -52,7 +52,7 @@
                                 </select>
                             </div>
                         </div>
-                        <div class="flex flex-wrap gap-2">
+                        <div class="flex flex-wrap gap-3">
                             <x-primary-button type="submit" id="addVehicleSubmit" disabled>{{ $pn('vehicles_add') }}</x-primary-button>
                             <x-secondary-button type="button" id="cancelAddVehicle">{{ $pn('vehicles_cancel') }}</x-secondary-button>
                         </div>
