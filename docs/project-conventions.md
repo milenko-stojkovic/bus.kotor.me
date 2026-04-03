@@ -62,12 +62,15 @@ Preporučeni oblik (naslovi ili bold oznake moraju biti eksplicitni):
 
 - **`php` često nije u PATH-u** u Cursor terminalu. Za **`php artisan`** koristi **jedno od**:
   1. **Skripta u rootu repoa:** `.\laragon-artisan.ps1 <artisan-arg>...` — bira najnoviji `php.exe` pod `C:\laragon\bin\php\`. Za test suite: **`.\laragon-artisan.ps1 test`** (ekvivalent `php artisan test`).
-  2. **Eksplicitna putanja** (primer sa ovog računara; folder verzije proveri sa `dir C:\laragon\bin\php`):  
+  2. **Ako PowerShell javlja „running scripts is disabled“ (Execution Policy):** koristi **`.\laragon-artisan.cmd <artisan-arg>...`** — isti efekat, **nije** `.ps1` pa politika ne blokira. Alternativa jednokratno:  
+     `powershell -ExecutionPolicy Bypass -File .\laragon-artisan.ps1 queue:work --tries=1`  
+     Trajnije (samo za tvoj nalog): `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
+  3. **Eksplicitna putanja** (primer; folder verzije proveri sa `dir C:\laragon\bin\php`):  
      `C:\laragon\bin\php\php-8.3.30-Win32-vs16-x64\php.exe artisan ...`
-- **PowerShell u Cursoru:** ne koristiti `&&` za lančanje komandi (stariji PS); koristiti `;` ili posebne linije. Iz korena repoa: `Set-Location c:\laragon\www\bus.kotor.me; .\laragon-artisan.ps1 test`.
-- **Sintaksa (`php -l`):** ne pokretati gol `php -l` ako Windows nudi „Open with…“ — koristi **`.\laragon-php.ps1 -l putanja\do\fajla.php`** (ista Laragon putanja kao za artisan).
-- **AI / automatizacija (Cursor agent, skripte):** **uvek** iz korena repoa pokretati **`.\laragon-artisan.ps1 <arg>...`** (npr. `test`, `migrate`, `queue:work`) — **ne** `php artisan ...` u shellu osim ako si eksplicitno proverio da je `php` u PATH-u. Isto za **`.\laragon-php.ps1`** umesto `php` za `-l` i sl. Ovo važi i kada agent „predlaže komandu“: primer mora biti sa skriptom, ne golim `php`.
-- **Queue:** za lokalni QA bez workera, **`QUEUE_CONNECTION=sync`** u `.env` — tada **nema** posebnog workera (jobovi se izvršavaju u istom zahtevu). Za **`database`** / **`redis`** mora da radi **`queue:work`** (npr. **`.\laragon-artisan.ps1 queue:work`**). **Provera da li worker radi (Windows):** u Task Manageru pogledati **`php.exe`** i komandnu liniju da sadrži `artisan queue:work`, ili u PowerShellu npr. `Get-CimInstance Win32_Process -Filter "Name = 'php.exe'" | Select-Object CommandLine`. Ako se poslovi gomilaju, proveri tabelu **`jobs`** (driver `database`). **Test mejlova:** uz `sync` dovoljno je **`MAIL_MAILER=log`** (ili Mailtrap); uz asinhroni red pokreni worker pre akcije koja dispatchuje mejl.
+- **PowerShell u Cursoru:** ne koristiti `&&` za lančanje komandi (stariji PS); koristiti `;` ili posebne linije. Iz korena repoa: `Set-Location c:\laragon\www\bus.kotor.me; .\laragon-artisan.ps1 test` ili **`.\laragon-artisan.cmd test`**.
+- **Sintaksa (`php -l`):** ne pokretati gol `php -l` ako Windows nudi „Open with…“ — koristi **`.\laragon-php.ps1 -l putanja\do\fajla.php`** ili **`.\laragon-php.cmd -l putanja\do\fajla.php`**.
+- **AI / automatizacija (Cursor agent, skripte):** iz korena repoa **`.\laragon-artisan.ps1`** ili **`.\laragon-artisan.cmd`** (npr. `test`, `migrate`, `queue:work`) — **ne** `php artisan ...` osim ako je `php` u PATH-u. Isto **`.\laragon-php.ps1`** / **`.\laragon-php.cmd`** umesto `php` za `-l`. Kada korisnik ima strogu Execution Policy, u primerima predložiti **`.cmd`**.
+- **Queue:** za lokalni QA bez workera, **`QUEUE_CONNECTION=sync`** u `.env` — tada **nema** posebnog workera (jobovi se izvršavaju u istom zahtevu). Za **`database`** / **`redis`** mora da radi **`queue:work`** (npr. **`.\laragon-artisan.cmd queue:work --tries=1`**). **Provera da li worker radi (Windows):** u Task Manageru pogledati **`php.exe`** i komandnu liniju da sadrži `artisan queue:work`, ili u PowerShellu npr. `Get-CimInstance Win32_Process -Filter "Name = 'php.exe'" | Select-Object CommandLine`. Ako se poslovi gomilaju, proveri tabelu **`jobs`** (driver `database`). **Test mejlova:** uz `sync` dovoljno je **`MAIL_MAILER=log`** (ili Mailtrap); uz asinhroni red pokreni worker pre akcije koja dispatchuje mejl.
 
 ### Frontend (Vite / Tailwind) — build, ne zavisnost od dev servera
 
