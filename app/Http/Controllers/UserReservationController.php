@@ -93,6 +93,9 @@ class UserReservationController extends Controller
         $reservation->update([
             'vehicle_id' => $vehicle->id,
             'license_plate' => $vehicle->license_plate,
+            // Snapshot tipa vozila mora da prati izabrano vozilo,
+            // ali `invoice_amount` ostaje nepromijenjen (historijska tačnost cijene).
+            'vehicle_type_id' => $vehicle->vehicle_type_id,
         ]);
         $reservation->refresh();
 
