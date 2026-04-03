@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Admin – Rezervacije') }}
+            Admin – rezervacije
         </h2>
     </x-slot>
 
@@ -17,39 +17,39 @@
                 <div class="p-6">
                     <form action="{{ route('admin.reservations.index') }}" method="get" class="mb-6 flex flex-wrap gap-2 items-end">
                         <div class="flex-1 min-w-[200px]">
-                            <label for="q" class="block text-sm font-medium text-gray-700 mb-1">{{ __('Pretraga (email, tablica, ime, ID transakcije)') }}</label>
+                            <label for="q" class="block text-sm font-medium text-gray-700 mb-1">Pretraga (email, tablica, ime, ID transakcije)</label>
                             <input type="text" name="q" id="q" value="{{ old('q', $search) }}"
                                    class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                                   placeholder="{{ __('Pretraži...') }}">
+                                   placeholder="Pretraži...">
                         </div>
                         <button type="submit" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
-                            {{ __('Pretraži') }}
+                            Pretraži
                         </button>
                         @if($search !== '')
                             <a href="{{ route('admin.reservations.index') }}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50 focus:outline-none transition">
-                                {{ __('Prikaži naredna 3h') }}
+                                Prikaži naredna 3h
                             </a>
                         @endif
                     </form>
 
                     @if($search === '')
-                        <p class="text-sm text-gray-600 mb-4">{{ __('Prikaz: rezervacije čiji drop-off termin je u naredna 3 sata. Za sve rezervacije koristite pretragu.') }}</p>
+                        <p class="text-sm text-gray-600 mb-4">Prikaz: rezervacije čiji drop-off termin je u naredna 3 sata. Za sve rezervacije koristite pretragu.</p>
                     @endif
 
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200 text-sm">
                             <thead class="bg-gray-50">
                                 <tr>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{{ __('Datum') }}</th>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{{ __('Drop-off') }}</th>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{{ __('Pick-up') }}</th>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{{ __('Ime') }}</th>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{{ __('Email') }}</th>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{{ __('Tablica') }}</th>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{{ __('Status') }}</th>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{{ __('Fiskalizacija') }}</th>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{{ __('Tx ID') }}</th>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{{ __('Akcije') }}</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Datum</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Drop-off</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Pick-up</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Ime</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tablica</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Fiskalizacija</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tx ID</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Akcije</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
@@ -66,13 +66,13 @@
                                         </td>
                                         <td class="px-4 py-2 whitespace-nowrap">
                                             @if($r->fiscalizationStatus() === 'completed')
-                                                <span class="px-2 py-0.5 rounded text-xs bg-green-100 text-green-800">{{ __('OK') }}</span>
+                                                <span class="px-2 py-0.5 rounded text-xs bg-green-100 text-green-800">OK</span>
                                             @elseif($r->fiscalizationStatus() === 'failed')
-                                                <span class="px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-800">{{ __('Retry') }}</span>
+                                                <span class="px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-800">Ponovi</span>
                                             @elseif($r->fiscalizationStatus() === 'not_applicable')
                                                 <span class="px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-600">—</span>
                                             @else
-                                                <span class="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600">{{ __('Pending') }}</span>
+                                                <span class="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600">Na čekanju</span>
                                             @endif
                                         </td>
                                         <td class="px-4 py-2 text-gray-500 font-mono text-xs">{{ $r->merchant_transaction_id }}</td>
@@ -81,16 +81,16 @@
                                                 @if($r->postFiscalizationDataUnresolved)
                                                     <form action="{{ route('admin.reservations.retry-fiscalization', $r->id) }}" method="post" class="inline">
                                                         @csrf
-                                                        <button type="submit" class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800 hover:bg-amber-200">{{ __('Retry fiskalizaciju') }}</button>
+                                                        <button type="submit" class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800 hover:bg-amber-200">Retry fiskalizaciju</button>
                                                     </form>
                                                     <form action="{{ route('admin.reservations.mark-resolved', $r->id) }}" method="post" class="inline">
                                                         @csrf
-                                                        <button type="submit" class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200">{{ __('Označi rešeno') }}</button>
+                                                        <button type="submit" class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200">Označi rešeno</button>
                                                     </form>
                                                 @endif
                                                 <form action="{{ route('admin.reservations.resend-invoice', $r->id) }}" method="post" class="inline">
                                                     @csrf
-                                                    <button type="submit" class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200">{{ __('Pošalji račun ponovo') }}</button>
+                                                    <button type="submit" class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200">Pošalji račun ponovo</button>
                                                 </form>
                                             </div>
                                         </td>
@@ -98,7 +98,7 @@
                                 @empty
                                     <tr>
                                         <td colspan="10" class="px-4 py-8 text-center text-gray-500">
-                                            {{ $search !== '' ? __('Nema rezultata pretrage.') : __('Nema rezervacija u naredna 3 sata.') }}
+                                            {{ $search !== '' ? 'Nema rezultata pretrage.' : 'Nema rezervacija u naredna 3 sata.' }}
                                         </td>
                                     </tr>
                                 @endforelse

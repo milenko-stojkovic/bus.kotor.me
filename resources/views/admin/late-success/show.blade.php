@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Late Success detalji') }}
+            Late Success — detalji
         </h2>
     </x-slot>
 
@@ -16,8 +16,8 @@
 
             <div class="bg-white shadow-sm sm:rounded-lg p-6">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-medium text-gray-900">{{ __('Temp data') }} #{{ $row->id }}</h3>
-                    <a href="{{ route('admin.late-success.index') }}" class="text-sm text-indigo-600 hover:text-indigo-800">{{ __('Nazad na listu') }}</a>
+                    <h3 class="text-lg font-medium text-gray-900">Privremeni podaci (temp_data) #{{ $row->id }}</h3>
+                    <a href="{{ route('admin.late-success.index') }}" class="text-sm text-indigo-600 hover:text-indigo-800">Nazad na listu</a>
                 </div>
 
                 <dl class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
@@ -39,29 +39,29 @@
             </div>
 
             <div class="bg-white shadow-sm sm:rounded-lg p-6">
-                <h3 class="text-lg font-medium text-gray-900 mb-3">{{ __('Raw callback payload') }}</h3>
+                <h3 class="text-lg font-medium text-gray-900 mb-3">Sirovi callback payload</h3>
                 <pre class="text-xs bg-gray-50 border border-gray-200 rounded p-3 overflow-x-auto">{{ json_encode($row->raw_callback_payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}' }}</pre>
             </div>
 
             @if($row->status === \App\Models\TempData::STATUS_LATE_MANUAL_REVIEW)
                 <div class="bg-white shadow-sm sm:rounded-lg p-6">
-                    <h3 class="text-lg font-medium text-gray-900 mb-3">{{ __('Akcije') }}</h3>
+                    <h3 class="text-lg font-medium text-gray-900 mb-3">Akcije</h3>
                     <div class="flex flex-wrap gap-2">
                         <form method="post" action="{{ route('admin.late-success.force', $row->id) }}">
                             @csrf
                             <button type="submit" class="inline-flex items-center px-4 py-2 bg-amber-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-amber-500">
-                                {{ __('Force create reservation') }}
+                                Prisilno kreiraj rezervaciju
                             </button>
                         </form>
                         <form method="post" action="{{ route('admin.late-success.reject', $row->id) }}">
                             @csrf
                             <button type="submit" class="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-500">
-                                {{ __('Reject') }}
+                                Odbij
                             </button>
                         </form>
                     </div>
                     <p class="mt-3 text-xs text-gray-500">
-                        {{ __('Admin override koristi snapshot iz temp_data kao izvor istine i postavlja resolution_reason radi audita.') }}
+                        Admin override koristi snapshot iz temp_data kao izvor istine i postavlja resolution_reason radi audita.
                     </p>
                 </div>
             @endif

@@ -3,6 +3,8 @@
 use App\Http\Controllers\Admin\LateSuccessController;
 use App\Http\Controllers\Admin\ReservationActionController;
 use App\Http\Controllers\Admin\ReservationListController;
+use App\Http\Controllers\Control\ControlAuthController;
+use App\Http\Controllers\Control\ControlDashboardController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\FakeBankCompleteController;
 use App\Http\Controllers\GuestReservationController;
@@ -16,6 +18,17 @@ use App\Http\Controllers\ReservationStatusController;
 use App\Http\Controllers\UserReservationController;
 use App\Http\Controllers\VehicleController;
 use Illuminate\Support\Facades\Route;
+
+Route::prefix('control')->name('control.')->group(function () {
+    Route::middleware('guest:control')->group(function () {
+        Route::get('login', [ControlAuthController::class, 'create'])->name('login');
+        Route::post('login', [ControlAuthController::class, 'store'])->name('login.store');
+    });
+    Route::middleware('auth:control')->group(function () {
+        Route::post('logout', [ControlAuthController::class, 'destroy'])->name('logout');
+        Route::get('/', [ControlDashboardController::class, 'index'])->name('dashboard');
+    });
+});
 
 Route::get('/', LandingController::class)->name('landing');
 Route::get('/guest/reserve', GuestReservationController::class)->name('guest.reserve');

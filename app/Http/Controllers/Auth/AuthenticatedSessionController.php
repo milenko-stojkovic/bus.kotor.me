@@ -42,6 +42,7 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerateToken();
 
-        return redirect('/');
+        // Koristi host iz trenutnog zahtjeva (ne samo APP_URL) da Laragon / više domena ne završi na 404.
+        return redirect()->away($request->root());
     }
 }

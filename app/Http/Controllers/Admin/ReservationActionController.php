@@ -22,18 +22,18 @@ class ReservationActionController extends Controller
     {
         $reservation = Reservation::find($id);
         if (! $reservation) {
-            return redirect()->back()->with('error', __('Rezervacija nije pronađena.'));
+            return redirect()->back()->with('error', 'Rezervacija nije pronađena.');
         }
 
         $post = PostFiscalizationData::where('reservation_id', $id)->unresolved()->first();
         if (! $post) {
-            return redirect()->back()->with('error', __('Nema otvorenog zapisa za retry fiskalizacije (već fiskalizovano ili označeno kao rešeno).'));
+            return redirect()->back()->with('error', 'Nema otvorenog zapisa za retry fiskalizacije (već fiskalizovano ili označeno kao rešeno).');
         }
 
         if ($reservation->fiscal_jir !== null) {
             $post->delete();
 
-            return redirect()->back()->with('message', __('Rezervacija je već fiskalizovana.'));
+            return redirect()->back()->with('message', 'Rezervacija je već fiskalizovana.');
         }
 
         $result = app(FiscalizationService::class)->tryFiscalize($reservation);
@@ -42,7 +42,7 @@ class ReservationActionController extends Controller
             $post->applyFiscalDataAndDelete($result);
             SendInvoiceEmailJob::dispatch($reservation->id, true);
 
-            return redirect()->back()->with('message', __('Fiskalizacija uspešna, fiskalni račun i email su poslati.'));
+            return redirect()->back()->with('message', 'Fiskalizacija uspješna, fiskalni račun i email su poslati.');
         }
 
         $post->increment('attempts');
@@ -51,7 +51,9 @@ class ReservationActionController extends Controller
             'next_retry_at' => now()->addMinutes(15 * $post->attempts),
         ]);
 
-        return redirect()->back()->with('error', __('Fiskalizacija i dalje nije uspela: :error', ['error' => $result['error'] ?? 'nepoznata greška']));
+        $err = $result['error'] ?? 'nepoznata greška';
+
+        return redirect()->back()->with('error', 'Fiskalizacija i dalje nije uspela: '.$err);
     }
 
     /**
@@ -61,7 +63,7 @@ class ReservationActionController extends Controller
     {
         $reservation = Reservation::find($id);
         if (! $reservation) {
-            return redirect()->back()->with('error', __('Rezervacija nije pronađena.'));
+            return redirect()->back()->with('error', 'Rezervacija nije pronađena.');
         }
 
         $reservation->update([
@@ -71,7 +73,7 @@ class ReservationActionController extends Controller
         $isFiscal = $reservation->fiscal_jir !== null;
         SendInvoiceEmailJob::dispatch($reservation->id, $isFiscal);
 
-        return redirect()->back()->with('message', __('Račun (PDF + email) je ponovo u redu za slanje.'));
+        return redirect()->back()->with('message', 'Račun (PDF + email) je ponovo u redu za slanje.');
     }
 
     /**
@@ -81,16 +83,16 @@ class ReservationActionController extends Controller
     {
         $reservation = Reservation::find($id);
         if (! $reservation) {
-            return redirect()->back()->with('error', __('Rezervacija nije pronađena.'));
+            return redirect()->back()->with('error', 'Rezervacija nije pronađena.');
         }
 
         $post = PostFiscalizationData::where('reservation_id', $id)->unresolved()->first();
         if (! $post) {
-            return redirect()->back()->with('error', __('Nema otvorenog zapisa za fiskalizaciju (već rešeno ili fiskalizovano).'));
+            return redirect()->back()->with('error', 'Nema otvorenog zapisa za fiskalizaciju (već rešeno ili fiskalizovano).');
         }
 
         $post->update(['resolved_at' => now()]);
 
-        return redirect()->back()->with('message', __('Označeno kao rešeno. Cron više neće retry-ovati fiskalizaciju za ovu rezervaciju.'));
+        return redirect()->back()->with('message', 'Označeno kao rešeno. Cron više neće retry-ovati fiskalizaciju za ovu rezervaciju.');
     }
 }

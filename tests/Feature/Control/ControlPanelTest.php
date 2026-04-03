@@ -1,0 +1,160 @@
+<?php
+
+namespace Tests\Feature\Control;
+
+use App\Models\Admin;
+use App\Models\ListOfTimeSlot;
+use App\Models\Reservation;
+use App\Models\VehicleType;
+use App\Models\VehicleTypeTranslation;
+use Carbon\Carbon;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class ControlPanelTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
+    }
+
+    public function test_guest_is_redirected_from_dashboard_to_control_login(): void
+    {
+        $this->get('/control')->assertRedirect(route('control.login', [], false));
+    }
+
+    public function test_control_login_screen_renders(): void
+    {
+        $this->get('/control/login')->assertOk();
+    }
+
+    public function test_control_user_can_login_and_see_dashboard(): void
+    {
+        $this->createControlAdmin();
+
+        $response = $this->post('/control/login', [
+            'email' => 'field@example.test',
+            'password' => 'secret-pass',
+        ]);
+
+        $response->assertRedirect(route('control.dashboard', [], false));
+        $this->assertAuthenticatedAs(Admin::where('email', 'field@example.test')->first(), 'control');
+        $this->get('/control')->assertOk();
+    }
+
+    public function test_admin_without_control_access_cannot_login_via_control(): void
+    {
+        Admin::query()->create([
+            'username' => 'nope',
+            'email' => 'nope@example.test',
+            'password' => bcrypt('x'),
+            'control_access' => false,
+        ]);
+
+        $this->post('/control/login', [
+            'email' => 'nope@example.test',
+            'password' => 'x',
+        ]);
+
+        $this->assertGuest('control');
+    }
+
+    public function test_arrivals_lists_reservation_in_next_three_hour_window(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-06-10 12:00:00', 'Europe/Belgrade'));
+
+        $drop = ListOfTimeSlot::query()->create(['time_slot' => '13:00 - 13:20']);
+        $pick = ListOfTimeSlot::query()->create(['time_slot' => '20:00 - 20:20']);
+        $vehicleType = $this->createVehicleType('Van');
+        $this->createControlAdmin();
+
+        Reservation::query()->create([
+            'drop_off_time_slot_id' => $drop->id,
+            'pick_up_time_slot_id' => $pick->id,
+            'reservation_date' => '2026-06-10',
+            'user_name' => 'Test User',
+            'country' => 'ME',
+            'license_plate' => 'PG AA 123',
+            'vehicle_type_id' => $vehicleType->id,
+            'email' => 'guest@example.test',
+            'status' => 'paid',
+        ]);
+
+        $this->actingAs(Admin::where('email', 'field@example.test')->first(), 'control');
+        $response = $this->get('/control');
+
+        $response->assertOk();
+        $response->assertSee('13:00 - 13:20', false);
+        $response->assertSee('PG AA 123', false);
+        $response->assertSee('Van', false);
+    }
+
+    public function test_search_finds_future_reservation_by_email(): void
+    {
+        $drop = ListOfTimeSlot::query()->create(['time_slot' => '09:00 - 09:20']);
+        $pick = ListOfTimeSlot::query()->create(['time_slot' => '17:00 - 17:20']);
+        $vehicleType = $this->createVehicleType('Car');
+        $this->createControlAdmin();
+
+        Reservation::query()->create([
+            'drop_off_time_slot_id' => $drop->id,
+            'pick_up_time_slot_id' => $pick->id,
+            'reservation_date' => now()->addDays(2)->format('Y-m-d'),
+            'user_name' => 'Search Me',
+            'country' => 'ME',
+            'license_plate' => 'PG BB 999',
+            'vehicle_type_id' => $vehicleType->id,
+            'email' => 'unique-find@example.test',
+            'status' => 'paid',
+        ]);
+
+        $this->actingAs(Admin::where('email', 'field@example.test')->first(), 'control');
+        $response = $this->get('/control?search=1&email=unique-find');
+
+        $response->assertOk();
+        $response->assertSee('unique-find@example.test', false);
+        $response->assertSee('Search Me', false);
+    }
+
+    public function test_search_with_empty_criteria_shows_validation_error(): void
+    {
+        $this->createControlAdmin();
+        $this->actingAs(Admin::where('email', 'field@example.test')->first(), 'control');
+
+        $response = $this->get('/control?search=1');
+
+        $response->assertSessionHasErrors('search');
+    }
+
+    private function createControlAdmin(): Admin
+    {
+        return Admin::query()->create([
+            'username' => 'field1',
+            'email' => 'field@example.test',
+            'password' => 'secret-pass',
+            'control_access' => true,
+        ]);
+    }
+
+    private function createVehicleType(string $nameEn): VehicleType
+    {
+        $vt = VehicleType::query()->create(['price' => 10]);
+        VehicleTypeTranslation::query()->create([
+            'vehicle_type_id' => $vt->id,
+            'locale' => 'en',
+            'name' => $nameEn,
+            'description' => null,
+        ]);
+        VehicleTypeTranslation::query()->create([
+            'vehicle_type_id' => $vt->id,
+            'locale' => 'cg',
+            'name' => $nameEn,
+            'description' => null,
+        ]);
+
+        return $vt;
+    }
+}

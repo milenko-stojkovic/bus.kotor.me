@@ -106,26 +106,25 @@ class Reservation extends Model
     }
 
     /**
-     * Scope: rezervacije čiji drop-off termin pada u naredna 3 sata od sada.
+     * Scope: drop-off u istom prozoru vidljivosti kao control panel (od 3h prije početka do kraja termina).
      */
     public function scopeNextThreeHours(Builder $query): void
     {
-        $now = Carbon::now();
-        $end = $now->copy()->addHours(3);
+        $tz = (string) config('reservations.operations_timezone', 'Europe/Podgorica');
+        $now = Carbon::now($tz);
         $today = $now->copy()->startOfDay();
         $tomorrow = $today->copy()->addDay();
+        $previewHours = 3;
 
         $slots = ListOfTimeSlot::orderBy('id')->get();
         $todaySlotIds = [];
         $tomorrowSlotIds = [];
 
         foreach ($slots as $slot) {
-            $startToday = $slot->getStartTimeForDate($today);
-            $startTomorrow = $slot->getStartTimeForDate($tomorrow);
-            if ($startToday && $startToday->between($now, $end)) {
+            if ($slot->isInArrivalControlWindow($now, $today, $previewHours)) {
                 $todaySlotIds[] = $slot->id;
             }
-            if ($startTomorrow && $startTomorrow->lte($end)) {
+            if ($slot->isInArrivalControlWindow($now, $tomorrow, $previewHours)) {
                 $tomorrowSlotIds[] = $slot->id;
             }
         }

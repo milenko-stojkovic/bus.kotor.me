@@ -59,17 +59,17 @@ class LateSuccessController extends Controller
         $result = DB::transaction(function () use ($id): array {
             $temp = TempData::query()->whereKey($id)->lockForUpdate()->first();
             if (! $temp) {
-                return ['ok' => false, 'message' => __('Zapis nije pronađen.')];
+                return ['ok' => false, 'message' => 'Zapis nije pronađen.'];
             }
             if ($temp->status !== TempData::STATUS_LATE_MANUAL_REVIEW) {
-                return ['ok' => false, 'message' => __('Status mora biti late_manual_review.')];
+                return ['ok' => false, 'message' => 'Status mora biti late_manual_review.'];
             }
 
             $existing = Reservation::where('merchant_transaction_id', $temp->merchant_transaction_id)->first();
             if ($existing) {
                 return [
                     'ok' => true,
-                    'message' => 'Reservation already exists, no action taken.',
+                    'message' => 'Rezervacija već postoji; nije izvršena akcija.',
                     'reservation_id' => $existing->id,
                     'created_now' => false,
                 ];
@@ -102,7 +102,7 @@ class LateSuccessController extends Controller
 
             return [
                 'ok' => true,
-                'message' => __('Rezervacija je kreirana admin override-om.'),
+                'message' => 'Rezervacija je kreirana admin override-om.',
                 'reservation_id' => $reservation->id,
                 'created_now' => true,
             ];
@@ -124,10 +124,10 @@ class LateSuccessController extends Controller
         $result = DB::transaction(function () use ($id): array {
             $temp = TempData::query()->whereKey($id)->lockForUpdate()->first();
             if (! $temp) {
-                return ['ok' => false, 'message' => __('Zapis nije pronađen.')];
+                return ['ok' => false, 'message' => 'Zapis nije pronađen.'];
             }
             if ($temp->status !== TempData::STATUS_LATE_MANUAL_REVIEW) {
-                return ['ok' => false, 'message' => __('Status mora biti late_manual_review.')];
+                return ['ok' => false, 'message' => 'Status mora biti late_manual_review.'];
             }
 
             $from = $temp->status;
@@ -137,7 +137,7 @@ class LateSuccessController extends Controller
             ]);
             TempData::logStateTransition($temp->merchant_transaction_id, $from, TempData::STATUS_LATE_REJECTED, 'Admin manual review rejected');
 
-            return ['ok' => true, 'message' => __('Late manual review zapis je odbijen.')];
+            return ['ok' => true, 'message' => 'Late manual review zapis je odbijen.'];
         });
 
         if (! $result['ok']) {

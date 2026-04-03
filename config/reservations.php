@@ -2,6 +2,13 @@
 
 return [
     /*
+    | Vremenska zona za operativne termine (list_of_time_slots su lokalni sati).
+    | Control „dolasci u naredna 3 sata“ i admin scope nextThreeHours koriste ovo uz Carbon::now().
+    | Podrazumijevano = APP_TIMEZONE (vidi config/app.php).
+    */
+    'operations_timezone' => env('RESERVATIONS_OPERATIONS_TIMEZONE', env('APP_TIMEZONE', 'Europe/Podgorica')),
+
+    /*
     | Expire pending temp_data after this many minutes (ExpirePendingReservations cron).
     */
     'pending_expire_minutes' => (int) env('RESERVATIONS_PENDING_EXPIRE_MINUTES', 30),

@@ -14,6 +14,7 @@ use App\Services\Payment\FakePaymentStatusInquiryService;
 use App\Services\Payment\RealCallbackSignatureValidator;
 use App\Services\Payment\RealPaymentProvider;
 use App\Services\Payment\RealPaymentStatusInquiryService;
+use Illuminate\Auth\Middleware\RedirectIfAuthenticated;
 use Illuminate\Queue\Events\WorkerStarting;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
@@ -55,6 +56,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        RedirectIfAuthenticated::redirectUsing(function (\Illuminate\Http\Request $request): string {
+            if ($request->routeIs('control.login')) {
+                return route('control.dashboard', absolute: false);
+            }
+
+            return route('dashboard', absolute: false);
+        });
+
         Event::listen(PaymentFailed::class, LogPaymentFailed::class);
         Event::listen(PaymentFailed::class, NotifyUserPaymentFailed::class);
 

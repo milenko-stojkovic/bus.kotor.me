@@ -4,6 +4,8 @@ Specifikacija admin funkcionalnosti. Modeli: Reservation, TempData, DailyParking
 
 **Implementirano (van opšte specifikacije ispod):** pregled i akcije za **`late_manual_review`** / povezane statuse — `App\Http\Controllers\Admin\LateSuccessController` (lista, detalj, **force create** rezervacije, **reject**). Rute pod admin middleware-om (v. `routes/web.php`).
 
+**Control panel** (šalter / dolasci) je **odvojen** proizvodni tok: guard **`control`**, model **`App\Models\Admin`**, rute pod **`/control`** — v. **[control-panel.md](./control-panel.md)**. Klasični admin ovde i dalje znači **`User`** + uloga / `AdminMiddleware` na **`/admin`**.
+
 ---
 
 ## 1. Rezervacije

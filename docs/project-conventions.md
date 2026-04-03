@@ -1,6 +1,6 @@
 # Konvencije projekta (bus.kotor.me)
 
-**Poslednje ažuriranje:** 2026-04-05  
+**Poslednje ažuriranje:** 2026-04-03  
 
 Za AI i ljude: držati se ovoga pri novim izmenama da ostane konzistentno.
 
@@ -67,7 +67,7 @@ Preporučeni oblik (naslovi ili bold oznake moraju biti eksplicitni):
 - **PowerShell u Cursoru:** ne koristiti `&&` za lančanje komandi (stariji PS); koristiti `;` ili posebne linije. Iz korena repoa: `Set-Location c:\laragon\www\bus.kotor.me; .\laragon-artisan.ps1 test`.
 - **Sintaksa (`php -l`):** ne pokretati gol `php -l` ako Windows nudi „Open with…“ — koristi **`.\laragon-php.ps1 -l putanja\do\fajla.php`** (ista Laragon putanja kao za artisan).
 - **AI / automatizacija (Cursor agent, skripte):** **uvek** iz korena repoa pokretati **`.\laragon-artisan.ps1 <arg>...`** (npr. `test`, `migrate`, `queue:work`) — **ne** `php artisan ...` u shellu osim ako si eksplicitno proverio da je `php` u PATH-u. Isto za **`.\laragon-php.ps1`** umesto `php` za `-l` i sl. Ovo važi i kada agent „predlaže komandu“: primer mora biti sa skriptom, ne golim `php`.
-- **Queue:** za lokalni QA bez workera, **`QUEUE_CONNECTION=sync`** u `.env`; inače `database` + **`.\laragon-artisan.ps1 queue:work`** (ili puna putanja do `php.exe` + `artisan queue:work`).
+- **Queue:** za lokalni QA bez workera, **`QUEUE_CONNECTION=sync`** u `.env` — tada **nema** posebnog workera (jobovi se izvršavaju u istom zahtevu). Za **`database`** / **`redis`** mora da radi **`queue:work`** (npr. **`.\laragon-artisan.ps1 queue:work`**). **Provera da li worker radi (Windows):** u Task Manageru pogledati **`php.exe`** i komandnu liniju da sadrži `artisan queue:work`, ili u PowerShellu npr. `Get-CimInstance Win32_Process -Filter "Name = 'php.exe'" | Select-Object CommandLine`. Ako se poslovi gomilaju, proveri tabelu **`jobs`** (driver `database`). **Test mejlova:** uz `sync` dovoljno je **`MAIL_MAILER=log`** (ili Mailtrap); uz asinhroni red pokreni worker pre akcije koja dispatchuje mejl.
 
 ### Frontend (Vite / Tailwind) — build, ne zavisnost od dev servera
 
@@ -97,6 +97,7 @@ Posle izmene `.env`: `.\laragon-artisan.ps1 config:clear` (ili ista PHP putanja 
 
 - Za relativne URL-ove (CSRF / različiti host test domen):  
   `redirect()->to(route('ime.rute', [], false))` — **ne** `redirect()->route(..., [], false)` (može dati nevalidan status).
+- Posle **logout** (web guard): **`redirect()->away($request->root())`** da odredište prati stvarni host zahteva (npr. Laragon `*.test`), a ne isključivo `APP_URL`.
 
 ---
 
@@ -131,11 +132,12 @@ U **`docs/`** postoje dubiji opisi po domenima (payment, fiskal, cron, auth, adm
 
 **Indeks:** `docs/project-status-next-steps.md` → „Ostala dokumentacija“. Primer česte greške: zastareo URL **`/api/payments/callback`** — u aplikaciji je **`POST /api/payment/callback`**. **Produkcija:** `production-runbook.md`, `production-hardening.md`.
 
-**Agency panel** (`/panel`, rezervacije, upcoming/realized, korisnik): **[agency-panel.md](./agency-panel.md)**.
+**Agency panel** (`/panel`, rezervacije, upcoming/realized, korisnik): **[agency-panel.md](./agency-panel.md)**. **Control panel** (`/control`, dolasci): **[control-panel.md](./control-panel.md)**.
 
 ---
 
 ## 9. Agency panel (kratko)
 
 - Rute pod prefiksom **`/panel`**, vidi **`docs/agency-panel.md`** (rezervacije, vozila, upcoming/realized, korisnik, invoice).
+- **Control:** prefiks **`/control`**, vidi **`docs/control-panel.md`**.
 - Korisnički tab: **`/panel/user`** — forma u `panel/partials/user-settings-form.blade.php`, **`PATCH /profile`**; brisanje naloga koristi **`user.delete_account_*`** u **`ui_translations`**.

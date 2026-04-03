@@ -16,6 +16,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             \App\Http\Middleware\SetLocale::class,
         ]);
+        $middleware->redirectGuestsTo(function (\Illuminate\Http\Request $request): string {
+            if ($request->is('control') || $request->is('control/*')) {
+                return route('control.login', absolute: false);
+            }
+
+            return route('login', absolute: false);
+        });
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
         ]);
