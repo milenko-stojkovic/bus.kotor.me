@@ -89,7 +89,7 @@ class PaymentJob implements ShouldQueue, ShouldBeUnique
             'email' => $temp->email,
             'status' => 'paid',
             'invoice_amount' => ReservationInvoiceAmount::snapshotForNewReservation('paid', $temp->vehicle_type_id),
-            'email_sent' => 0,
+            'email_sent' => \App\Models\Reservation::EMAIL_NOT_SENT,
         ]);
     }
 }

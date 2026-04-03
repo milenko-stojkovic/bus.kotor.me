@@ -55,7 +55,7 @@ class ReservationActionController extends Controller
     }
 
     /**
-     * Resend invoice email (i ponovo generiši PDF ako treba). Resetuje invoice_sent_at da job pošalje.
+     * Ponovo pošalji email sa računom: resetuje invoice_sent_at; PDF se generiše u jobu iz baze (on-demand).
      */
     public function resendInvoice(Request $request, int $id): RedirectResponse
     {
@@ -66,7 +66,7 @@ class ReservationActionController extends Controller
 
         $reservation->update([
             'invoice_sent_at' => null,
-            'email_sent' => 0,
+            'email_sent' => Reservation::EMAIL_NOT_SENT,
         ]);
         $isFiscal = $reservation->fiscal_jir !== null;
         SendInvoiceEmailJob::dispatch($reservation->id, $isFiscal);

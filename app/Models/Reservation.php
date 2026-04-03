@@ -26,6 +26,17 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  */
 class Reservation extends Model
 {
+    /**
+     * Stanje slanja email potvrde / računa (queue idempotency + stariji cron ReportEmail).
+     * Ne uvoditi novu kolonu — samo ova tri stanja.
+     */
+    public const EMAIL_NOT_SENT = 0;
+
+    public const EMAIL_SENT = 1;
+
+    /** Privremeno: worker drži lock da paralelni job ne pošalje dupli mail. */
+    public const EMAIL_SENDING = 2;
+
     /** Fillable: FK, termini, datum, snapshot polja, fiscal, status (za masovno punjenje). */
     protected $fillable = [
         'user_id',
@@ -58,7 +69,7 @@ class Reservation extends Model
             'fiscal_date' => 'datetime',
             'invoice_sent_at' => 'datetime',
             'invoice_amount' => 'decimal:2',
-            'email_sent' => 'integer', // 0 = nije poslat, 1 = poslata potvrda (integacija sa ReportEmail / notifikacije)
+            'email_sent' => 'integer', // vidi EMAIL_NOT_SENT, EMAIL_SENT, EMAIL_SENDING
         ];
     }
 
@@ -70,7 +81,7 @@ class Reservation extends Model
         }
 
         return $this->update([
-            'email_sent' => 1,
+            'email_sent' => self::EMAIL_SENT,
             'invoice_sent_at' => now(),
         ]);
     }

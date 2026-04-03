@@ -43,6 +43,7 @@ class FiscalizationService
     {
         $documentNumber = $this->nextDocumentNumber();
 
+        // Fake driver MUST mirror real API contract (success: ResponseCode=JIR, UIDRequest=IKOF, Url.Value=QR, Operator; errors: Error.ErrorCode / ErrorMessage).
         // Align fake flow with real provider contract: deposit -> receipt (same shape as real).
         $payload = [
             ...$this->buildFiscalPayload($reservation),
@@ -606,7 +607,8 @@ class FiscalizationService
     }
 
     /**
-     * Payload identičan onom koji se šalje realnom servisu (za fake i real).
+     * Osnovni JSON deo koji ide i na fake i na real receipt (proširenje u callFakeFiscalization / callRealFiscalization).
+     * Fake driver MUST mirror real API contract — dodavanje polja ovde zahteva isto polje u real payload-u gde je primenljivo.
      */
     private function buildFiscalPayload(Reservation $reservation): array
     {

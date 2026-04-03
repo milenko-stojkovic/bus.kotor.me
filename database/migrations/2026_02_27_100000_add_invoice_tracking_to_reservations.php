@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Idempotentni retry: "ako već postoji PDF – ne pravi novi", "ako je mail već poslat – ne šalji ponovo".
+     * invoice_sent_at + (legacy) invoice_pdf_path. PDF se danas ne čuva na disku (uklonjeno kasnijom migracijom); idempotentnost mejla preko invoice_sent_at.
      */
     public function up(): void
     {

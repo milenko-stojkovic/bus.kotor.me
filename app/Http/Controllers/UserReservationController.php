@@ -32,7 +32,7 @@ class UserReservationController extends Controller
             ->firstOrFail();
 
         $binary = $this->pdfBinaryForReservation($reservation);
-        abort_if($binary === null || $binary === '', 404);
+        abort_if($binary === '', 404);
 
         return response()->streamDownload(
             static function () use ($binary): void {
@@ -56,7 +56,7 @@ class UserReservationController extends Controller
             ->firstOrFail();
 
         $binary = $this->pdfBinaryForReservation($reservation);
-        abort_if($binary === null || $binary === '', 404);
+        abort_if($binary === '', 404);
 
         return response($binary, 200, [
             'Content-Type' => 'application/pdf',
@@ -64,18 +64,27 @@ class UserReservationController extends Controller
         ]);
     }
 
-    private function pdfBinaryForReservation(Reservation $reservation): ?string
+    private function pdfBinaryForReservation(Reservation $reservation): string
     {
         if ($reservation->status === 'free') {
-            return app(FreeReservationPdfGenerator::class)->renderBinary($reservation);
+            try {
+                return app(FreeReservationPdfGenerator::class)->renderBinary($reservation);
+            } catch (\Throwable $e) {
+                report($e);
+                abort(503);
+            }
         }
         if ($reservation->status === 'paid') {
             $isFiscal = $reservation->fiscal_jir !== null;
-
-            return app(PaidInvoicePdfGenerator::class)->renderBinary($reservation, $isFiscal);
+            try {
+                return app(PaidInvoicePdfGenerator::class)->renderBinary($reservation, $isFiscal);
+            } catch (\Throwable $e) {
+                report($e);
+                abort(503);
+            }
         }
 
-        return null;
+        abort(404);
     }
 
     public function updateVehicle(UpdateReservationVehicleRequest $request, int $id): RedirectResponse
@@ -102,7 +111,7 @@ class UserReservationController extends Controller
         if ($reservation->status === 'paid') {
             $reservation->update([
                 'invoice_sent_at' => null,
-                'email_sent' => 0,
+                'email_sent' => Reservation::EMAIL_NOT_SENT,
             ]);
             $reservation->refresh();
 

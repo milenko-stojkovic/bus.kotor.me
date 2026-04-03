@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -11,19 +12,34 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            // SQLite: bez MySQL imenovanih FK/dropForeign pariteta; kolone za PHPUnit in-memory šemu.
+            Schema::table('reservations', function (Blueprint $table) {
+                if (! Schema::hasColumn('reservations', 'user_id')) {
+                    $table->unsignedBigInteger('user_id')->nullable()->after('id');
+                    $table->index('user_id', 'idx_res_user');
+                }
+                if (! Schema::hasColumn('reservations', 'vehicle_id')) {
+                    $table->unsignedInteger('vehicle_id')->nullable()->after('user_id');
+                }
+            });
+
+            return;
+        }
+
         Schema::table('reservations', function (Blueprint $table) {
             if (! Schema::hasColumn('reservations', 'user_id')) {
                 $table->unsignedBigInteger('user_id')->nullable()->after('id');
                 $table->index('user_id', 'idx_res_user');
                 $table->foreign('user_id', 'fk_res_user')
-                      ->references('id')->on('users')
-                      ->onDelete('set null');
+                    ->references('id')->on('users')
+                    ->onDelete('set null');
             }
             if (! Schema::hasColumn('reservations', 'vehicle_id')) {
                 $table->unsignedInteger('vehicle_id')->nullable()->after('user_id');
                 $table->foreign('vehicle_id', 'fk_res_vehicle_v2')
-                      ->references('id')->on('vehicles')
-                      ->onDelete('set null');
+                    ->references('id')->on('vehicles')
+                    ->onDelete('set null');
             }
         });
     }
@@ -33,6 +49,20 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            Schema::table('reservations', function (Blueprint $table) {
+                if (Schema::hasColumn('reservations', 'vehicle_id')) {
+                    $table->dropColumn('vehicle_id');
+                }
+                if (Schema::hasColumn('reservations', 'user_id')) {
+                    $table->dropIndex('idx_res_user');
+                    $table->dropColumn('user_id');
+                }
+            });
+
+            return;
+        }
+
         Schema::table('reservations', function (Blueprint $table) {
             if (Schema::hasColumn('reservations', 'user_id')) {
                 $table->dropForeign(['user_id']);

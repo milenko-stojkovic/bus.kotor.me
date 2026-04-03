@@ -5,8 +5,7 @@ namespace App\Services\Pdf;
 use App\Models\Reservation;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Log;
-use Throwable;
+use RuntimeException;
 
 /**
  * Fiskalni ili nefiskalni račun (plaćena rezervacija) — PDF po V1 izgledu.
@@ -18,9 +17,9 @@ class PaidInvoicePdfGenerator
     public const NON_FISCAL_NOTE = 'Račun je važeći kao potvrda o kupovini termina. Fiskalizovani račun biće dostavljen naknadno.';
 
     /**
-     * PDF kao binarni sadržaj (bez čuvanja na disku).
+     * PDF kao binarni sadržaj (bez čuvanja na disku). Baca izuzetak ako generisanje ne uspe — nema tihog null fallback-a.
      */
-    public function renderBinary(Reservation $reservation, bool $isFiscal): ?string
+    public function renderBinary(Reservation $reservation, bool $isFiscal): string
     {
         $previousLocale = app()->getLocale();
         app()->setLocale('cg');
@@ -60,15 +59,12 @@ class PaidInvoicePdfGenerator
                 'nonFiscalNote' => self::NON_FISCAL_NOTE,
             ])->setPaper('a4', 'portrait');
 
-            return $pdf->output();
-        } catch (Throwable $e) {
-            Log::channel('single')->error('Paid invoice PDF failed', [
-                'reservation_id' => $reservation->id,
-                'is_fiscal' => $isFiscal,
-                'message' => $e->getMessage(),
-            ]);
+            $out = $pdf->output();
+            if (! is_string($out) || $out === '') {
+                throw new RuntimeException('Paid invoice PDF output empty.');
+            }
 
-            return null;
+            return $out;
         } finally {
             app()->setLocale($previousLocale);
         }

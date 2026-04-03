@@ -13,12 +13,14 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use RuntimeException;
+use Throwable;
 
 /**
  * Sends invoice/confirmation email to customer. Fiscal or non-fiscal PDF attached.
- * PDF se generiše u memoriji / privremenom fajlu pri slanju; ne čuva se u storage/app.
- * Idempotent: ako je mail već poslat (invoice_sent_at set) – ne šalji ponovo (retry safe).
- * Mail must be sent from bus@kotor.me (MAIL_FROM_ADDRESS).
+ * PDF se generiše iz baze (renderBinary) u memoriji / privremenom fajlu; ne čuva se u storage.
+ * Idempotent: ako je mail već poslat (invoice_sent_at set) – ne šalji ponovo.
+ * Na grešku PDF-a ili slanja: email_sent → NOT_SENT, job baca izuzetak (Laravel retry); nema „regeneriši u istom prolazu“.
  */
 class SendInvoiceEmailJob implements ShouldQueue
 {
@@ -32,6 +34,13 @@ class SendInvoiceEmailJob implements ShouldQueue
         public int $reservationId,
         public bool $isFiscal = true
     ) {}
+
+    public function failed(?Throwable $e): void
+    {
+        Reservation::query()->whereKey($this->reservationId)->update([
+            'email_sent' => Reservation::EMAIL_NOT_SENT,
+        ]);
+    }
 
     public function handle(PaidInvoicePdfGenerator $pdfGenerator): void
     {
@@ -53,11 +62,11 @@ class SendInvoiceEmailJob implements ShouldQueue
                 return;
             }
 
-            if ((int) $reservation->email_sent === 2) {
+            if ((int) $reservation->email_sent === Reservation::EMAIL_SENDING) {
                 return;
             }
 
-            $reservation->update(['email_sent' => 2]); // sending
+            $reservation->update(['email_sent' => Reservation::EMAIL_SENDING]);
             $claimed = true;
         });
 
@@ -69,7 +78,7 @@ class SendInvoiceEmailJob implements ShouldQueue
             ? ($reservation->user?->email ?? $reservation->email)
             : $reservation->email;
         if (empty($email)) {
-            $reservation->update(['email_sent' => 0]);
+            $reservation->update(['email_sent' => Reservation::EMAIL_NOT_SENT]);
 
             return;
         }
@@ -86,29 +95,6 @@ class SendInvoiceEmailJob implements ShouldQueue
         $fromAddress = config('mail.from.address');
         $fromName = config('mail.from.name');
 
-        $pdfBinary = $pdfGenerator->renderBinary($reservation, $this->isFiscal);
-        if ($pdfBinary === null || $pdfBinary === '') {
-            Log::channel('single')->warning('SendInvoiceEmailJob: PDF generation failed, skipping email send', [
-                'reservation_id' => $reservation->id,
-                'is_fiscal' => $this->isFiscal,
-            ]);
-            $reservation->update(['email_sent' => 0]);
-            app()->setLocale($previousLocale);
-
-            return;
-        }
-
-        $tmpPath = tempnam(sys_get_temp_dir(), 'bus_inv_');
-        if ($tmpPath === false) {
-            Log::channel('single')->error('SendInvoiceEmailJob: tempnam failed', [
-                'reservation_id' => $reservation->id,
-            ]);
-            $reservation->update(['email_sent' => 0]);
-            app()->setLocale($previousLocale);
-
-            return;
-        }
-
         $subjectTemplate = UiText::t(
             'emails',
             'paid_invoice_email_subject',
@@ -119,7 +105,18 @@ class SendInvoiceEmailJob implements ShouldQueue
 
         $body = $this->buildConfirmationText($reservation, $emailLocale);
 
+        $tmpPath = null;
         try {
+            $pdfBinary = $pdfGenerator->renderBinary($reservation, $this->isFiscal);
+            if ($pdfBinary === '') {
+                throw new RuntimeException('Paid invoice PDF empty after renderBinary.');
+            }
+
+            $tmpPath = tempnam(sys_get_temp_dir(), 'bus_inv_');
+            if ($tmpPath === false) {
+                throw new RuntimeException('tempnam failed for invoice PDF attachment.');
+            }
+
             file_put_contents($tmpPath, $pdfBinary);
             Mail::raw(
                 $body,
@@ -133,17 +130,23 @@ class SendInvoiceEmailJob implements ShouldQueue
                     ]);
                 }
             );
-        } catch (\Throwable $e) {
-            $reservation->update(['email_sent' => 0]);
-            app()->setLocale($previousLocale);
-            @unlink($tmpPath);
+
+            $reservation->markConfirmationEmailSent();
+        } catch (Throwable $e) {
+            Log::channel('single')->error('SendInvoiceEmailJob failed', [
+                'reservation_id' => $reservation->id,
+                'is_fiscal' => $this->isFiscal,
+                'message' => $e->getMessage(),
+                'exception' => $e::class,
+            ]);
+            $reservation->update(['email_sent' => Reservation::EMAIL_NOT_SENT]);
             throw $e;
+        } finally {
+            if (is_string($tmpPath)) {
+                @unlink($tmpPath);
+            }
+            app()->setLocale($previousLocale);
         }
-
-        @unlink($tmpPath);
-        app()->setLocale($previousLocale);
-
-        $reservation->markConfirmationEmailSent();
     }
 
     private function buildConfirmationText(Reservation $reservation, string $emailLocale): string

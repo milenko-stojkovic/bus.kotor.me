@@ -162,7 +162,7 @@ class PaymentSuccessHandler
             'preferred_locale' => $temp->preferred_locale,
             'status' => $status,
             'invoice_amount' => ReservationInvoiceAmount::snapshotForNewReservation($status, $temp->vehicle_type_id),
-            'email_sent' => 0,
+            'email_sent' => Reservation::EMAIL_NOT_SENT,
         ]);
     }
 }

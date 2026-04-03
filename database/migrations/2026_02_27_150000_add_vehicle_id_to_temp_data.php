@@ -10,7 +10,7 @@ return new class extends Migration
     public function up(): void
     {
         if (DB::getDriverName() === 'sqlite') {
-            // MySQL-only recovery steps below rely on information_schema and ALTER TABLE ... MODIFY.
+            // Guard: ispod su information_schema + ALTER MODIFY (MySQL); SQLite dobija samo kolonu.
             if (! Schema::hasColumn('temp_data', 'vehicle_id')) {
                 Schema::table('temp_data', function (Blueprint $table) {
                     $table->unsignedInteger('vehicle_id')->nullable()->after('user_id');

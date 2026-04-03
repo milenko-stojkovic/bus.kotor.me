@@ -10,6 +10,8 @@ use Illuminate\Support\Str;
 /**
  * Fake eksterni fiskal servis – samo za test.
  *
+ * Odgovor (success/error shape) mora ostati kompatibilan sa pravim provajderom — vidi {@see \App\Services\FiscalizationService} (fake driver MUST mirror real API contract).
+ *
  * Rute: POST /api/efiscal/deposit, POST /api/efiscal/fiscalReceipt.
  * - forceFail=true (query/JSON) ili header X-Fake-Fail: 1 → Error payload.
  * - Header X-Fake-Timeout: 1 → sleep 10s, zatim 504.

@@ -4,8 +4,7 @@ namespace App\Services\Pdf;
 
 use App\Models\Reservation;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Support\Facades\Log;
-use Throwable;
+use RuntimeException;
 
 /**
  * PDF potvrda besplatne rezervacije — sav sadržaj u šablonu na crnogorskom (cg), bez en varijante.
@@ -15,9 +14,9 @@ use Throwable;
 class FreeReservationPdfGenerator
 {
     /**
-     * PDF kao binarni sadržaj (bez čuvanja na disku).
+     * PDF kao binarni sadržaj (bez čuvanja na disku). Baca izuzetak ako generisanje ne uspe — nema tihog null fallback-a.
      */
-    public function renderBinary(Reservation $reservation): ?string
+    public function renderBinary(Reservation $reservation): string
     {
         $previousLocale = app()->getLocale();
         app()->setLocale('cg');
@@ -39,14 +38,12 @@ class FreeReservationPdfGenerator
                 'vehicleTypeLabel' => $vehicleLabel,
             ])->setPaper('a4', 'portrait');
 
-            return $pdf->output();
-        } catch (Throwable $e) {
-            Log::channel('single')->error('Free reservation PDF failed', [
-                'reservation_id' => $reservation->id,
-                'message' => $e->getMessage(),
-            ]);
+            $out = $pdf->output();
+            if (! is_string($out) || $out === '') {
+                throw new RuntimeException('Free reservation PDF output empty.');
+            }
 
-            return null;
+            return $out;
         } finally {
             app()->setLocale($previousLocale);
         }

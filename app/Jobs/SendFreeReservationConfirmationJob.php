@@ -10,13 +10,16 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use RuntimeException;
+use Throwable;
 
 /**
- * Besplatna rezervacija: potvrda na email sa PDF prilogom (potvrda besplatne rezervacije, cg).
- * PDF se generiše u privremenom fajlu pri slanju; ne čuva se u storage/app.
- * Idempotentno (invoice_sent_at).
+ * Besplatna rezervacija: potvrda na email sa PDF prilogom.
+ * PDF iz baze (renderBinary); na grešku: email_sent → NOT_SENT, job fail (queue retry); bez fallback regeneracije.
+ * Idempotentno: invoice_sent_at + lock na EMAIL_SENDING (isto kao plaćeni job).
  */
 class SendFreeReservationConfirmationJob implements ShouldQueue
 {
@@ -30,14 +33,42 @@ class SendFreeReservationConfirmationJob implements ShouldQueue
         public int $reservationId
     ) {}
 
+    public function failed(?Throwable $e): void
+    {
+        Reservation::query()->whereKey($this->reservationId)->update([
+            'email_sent' => Reservation::EMAIL_NOT_SENT,
+        ]);
+    }
+
     public function handle(FreeReservationPdfGenerator $pdfGenerator): void
     {
-        $reservation = Reservation::find($this->reservationId);
-        if (! $reservation || $reservation->status !== 'free') {
-            return;
-        }
+        /** @var Reservation|null $reservation */
+        $reservation = null;
+        $claimed = false;
 
-        if ($reservation->invoice_sent_at !== null) {
+        DB::transaction(function () use (&$reservation, &$claimed): void {
+            $reservation = Reservation::query()
+                ->whereKey($this->reservationId)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $reservation || $reservation->status !== 'free') {
+                return;
+            }
+
+            if ($reservation->invoice_sent_at !== null) {
+                return;
+            }
+
+            if ((int) $reservation->email_sent === Reservation::EMAIL_SENDING) {
+                return;
+            }
+
+            $reservation->update(['email_sent' => Reservation::EMAIL_SENDING]);
+            $claimed = true;
+        });
+
+        if (! $reservation || ! $claimed) {
             return;
         }
 
@@ -45,6 +76,8 @@ class SendFreeReservationConfirmationJob implements ShouldQueue
             ? ($reservation->user?->email ?? $reservation->email)
             : $reservation->email;
         if ($email === '' || $email === null) {
+            $reservation->update(['email_sent' => Reservation::EMAIL_NOT_SENT]);
+
             return;
         }
 
@@ -80,27 +113,18 @@ class SendFreeReservationConfirmationJob implements ShouldQueue
             $reservation->reservation_date->format('Y-m-d')
         );
 
-        $pdfBinary = $pdfGenerator->renderBinary($reservation);
-        if ($pdfBinary === null || $pdfBinary === '') {
-            Log::channel('single')->warning('SendFreeReservationConfirmationJob: PDF generation failed', [
-                'reservation_id' => $reservation->id,
-            ]);
-            app()->setLocale($previousLocale);
-
-            return;
-        }
-
-        $tmpPath = tempnam(sys_get_temp_dir(), 'bus_free_');
-        if ($tmpPath === false) {
-            Log::channel('single')->error('SendFreeReservationConfirmationJob: tempnam failed', [
-                'reservation_id' => $reservation->id,
-            ]);
-            app()->setLocale($previousLocale);
-
-            return;
-        }
-
+        $tmpPath = null;
         try {
+            $pdfBinary = $pdfGenerator->renderBinary($reservation);
+            if ($pdfBinary === '') {
+                throw new RuntimeException('Free reservation PDF empty after renderBinary.');
+            }
+
+            $tmpPath = tempnam(sys_get_temp_dir(), 'bus_free_');
+            if ($tmpPath === false) {
+                throw new RuntimeException('tempnam failed for free reservation PDF attachment.');
+            }
+
             file_put_contents($tmpPath, $pdfBinary);
             Mail::raw($body, function ($message) use ($email, $fromAddress, $fromName, $subject, $reservation, $tmpPath): void {
                 $message->to($email)
@@ -111,15 +135,21 @@ class SendFreeReservationConfirmationJob implements ShouldQueue
                     'mime' => 'application/pdf',
                 ]);
             });
-        } catch (\Throwable $e) {
-            @unlink($tmpPath);
-            app()->setLocale($previousLocale);
+
+            $reservation->markConfirmationEmailSent();
+        } catch (Throwable $e) {
+            Log::channel('single')->error('SendFreeReservationConfirmationJob failed', [
+                'reservation_id' => $reservation->id,
+                'message' => $e->getMessage(),
+                'exception' => $e::class,
+            ]);
+            $reservation->update(['email_sent' => Reservation::EMAIL_NOT_SENT]);
             throw $e;
+        } finally {
+            if (is_string($tmpPath)) {
+                @unlink($tmpPath);
+            }
+            app()->setLocale($previousLocale);
         }
-
-        @unlink($tmpPath);
-        app()->setLocale($previousLocale);
-
-        $reservation->markConfirmationEmailSent();
     }
 }

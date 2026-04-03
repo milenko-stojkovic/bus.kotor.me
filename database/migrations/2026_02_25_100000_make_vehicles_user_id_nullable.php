@@ -13,7 +13,7 @@ return new class extends Migration
     public function up(): void
     {
         if (DB::getDriverName() === 'sqlite') {
-            // SQLite doesn't support ALTER TABLE ... MODIFY, and this migration is MySQL-specific.
+            // Guard: SQLite — nema pouzdanog MODIFY + dropForeign isto kao MySQL; produkcija je MySQL.
             return;
         }
 
@@ -33,6 +33,7 @@ return new class extends Migration
     public function down(): void
     {
         if (DB::getDriverName() === 'sqlite') {
+            // Guard: vidi up().
             return;
         }
 

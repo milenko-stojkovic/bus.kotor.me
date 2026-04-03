@@ -18,6 +18,7 @@ return new class extends Migration
             $table->text('callback_error_reason')->nullable()->after('callback_error_code');
         });
 
+        // Guard: SQLite ne podržava MySQL ALTER ... MODIFY ENUM.
         if (DB::getDriverName() !== 'sqlite') {
             DB::statement("ALTER TABLE temp_data MODIFY COLUMN status ENUM('pending', 'failed', 'late_success', 'processed') DEFAULT 'pending'");
         }
@@ -26,6 +27,7 @@ return new class extends Migration
     public function down(): void
     {
         DB::table('temp_data')->where('status', 'processed')->update(['status' => 'failed']);
+        // Guard: SQLite — bez MODIFY ENUM (vidi up()).
         if (DB::getDriverName() !== 'sqlite') {
             DB::statement("ALTER TABLE temp_data MODIFY COLUMN status ENUM('pending', 'failed', 'late_success') DEFAULT 'pending'");
         }
