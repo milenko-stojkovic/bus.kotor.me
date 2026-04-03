@@ -51,7 +51,8 @@ Ne idu na banku i **ne** pokreću **ProcessReservationAfterPaymentJob** / fiskal
 Napomena (PDF + email robustnost):
 
 - PDF se **ne** drži u **`storage/app`**; **`SendInvoiceEmailJob`** / **`SendFreeReservationConfirmationJob`** generišu binarni PDF pa ga privremeno snime za `attach`.
-- **Email bez attachmenta se ne šalje:** ako **`renderBinary`** vrati prazno, job resetuje **`email_sent`** i **ne** poziva **`markConfirmationEmailSent`**.
+- **`renderBinary`** mora uspeti iz baze (DomPDF): vraća neprazan **`string`** ili **baca izuzetak** — nema tihog `null` fallback-a.
+- **Email bez validnog PDF-a se ne šalje:** na grešku PDF-a / `tempnam` / slanja job postavlja **`email_sent`** na **`Reservation::EMAIL_NOT_SENT`** (0), loguje sa **`reservation_id`**, **baca izuzetak** da **Laravel queue** uradi **retry** (`tries` na jobu); nema „regeneriši u istom handle-u“. Paralelno: **`EMAIL_SENDING`** (2) + lock sprječavaju dupli mail; **`failed()`** posle istrošenih pokušaja vraća **`email_sent`** na **NOT_SENT**.
 
 ---
 

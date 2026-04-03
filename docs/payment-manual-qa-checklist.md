@@ -294,7 +294,7 @@ Napomena: za QA obavezno evidentirati da li u trenutnoj grani koda postoji autom
 
 ## 4.4 PDF nije generisan
 
-- Proveri da je **`SendInvoiceEmailJob`** (ili panel **`PaidInvoicePdfGenerator`**) izvršen bez greške u logu (`Paid invoice PDF failed`).
+- Proveri da je **`SendInvoiceEmailJob`** (ili panel **`PaidInvoicePdfGenerator`**) izvršen bez greške u logu (npr. **`SendInvoiceEmailJob failed`** / izuzetak iz DomPDF-a).
 - Proveri `reservations.invoice_amount` (mora biti postavljen za plaćene).
 - PDF se ne čuva trajno; privremeni fajl za mail koristi sistemski temp dir (`sys_get_temp_dir()`).
 
@@ -303,7 +303,7 @@ Napomena: za QA obavezno evidentirati da li u trenutnoj grani koda postoji autom
 - Proveri `SendInvoiceEmailJob`.
 - Proveri `MAIL_MAILER`, `MAIL_FROM_ADDRESS`.
 - Proveri `reservations.invoice_sent_at` i mail log (`MAIL_MAILER=log`).
-- Napomena: `SendInvoiceEmailJob` ne šalje mail ako **`renderBinary`** ne vrati PDF (da se izbegne mail bez računa).
+- Napomena: `SendInvoiceEmailJob` / `SendFreeReservationConfirmationJob` **ne šalju** mail bez uspešnog PDF-a; **`renderBinary`** baca ili job fail-uje → **queue retry**; u logu **`reservation_id`**.
 
 ## 4.6 Late success ne ulazi u admin review
 

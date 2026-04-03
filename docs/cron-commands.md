@@ -94,7 +94,7 @@ Svi cron job-ovi su Laravel Artisan komande. Registruju se u `bootstrap/app.php`
 
 **Komanda:** `reservations:send-emails`
 
-**Opis:** Proverava reservations gde **email_sent = 0**. Šalje potvrdu rezervacije korisniku. Nakon slanja → **email_sent = 1**.
+**Opis:** Proverava reservations gde **`email_sent = Reservation::EMAIL_NOT_SENT` (0)**. Šalje potvrdu rezervacije korisniku. Nakon slanja → **`EMAIL_SENT` (1)** preko **`markConfirmationEmailSent()`**. *(Stanje **EMAIL_SENDING** (2) koriste queue jobovi za lock — v. `SendInvoiceEmailJob`.)*
 
 **Frekvencija:** svakih 5–10 minuta.
 

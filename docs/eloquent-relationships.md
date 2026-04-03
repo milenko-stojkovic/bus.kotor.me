@@ -196,7 +196,7 @@ public function postFiscalizationData(): HasOne
 ```
 
 **Fillable:** sva polja koja se mass-assign-uju (bez id, created_at, updated_at).  
-**Casts:** `reservation_date` => `date`, `fiscal_date` => `datetime`, `email_sent` => `boolean` (ili integer).
+**Casts:** `reservation_date` => `date`, `fiscal_date` => `datetime`, `email_sent` => `integer` — semantika: **`Reservation::EMAIL_NOT_SENT`**, **`EMAIL_SENT`**, **`EMAIL_SENDING`** (v. model).
 
 ---
 

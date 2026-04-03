@@ -1,6 +1,6 @@
 # Konvencije projekta (bus.kotor.me)
 
-**Poslednje ažuriranje:** 2026-04-03  
+**Poslednje ažuriranje:** 2026-04-04  
 
 Za AI i ljude: držati se ovoga pri novim izmenama da ostane konzistentno.
 
@@ -50,6 +50,7 @@ Preporučeni oblik (naslovi ili bold oznake moraju biti eksplicitni):
 ### PDF računi i potvrde (izdavač: Opština Kotor)
 
 - **Iznos na plaćenom računu** u PDF-u dolazi isključivo iz **`reservations.invoice_amount`** (snapshot pri kreiranju rezervacije), ne iz trenutne **`vehicle_types.price`**. PDF se generiše na zahtev (email ili panel); nema trajnog čuvanja u **`storage/app/invoices`**.
+- **Queue jobovi za mejl** (`SendInvoiceEmailJob`, `SendFreeReservationConfirmationJob`): PDF isključivo **`renderBinary`** iz baze; greška → **ne šalji** mejl, **`email_sent`** na **`Reservation::EMAIL_NOT_SENT`**, job **baca izuzetak** (retry preko reda; v. `success-payment-pipeline.md`). **`email_sent`:** `EMAIL_NOT_SENT` (0), `EMAIL_SENT` (1), `EMAIL_SENDING` (2) — konstante u modelu.
 - Tekst u PDF šablonima (**fiskalni račun**, **nefiskalni račun**, **besplatna potvrda**) je **isključivo na crnogorskom (cg, latinica)** — **nema en varijante** u samom dokumentu; smisao je zvaničnog izdavača u Crnoj Gori.
 - **Fiskalni račun** (`pdf/paid-invoice`, `isFiscal`): donji pravni red *„Ovaj račun je generisan automatski i važi kao fiskalni dokument.“*
 - **Nefiskalni račun** (isti šablon, `isFiscal = false`): *„Ova potvrda je automatski generisana od strane sistema Opštine Kotor.“* (nije fiskalni dokument u tom smislu).
@@ -65,8 +66,8 @@ Preporučeni oblik (naslovi ili bold oznake moraju biti eksplicitni):
      `C:\laragon\bin\php\php-8.3.30-Win32-vs16-x64\php.exe artisan ...`
 - **PowerShell u Cursoru:** ne koristiti `&&` za lančanje komandi (stariji PS); koristiti `;` ili posebne linije. Iz korena repoa: `Set-Location c:\laragon\www\bus.kotor.me; .\laragon-artisan.ps1 test`.
 - **Sintaksa (`php -l`):** ne pokretati gol `php -l` ako Windows nudi „Open with…“ — koristi **`.\laragon-php.ps1 -l putanja\do\fajla.php`** (ista Laragon putanja kao za artisan).
-- **AI / automatizacija:** u ovom projektu na Windowsu **ne oslanjati se** na gol `php` / `php artisan` u shellu dok se ne potvrdi da `php` postoji u PATH-u; preferirati **`.\laragon-php.ps1`**, **`.\laragon-artisan.ps1`**, ili punu putanju iznad.
-- **Queue:** za lokalni QA bez workera, **`QUEUE_CONNECTION=sync`** u `.env`; inače `database` + `php artisan queue:work` (i tu istu PHP putanju ako treba).
+- **AI / automatizacija (Cursor agent, skripte):** **uvek** iz korena repoa pokretati **`.\laragon-artisan.ps1 <arg>...`** (npr. `test`, `migrate`, `queue:work`) — **ne** `php artisan ...` u shellu osim ako si eksplicitno proverio da je `php` u PATH-u. Isto za **`.\laragon-php.ps1`** umesto `php` za `-l` i sl. Ovo važi i kada agent „predlaže komandu“: primer mora biti sa skriptom, ne golim `php`.
+- **Queue:** za lokalni QA bez workera, **`QUEUE_CONNECTION=sync`** u `.env`; inače `database` + **`.\laragon-artisan.ps1 queue:work`** (ili puna putanja do `php.exe` + `artisan queue:work`).
 
 ### Frontend (Vite / Tailwind) — build, ne zavisnost od dev servera
 
