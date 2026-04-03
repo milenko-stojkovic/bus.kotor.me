@@ -24,33 +24,35 @@
 
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6">
-                    <form method="post" action="{{ route('panel.vehicles.store', [], false) }}" id="addVehicleForm" class="flex flex-col xl:flex-row xl:flex-wrap xl:items-end gap-3">
+                    <form method="post" action="{{ route('panel.vehicles.store', [], false) }}" id="addVehicleForm" class="space-y-3">
                         @csrf
-                        <div class="flex-1 min-w-[140px]">
-                            <x-input-label for="add_license_plate" :value="$ui('registration_plates')" />
-                            <x-text-input
-                                id="add_license_plate"
-                                name="license_plate"
-                                type="text"
-                                class="mt-1 block w-full"
-                                :value="old('license_plate')"
-                                autocomplete="off"
-                                inputmode="latin"
-                                pattern="[A-Z0-9]+"
-                            />
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <x-input-label for="add_license_plate" :value="$ui('registration_plates')" />
+                                <x-text-input
+                                    id="add_license_plate"
+                                    name="license_plate"
+                                    type="text"
+                                    class="mt-1 block w-full"
+                                    :value="old('license_plate')"
+                                    autocomplete="off"
+                                    inputmode="latin"
+                                    pattern="[A-Z0-9]+"
+                                />
+                            </div>
+                            <div>
+                                <x-input-label for="add_vehicle_type_id" :value="$ui('vehicle_category')" />
+                                <select id="add_vehicle_type_id" name="vehicle_type_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                    <option value="">{{ $ui('select_vehicle_category') }}</option>
+                                    @foreach($vehicleTypes as $type)
+                                        <option value="{{ $type->id }}" @selected((string) old('vehicle_type_id') === (string) $type->id)>
+                                            {{ $type->getTranslatedName($locale) }}@if(is_numeric((string) $type->price)) — {{ number_format((float) $type->price, 2, '.', '') }} EUR @endif
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
                         </div>
-                        <div class="flex-1 min-w-[180px]">
-                            <x-input-label for="add_vehicle_type_id" :value="$ui('vehicle_category')" />
-                            <select id="add_vehicle_type_id" name="vehicle_type_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                <option value="">{{ $ui('select_vehicle_category') }}</option>
-                                @foreach($vehicleTypes as $type)
-                                    <option value="{{ $type->id }}" @selected((string) old('vehicle_type_id') === (string) $type->id)>
-                                        {{ $type->getTranslatedName($locale) }}@if(is_numeric((string) $type->price)) — {{ number_format((float) $type->price, 2, '.', '') }} EUR @endif
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="flex flex-wrap gap-2 items-end">
+                        <div class="flex flex-wrap gap-2">
                             <x-primary-button type="submit" id="addVehicleSubmit" disabled>{{ $pn('vehicles_add') }}</x-primary-button>
                             <x-secondary-button type="button" id="cancelAddVehicle">{{ $pn('vehicles_cancel') }}</x-secondary-button>
                         </div>
