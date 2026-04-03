@@ -110,11 +110,14 @@ class RealPaymentProvider implements PaymentService
             $headers['X-Signature'] = (string) $signature;
         }
 
+        $httpCfg = config('http-outbound.bankart', []);
+
         try {
             $response = Http::withBasicAuth($username, $password)
                 ->withHeaders($headers)
                 ->withBody($rawBody, $contentType)
-                ->timeout(20)
+                ->connectTimeout((float) ($httpCfg['connect_timeout'] ?? 5))
+                ->timeout((float) ($httpCfg['timeout'] ?? 25))
                 ->post($url);
         } catch (Throwable $e) {
             Log::channel('payments')->error('Bankart init request failed', [

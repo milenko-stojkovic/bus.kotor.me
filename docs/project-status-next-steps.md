@@ -1,6 +1,6 @@
 # Project status — indeks
 
-**Poslednje ažuriranje:** 2026-04-01
+**Poslednje ažuriranje:** 2026-04-05
 
 Ovaj fajl je **kratak smerač**. Detalji su podeljeni da bi novi chat mogao da učita samo ono što treba.
 
@@ -47,6 +47,8 @@ Ovi fajlovi treba da prate trenutni kod; v. `project-conventions.md` § 8.
 | Agency panel (rezervacije, upcoming/realized, user) | [agency-panel.md](./agency-panel.md) |
 | Admin (spec + šta je urađeno) | [admin-panel.md](./admin-panel.md) |
 | Cron detalji | [cron-commands.md](./cron-commands.md) |
+| Deploy / produkcija (checklist) | [production-runbook.md](./production-runbook.md) |
+| Timeout, queue, log eventi, stuck | [production-hardening.md](./production-hardening.md) |
 | Fake vs real | [fake-vs-real-contract-parity.md](./fake-vs-real-contract-parity.md) |
 | Raspored scheduler-a | [scheduled-tasks-overview.md](./scheduled-tasks-overview.md) |
 | Ručni QA payment | [payment-manual-qa-checklist.md](./payment-manual-qa-checklist.md) |

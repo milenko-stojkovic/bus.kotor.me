@@ -15,6 +15,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * Payment state machine. Only API bank callbacks drive transitions.
@@ -32,6 +33,14 @@ class PaymentCallbackJob implements ShouldQueue, ShouldBeUnique
     public int $tries = 3;
 
     public int $timeout = 60;
+
+    /**
+     * @return array<int, int> seconds before retry 2 and 3
+     */
+    public function backoff(): array
+    {
+        return [60, 300, 900];
+    }
 
     public function __construct(
         public array $payload,
@@ -143,5 +152,14 @@ class PaymentCallbackJob implements ShouldQueue, ShouldBeUnique
     public function uniqueId(): string
     {
         return (string) ($this->payload['merchant_transaction_id'] ?? $this->job?->getJobId() ?? 'payment-callback');
+    }
+
+    public function failed(?Throwable $e): void
+    {
+        Log::channel('payments')->error('payment_callback_job_exhausted', [
+            'merchant_transaction_id' => $this->payload['merchant_transaction_id'] ?? null,
+            'message' => $e?->getMessage(),
+            'exception' => $e !== null ? $e::class : null,
+        ]);
     }
 }

@@ -27,7 +27,15 @@ class SendFreeReservationConfirmationJob implements ShouldQueue
 
     public int $tries = 3;
 
-    public int $timeout = 30;
+    public int $timeout = 45;
+
+    /**
+     * @return array<int, int>
+     */
+    public function backoff(): array
+    {
+        return [60, 180, 600];
+    }
 
     public function __construct(
         public int $reservationId
@@ -37,6 +45,11 @@ class SendFreeReservationConfirmationJob implements ShouldQueue
     {
         Reservation::query()->whereKey($this->reservationId)->update([
             'email_sent' => Reservation::EMAIL_NOT_SENT,
+        ]);
+        Log::channel('payments')->error('free_reservation_email_job_exhausted', [
+            'reservation_id' => $this->reservationId,
+            'message' => $e?->getMessage(),
+            'exception' => $e !== null ? $e::class : null,
         ]);
     }
 
@@ -137,7 +150,17 @@ class SendFreeReservationConfirmationJob implements ShouldQueue
             });
 
             $reservation->markConfirmationEmailSent();
+            Log::channel('payments')->info('free_reservation_email_sent', [
+                'reservation_id' => $reservation->id,
+                'merchant_transaction_id' => $reservation->merchant_transaction_id,
+            ]);
         } catch (Throwable $e) {
+            Log::channel('payments')->warning('free_reservation_email_send_failed', [
+                'reservation_id' => $reservation->id,
+                'merchant_transaction_id' => $reservation->merchant_transaction_id,
+                'message' => $e->getMessage(),
+                'exception' => $e::class,
+            ]);
             Log::channel('single')->error('SendFreeReservationConfirmationJob failed', [
                 'reservation_id' => $reservation->id,
                 'message' => $e->getMessage(),

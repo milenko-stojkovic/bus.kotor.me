@@ -14,7 +14,9 @@ use App\Services\Payment\FakePaymentStatusInquiryService;
 use App\Services\Payment\RealCallbackSignatureValidator;
 use App\Services\Payment\RealPaymentProvider;
 use App\Services\Payment\RealPaymentStatusInquiryService;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -54,5 +56,21 @@ class AppServiceProvider extends ServiceProvider
     {
         Event::listen(PaymentFailed::class, LogPaymentFailed::class);
         Event::listen(PaymentFailed::class, NotifyUserPaymentFailed::class);
+
+        if ($this->app->environment('production')) {
+            $bank = (string) config('services.bank.driver', 'fake');
+            $fiscal = (string) config('services.fiscalization.driver', 'fake');
+            if ($bank === 'fake' || $fiscal === 'fake') {
+                Cache::remember('bootstrap_warn_fake_payment_drivers', 43_200, function () use ($bank, $fiscal): bool {
+                    Log::channel('payments')->warning('production_fake_driver_active', [
+                        'bank_driver' => $bank,
+                        'fiscalization_driver' => $fiscal,
+                        'hint' => 'Production should use BANK_DRIVER=bankart and FISCALIZATION_DRIVER=real.',
+                    ]);
+
+                    return true;
+                });
+            }
+        }
     }
 }

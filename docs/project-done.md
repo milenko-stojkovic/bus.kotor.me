@@ -1,6 +1,6 @@
 # Project DONE (urađeno)
 
-**Poslednje ažuriranje:** 2026-04-04  
+**Poslednje ažuriranje:** 2026-04-05  
 
 Hronološki najnovije na vrhu unutar svake sekcije. Pri zatvaranju zadatka dodaj red sa **datumom** (`YYYY-MM-DD`) i kratak opis; istu stavku ukloni iz `docs/project-todo.md`.
 
@@ -8,6 +8,7 @@ Hronološki najnovije na vrhu unutar svake sekcije. Pri zatvaranju zadatka dodaj
 
 ## 2026-04 — Agency panel, besplatan checkout, dokumentacija
 
+- **2026-04-05** — **Production hardening (plaćanje / fiskal / email):** `config/http-outbound.php` — connect + response timeout za Bankart i fiskal (env override); `connectTimeout` u `RealPaymentProvider` i `FiscalizationService`; dokumentovan retry (nema HTTP retry na Bankart debit; fiskal 58 jednom); job `backoff()` + `failed()` na `PaymentCallbackJob`, `PaymentJob`, `ProcessReservationAfterPaymentJob`; povećan timeout post-payment joba; email jobovi — backoff, duži timeout, log u `payments` (`invoice_email_*`, `free_reservation_email_*`, exhausted); `payment_reservation_created`, `payment_fiscal_success`, `post_fiscalization_enqueued`; production upozorenje za fake driver (keš); `RealPaymentStatusInquiryService` → `payment_status_inquiry_not_implemented` warning; **`docs/production-runbook.md`**, **`docs/production-hardening.md`**; `.env.example` napomene; indeks u `project-status-next-steps.md`.
 - **2026-04-04** — **PDF/email bez tihog fallback-a + retry preko reda:** `PaidInvoicePdfGenerator`/`FreeReservationPdfGenerator` → `renderBinary` vraća `string` ili baca (nema `null` maskiranja); `SendInvoiceEmailJob` i `SendFreeReservationConfirmationJob` — DB lock + `Reservation::EMAIL_SENDING`, na grešku `EMAIL_NOT_SENT` + log sa `reservation_id` + **fail job** (Laravel `tries`); `failed()` čisti zaglavljeno stanje; `Reservation::EMAIL_*` konstante; migracije — SQLite guard komentari / grane (`temp_data`, `reservations` user/vehicle, `drop invoice_pdf_path` idempotentno); fiskal — komentari „fake MUST mirror real API contract“ u `FiscalizationService` + `FakeFiscalApiController`.
 - **2026-04-03** — **`project-conventions.md` §3:** Vite `npm run build` vs dev, lokalni HTTPS/`APP_URL`; eksplicitno da agent uvek koristi **`.\laragon-artisan.ps1`** (ne gol `php artisan`); queue primer sa skriptom.
 - **2026-04-02** — **invoice_amount + PDF on-demand:** snapshot iznosa u `reservations`; uklonjen `invoice_pdf_path` i disk `invoices`; `PaidInvoicePdfGenerator`/`FreeReservationPdfGenerator` → `renderBinary`; email koristi temp fajl; panel inline/stream bez storage.

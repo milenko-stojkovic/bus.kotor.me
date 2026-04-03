@@ -14,8 +14,9 @@ class RealPaymentStatusInquiryService implements PaymentStatusInquiryService
     public function inquire(string $merchantTransactionId): ?string
     {
         // TODO: call bank status inquiry endpoint, return 'success' | 'failed' | null
-        Log::channel('payments')->debug('Payment status inquiry not implemented', [
+        Log::channel('payments')->warning('payment_status_inquiry_not_implemented', [
             'merchant_transaction_id' => $merchantTransactionId,
+            'hint' => 'Pending recovery via bank inquiry is a no-op until Bankart status API is wired.',
         ]);
 
         return null;

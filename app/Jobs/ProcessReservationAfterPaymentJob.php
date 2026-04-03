@@ -12,6 +12,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * Payment states: pending → success → [fiscalization_failed → post_fiscalization_data].
@@ -29,7 +30,16 @@ class ProcessReservationAfterPaymentJob implements ShouldQueue
 
     public int $tries = 3;
 
-    public int $timeout = 90;
+    /** Fiskal + dispatch email mora stati ispod worker timeout-a. */
+    public int $timeout = 120;
+
+    /**
+     * @return array<int, int>
+     */
+    public function backoff(): array
+    {
+        return [120, 600, 1800];
+    }
 
     public function __construct(
         public int $reservationId,
@@ -66,6 +76,10 @@ class ProcessReservationAfterPaymentJob implements ShouldQueue
                 'fiscal_qr' => $result['fiscal_qr'] ?? null,
                 'fiscal_operator' => $result['fiscal_operator'] ?? (config('services.fiscal.enu_identifier') ?: null),
                 'fiscal_date' => $result['fiscal_date'] ?? now(),
+            ]);
+            Log::channel('payments')->info('payment_fiscal_success', [
+                'reservation_id' => $reservation->id,
+                'merchant_transaction_id' => $reservation->merchant_transaction_id,
             ]);
             $this->dispatchInvoiceEmail($reservation->id, true);
 
@@ -158,7 +172,24 @@ class ProcessReservationAfterPaymentJob implements ShouldQueue
         }
 
         $post->save();
+        Log::channel('payments')->info('post_fiscalization_enqueued', [
+            'reservation_id' => $reservation->id,
+            'merchant_transaction_id' => $reservation->merchant_transaction_id,
+            'attempts' => $post->attempts,
+            'next_retry_at' => $post->next_retry_at?->toIso8601String(),
+            'retryable' => $retryable,
+            'resolution_reason' => $resolutionReason,
+        ]);
         $this->dispatchInvoiceEmail($reservation->id, false);
+    }
+
+    public function failed(?Throwable $e): void
+    {
+        Log::channel('payments')->error('process_reservation_after_payment_job_exhausted', [
+            'reservation_id' => $this->reservationId,
+            'message' => $e?->getMessage(),
+            'exception' => $e !== null ? $e::class : null,
+        ]);
     }
 
     private function dispatchInvoiceEmail(int $reservationId, bool $isFiscal): void

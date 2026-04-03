@@ -28,7 +28,15 @@ class SendInvoiceEmailJob implements ShouldQueue
 
     public int $tries = 3;
 
-    public int $timeout = 30;
+    public int $timeout = 45;
+
+    /**
+     * @return array<int, int>
+     */
+    public function backoff(): array
+    {
+        return [60, 180, 600];
+    }
 
     public function __construct(
         public int $reservationId,
@@ -39,6 +47,12 @@ class SendInvoiceEmailJob implements ShouldQueue
     {
         Reservation::query()->whereKey($this->reservationId)->update([
             'email_sent' => Reservation::EMAIL_NOT_SENT,
+        ]);
+        Log::channel('payments')->error('invoice_email_job_exhausted', [
+            'reservation_id' => $this->reservationId,
+            'is_fiscal' => $this->isFiscal,
+            'message' => $e?->getMessage(),
+            'exception' => $e !== null ? $e::class : null,
         ]);
     }
 
@@ -132,7 +146,19 @@ class SendInvoiceEmailJob implements ShouldQueue
             );
 
             $reservation->markConfirmationEmailSent();
+            Log::channel('payments')->info('invoice_email_sent', [
+                'reservation_id' => $reservation->id,
+                'merchant_transaction_id' => $reservation->merchant_transaction_id,
+                'is_fiscal_pdf' => $this->isFiscal,
+            ]);
         } catch (Throwable $e) {
+            Log::channel('payments')->warning('invoice_email_send_failed', [
+                'reservation_id' => $reservation->id,
+                'merchant_transaction_id' => $reservation->merchant_transaction_id,
+                'is_fiscal' => $this->isFiscal,
+                'message' => $e->getMessage(),
+                'exception' => $e::class,
+            ]);
             Log::channel('single')->error('SendInvoiceEmailJob failed', [
                 'reservation_id' => $reservation->id,
                 'is_fiscal' => $this->isFiscal,

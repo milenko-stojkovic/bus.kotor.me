@@ -13,6 +13,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * Async payment job. Idempotentan: merchant_transaction_id je idempotency key – ponovni pokušaji ne smeju duplirati rezervacije.
@@ -26,6 +28,14 @@ class PaymentJob implements ShouldQueue, ShouldBeUnique
     public int $tries = 3;
 
     public int $timeout = 60;
+
+    /**
+     * @return array<int, int>
+     */
+    public function backoff(): array
+    {
+        return [30, 120, 300];
+    }
 
     public function __construct(
         public int $tempDataId
@@ -71,6 +81,15 @@ class PaymentJob implements ShouldQueue, ShouldBeUnique
         $temp = TempData::find($this->tempDataId);
 
         return $temp?->merchant_transaction_id ?? (string) $this->tempDataId;
+    }
+
+    public function failed(?Throwable $e): void
+    {
+        Log::channel('payments')->error('payment_job_exhausted', [
+            'temp_data_id' => $this->tempDataId,
+            'message' => $e?->getMessage(),
+            'exception' => $e !== null ? $e::class : null,
+        ]);
     }
 
     private function createReservationFromTempData(TempData $temp): Reservation

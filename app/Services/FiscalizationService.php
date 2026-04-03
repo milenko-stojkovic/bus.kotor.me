@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Reservation;
 use App\Models\SystemConfig;
 use App\Services\Payment\ErrorClassifier;
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -13,6 +14,7 @@ use Throwable;
 /**
  * Fiskalizacija rezervacije. Vraća ['fiscal_jir' => ..., ...] na uspeh ili ['error' => message] na neuspeh.
  * Driver iz config('services.fiscalization.driver'): fake = POST na local fake efiscal endpoints (deposit + receipt), real = pravi API.
+ * HTTP connect/response timeout: {@see config('http-outbound.fiscal')}.
  */
 class FiscalizationService
 {
@@ -83,10 +85,7 @@ class FiscalizationService
             $receiptUrl .= '?scenario='.urlencode($scenario);
         }
 
-        $depositResp = Http::acceptJson()
-            ->contentType('application/json')
-            ->timeout(15)
-            ->post($depositUrl, $payload);
+        $depositResp = $this->fiscalHttpClient()->post($depositUrl, $payload);
 
         $depositData = $depositResp->json();
         if (! $depositResp->successful() || ! is_array($depositData)) {
@@ -115,10 +114,7 @@ class FiscalizationService
             ];
         }
 
-        $receiptResp = Http::acceptJson()
-            ->contentType('application/json')
-            ->timeout(15)
-            ->post($receiptUrl, $payload);
+        $receiptResp = $this->fiscalHttpClient()->post($receiptUrl, $payload);
 
         $data = $receiptResp->json();
         if (! $receiptResp->successful() || ! is_array($data)) {
@@ -165,16 +161,10 @@ class FiscalizationService
 
         // Same semantics as real: if 58, retry deposit + receipt once.
         if ((string) $errorCode === '58') {
-            $retryDeposit = Http::acceptJson()
-                ->contentType('application/json')
-                ->timeout(15)
-                ->post($depositUrl, $payload);
+            $retryDeposit = $this->fiscalHttpClient()->post($depositUrl, $payload);
             $retryDepositData = $retryDeposit->json();
             if ($retryDeposit->successful() && is_array($retryDepositData)) {
-                $retryReceipt = Http::acceptJson()
-                    ->contentType('application/json')
-                    ->timeout(15)
-                    ->post($receiptUrl, $payload);
+                $retryReceipt = $this->fiscalHttpClient()->post($receiptUrl, $payload);
                 $retryData = $retryReceipt->json();
                 if ($retryReceipt->successful() && is_array($retryData)) {
                     $retryIsSuccess = $retryData['IsSucccess'] ?? $retryData['IsSuccess'] ?? null;
@@ -282,10 +272,8 @@ class FiscalizationService
         ]);
 
         try {
-            $response = Http::acceptJson()
-                ->contentType('application/json')
+            $response = $this->fiscalHttpClient()
                 ->withToken($token)
-                ->timeout(20)
                 ->post($receiptEndpoint, $receiptPayload);
         } catch (Throwable $e) {
             Log::channel('payments')->error('Real fiscalization request failed', [
@@ -397,10 +385,8 @@ class FiscalizationService
             }
 
             try {
-                $retryResp = Http::acceptJson()
-                    ->contentType('application/json')
+                $retryResp = $this->fiscalHttpClient()
                     ->withToken($token)
-                    ->timeout(20)
                     ->post($receiptEndpoint, $receiptPayload);
             } catch (Throwable $e) {
                 Log::channel('payments')->error('Real fiscalization retry request failed', [
@@ -521,10 +507,8 @@ class FiscalizationService
         ]);
 
         try {
-            $response = Http::acceptJson()
-                ->contentType('application/json')
+            $response = $this->fiscalHttpClient()
                 ->withToken($token)
-                ->timeout(20)
                 ->post($endpoint, $payload);
         } catch (Throwable $e) {
             Log::channel('payments')->error('Real fiscal deposit request failed', [
@@ -621,5 +605,16 @@ class FiscalizationService
             'license_plate' => $reservation->license_plate,
             'country' => $reservation->country,
         ];
+    }
+
+    /** Connect + response timeout iz {@see config('http-outbound.fiscal')}. */
+    private function fiscalHttpClient(): PendingRequest
+    {
+        $cfg = config('http-outbound.fiscal', []);
+
+        return Http::acceptJson()
+            ->contentType('application/json')
+            ->connectTimeout((float) ($cfg['connect_timeout'] ?? 5))
+            ->timeout((float) ($cfg['timeout'] ?? 25));
     }
 }

@@ -9,6 +9,7 @@ use App\Models\Reservation;
 use App\Models\TempData;
 use App\Support\ReservationInvoiceAmount;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Zajednički flow za SUCCESS plaćanja: callback ili status inquiry (timeout callback).
@@ -54,6 +55,12 @@ class PaymentSuccessHandler
 
             $reservationStatus = $runFiscalAndInvoicePipeline ? 'paid' : 'free';
             $reservation = $this->createReservationFromTempData($temp, $reservationStatus);
+            Log::channel('payments')->info('payment_reservation_created', [
+                'reservation_id' => $reservation->id,
+                'merchant_transaction_id' => $reservation->merchant_transaction_id,
+                'user_id' => $reservation->user_id,
+                'status' => $reservation->status,
+            ]);
             $from = $temp->status;
             $temp->update([
                 'status' => TempData::STATUS_PROCESSED,
