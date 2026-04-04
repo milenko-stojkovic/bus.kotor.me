@@ -11,7 +11,7 @@ Helper: **`App\Support\HttpOutboundConfig`** spaja root vrednosti sa opcionim pe
 | Izlazni poziv | Konfiguracija | Retry |
 |---------------|---------------|--------|
 | **Bankart** create session | `HttpOutboundConfig::bankart('create_session')` — fallback na `bankart.connect_timeout` / `bankart.timeout` | **Nema** automatskog HTTP retry-a na debit. |
-| **Bankart** status inquiry (buduće) | `HttpOutboundConfig::bankart('status_inquiry')` | Kada se implementira `PaymentStatusInquiryService::inquire()`. |
+| **Bankart** status inquiry | `HttpOutboundConfig::bankart('status_inquiry')` | Nema HTTP retry u servisu; cron throttle po transakciji; ishod ide na **`PaymentCallbackJob`**. |
 | **Fiskal** deposit | `HttpOutboundConfig::fiscal('deposit')` | **Jedan** unutrašnji retry para deposit+receipt na grešku **58**; deposit `Amount=0` je idempotentan. |
 | **Fiskal** receipt | `HttpOutboundConfig::fiscal('receipt')` | Isto. |
 | **Laravel jobovi** | N/A | Eksplicitan **`backoff()`**; idempotentnost: job komentari + `ShouldBeUnique` gde postoji. |
@@ -52,7 +52,7 @@ Callback prima i dalje: `Payment callback received` / `accepted` / itd.
 
 | Scenario | Šta postoji | Napomena |
 |----------|-------------|----------|
-| `temp_data` dugo **pending** | `payment:check-pending-inquiry` → **`payment_pending_too_long`** | Status se **ne menja** automatski. Kada `PaymentStatusInquiryService::isImplemented()` bude **true**, ista komanda poziva `inquire()` posle `pending_inquiry_after_minutes`. |
+| `temp_data` dugo **pending** | `payment:check-pending-inquiry` → **`payment_pending_too_long`** + opciono **Bankart inquiry** | Upozorenje **ne menja** status. Inquiry (ako uključen) šalje **`PaymentCallbackJob`** na SUCCESS/ERROR banke; throttle po `merchant_transaction_id`. |
 | Plaćena rezervacija bez **fiscal_jir** | `post_fiscalization_data` + `post-fiscalization:retry` + admin | Nefiskalni email iz `ProcessReservationAfterPaymentJob`. |
 | Email nije poslat | `invoice_sent_at`, `email_sent`, `invoice_email_*` | Worker + retry; **`failed()`** vraća **`email_sent`** na **`EMAIL_NOT_SENT`** (nema trajnog `EMAIL_SENDING`). |
 | Gomilanje **post_fiscalization_data** | Retry komanda + admin | `next_retry_at`, `resolved_at`. |
@@ -70,5 +70,5 @@ Callback prima i dalje: `Payment callback received` / `accepted` / itd.
 
 ## 6. `PaymentStatusInquiryService`
 
-- **`isImplemented()`:** `false` na fake i real dok se ne poveže Bankart status API; tada postaviti **`true`** samo u real implementaciji.
-- **`inquire()`:** poziva se **samo** ako je `isImplemented()` true; inače cron samo loguje stale pending (gore).
+- **`isImplemented()`:** `false` za fake bank driver; za Bankart kada je `BANKART_STATUS_INQUIRY_ENABLED` i konfiguracija (`BANKART_API_URL`, ključevi, kredencijali, shared secret ako je potpis uključen) kompletna.
+- **`inquire()`:** vraća `['outcome' => 'success'|'failed'|null, 'raw' => …]`; poziva se **samo** ako je `isImplemented()` true. **null** = pending / greška API-ja / HTTP — bez promene `temp_data` u tom koraku. Cron dispatchuje **`PaymentCallbackJob`** za `success` i `failed`.

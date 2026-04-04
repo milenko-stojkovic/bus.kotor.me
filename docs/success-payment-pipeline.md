@@ -17,7 +17,7 @@ Ne idu na banku i **ne** pokreću **ProcessReservationAfterPaymentJob** / fiskal
 
 ## Flow (plaćeni tok — kao ranije)
 
-1. **pending → processed** (samo bank API callback, PaymentCallbackJob).
+1. **pending → processed** nakon **`PaymentCallbackJob`** na **SUCCESS** — bilo iz **webhooka** (`POST /api/payment/callback`), bilo iz **cron Bankart status inquiry** (isti job i isti `PaymentSuccessHandler` tok).
 2. Kreira se **reservation** (bez fiscal polja).
 3. Dispatch **ProcessReservationAfterPaymentJob(reservation_id)** (opciono sa **`fakeFiscalScenario`** kad fiskal driver šalje scenario iz kombinovane fake QA forme).
    - **Izuzetak:** ako su **`BANK_DRIVER=fake`** i **`FISCALIZATION_DRIVER=fake`**, job se **ne** šalje iz **`PaymentSuccessHandler`** — isti zahtev ga pokreće **`FakeBankCompleteController`** odmah poslije **`PaymentCallbackJob`**, sa scenarijem sa forme (jedan submit = bank + fiskal ishod).

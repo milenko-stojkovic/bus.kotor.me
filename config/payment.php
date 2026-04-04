@@ -8,6 +8,11 @@ return [
     'provider' => env('PAYMENT_PROVIDER', 'fake'),
 
     /*
+    | Bankart: uključi HTTP status inquiry u cron-u (GET getByMerchantTransactionId). Isključi ako provajder još nije spreman.
+    */
+    'bankart_status_inquiry_enabled' => filter_var(env('BANKART_STATUS_INQUIRY_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
+
+    /*
     | Prekidač za fake QA pipeline (oba drivera fake): sync vs queue. Ne utiče na real bankart/fiskal.
     |
     | - true  = fake QA sync režim: {@see \App\Support\QueueMode::dispatchForFakeE2e} → dispatch_sync za pipeline jobove;
@@ -29,6 +34,11 @@ return [
     | Ako banka kaže SUCCESS → pokreće se isti flow kao callback. Timeout callback-a (callback nikad ne stigne).
     */
     'pending_inquiry_after_minutes' => (int) env('PAYMENT_PENDING_INQUIRY_AFTER_MINUTES', 10),
+
+    /*
+    | Minimalni interval između dva status inquiry poziva za isti merchant_transaction_id (keš).
+    */
+    'status_inquiry_throttle_minutes' => (int) env('PAYMENT_STATUS_INQUIRY_THROTTLE_MINUTES', 20),
 
     /*
     | temp_data u pending duže od ovoga: log WARNING `payment_pending_too_long` (bez promene statusa).

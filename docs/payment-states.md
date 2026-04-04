@@ -35,9 +35,9 @@ Stanja plaćanja i fiskalizacije. Rezervacija se **uvek** kreira na **success**;
 
 ## Timeout callback (status inquiry)
 
-- Ako **callback od banke nikad ne stigne**, cron **payment:check-pending-inquiry** loguje **`payment_pending_too_long`** za pending starije od praga (**bez automatske promene statusa**). Kada **`PaymentStatusInquiryService::isImplemented()`** bude true, ista komanda može pozvati bankin status inquiry i na SUCCESS pokrenuti isti flow kao callback.
-- Ako banka kaže **SUCCESS** → pokreće se **isti flow kao callback** (PaymentSuccessHandler: rezervacija, temp_data → processed, ProcessReservationAfterPaymentJob).
-- Konfiguracija: `payment.pending_inquiry_after_minutes` (npr. 10). Status inquiry je iza interfejsa `PaymentStatusInquiryService` (fake vraća null; real poziva bank API – TODO).
+- Ako **callback od banke nikad ne stigne**, cron **payment:check-pending-inquiry** loguje **`payment_pending_too_long`** za pending starije od praga (**bez automatske promene statusa**). Kada **`PaymentStatusInquiryService::isImplemented()`** true (Bankart), komanda poziva **HTTP status inquiry**; **SUCCESS** / **ERROR** (Bankart `transactionStatus`) → **`PaymentCallbackJob`** (isti state machine kao webhook).
+- Ako banka kaže **SUCCESS** → job poziva **`PaymentSuccessHandler::handle`** (rezervacija, temp_data → processed, `ProcessReservationAfterPaymentJob` kada je red). **ERROR** → job tretira kao neuspeh plaćanja (canceled + `PaymentFailed`), kao CANCEL/ERROR callback.
+- Konfiguracija: `payment.pending_inquiry_after_minutes`, `payment.status_inquiry_throttle_minutes`, `payment.bankart_status_inquiry_enabled`. **Fake** driver: `isImplemented()` = false (samo log stale pending). **Real** (`RealPaymentStatusInquiryService`): GET Bankart `getByMerchantTransactionId`; logovi `payment_status_inquiry_*` u `payments`.
 
 ---
 

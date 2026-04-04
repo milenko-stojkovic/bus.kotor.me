@@ -6,6 +6,8 @@
 
 Pravila za validaciju callback-a, idempotentnost, CANCEL/ERROR, notifikacije i redirect.
 
+**Isti pipeline:** **`PaymentCallbackJob`** se može dispatchovati i kada **HTTP callback ne stigne** — cron **`payment:check-pending-inquiry`** (Bankart status inquiry) šalje job sa ekvivalentnim **`status`** poljem i `raw` iz odgovora banke (`source: status_inquiry`). Idempotentnost i CANCEL/ERROR pravila u jobu važe i za taj ulaz. V. **`payment-architecture.md`**, **`payment-states.md`**, **`cron-commands.md`**.
+
 ---
 
 ## 1. Validacija callback-a (uvek prvo)

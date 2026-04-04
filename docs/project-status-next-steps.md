@@ -28,6 +28,8 @@ Ovaj fajl je **kratak smerač**. Detalji su podeljeni da bi novi chat mogao da u
 
 Smislen test sa pravim callback-om obično zahteva **hostovan** domen i bankin mod/simulaciju — v. kratku napomenu u [handoff-new-chat.md](./handoff-new-chat.md) i stavke u [project-todo.md](./project-todo.md).
 
+**Status inquiry:** implementiran je **GET** `getByMerchantTransactionId` (`RealPaymentStatusInquiryService`) → **`PaymentCallbackJob`**. U produkciji proveriti da **HMAC za GET** (prazno telo / `Content-Type` u potpisu) odgovara Bankart „Signature testing“ alatu ako gateway odbije zahtev.
+
 ---
 
 ## Ostala dokumentacija (dublje u teme)

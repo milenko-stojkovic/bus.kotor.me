@@ -20,14 +20,14 @@ Korisnik se **odmah redirect-uje na bank payment page** nakon klika "Pay". Obrad
 
 ## Obrada rezultata (success / fail / late success)
 
-- **Webhook / callback endpoint** – gateway poziva naš URL sa rezultatom.
-- **Queue job** (PaymentCallbackJob) obavlja:
-  - kreiranje rezervacije iz temp_data
-  - fiskalizacija (PostFiscalizationJob)
-  - email (cron SendReservationEmails)
+- **Webhook / callback endpoint** – gateway poziva naš URL sa rezultatom → **`PaymentCallbackJob`**.
+- **Cron status inquiry** (Bankart, kad je uključen) – komanda **`payment:check-pending-inquiry`** poziva **`PaymentStatusInquiryService::inquire()`**; na jasan **SUCCESS** / **ERROR** u odgovoru banke ponovo se šalje **isti `PaymentCallbackJob`** (payload kao kod webhooka, `raw` uključuje `source: status_inquiry`). V. **`docs/payment-states.md`**, **`docs/cron-commands.md`**.
+- **Queue job** (`PaymentCallbackJob`) obavlja:
+  - kreiranje rezervacije iz `temp_data` (success) ili otkaz (failed)
+  - fiskalizacija / email preko **`ProcessReservationAfterPaymentJob`** i povezanih jobova
   - retries, idempotentnost
 
-Nikad kreiranje rezervacije ili fiskalizacija u HTTP request-u – samo validacija payload-a i **dispatch job-a**.
+Nikad kreiranje rezervacije ili fiskalizacija u HTTP request-u niti u samoj Artisan komandi inquiry-ja – samo **dispatch `PaymentCallbackJob`** (ili validacija u callback kontroleru pa dispatch).
 
 ---
 
@@ -90,10 +90,9 @@ Controller **nikad**:
 
 1. **POST /checkout** → validacija, dostupnost, temp_data (pending), createSession(sync) → **redirect na payment_url** ili 503.
 2. Korisnik plaća na bank stranici (ili na fake bank stranici bira Success/Fail).
-3. Gateway (ili fake bank form) šalje **`POST /api/payment/callback`** sa merchant_transaction_id i status.
-4. Webhook: validacija → **PaymentCallbackJob::dispatch(payload)** → 202.
-5. **PaymentCallbackJob**: na success → Reservation, **temp_data.status = processed** (red se **ne briše** — audit); **`ProcessReservationAfterPaymentJob`** iz **`PaymentSuccessHandler`**: za **async** webhook uvek kada treba fiskal/mejl pipeline (uključujući **oba fake** drivera). Izuzetak: **`FakeBankCompleteController`** šalje callback preko **`QueueMode::dispatchPaymentCallbackSyncForFakeQaForm`** (`deferFakeBankFiscalPipeline: true`) — handler tada **ne** dispatchuje pipeline; odmah posle toga forma šalje **`ProcessReservationAfterPaymentJob`** preko **`QueueMode::dispatchForFakeE2e`** (sync vs queue prema **`FAKE_PAYMENT_E2E_SYNC`** i oba fake drivera). Na failed → ažuriranje `temp_data` + **ErrorClassifier**; na timeout → `late_success` gde je predviđeno.
-6. UI može koristiti **GET /reservation-status/{merchant_transaction_id}** (polling) za status.
+3. **Ulaz u state machine:** **Put A — webhook:** gateway (ili fake forma) šalje **`POST /api/payment/callback`** → validacija potpisa/payload-a → **`PaymentCallbackJob::dispatch`** → **202**. **Put B — Bankart inquiry:** ako callback ne stigne, **`payment:check-pending-inquiry`** (scheduler) poziva banku; na jasan SUCCESS/ERROR → opet **`PaymentCallbackJob::dispatch`** (v. **`CheckPendingPaymentStatus`**).
+4. **PaymentCallbackJob**: na success → Reservation, **temp_data.status = processed** (red se **ne briše** — audit); **`ProcessReservationAfterPaymentJob`** iz **`PaymentSuccessHandler`**: za **async** webhook uvek kada treba fiskal/mejl pipeline (uključujući **oba fake** drivera). Izuzetak: **`FakeBankCompleteController`** šalje callback preko **`QueueMode::dispatchPaymentCallbackSyncForFakeQaForm`** (`deferFakeBankFiscalPipeline: true`) — handler tada **ne** dispatchuje pipeline; odmah posle toga forma šalje **`ProcessReservationAfterPaymentJob`** preko **`QueueMode::dispatchForFakeE2e`** (sync vs queue prema **`FAKE_PAYMENT_E2E_SYNC`** i oba fake drivera). Na failed → ažuriranje `temp_data` + **ErrorClassifier**; na timeout → `late_success` gde je predviđeno.
+5. UI može koristiti **GET /reservation-status/{merchant_transaction_id}** (polling) za status.
 
 ---
 
@@ -132,6 +131,9 @@ Pretpostavka: **`BANK_DRIVER=fake`**, **`FISCALIZATION_DRIVER=fake`**.
 | `App\Http\Controllers\ReservationStatusController` | Polling: GET po merchant_transaction_id. |
 | `App\Support\QueueMode` | Centralno: **`useSyncForFake()`** (oba fake + `payment.fake_e2e_sync`); **`dispatchForFakeE2e($job)`** (sync ili `dispatch`); **`dispatchPaymentCallbackSyncForFakeQaForm`** (uvijek sync u fake formi). |
 | `App\Http\Controllers\FakeBankCompleteController` | Samo test: POST kombinovana forma + GET complete; callback uvijek sync preko `QueueMode`; kad su oba drivera fake i bank success → `ProcessReservationAfterPaymentJob` preko `QueueMode::dispatchForFakeE2e`. |
+| `App\Console\Commands\CheckPendingPaymentStatus` | Cron: log stale pending; Bankart inquiry → `PaymentCallbackJob` (throttle po tx). |
+| `App\Contracts\PaymentStatusInquiryService` | Fake: `isImplemented()` false. Bankart: `RealPaymentStatusInquiryService` — GET `getByMerchantTransactionId`. |
+| `App\Support\BankartSignature` | Zajednički HMAC potpis za Bankart POST (debit) i GET (status inquiry). |
 
 ---
 
@@ -158,7 +160,7 @@ V. **docs/payment-concurrency.md**: jedinstven merchant_transaction_id, validaci
 - [x] User se redirect-uje na bank payment page odmah nakon "Pay".
 - [x] Controller: validacija, provera dostupnosti, temp_data (pending), createSession (sync), redirect ili 503.
 - [x] Nema obrade statusa plaćanja u HTTP request-u.
-- [x] Rezultat plaćanja: webhook/callback + PaymentCallbackJob (rezervacija, fiskalizacija, email, retries).
+- [x] Rezultat plaćanja: webhook/callback + **PaymentCallbackJob**; opciono ista grana preko **cron status inquiry** (Bankart).
 - [x] Ako gateway spor/nedostupan: 503, bez kreiranja rezervacije.
 - [x] Payment provider iza interfejsa (PaymentService, Fake/Real).
 - [x] Queue obavezna za PaymentCallbackJob.

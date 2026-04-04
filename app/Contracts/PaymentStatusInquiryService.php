@@ -15,8 +15,13 @@ interface PaymentStatusInquiryService
     public function isImplemented(): bool;
 
     /**
-     * Proveri status plaćanja kod banke. Vraća 'success' | 'failed' | null (nepoznat/error).
+     * Proveri status plaćanja kod banke.
+     *
+     * @return array{outcome: 'success'|'failed'|null, raw: array<string, mixed>}
+     *         outcome null = još uvek pending, nepoznat status, ili greška HTTP/API (bez promene temp_data).
+     *         raw = parsirano telo odgovora banke kad postoji, inače [].
+     *
      * Pozivati samo kada {@see isImplemented()} true.
      */
-    public function inquire(string $merchantTransactionId): ?string;
+    public function inquire(string $merchantTransactionId): array;
 }

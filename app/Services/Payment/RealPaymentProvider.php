@@ -6,6 +6,7 @@ use App\Contracts\PaymentResult;
 use App\Contracts\PaymentService;
 use App\Contracts\PaymentSessionResult;
 use App\Models\TempData;
+use App\Support\BankartSignature;
 use App\Support\HttpOutboundConfig;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -49,7 +50,7 @@ class RealPaymentProvider implements PaymentService
 
         $path = '/transaction/'.$apiKey.'/debit';
         $url = $apiBase.$path;
-        $signaturePath = $this->resolveSignaturePath($apiBase, $path);
+        $signaturePath = BankartSignature::resolveSignaturePath($apiBase, $path);
         $contentType = 'application/json; charset=utf-8';
         $date = gmdate('D, d M Y H:i:s').' GMT';
 
@@ -82,7 +83,7 @@ class RealPaymentProvider implements PaymentService
 
         $signature = null;
         if ($signatureEnabled) {
-            $signature = $this->signRequest($rawBody, $contentType, $date, $signaturePath, $sharedSecret);
+            $signature = BankartSignature::sign('POST', $rawBody, $contentType, $date, $signaturePath, $sharedSecret);
             if ($signature === null) {
                 Log::channel('payments')->error('Bankart init signing failed', [
                     'merchant_transaction_id' => $tempData->merchant_transaction_id,
@@ -183,28 +184,4 @@ class RealPaymentProvider implements PaymentService
         return number_format((float) $price, 2, '.', '');
     }
 
-    private function signRequest(string $rawBody, string $contentType, string $date, string $path, string $sharedSecret): ?string
-    {
-        if ($sharedSecret === '') {
-            return null;
-        }
-
-        $bodyHash = hash('sha512', $rawBody);
-        $message = implode("\n", [
-            'POST',
-            $bodyHash,
-            $contentType,
-            $date,
-            $path,
-        ]);
-
-        return base64_encode(hash_hmac('sha512', $message, $sharedSecret, true));
-    }
-
-    private function resolveSignaturePath(string $apiBase, string $path): string
-    {
-        $basePath = parse_url($apiBase, PHP_URL_PATH);
-        $basePath = is_string($basePath) ? rtrim($basePath, '/') : '';
-        return ($basePath !== '' ? $basePath : '').$path;
-    }
 }

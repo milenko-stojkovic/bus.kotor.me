@@ -20,7 +20,7 @@ Pregled svih trenutno planiranih (scheduled) taskova u projektu.
 | Command | Schedule | Command file | Kratko |
 |---|---|---|---|
 | `reservations:process-pending` | every 5 minutes | `app/Console/Commands/ProcessPendingReservations.php` | Obrada `temp_data` pending (trenutno TODO/stub delovi postoje) |
-| `payment:check-pending-inquiry` | every 5 minutes | `app/Console/Commands/CheckPendingPaymentStatus.php` | Status inquiry za pending plaćanja starija od praga |
+| `payment:check-pending-inquiry` | every 5 minutes | `app/Console/Commands/CheckPendingPaymentStatus.php` | Stale pending log + Bankart inquiry → `PaymentCallbackJob` (throttle po tx) |
 | `post-fiscalization:retry` | every 10 minutes | `app/Console/Commands/RetryPostFiscalization.php` | Retry fiskalizacije za `post_fiscalization_data` |
 | `reservations:expire-pending` | every 10 minutes | `app/Console/Commands/ExpirePendingReservations.php` | Pending -> expired, oslobađa soft lock |
 | `reservations:assign-late-success` | every 15 minutes | `app/Console/Commands/AssignLateSuccessReservations.php` | Late success obrada (**trenutno V1 stub**) |
@@ -31,7 +31,7 @@ Pregled svih trenutno planiranih (scheduled) taskova u projektu.
 
 ## Ručno pokretanje komandi
 
-Možeš ih pokrenuti pojedinačno:
+Možeš ih pokrenuti pojedinačno. Na **Windowsu** u Cursor terminalu često **`php` nije u PATH-u** — koristi iz korena repoa **`.\laragon-artisan.cmd <komanda>`** (v. **`docs/project-conventions.md`** §3).
 
 - `php artisan reservations:process-pending`
 - `php artisan payment:check-pending-inquiry`

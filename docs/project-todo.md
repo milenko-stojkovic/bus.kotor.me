@@ -1,6 +1,6 @@
 # Project TODO (otvoreno)
 
-**Poslednje ažuriranje:** 2026-03-31  
+**Poslednje ažuriranje:** 2026-04-03  
 
 Stavke su prioritetne grupe. Kada nešto **završiš**, premesti opis u `docs/project-done.md` i ukloni odavde.
 
@@ -10,8 +10,6 @@ Stavke su prioritetne grupe. Kada nešto **završiš**, premesti opis u `docs/pr
 
 - [ ] Finalna provera **HMAC / potpisa** callback-a po specifikaciji banke (`RealCallbackSignatureValidator` i srodnо).
 - [ ] **E2E** sa realnim callback primerima na **hostovanom** okruženju (banka / simulation mod) — v. `docs/project-status-next-steps.md` § Real E2E.
-- [ ] Implementacija **status inquiry** u `RealPaymentStatusInquiryService` (gde je trenutno stub).
-
 ## 2. `late_success` automatska obrada
 
 - [ ] Komanda `reservations:assign-late-success` je **stub** — definisati pravila: kada auto-kreirati rezervaciju iz `temp_data`, kada ostaviti incident / admin (`AssignLateSuccessReservations.php`).

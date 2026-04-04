@@ -34,13 +34,13 @@ Svi cron job-ovi su Laravel Artisan komande. Registruju se u `bootstrap/app.php`
 
 **Komanda:** `payment:check-pending-inquiry`
 
-**Opis:** (1) Za **temp_data** u **pending** starije od **`payment.stale_pending_warn_after_minutes`** (npr. 12) — log **`payment_pending_too_long`** u `payments` (throttle keš po slogu; **bez promene statusa**). (2) Samo ako je **`PaymentStatusInquiryService::isImplemented()`** = true: za pending starije od **`payment.pending_inquiry_after_minutes`** poziva **inquire()** kod banke; **SUCCESS** → isti flow kao callback (**PaymentSuccessHandler**). Dok inquiry nije implementiran, korak (2) se preskače.
+**Opis:** (1) Za **temp_data** u **pending** starije od **`payment.stale_pending_warn_after_minutes`** (npr. 12) — log **`payment_pending_too_long`** u `payments` (throttle keš po slogu; **bez promene statusa**). (2) Samo ako je **`PaymentStatusInquiryService::isImplemented()`** = true (Bankart + `BANKART_STATUS_INQUIRY_ENABLED` + kompletna konfiguracija): za pending starije od **`payment.pending_inquiry_after_minutes`** poziva **inquire()**; keš **throttle** po **`merchant_transaction_id`** (`payment.status_inquiry_throttle_minutes`). Rezultat **SUCCESS** / **ERROR** (Bankart `transactionStatus`) → **`PaymentCallbackJob`** sa istim payload semantikom kao webhook (**nije** direktan `PaymentSuccessHandler` iz komande).
 
 **Frekvencija:** svakih 5 minuta (bootstrap/app.php).
 
 **Tabele:** temp_data, reservations, daily_parking_data.
 
-**Config:** `stale_pending_warn_after_minutes` (`PAYMENT_STALE_PENDING_WARN_AFTER_MINUTES`); `pending_inquiry_after_minutes` (`PAYMENT_PENDING_INQUIRY_AFTER_MINUTES`).
+**Config:** `stale_pending_warn_after_minutes` (`PAYMENT_STALE_PENDING_WARN_AFTER_MINUTES`); `pending_inquiry_after_minutes` (`PAYMENT_PENDING_INQUIRY_AFTER_MINUTES`); `status_inquiry_throttle_minutes` (`PAYMENT_STATUS_INQUIRY_THROTTLE_MINUTES`); `bankart_status_inquiry_enabled` (`BANKART_STATUS_INQUIRY_ENABLED`).
 
 ---
 

@@ -14,8 +14,8 @@ class FakePaymentStatusInquiryService implements PaymentStatusInquiryService
         return false;
     }
 
-    public function inquire(string $merchantTransactionId): ?string
+    public function inquire(string $merchantTransactionId): array
     {
-        return null;
+        return ['outcome' => null, 'raw' => []];
     }
 }
