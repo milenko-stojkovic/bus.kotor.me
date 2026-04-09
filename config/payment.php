@@ -51,4 +51,10 @@ return [
     | U ovom projektu: POST /api/payment/callback (routes/api.php). Banka mora biti podešena na isti path.
     */
     'callback_path' => env('PAYMENT_CALLBACK_PATH', '/api/payment/callback'),
+
+    /*
+    | Email za operativne alerte (kontradiktorni bank odgovor, fiskal — v. AdminFiscalizationAlertService).
+    | Podrazumevano isti kao legacy bus@kotor.me u servisu.
+    */
+    'operations_alert_email' => env('PAYMENT_OPERATIONS_ALERT_EMAIL', 'bus@kotor.me'),
 ];

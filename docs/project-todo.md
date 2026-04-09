@@ -1,6 +1,6 @@
 # Project TODO (otvoreno)
 
-**Poslednje ažuriranje:** 2026-04-03  
+**Poslednje ažuriranje:** 2026-04-10  
 
 Stavke su prioritetne grupe. Kada nešto **završiš**, premesti opis u `docs/project-done.md` i ukloni odavde.
 
@@ -10,6 +10,7 @@ Stavke su prioritetne grupe. Kada nešto **završiš**, premesti opis u `docs/pr
 
 - [ ] Finalna provera **HMAC / potpisa** callback-a po specifikaciji banke (`RealCallbackSignatureValidator` i srodnо).
 - [ ] **E2E** sa realnim callback primerima na **hostovanom** okruženju (banka / simulation mod) — v. `docs/project-status-next-steps.md` § Real E2E.
+
 ## 2. `late_success` automatska obrada
 
 - [ ] Komanda `reservations:assign-late-success` je **stub** — definisati pravila: kada auto-kreirati rezervaciju iz `temp_data`, kada ostaviti incident / admin (`AssignLateSuccessReservations.php`).
@@ -17,7 +18,7 @@ Stavke su prioritetne grupe. Kada nešto **završiš**, premesti opis u `docs/pr
 ## 3. Operativno / audit
 
 - [ ] Politika **retencije** `temp_data` (mapping `resolution_reason` → bucket, cleanup job ili SQL pravilo).
-- [ ] Politika za **`notify_admin`** iz `ErrorClassifier` (kada slati alarm, kanal: mail/slack).
+- [ ] Politika za **`notify_admin`** iz `ErrorClassifier` (kada slati alarm, kanal: mail/slack). *(Ovo je odvojeno od postojećeg **`AdminFiscalizationAlertService`**: fiskal alerti + email za kontradiktorni SUCCESS posle `canceled` — v. `docs/payment-state-machine.md`.)*
 - [ ] Verifikacija lifecycle-a `temp_data` / `retry_token` u rubnim slučajevima.
 - [ ] Gde trajno čuvati **fiskalnu klasifikaciju** za audit (postojeće tabele, bez novih ako moguće).
 

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\PostFiscalizationData;
 use App\Models\Reservation;
+use App\Models\TempData;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -12,28 +13,100 @@ class AdminFiscalizationAlertService
     public const ADMIN_EMAIL = 'bus@kotor.me';
 
     /**
+     * Primalac operativnih alerta (fiskal, kontradiktorni payment ishod).
+     */
+    public function operationsAlertRecipient(): string
+    {
+        $configured = config('payment.operations_alert_email');
+
+        return is_string($configured) && $configured !== ''
+            ? $configured
+            : self::ADMIN_EMAIL;
+    }
+
+    /**
+     * Banka je poslala SUCCESS dok je temp_data već canceled — bez promene stanja; obaveštenje za ručnu obradu.
+     *
+     * @param  array<string, mixed>  $incomingRawPayload
+     */
+    public function notifyPaymentSuccessAfterCanceled(TempData $temp, array $incomingRawPayload): void
+    {
+        $subject = '[Kotor Bus] Contradictory bank outcome: SUCCESS after canceled payment';
+
+        $reservationId = Reservation::query()
+            ->where('merchant_transaction_id', $temp->merchant_transaction_id)
+            ->value('id');
+
+        $jsonFlags = JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT;
+        $storedPayload = $temp->raw_callback_payload;
+        $storedJson = json_encode(is_array($storedPayload) ? $storedPayload : [], $jsonFlags);
+        $incomingJson = json_encode($incomingRawPayload, $jsonFlags);
+
+        $lines = [
+            'Incident: The bank/gateway sent SUCCESS after this checkout was already recorded as CANCEL/ERROR (temp_data.status = canceled).',
+            'The application did NOT create a reservation, did NOT apply late_success, and did NOT change temp_data.status.',
+            'Resolve manually outside the app (bank, customer, reconciliation).',
+            '',
+            '--- temp_data (investigation) ---',
+            'merchant_transaction_id: '.($temp->merchant_transaction_id ?? '—'),
+            'temp_data.id: '.$temp->id,
+            'status: '.($temp->status ?? '—'),
+            'resolution_reason: '.($temp->resolution_reason ?? '—'),
+            'callback_error_code: '.($temp->callback_error_code ?? '—'),
+            'callback_error_reason: '.($temp->callback_error_reason ?? '—'),
+            'user_id: '.($temp->user_id !== null ? (string) $temp->user_id : '—'),
+            'user_name: '.($temp->user_name ?? '—'),
+            'email: '.($temp->email ?? '—'),
+            'country: '.($temp->country ?? '—'),
+            'license_plate: '.($temp->license_plate ?? '—'),
+            'vehicle_type_id: '.($temp->vehicle_type_id !== null ? (string) $temp->vehicle_type_id : '—'),
+            'reservation_date: '.($temp->reservation_date?->format('Y-m-d') ?? '—'),
+            'drop_off_time_slot_id: '.($temp->drop_off_time_slot_id !== null ? (string) $temp->drop_off_time_slot_id : '—'),
+            'pick_up_time_slot_id: '.($temp->pick_up_time_slot_id !== null ? (string) $temp->pick_up_time_slot_id : '—'),
+            'retry_token: '.($temp->retry_token ?? '—'),
+            'created_at: '.($temp->created_at?->toIso8601String() ?? '—'),
+            'updated_at: '.($temp->updated_at?->toIso8601String() ?? '—'),
+            'reservation_id (if any for this merchant tx): '.($reservationId !== null ? (string) $reservationId : '—'),
+            '',
+            'raw_callback_payload (stored on temp_data):',
+            $storedJson,
+            '',
+            'incoming callback/inquiry raw payload:',
+            $incomingJson !== false ? $incomingJson : '{}',
+        ];
+        $body = implode("\n", $lines);
+
+        $this->notify($subject, $body, [
+            'alert_type' => 'payment_success_after_canceled',
+            'merchant_transaction_id' => $temp->merchant_transaction_id,
+            'temp_data_id' => $temp->id,
+        ]);
+    }
+
+    /**
      * @param  array<string, mixed>  $context
      */
     public function notify(string $subject, string $body, array $context = []): void
     {
         $fromAddress = config('mail.from.address');
         $fromName = config('mail.from.name');
+        $to = $this->operationsAlertRecipient();
 
         try {
-            Mail::raw($body, function ($message) use ($subject, $fromAddress, $fromName): void {
-                $message->to(self::ADMIN_EMAIL)
+            Mail::raw($body, function ($message) use ($subject, $fromAddress, $fromName, $to): void {
+                $message->to($to)
                     ->from($fromAddress, $fromName)
                     ->subject($subject);
             });
 
             Log::channel('payments')->warning('Admin fiscalization email sent', [
-                'to' => self::ADMIN_EMAIL,
+                'to' => $to,
                 'subject' => $subject,
                 ...$context,
             ]);
         } catch (\Throwable $e) {
             Log::channel('payments')->error('Admin fiscalization email failed', [
-                'to' => self::ADMIN_EMAIL,
+                'to' => $to,
                 'subject' => $subject,
                 'error' => $e->getMessage(),
                 ...$context,

@@ -38,6 +38,11 @@ Logika mora ostati konzistentna: **temp_data** kao soft lock i audit, zatim upis
 - Ažurira se **temp_data** (`failed`, `canceled`, `expired`, itd. prema `ErrorClassifier` / pravilima job-a); **ne oslanjati se na fizičko brisanje** redova za operativni audit.
 - Oslobađanje soft lock-a: **decrement `pending`** za oba slota gde je primenjeno.
 
+### 4. Kasni odgovor banke posle terminalnog `temp_data`
+
+- **`canceled`:** ostaje **`canceled`**. Naknadni bank **SUCCESS** u **`PaymentCallbackJob`** se **ignoriše** (log **`payment_success_after_canceled_ignored`**); **nema** prelaza u **`late_success`**.
+- **`expired`** (npr. posle **`reservations:expire-pending`**): naknadni **SUCCESS** → **`late_success`** preko **`applyLateSuccess`** (bez automatskog kreiranja rezervacije). Razlika: istekao pending i oslobođen slot ≠ eksplicitni bankovski otkaz.
+
 ---
 
 ## Cron i temp_data
@@ -45,7 +50,8 @@ Logika mora ostati konzistentna: **temp_data** kao soft lock i audit, zatim upis
 | Status / scenario | Napomena |
 |-------------------|----------|
 | **processed** | Red u `temp_data` ostaje; rezervacija u `reservations`. |
-| **late_success** / **late_manual_review** | Admin ili cron stub (`reservations:assign-late-success`) — v. `AssignLateSuccessReservations`, `LateSuccessController`. |
+| **canceled** | Terminalno; kasni SUCCESS ne menja status (v. §4). |
+| **late_success** / **late_manual_review** | Samo nakon **`expired`** + kasni SUCCESS; admin ili cron stub (`reservations:assign-late-success`) — v. `AssignLateSuccessReservations`, `LateSuccessController`. |
 | **failed** / **expired** | Red ostaje za audit; cleanup komanda `temp-data:cleanup` trenutno **ne briše** fizički (v. `CleanupOldTempData`). |
 
 ---

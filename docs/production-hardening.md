@@ -41,6 +41,7 @@ Strukturisani ključevi (gde je moguće: **`merchant_transaction_id`** + **`rese
 - `invoice_email_sent` / `invoice_email_send_failed` / `invoice_email_job_exhausted`
 - `free_reservation_email_sent` / `free_reservation_email_send_failed` / `free_reservation_email_job_exhausted`
 - `payment_callback_job_exhausted`, `payment_job_exhausted`, `process_reservation_after_payment_job_exhausted`
+- `payment_success_after_canceled_ignored` — bank **SUCCESS** stigao dok je **`temp_data` već `canceled`**; status se **ne** menja u `late_success` (`merchant_transaction_id`, `temp_data_id`); zatim **admin email** istim putem kao fiskal alerti (**`AdminFiscalizationAlertService`**, subject *Contradictory bank outcome…*). Uspeh slanja se i dalje loguje kao **`Admin fiscalization email sent`** sa `alert_type` = `payment_success_after_canceled`.
 - `queue_worker_booted` — jednom po PHP procesu queue workera u **production** (event `WorkerStarting`)
 - `production_fake_driver_active` — fake bank/fiscal u production (throttle keš)
 

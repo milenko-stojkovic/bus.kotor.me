@@ -41,6 +41,13 @@ Stanja plaćanja i fiskalizacije. Rezervacija se **uvek** kreira na **success**;
 
 ---
 
+## Kasni SUCCESS (`late_success`)
+
+- **`canceled`** je **terminalno**: banka je već vratila neuspeh / otkaz; **`temp_data` ostaje `canceled`**. Ako banka naknadno pošalje **SUCCESS** (webhook ili inquiry → **`PaymentCallbackJob`**), sistem **ne** prelazi u **`late_success`** — log **`payment_success_after_canceled_ignored`** (`payments`), bez promene statusa, i **email administratoru** (**`AdminFiscalizationAlertService::notifyPaymentSuccessAfterCanceled`**, `payment.operations_alert_email`).
+- **`expired`**: cron je oslobodio lock (`reservations:expire-pending`). Kasni **SUCCESS** → **`applyLateSuccess`** → **`late_success`** (bez kreiranja rezervacije; audit + UX „kontaktirajte podršku“). V. **`PaymentCallbackJob`**.
+
+---
+
 ## Pravila
 
 - **Rezervacije se kreiraju na success** – čak i ako fiskalizacija kasnije ne uspe. Kreiranje rezervacije ne zavisi od fiskalnog API-ja.

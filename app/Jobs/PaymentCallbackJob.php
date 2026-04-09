@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Events\PaymentFailed;
 use App\Models\Reservation;
 use App\Models\TempData;
+use App\Services\AdminFiscalizationAlertService;
 use App\Services\Payment\ErrorClassifier;
 use App\Services\Payment\PaymentSuccessHandler;
 use Illuminate\Bus\Queueable;
@@ -22,7 +23,8 @@ use Throwable;
  *
  * Rules:
  * - All payments start as pending. processed is terminal (no further transitions).
- * - late_success only when: bank SUCCESS but lock already expired/canceled; never creates reservation.
+ * - late_success only when: bank SUCCESS after temp_data was expired (cron lock released); never creates reservation.
+ * - canceled is terminal: a later bank SUCCESS does not transition to late_success (logged and ignored).
  * - processed is idempotent: duplicate SUCCESS callbacks must not create duplicate reservations.
  * - Every transition logged; all transitions inside DB transaction. Never rely on frontend for state.
  */
@@ -90,9 +92,21 @@ class PaymentCallbackJob implements ShouldQueue, ShouldBeUnique
             if ($temp->status === TempData::STATUS_PROCESSED) {
                 return;
             }
-            if ($callbackStatus === 'success' && in_array($temp->status, [TempData::STATUS_CANCELED, TempData::STATUS_EXPIRED], true)) {
+            if ($callbackStatus === 'success' && $temp->status === TempData::STATUS_EXPIRED) {
                 app(PaymentSuccessHandler::class)->applyLateSuccess($temp, $this->rawPayload, false);
+
+                return;
             }
+            if ($callbackStatus === 'success' && $temp->status === TempData::STATUS_CANCELED) {
+                Log::channel('payments')->warning('payment_success_after_canceled_ignored', [
+                    'merchant_transaction_id' => $txId,
+                    'temp_data_id' => $temp->id,
+                ]);
+                app(AdminFiscalizationAlertService::class)->notifyPaymentSuccessAfterCanceled($temp, $this->rawPayload);
+
+                return;
+            }
+
             return;
         }
 

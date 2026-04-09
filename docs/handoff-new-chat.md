@@ -19,8 +19,10 @@ Obavezno prvo pročitaj (redosled):
 
 Kratki indeks svih docs: docs/project-status-next-steps.md
 
+Ako diraš payment / temp_data / callback / inquiry / late_success: prvo docs/payment-state-machine.md (canonical invarijanti + tabela prelaza), pa ostali payment docs.
+
 Pravilo ažuriranja: kad nešto završiš, premesti stavku iz docs/project-todo.md u docs/project-done.md (sa datumom). Ne ostavljaj zastarele TODO stavke.
-Ako promena dira domen (payment, fiskal, auth), ažuriraj i odgovarajući tematski fajl u docs/ (v. docs/project-status-next-steps.md i §3 u handoff-new-chat.md).
+Ako promena dira domen (payment, fiskal, auth), ažuriraj i odgovarajući tematski fajl u docs/ (v. docs/project-status-next-steps.md i §3 u handoff-new-chat.md). Za payment state machine ažuriraj docs/payment-state-machine.md ako si promenio pravila u kodu.
 
 Trenutni zadatak: [OVDE NAPIŠI ŠTA RADIŠ]
 ```
@@ -59,9 +61,9 @@ Tematski fajlovi (payment-states, callback, concurrency, cron, auth/guest, admin
 | Konvencije (prevod, mail, queue) | `docs/project-conventions.md` |
 | Usklađenost fake vs real API | `docs/fake-vs-real-contract-parity.md` |
 | Zakazani zadaci | `docs/scheduled-tasks-overview.md` |
-| Payment / temp_data tok | `docs/payment-states.md`, `docs/workflow-placanje-temp-data.md` |
+| Payment / temp_data tok | **`docs/payment-state-machine.md` (canonical)**, `docs/payment-states.md`, `docs/workflow-placanje-temp-data.md` |
 | Admin | `docs/admin-panel.md` |
 
 ---
 
-Poslednje ažuriranje ovog fajla: 2026-04-02 (indeks docs i dalje aktuelan)
+Poslednje ažuriranje ovog fajla: 2026-04-04 (`payment-state-machine.md` kao canonical referenca za payment state machine)

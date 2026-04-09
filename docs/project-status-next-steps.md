@@ -1,8 +1,10 @@
 # Project status — indeks
 
-**Poslednje ažuriranje:** 2026-04-03
+**Poslednje ažuriranje:** 2026-04-10
 
 Ovaj fajl je **kratak smerač**. Detalji su podeljeni da bi novi chat mogao da učita samo ono što treba.
+
+**Canonical payment state machine (prelazi, terminalna stanja, invarijante):** [payment-state-machine.md](./payment-state-machine.md) — pročitaj **pre** izmene u `PaymentCallbackJob`, `TempData`, checkout/callback/inquiry toku.
 
 **Princip:** dokumentacija treba da bude **izvor istine, ne zabune** — v. [project-conventions.md](./project-conventions.md) **§ 0**. Tematski fajlovi ispod moraju da prate kod; ako nešto ne štima, ispravi doc ili kod.
 
@@ -38,6 +40,7 @@ Ovi fajlovi treba da prate trenutni kod; v. `project-conventions.md` § 8.
 
 | Oblast | Fajl |
 |--------|------|
+| **Payment state machine (canonical)** | **[payment-state-machine.md](./payment-state-machine.md)** |
 | Callback, idempotentnost, return/result | [payment-callback-handling.md](./payment-callback-handling.md) |
 | Arhitektura plaćanja, queue | [payment-architecture.md](./payment-architecture.md) |
 | Konkurentnost | [payment-concurrency.md](./payment-concurrency.md) |
