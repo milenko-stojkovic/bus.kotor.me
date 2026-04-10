@@ -5,6 +5,7 @@
         \App\Models\AdminAlert::STATUS_DONE => 'Završeno',
         default => $s,
     };
+    $fmtDate = fn (string $d) => \Carbon\Carbon::parse($d)->format('d.m.Y.');
 @endphp
 
 @push('head')
@@ -74,21 +75,67 @@
 
         <section>
             <h2 class="text-lg font-semibold text-gray-900 mb-2">Nedostupni dani i termini</h2>
-            <div class="bg-white shadow rounded-lg p-5 border border-dashed border-amber-200">
-                <p class="text-sm text-gray-600">
-                    U ovom koraku nije implementirano. Ovde će biti prikaz slotova koji nisu dostupni za novu prodaju
-                    (blokirani i oni bez slobodnog kapaciteta po availability logici).
-                </p>
-            </div>
+            <p class="text-sm text-gray-600 mb-4 max-w-3xl">
+                Termini koji se trenutno <strong class="font-medium">ne mogu kupiti</strong> po backend pravilima (nema reda u
+                <code class="text-xs bg-gray-100 px-1 rounded">daily_parking_data</code>, blokada, ili nema slobodnog kapaciteta uzimajući u obzir i pending).
+                Lista prati postojeće datume u tabeli (od danas nadalje). Blokirani termini su uključeni i ovde i u sekciji ispod.
+            </p>
+            @if (empty($unavailableDays))
+                <p class="text-sm text-gray-600">Nema nedostupnih termina za prikazane datume.</p>
+            @else
+                <ul class="space-y-3">
+                    @foreach ($unavailableDays as $day)
+                        <li class="bg-white shadow rounded-lg p-4 border border-gray-100">
+                            <div class="font-medium text-gray-900">
+                                {{ $fmtDate($day['date']) }}
+                                @if ($day['is_full_day'])
+                                    <span class="text-gray-600">— nedostupan</span>
+                                @endif
+                            </div>
+                            @if (! $day['is_full_day'])
+                                <div class="mt-1 text-sm text-gray-700">
+                                    {{ implode(', ', $day['ranges']) }}
+                                </div>
+                            @endif
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
         </section>
 
         <section>
             <h2 class="text-lg font-semibold text-gray-900 mb-2">Blokirani dani i termini</h2>
-            <div class="bg-white shadow rounded-lg p-5 border border-dashed border-amber-200">
-                <p class="text-sm text-gray-600">
-                    U ovom koraku nije implementirano. Blokiranje sprečava novu prodaju bez menjanja capacity/reserved/pending.
-                </p>
-            </div>
+            <p class="text-sm text-gray-600 mb-4 max-w-3xl">
+                Redovi u <code class="text-xs bg-gray-100 px-1 rounded">daily_parking_data</code> sa <code class="text-xs bg-gray-100 px-1 rounded">is_blocked = 1</code>.
+                Blokada sprečava novu prodaju bez menjanja kapaciteta, rezervisanih i pending vrednosti.
+            </p>
+            @if (empty($blockedDays))
+                <p class="text-sm text-gray-600">Nema blokiranih termina.</p>
+            @else
+                <ul class="space-y-3">
+                    @foreach ($blockedDays as $day)
+                        <li class="bg-white shadow rounded-lg p-4 flex flex-wrap items-start justify-between gap-3 border border-gray-100">
+                            <div class="min-w-0">
+                                <div class="font-medium text-gray-900">
+                                    {{ $fmtDate($day['date']) }}
+                                    @if ($day['is_full_day'])
+                                        <span class="text-gray-600">— blokiran</span>
+                                    @endif
+                                </div>
+                                @if (! $day['is_full_day'])
+                                    <div class="mt-1 text-sm text-gray-700">
+                                        {{ implode(', ', $day['ranges']) }}
+                                    </div>
+                                @endif
+                            </div>
+                            <a href="{{ route('panel_admin.blocking.day', ['date' => $day['date']], false) }}"
+                               class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-xs font-semibold text-gray-700 uppercase tracking-widest hover:bg-gray-50 shrink-0">
+                                Deblokiraj
+                            </a>
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
         </section>
     </div>
 </x-admin-panel-layout>

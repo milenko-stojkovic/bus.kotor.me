@@ -13,8 +13,9 @@ class BlockZoneWorklistService
 {
     /**
      * Kada pending pokušaj postane rezervacija: pending_payment → ready_to_adjust.
+     * Za admin direktan free tok ($temp === null) samo se veže reservation_id ako postoji worklist red.
      */
-    public function onReservationCreated(Reservation $reservation, TempData $temp): void
+    public function onReservationCreated(Reservation $reservation, ?TempData $temp = null): void
     {
         $row = BlockZoneWorklist::query()
             ->where('merchant_transaction_id', $reservation->merchant_transaction_id)
@@ -27,7 +28,9 @@ class BlockZoneWorklistService
             $row->status = BlockZoneWorklist::STATUS_READY_TO_ADJUST;
         }
         $row->reservation_id = $reservation->id;
-        $row->temp_data_id = $temp->id;
+        if ($temp !== null) {
+            $row->temp_data_id = $temp->id;
+        }
         $row->snapshot_json = array_merge((array) ($row->snapshot_json ?? []), [
             'user_name' => $reservation->user_name,
             'email' => $reservation->email,

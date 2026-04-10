@@ -16,6 +16,7 @@ use App\Services\Payment\RealPaymentProvider;
 use App\Services\Payment\RealPaymentStatusInquiryService;
 use Illuminate\Auth\Middleware\RedirectIfAuthenticated;
 use Illuminate\Queue\Events\WorkerStarting;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
@@ -58,10 +59,14 @@ class AppServiceProvider extends ServiceProvider
     {
         RedirectIfAuthenticated::redirectUsing(function (\Illuminate\Http\Request $request): string {
             if ($request->routeIs('panel_admin.login')) {
-                return route('panel_admin.dashboard', absolute: false);
+                return Auth::guard('panel_admin')->check()
+                    ? route('panel_admin.dashboard', absolute: false)
+                    : route('login', absolute: false);
             }
             if ($request->routeIs('control.login')) {
-                return route('control.dashboard', absolute: false);
+                return Auth::guard('control')->check()
+                    ? route('control.dashboard', absolute: false)
+                    : route('login', absolute: false);
             }
 
             return route('dashboard', absolute: false);

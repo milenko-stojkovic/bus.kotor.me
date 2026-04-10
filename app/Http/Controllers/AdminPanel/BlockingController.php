@@ -24,7 +24,7 @@ class BlockingController extends Controller
         $slots = $blocking->allSlots();
 
         $dailyBySlotId = DailyParkingData::query()
-            ->where('date', $selectedDate)
+            ->whereDate('date', $selectedDate)
             ->get()
             ->keyBy('time_slot_id');
 
@@ -69,7 +69,7 @@ class BlockingController extends Controller
     {
         $slots = $blocking->allSlots();
         $dailyBySlotId = DailyParkingData::query()
-            ->where('date', $date)
+            ->whereDate('date', $date)
             ->get()
             ->keyBy('time_slot_id');
 
@@ -200,7 +200,7 @@ class BlockingController extends Controller
                 foreach ($sorted as [$d, $sid]) {
                     $key = $d.'|'.$sid;
                     $m = DailyParkingData::query()
-                        ->where('date', $d)
+                        ->whereDate('date', $d)
                         ->where('time_slot_id', $sid)
                         ->lockForUpdate()
                         ->first();

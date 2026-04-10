@@ -6,12 +6,39 @@ Specifikacija admin funkcionalnosti. Modeli: Reservation, TempData, DailyParking
 
 | Šta | URL prefiks | Auth | Namena |
 |-----|-------------|------|--------|
-| **Glavni admin panel** | `/admin` | Guard **`panel_admin`**, tabela **`admins`**, kolona **`admin_access=1`** (i **`control_access=0`**) | Upozorenja/Informacije (`admin_alerts`), navigacija ka budućim modulima (Blokiranje, …). Login: **`GET /admin/login`**. |
+| **Glavni admin panel** | `/admin` | Guard **`panel_admin`**, tabela **`admins`**, kolona **`admin_access=1`** (i **`control_access=0`**) | Dashboard **Upozorenja / Informacije** (`admin_alerts`, pregled nedostupnosti i blokada), navigacija (Blokiranje, Besplatne rezervacije, …). Login: **`GET /admin/login`**. |
 | **Staff operativa** (rezervacije, late-success) | `/staff` | **`User`** + **`AdminMiddleware`** (uloga admin ili email u `admins`) | `ReservationListController`, `LateSuccessController` — v. `routes/web.php` imena **`staff.*`**. |
 
 **Control panel** (šalter / dolasci): guard **`control`**, **`/control`** — v. **[control-panel.md](./control-panel.md)**. **`admin_access`** i **`control_access`** su međusobno isključivi; isti red u `admins` nikad ne drži oba = 1 (v. migracija + `Admin::booted`).
 
 **Tabela `admin_alerts`:** operativna lista upozorenja (ne inbox); incident **SUCCESS posle `canceled`** upisuje se u **`admin_alerts`** preko **`AdminFiscalizationAlertService::notifyPaymentSuccessAfterCanceled`** (uz postojeći email).
+
+### Dashboard `GET /admin` (`panel_admin.dashboard`)
+
+Kontroler: **`WarningsController::index`**. Stranica ima tri bloka: **Upozorenja**, **Nedostupni dani i termini**, **Blokirani dani i termini** (meta refresh 300 s za operativni pregled).
+
+**Blokirani dani i termini**
+
+- Izvor: **`daily_parking_data.is_blocked = 1`**.
+- Opseg: samo datumi koji postoje u tabeli i **`date >= danas`** (nema proizvoljnog „+90 dana“ skeniranja praznih dana).
+- Grupisanje po danu; uzastopni blokirani slotovi (po rastućem `time_slot_id`, uzastopni celi brojevi) spajaju se u jedan raspon: **početak prvog termina – kraj poslednjeg** (parsiranje stringa `time_slot`, v. **`DaySlotRangeSummaryBuilder`**).
+- Ako je blokiran **ceo katalog** slotova za taj dan → prikaz datuma sa oznakom **„— blokiran”** (bez liste intervala).
+- Ne zavisi od free/plaćeno niti od broja rezervacija — opisuje samo administrativnu blok zonu. Link **Deblokiraj** vodi na **`panel_admin.blocking.day`**.
+
+**Nedostupni dani i termini**
+
+- Izvor istine: da li se termin **može kupiti** u smislu iste provere kao pri zaključavanju u checkout-u (**`CheckoutController::store`**, transakcija + `lockForUpdate`): za svaki slot iz **`list_of_time_slots`** nedostupan je ako **nema** reda u `daily_parking_data` za taj datum, ili je **`is_blocked`**, ili je **`availableCapacity() < 1`** (uključuje **`pending`**).
+- Opseg datuma: kao i gore — **distinct datumi iz `daily_parking_data` sa `date >= danas`**.
+- **Uključuje i blokirane** termine (oni su istovremeno i u sekciji Blokirani); ovo je zbir „trenutno se ne može kupiti“.
+- Grupisanje i spajanje raspona: isti **`DaySlotRangeSummaryBuilder`**. Ceo dan nedostupan (svi slotovi kataloga) → **„— nedostupan”**.
+
+**Zajednička logika spajanja**
+
+- Klasa **`App\Services\AdminPanel\Blocking\DaySlotRangeSummaryBuilder`**: ulaz = pun skup slotova (redosled kao u `allSlots()`) + lista ID-jeva „označenih“ slotova; izlaz = **`is_full_day`** (ceo katalog pokriven) ili lista stringova raspona.
+
+**Servis:** **`BlockingService::blockedDaySummaries()`**, **`unavailableForPurchaseDaySummaries()`**. Lista na stranici **Blokiranje** (`/admin/blokiranje`) koristi isti **`blockedDaySummaries()`**.
+
+**Testovi:** `tests/Feature/AdminPanel/AdminWarningsDashboardTest.php`, `tests/Unit/DaySlotRangeSummaryBuilderTest.php`.
 
 ---
 
@@ -29,6 +56,22 @@ Specifikacija admin funkcionalnosti. Modeli: Reservation, TempData, DailyParking
 | **Pristup i izmena napravljene rezervacije** | Pogled i izmena rezervacije u statusu `late_success` (već upisane). | `Reservation`, `TempData` (ako još postoji) |
 | **Izmene termina** | Izmena `drop_off_time_slot_id`, `pick_up_time_slot_id`, `reservation_date` na postojećoj rezervaciji. | `Reservation`, validacija preko `DailyParkingData` |
 | **Promena statusa rezervacija** | Menjanje `status` (npr. paid / free). | `Reservation.status` |
+
+### 1.1 Besplatne rezervacije (admin panel) — implementirano
+
+| Ruta | Namena |
+|------|--------|
+| `GET /admin/besplatne-rezervacije` | `panel_admin.free-reservations` — forma (korak kao gost + polja za snapshot). |
+| `POST /admin/besplatne-rezervacije` | `panel_admin.free-reservations.store` — kreiranje. |
+
+- **Kontroler:** `App\Http\Controllers\AdminPanel\FreeReservationController`; **validacija:** `AdminFreeReservationRequest`.
+- **Podaci stranice / slotovi:** `ReservationBookingPageData::forAdminPanel()` — isti `buildSlotPayload` / `FreeReservationRules` kao gost; UI jezik fiksno **cg** (`App::setLocale('cg')` u kontroleru).
+- **Bez `temp_data`:** `App\Services\AdminPanel\FreeReservation\AdminDirectFreeReservationService` u transakciji zaključava `daily_parking_data` po `whereDate` + `time_slot_id`, proverava `!is_blocked` i `availableCapacity() >= 1`, kreira `Reservation` (`status=free`, `created_by_admin=true`, `user_id=null`, `preferred_locale=cg`, `invoice_amount` preko `ReservationInvoiceAmount`), **increment `reserved`** po jedinstvenom slotu (isti ID jednom), zatim `SendFreeReservationConfirmationJob`.
+- **Worklist:** `BlockZoneWorklistService::onReservationCreated($reservation, null)` ako postoji red po istom `merchant_transaction_id` (retko za novi UUID).
+- **Konflikt termina:** `AdminFreeReservationSlotsUnavailableException` → redirect na istu stranu sa query parametrima za `name`, `country`, `license_plate`, `email`, `vehicle_type_id` (bez datuma/termina) + flash `error`.
+- **Uspeh:** redirect na praznu stranu + flash `status`; forma bez starog unosa.
+
+**`created_by_admin`:** u ovom toku uvek `true`; ostali tokovi i dalje `false` (v. §2 ispod).
 
 ---
 
@@ -48,11 +91,13 @@ Rute (admin panel):
 - `POST /admin/blokiranje/dan/apply` (`panel_admin.blocking.unblock.apply`)
 - `GET|POST /admin/blokiranje/worklist/{row}/prilagodi` (prilagođavanje rezervacije)
 
-**`reservations.created_by_admin`:** boolean, default `false` (signal za budući modul „Besplatne rezervacije“ / admin-kreirane free rezervacije). Postojeći tokovi kreiranja rezervacije eksplicitno postavljaju `false`. **Migracija:** `2026_04_11_120000_add_created_by_admin_to_reservations_table.php`.
+**`reservations.created_by_admin`:** boolean, default `false`. **`true`** samo za admin panel **Besplatne rezervacije** (`AdminDirectFreeReservationService`). Ostali tokovi eksplicitno postavljaju `false`. **Migracija:** `2026_04_11_120000_add_created_by_admin_to_reservations_table.php`.
 
 **Prilagođavanje u blok zoni:** UI datum koristi prefiltar dana (minimum dva teorijski slobodna mesta tog dana — **nije** konačna garancija). Odlučujuća provera novih slotova (`!is_blocked`, `pending=0`, kapacitet; isti slot ID jednom) radi se **posle** `lockForUpdate` na relevantnim `daily_parking_data` redovima (`BlockingController` + `BlockReservationAdjustmentValidator`). Ako finalna validacija padne, nema delimičnih izmena. Posle uspešnog `Primeni` (blok/deblok) ili prilagođavanja redirect nosi `_fresh=timestamp` radi osvežavanja prikaza (bez auto-refresh tokom rada).
 
-**Testovi (izbor):** `tests/Feature/AdminPanel/BlockReservationHardeningTest.php` (default kolone, post-lock odbijanje, `_fresh` na Primeni).
+**Upit po datumu:** u modulu blokiranja/prilagođavanja, učitavanje i `lockForUpdate` nad `daily_parking_data` koristi **`whereDate('date', …)`** (ne striktno `where('date', …)`), da se datum uvek poklapa sa vrednošću u bazi i na SQLite-u.
+
+**Testovi (izbor):** `tests/Feature/AdminPanel/AdminPanelAuthTest.php` (guard `panel_admin` vs `web`, 403, logout). `tests/Feature/AdminPanel/BlockReservationHardeningTest.php` (default kolone, post-lock odbijanje, blokiran novi slot bez delimičnih izmena, uspešan adjust + `_fresh`, deblok `_fresh`). `tests/Feature/AdminPanel/AdminWarningsDashboardTest.php` (dashboard nedostupni/blokirani). `tests/Feature/AdminPanel/AdminPanelFreeReservationTest.php` (besplatne rezervacije).
 
 ---
 

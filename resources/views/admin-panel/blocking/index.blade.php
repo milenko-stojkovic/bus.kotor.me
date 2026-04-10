@@ -24,7 +24,7 @@
                                 <div class="font-medium text-gray-900">
                                     {{ $fmtDate($day['date']) }}
                                     @if ($day['is_full_day'])
-                                        <span class="text-gray-600">— blokiran ceo dan</span>
+                                        <span class="text-gray-600">— blokiran</span>
                                     @endif
                                 </div>
                                 @if (! $day['is_full_day'])

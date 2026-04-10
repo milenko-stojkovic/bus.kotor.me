@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\ReservationActionController;
 use App\Http\Controllers\Admin\ReservationListController;
 use App\Http\Controllers\AdminPanel\AuthController as AdminPanelAuthController;
 use App\Http\Controllers\AdminPanel\BlockingController as AdminPanelBlockingController;
+use App\Http\Controllers\AdminPanel\FreeReservationController as AdminPanelFreeReservationController;
 use App\Http\Controllers\AdminPanel\WarningsController as AdminPanelWarningsController;
 use App\Http\Controllers\Control\ControlAuthController;
 use App\Http\Controllers\Control\ControlDashboardController;
@@ -39,11 +40,8 @@ Route::prefix('admin')->name('panel_admin.')->group(function () {
         Route::get('blokiranje/worklist/{row}/prilagodi', [AdminPanelBlockingController::class, 'adjust'])->name('blocking.worklist.adjust');
         Route::post('blokiranje/worklist/{row}/prilagodi', [AdminPanelBlockingController::class, 'applyAdjust'])->name('blocking.worklist.adjust.apply');
 
-        Route::view('besplatne-rezervacije', 'admin-panel.placeholder', [
-            'navActive' => 'free-reservations',
-            'title' => 'Besplatne rezervacije',
-            'lead' => 'Uskoro.',
-        ])->name('free-reservations');
+        Route::get('besplatne-rezervacije', [AdminPanelFreeReservationController::class, 'create'])->name('free-reservations');
+        Route::post('besplatne-rezervacije', [AdminPanelFreeReservationController::class, 'store'])->name('free-reservations.store');
 
         Route::view('rezervacije', 'admin-panel.placeholder', [
             'navActive' => 'reservations',

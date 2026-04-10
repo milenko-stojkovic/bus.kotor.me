@@ -7,6 +7,7 @@ use App\Models\DailyParkingData;
 use App\Models\ListOfTimeSlot;
 use App\Models\Reservation;
 use App\Models\TempData;
+use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -34,7 +35,7 @@ class BlockingService
 
         DB::transaction(function () use ($date, $slotIds): void {
             $daily = DailyParkingData::query()
-                ->where('date', $date)
+                ->whereDate('date', $date)
                 ->whereIn('time_slot_id', $slotIds)
                 ->lockForUpdate()
                 ->get()
@@ -94,7 +95,7 @@ class BlockingService
         DB::transaction(function () use ($date, $slotIdsToUnblock): void {
             if ($slotIdsToUnblock !== []) {
                 DailyParkingData::query()
-                    ->where('date', $date)
+                    ->whereDate('date', $date)
                     ->whereIn('time_slot_id', $slotIdsToUnblock)
                     ->lockForUpdate()
                     ->update(['is_blocked' => false]);
@@ -109,7 +110,7 @@ class BlockingService
             }
 
             $blockedBySlot = DailyParkingData::query()
-                ->where('date', $date)
+                ->whereDate('date', $date)
                 ->where('is_blocked', true)
                 ->get()
                 ->keyBy('time_slot_id');
@@ -210,19 +211,23 @@ class BlockingService
     }
 
     /**
-     * @return array<int, array{date:string, is_full_day:bool, ranges:list<string>, slot_ids:list<int>}>
+     * Blokirani termini: samo redovi sa `is_blocked`. Datumi iz postojećih redova u tabeli (od danas nadalje).
+     *
+     * @return list<array{date:string, is_full_day:bool, ranges:list<string>, slot_ids:list<int>}>
      */
-    public function blockedDaySummaries(int $daysAhead = 90): array
+    public function blockedDaySummaries(): array
     {
-        $from = now()->toDateString();
-        $to = now()->addDays($daysAhead)->toDateString();
+        $orderedSlots = $this->allSlots();
+        if ($orderedSlots->isEmpty()) {
+            return [];
+        }
 
-        $allSlots = $this->allSlots()->keyBy('id');
-        $slotCount = $allSlots->count();
+        $builder = new DaySlotRangeSummaryBuilder;
+        $today = now()->toDateString();
 
         $blocked = DailyParkingData::query()
-            ->whereBetween('date', [$from, $to])
             ->where('is_blocked', true)
+            ->whereDate('date', '>=', $today)
             ->orderBy('date')
             ->orderBy('time_slot_id')
             ->get()
@@ -230,14 +235,69 @@ class BlockingService
 
         $out = [];
         foreach ($blocked as $date => $rows) {
-            $slotIds = $rows->pluck('time_slot_id')->map(fn ($v) => (int) $v)->values()->all();
-            $isFull = $slotCount > 0 && count($slotIds) >= $slotCount;
-            $ranges = $isFull ? [] : $this->mergeConsecutiveSlotRanges($slotIds, $allSlots);
+            $slotIds = $rows->pluck('time_slot_id')->map(fn ($v) => (int) $v)->unique()->values()->all();
+            $summary = $builder->summarize($orderedSlots, $slotIds);
             $out[] = [
                 'date' => $date,
-                'is_full_day' => $isFull,
-                'ranges' => $ranges,
+                'is_full_day' => $summary['is_full_day'],
+                'ranges' => $summary['ranges'],
                 'slot_ids' => $slotIds,
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Termini koji se ne mogu kupiti: ista provera kao pri atomic claim-u u checkout-u
+     * ({@see \App\Http\Controllers\CheckoutController::store}): nema reda, `is_blocked`, ili `availableCapacity() < 1`.
+     * Uključuje i blokirane. Samo datumi koji već postoje u `daily_parking_data` (od danas nadalje).
+     *
+     * @return list<array{date:string, is_full_day:bool, ranges:list<string>}>
+     */
+    public function unavailableForPurchaseDaySummaries(): array
+    {
+        $orderedSlots = $this->allSlots();
+        if ($orderedSlots->isEmpty()) {
+            return [];
+        }
+
+        $builder = new DaySlotRangeSummaryBuilder;
+        $today = now()->toDateString();
+
+        $dates = DailyParkingData::query()
+            ->whereDate('date', '>=', $today)
+            ->distinct()
+            ->orderBy('date')
+            ->pluck('date')
+            ->map(fn ($d) => Carbon::parse($d)->toDateString())
+            ->values()
+            ->all();
+
+        $out = [];
+        foreach ($dates as $dateStr) {
+            $dailyBySlot = DailyParkingData::query()
+                ->whereDate('date', $dateStr)
+                ->get()
+                ->keyBy('time_slot_id');
+
+            $unavailableIds = [];
+            foreach ($orderedSlots as $slot) {
+                $daily = $dailyBySlot->get($slot->id);
+                if ($daily === null || $daily->is_blocked || $daily->availableCapacity() < 1) {
+                    $unavailableIds[] = $slot->id;
+                }
+            }
+
+            if ($unavailableIds === []) {
+                continue;
+            }
+
+            $summary = $builder->summarize($orderedSlots, $unavailableIds);
+            $out[] = [
+                'date' => $dateStr,
+                'is_full_day' => $summary['is_full_day'],
+                'ranges' => $summary['ranges'],
             ];
         }
 
@@ -278,49 +338,6 @@ class BlockingService
         }
 
         return $eligible;
-    }
-
-    /**
-     * @param  list<int>  $slotIds
-     * @param  Collection<int, ListOfTimeSlot>  $slotsById
-     * @return list<string>
-     */
-    private function mergeConsecutiveSlotRanges(array $slotIds, Collection $slotsById): array
-    {
-        sort($slotIds);
-        $ranges = [];
-        $start = null;
-        $prev = null;
-        foreach ($slotIds as $id) {
-            if ($start === null) {
-                $start = $id;
-                $prev = $id;
-                continue;
-            }
-            if ($id === $prev + 1) {
-                $prev = $id;
-                continue;
-            }
-            $ranges[] = $this->formatRange($start, $prev, $slotsById);
-            $start = $id;
-            $prev = $id;
-        }
-        if ($start !== null && $prev !== null) {
-            $ranges[] = $this->formatRange($start, $prev, $slotsById);
-        }
-
-        return $ranges;
-    }
-
-    private function formatRange(int $startId, int $endId, Collection $slotsById): string
-    {
-        $start = $slotsById->get($startId)?->time_slot ?? ('#'.$startId);
-        $end = $slotsById->get($endId)?->time_slot ?? ('#'.$endId);
-        if ($startId === $endId) {
-            return $start;
-        }
-
-        return $start.' … '.$end;
     }
 }
 

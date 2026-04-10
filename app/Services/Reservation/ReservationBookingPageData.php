@@ -71,6 +71,46 @@ final class ReservationBookingPageData
     }
 
     /**
+     * Admin panel — uvek cg; isti booking engine kao gost (kalendar 0–90 dana, ista pravila slotova).
+     * GET query + old() (nakon redirecta) za repopulaciju polja.
+     *
+     * @return array<string, mixed>
+     */
+    public function forAdminPanel(Request $request): array
+    {
+        $locale = 'cg';
+
+        $dateStr = (string) old('reservation_date', $request->query('reservation_date', ''));
+        $selectedDate = $this->parseAllowedDate($dateStr);
+
+        $arrivalId = $this->asIntOrNull(old('drop_off_time_slot_id', $request->query('drop_off_time_slot_id')));
+        $departureId = $this->asIntOrNull(old('pick_up_time_slot_id', $request->query('pick_up_time_slot_id')));
+
+        $slotPayload = $this->buildSlotPayload($selectedDate, $arrivalId, $departureId, $locale);
+        $departureId = $slotPayload['effective_departure_id'];
+
+        $vehicleTypes = VehicleType::query()
+            ->with('translations')
+            ->orderBy('id')
+            ->get();
+
+        $countries = (array) config('countries', []);
+
+        unset($slotPayload['effective_departure_id']);
+
+        return array_merge($slotPayload, [
+            'selected_date' => $selectedDate?->toDateString(),
+            'arrival_id' => $arrivalId,
+            'departure_id' => $departureId,
+            'vehicle_types' => $vehicleTypes,
+            'countries' => $countries,
+            'booking_mode' => 'admin_free',
+            'vehicles' => collect(),
+            'vehicle_id' => null,
+        ]);
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function forAuthenticated(Request $request, User $user): array
