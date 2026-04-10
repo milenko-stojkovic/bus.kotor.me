@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Contracts\PaymentService;
+use App\Contracts\PaymentSessionResult;
 use App\Exceptions\NoCapacityException;
 use App\Helpers\LocaleHelper;
 use App\Http\Requests\CheckoutReservationRequest;
@@ -14,6 +15,7 @@ use App\Models\Vehicle;
 use App\Services\Payment\PaymentSuccessHandler;
 use App\Services\Reservation\FreeReservationRules;
 use App\Support\CheckoutResultFlash;
+use App\Support\UiText;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
@@ -72,6 +74,14 @@ class CheckoutController extends Controller
             if ($session->success && $session->paymentUrl) {
                 return redirect()->away($session->paymentUrl);
             }
+
+            Log::channel('payments')->warning('checkout_create_session_failed', [
+                'stage' => 'checkout_existing_pending',
+                'merchant_transaction_id' => $existingBySlot->merchant_transaction_id,
+                'temp_data_id' => $existingBySlot->id,
+            ]);
+
+            return $this->createSessionFailedResponse($request, $session);
         }
 
         // merchant_transaction_id i retry_token uvek generiše backend (pre job-a i redirect-a)
@@ -167,6 +177,14 @@ class CheckoutController extends Controller
                 if ($session->success && $session->paymentUrl) {
                     return redirect()->away($session->paymentUrl);
                 }
+
+                Log::channel('payments')->warning('checkout_create_session_failed', [
+                    'stage' => 'checkout_after_unique_violation',
+                    'merchant_transaction_id' => $existingByMtid->merchant_transaction_id,
+                    'temp_data_id' => $existingByMtid->id,
+                ]);
+
+                return $this->createSessionFailedResponse($request, $session);
             }
             throw $e;
         }
@@ -192,7 +210,22 @@ class CheckoutController extends Controller
             ->where('date', $date)
             ->whereIn('time_slot_id', $slotIds)
             ->decrement('pending');
-        $message = $session->errorMessage ?? 'Payment temporarily unavailable.';
+
+        Log::channel('payments')->warning('checkout_create_session_failed', [
+            'stage' => 'checkout_after_temp_created',
+            'merchant_transaction_id' => $temp->merchant_transaction_id,
+            'temp_data_id' => $temp->id,
+        ]);
+
+        return $this->createSessionFailedResponse($request, $session);
+    }
+
+    private function createSessionFailedResponse(
+        CheckoutReservationRequest $request,
+        ?PaymentSessionResult $session = null,
+    ): JsonResponse|Response {
+        $message = $session?->errorMessage
+            ?? UiText::t('payment', 'payment_processing_issue', 'Payment temporarily unavailable.');
 
         return $request->expectsJson()
             ? response()->json(['message' => $message], Response::HTTP_SERVICE_UNAVAILABLE)

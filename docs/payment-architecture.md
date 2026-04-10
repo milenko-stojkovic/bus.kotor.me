@@ -34,8 +34,19 @@ Nikad kreiranje rezervacije ili fiskalizacija u HTTP request-u niti u samoj Arti
 ## Ako je gateway spor ili nedostupan
 
 - Controller **ne kreira** rezervaciju.
-- Controller vraća **"payment temporarily unavailable"** (503).
-- Nema fallback sync plaćanja – korisnik može ponovo pokušati kasnije.
+- Controller vraća **503** sa **generičkom** porukom iz **`UiText`** (grupa `payment`, ključ zavisi od klasifikacije) — **nikad** sirovi tekst banke u odgovoru korisniku.
+- Nakon kreiranja `temp_data` i neuspelog `createSession`: **decrement `pending`** na zauzetim slotovima (hold se vraća). Nema dispatch-a payment jobova.
+- Ako postoji **postojeći pending** za iste slotove/korisnika ili **idempotentna grana** posle unique constraint-a, a `createSession` padne — odmah se vraća **503** **bez** ponovnog ulaska u transakciju kreiranja novog `temp_data` (v. `CheckoutController`).
+
+### Bankart `createSession` (`RealPaymentProvider`)
+
+- **Sync debit init** (HTTP POST); detalji u `config/http-outbound.php` (`bankart.create_session`).
+- **Log kanal `payments` (strukturisano):**
+  - `bankart_create_session_request` — prije HTTP poziva: `merchant_transaction_id`, `temp_data_id`, `amount`, `currency`, `stage` = `create_session`.
+  - `bankart_create_session_response` — uspjeh: `http_status`, `outcome` = `success`, isti identifikatori + polja iz odgovora banke (npr. `uuid`, `purchaseId`) **bez** tajni.
+  - `bankart_create_session_failed` — neuspjeh (config, encode, potpis, mreža, ne-JSON, odbijen odgovor): `reason`, `http_status` kad postoji, `response_body_preview` (skraćeno), `bank_code` / `bank_message_truncated` kad postoje, `resolution_reason` nakon klasifikacije.
+- **`ErrorClassifier`** na odbijenom JSON odgovoru (npr. poruke tipa „Enter lesser amount“) mapira **`bank_invalid_amount`** → korisniku **`payment_processing_issue`**; ostale Bankart greške kao i u callback-u. **`Error classified`** log prima dodatni kontekst npr. `stage` = `create_session`.
+- U **callback** grani, **`PaymentCallbackJob`** šalje u klasifikator kontekst **`stage` = `payment_callback`** (samo logiranje).
 
 ---
 
@@ -48,7 +59,7 @@ Controller **samo**:
 3. **Kreira** zapis u **temp_data** sa **status = pending**.
 4. **Poziva** **PaymentService::createSession($temp)** (sync) – provider iza interfejsa.
 5. Ako **payment_url** → **redirect** na payment_url.
-6. Inače → **503** sa porukom (gateway spor/nedostupan).
+6. Inače → **503** sa **bezbednom** porukom (`UiText` / `ErrorClassifier`), ne sirovim bankarskim tekstom.
 
 Controller **nikad**:
 

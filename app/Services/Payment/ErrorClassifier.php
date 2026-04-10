@@ -8,9 +8,10 @@ class ErrorClassifier
 {
     /**
      * @param  array<string, mixed>|null  $payload
+     * @param  array<string, mixed>  $logContext  Dodatna polja za `payments` log (npr. `stage` => `create_session`).
      * @return array{resolution_reason: string, category: string, notify_admin: bool, user_message_key: string, retryable: bool}
      */
-    public function classify(string $source, string|int|null $raw_code, ?string $raw_message = null, ?array $payload = null): array
+    public function classify(string $source, string|int|null $raw_code, ?string $raw_message = null, ?array $payload = null, array $logContext = []): array
     {
         $code = $this->normalizeCode($raw_code);
         $reason = $this->normalizeMessage($raw_message);
@@ -25,7 +26,7 @@ class ErrorClassifier
         // Strict mapping: user-facing messages must NOT depend on raw provider message.
         $result['user_message_key'] = $this->userMessageKeyForResolutionReason($result['resolution_reason']);
 
-        Log::channel('payments')->info('Error classified', [
+        Log::channel('payments')->info('Error classified', array_merge([
             'source' => $source,
             'raw_code' => $raw_code,
             'raw_message' => $this->truncate($reason, 200),
@@ -38,7 +39,7 @@ class ErrorClassifier
                 ? ($payload['merchant_transaction_id'] ?? $payload['merchantTransactionId'] ?? null)
                 : null,
             'reservation_id' => is_array($payload) ? ($payload['reservation_id'] ?? null) : null,
-        ]);
+        ], $logContext));
 
         return $result;
     }
@@ -48,7 +49,7 @@ class ErrorClassifier
      */
     public function userMessageKey(string $source, string|int|null $raw_code, ?string $raw_message = null, ?array $payload = null): string
     {
-        return $this->classify($source, $raw_code, $raw_message, $payload)['user_message_key'];
+        return $this->classify($source, $raw_code, $raw_message, $payload, [])['user_message_key'];
     }
 
     /**
@@ -90,6 +91,11 @@ class ErrorClassifier
 
         if ($code === 2006 || $adapterCode === 51) {
             return $this->userRetryWithCategory('insufficient_funds', 'insufficient_funds', 'user_payment');
+        }
+
+        // Amount / validation from gateway (e.g. debit init "Enter lesser amount") — backend amount; never show raw bank text to users.
+        if ($this->isBankartAmountOrLimitMessage($msg)) {
+            return $this->systemNoRetry('bank_invalid_amount', 'payment_processing_issue');
         }
 
         if ($code === 2003) {
@@ -287,6 +293,7 @@ class ErrorClassifier
             'user_cancelled' => 'payment_cancelled',
             'insufficient_funds' => 'payment_insufficient_funds',
             'authorization_declined' => 'payment_declined',
+            'bank_invalid_amount' => 'payment_processing_issue',
             'card_validation_error' => 'payment_card_check',
             '3ds_failed' => 'payment_authentication_failed',
             'system_error' => 'payment_processing_issue',
@@ -356,6 +363,22 @@ class ErrorClassifier
         $raw = strtolower(trim($raw));
 
         return $raw === '' ? null : $raw;
+    }
+
+    private function isBankartAmountOrLimitMessage(string $msg): bool
+    {
+        if ($msg === '') {
+            return false;
+        }
+
+        return str_contains($msg, 'lesser amount')
+            || str_contains($msg, 'enter lesser')
+            || str_contains($msg, 'invalid amount')
+            || str_contains($msg, 'amount exceeds')
+            || str_contains($msg, 'amount too high')
+            || str_contains($msg, 'maximum amount')
+            || str_contains($msg, 'minimum amount')
+            || str_contains($msg, 'amount not allowed');
     }
 }
 

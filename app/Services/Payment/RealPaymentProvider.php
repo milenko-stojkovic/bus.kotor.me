@@ -8,10 +8,11 @@ use App\Contracts\PaymentSessionResult;
 use App\Models\TempData;
 use App\Support\BankartSignature;
 use App\Support\HttpOutboundConfig;
+use App\Support\UiText;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Throwable;
 use RuntimeException;
+use Throwable;
 
 class RealPaymentProvider implements PaymentService
 {
@@ -27,8 +28,11 @@ class RealPaymentProvider implements PaymentService
         $sendCustomer = (bool) ($cfg['send_customer'] ?? true);
 
         if ($apiBase === '' || $apiKey === '' || $username === '' || $password === '' || ($signatureEnabled && $sharedSecret === '')) {
-            Log::channel('payments')->warning('Bankart init missing configuration', [
+            Log::channel('payments')->warning('bankart_create_session_failed', [
+                'stage' => 'create_session',
+                'reason' => 'missing_configuration',
                 'merchant_transaction_id' => $tempData->merchant_transaction_id,
+                'temp_data_id' => $tempData->id,
                 'has_api_url' => $apiBase !== '',
                 'has_api_key' => $apiKey !== '',
                 'has_username' => $username !== '',
@@ -36,17 +40,36 @@ class RealPaymentProvider implements PaymentService
                 'has_shared_secret' => $sharedSecret !== '',
                 'signature_enabled' => $signatureEnabled,
             ]);
-            return PaymentSessionResult::unavailable('Real payment gateway not configured.');
+
+            return PaymentSessionResult::unavailable(
+                UiText::t('payment', 'payment_processing_issue', 'Payment temporarily unavailable.'),
+            );
         }
 
         $amount = $this->resolveAmount($tempData);
         if ($amount === null) {
-            Log::channel('payments')->warning('Bankart init missing amount source', [
+            Log::channel('payments')->warning('bankart_create_session_failed', [
+                'stage' => 'create_session',
+                'reason' => 'missing_amount',
                 'merchant_transaction_id' => $tempData->merchant_transaction_id,
+                'temp_data_id' => $tempData->id,
                 'vehicle_type_id' => $tempData->vehicle_type_id,
             ]);
-            return PaymentSessionResult::unavailable('Payment amount unavailable.');
+
+            return PaymentSessionResult::unavailable(
+                UiText::t('payment', 'payment_processing_issue', 'Payment temporarily unavailable.'),
+            );
         }
+
+        $currency = 'EUR';
+
+        Log::channel('payments')->info('bankart_create_session_request', [
+            'stage' => 'create_session',
+            'merchant_transaction_id' => $tempData->merchant_transaction_id,
+            'temp_data_id' => $tempData->id,
+            'amount' => $amount,
+            'currency' => $currency,
+        ]);
 
         $path = '/transaction/'.$apiKey.'/debit';
         $url = $apiBase.$path;
@@ -57,7 +80,7 @@ class RealPaymentProvider implements PaymentService
         $payload = [
             'merchantTransactionId' => $tempData->merchant_transaction_id,
             'amount' => $amount,
-            'currency' => 'EUR',
+            'currency' => $currency,
             'successUrl' => route('payment.return', ['merchant_transaction_id' => $tempData->merchant_transaction_id, 'bank_result' => 'success']),
             'errorUrl' => route('payment.return', ['merchant_transaction_id' => $tempData->merchant_transaction_id, 'bank_result' => 'error']),
             'cancelUrl' => route('payment.return', ['merchant_transaction_id' => $tempData->merchant_transaction_id, 'bank_result' => 'cancel']),
@@ -75,33 +98,42 @@ class RealPaymentProvider implements PaymentService
 
         $rawBody = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         if ($rawBody === false) {
-            Log::channel('payments')->error('Bankart init payload encoding failed', [
+            Log::channel('payments')->error('bankart_create_session_failed', [
+                'stage' => 'create_session',
+                'reason' => 'payload_encode_failed',
                 'merchant_transaction_id' => $tempData->merchant_transaction_id,
+                'temp_data_id' => $tempData->id,
+                'amount' => $amount,
+                'currency' => $currency,
+                'http_status' => null,
+                'response_body_preview' => null,
             ]);
-            return PaymentSessionResult::unavailable('Payment payload encoding failed.');
+
+            return PaymentSessionResult::unavailable(
+                UiText::t('payment', 'payment_processing_issue', 'Payment temporarily unavailable.'),
+            );
         }
 
         $signature = null;
         if ($signatureEnabled) {
             $signature = BankartSignature::sign('POST', $rawBody, $contentType, $date, $signaturePath, $sharedSecret);
             if ($signature === null) {
-                Log::channel('payments')->error('Bankart init signing failed', [
+                Log::channel('payments')->error('bankart_create_session_failed', [
+                    'stage' => 'create_session',
+                    'reason' => 'signing_failed',
                     'merchant_transaction_id' => $tempData->merchant_transaction_id,
+                    'temp_data_id' => $tempData->id,
+                    'amount' => $amount,
+                    'currency' => $currency,
+                    'http_status' => null,
+                    'response_body_preview' => null,
                 ]);
-                return PaymentSessionResult::unavailable('Payment signing failed.');
+
+                return PaymentSessionResult::unavailable(
+                    UiText::t('payment', 'payment_processing_issue', 'Payment temporarily unavailable.'),
+                );
             }
         }
-
-        Log::channel('payments')->info('Bankart init request start', [
-            'merchant_transaction_id' => $tempData->merchant_transaction_id,
-            'url' => $url,
-            'path' => $path,
-            'signature_path' => $signaturePath,
-            'amount' => $amount,
-            'currency' => 'EUR',
-            'signature_enabled' => $signatureEnabled,
-            'send_customer' => $sendCustomer,
-        ]);
 
         $headers = [
             'Accept' => 'application/json',
@@ -122,48 +154,101 @@ class RealPaymentProvider implements PaymentService
                 ->timeout($httpCfg['timeout'])
                 ->post($url);
         } catch (Throwable $e) {
-            Log::channel('payments')->error('Bankart init request failed', [
+            Log::channel('payments')->error('bankart_create_session_failed', [
+                'stage' => 'create_session',
+                'reason' => 'http_exception',
                 'merchant_transaction_id' => $tempData->merchant_transaction_id,
-                'message' => $e->getMessage(),
+                'temp_data_id' => $tempData->id,
+                'amount' => $amount,
+                'currency' => $currency,
+                'http_status' => null,
+                'exception_class' => $e::class,
+                'exception_message' => $e->getMessage(),
+                'response_body_preview' => null,
             ]);
-            return PaymentSessionResult::unavailable('Payment gateway unavailable.');
+
+            return PaymentSessionResult::unavailable(
+                UiText::t('payment', 'payment_processing_issue', 'Payment temporarily unavailable.'),
+            );
         }
 
+        $httpStatus = $response->status();
+        $bodyPreview = $this->truncateForLog($response->body());
         $data = $response->json();
         if (! is_array($data)) {
-            Log::channel('payments')->error('Bankart init invalid JSON response', [
+            Log::channel('payments')->error('bankart_create_session_failed', [
+                'stage' => 'create_session',
+                'reason' => 'invalid_json',
                 'merchant_transaction_id' => $tempData->merchant_transaction_id,
-                'status' => $response->status(),
+                'temp_data_id' => $tempData->id,
+                'amount' => $amount,
+                'currency' => $currency,
+                'http_status' => $httpStatus,
+                'response_body_preview' => $bodyPreview,
             ]);
-            return PaymentSessionResult::unavailable('Invalid payment gateway response.');
+
+            return PaymentSessionResult::unavailable(
+                UiText::t('payment', 'payment_processing_issue', 'Payment temporarily unavailable.'),
+            );
         }
 
         $redirectUrl = $data['redirectUrl'] ?? null;
         if ($response->successful() && is_string($redirectUrl) && $redirectUrl !== '') {
-            Log::channel('payments')->info('Bankart init request success', [
+            Log::channel('payments')->info('bankart_create_session_response', [
+                'stage' => 'create_session',
+                'outcome' => 'success',
                 'merchant_transaction_id' => $tempData->merchant_transaction_id,
-                'status' => $response->status(),
+                'temp_data_id' => $tempData->id,
+                'amount' => $amount,
+                'currency' => $currency,
+                'http_status' => $httpStatus,
                 'uuid' => $data['uuid'] ?? null,
                 'purchase_id' => $data['purchaseId'] ?? null,
                 'payment_method' => $data['paymentMethod'] ?? null,
                 'return_type' => $data['returnType'] ?? null,
             ]);
+
             return PaymentSessionResult::ok($redirectUrl);
         }
 
-        $errorMessage = $data['message']
-            ?? $data['error']
-            ?? $response->reason()
-            ?? 'Payment gateway rejected create session.';
-
-        Log::channel('payments')->warning('Bankart init request failed response', [
+        $rawCode = $data['code'] ?? $data['errorCode'] ?? null;
+        $rawMessage = $data['message'] ?? $data['error'] ?? $response->reason();
+        $payloadForClassifier = array_merge($data, [
+            'merchantTransactionId' => $tempData->merchant_transaction_id,
             'merchant_transaction_id' => $tempData->merchant_transaction_id,
-            'status' => $response->status(),
-            'has_redirect_url' => is_string($redirectUrl) && $redirectUrl !== '',
-            'error' => $errorMessage,
         ]);
 
-        return PaymentSessionResult::unavailable((string) $errorMessage);
+        $classified = app(ErrorClassifier::class)->classify(
+            'bankart',
+            is_scalar($rawCode) ? $rawCode : null,
+            is_string($rawMessage) ? $rawMessage : null,
+            $payloadForClassifier,
+            [
+                'stage' => 'create_session',
+                'http_status' => $httpStatus,
+                'amount' => $amount,
+                'currency' => $currency,
+                'temp_data_id' => $tempData->id,
+            ],
+        );
+
+        Log::channel('payments')->warning('bankart_create_session_failed', [
+            'stage' => 'create_session',
+            'reason' => 'gateway_rejected',
+            'merchant_transaction_id' => $tempData->merchant_transaction_id,
+            'temp_data_id' => $tempData->id,
+            'amount' => $amount,
+            'currency' => $currency,
+            'http_status' => $httpStatus,
+            'response_body_preview' => $this->truncateForLog((string) json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)),
+            'bank_code' => $rawCode,
+            'bank_message_truncated' => $this->truncateForLog(is_string($rawMessage) ? $rawMessage : null, 500),
+            'resolution_reason' => $classified['resolution_reason'],
+        ]);
+
+        $userLine = UiText::t('payment', $classified['user_message_key'], 'Payment temporarily unavailable.');
+
+        return PaymentSessionResult::unavailable($userLine);
     }
 
     public function pay(TempData $tempData): PaymentResult
@@ -184,4 +269,15 @@ class RealPaymentProvider implements PaymentService
         return number_format((float) $price, 2, '.', '');
     }
 
+    private function truncateForLog(?string $raw, int $max = 4000): ?string
+    {
+        if ($raw === null) {
+            return null;
+        }
+        if (strlen($raw) <= $max) {
+            return $raw;
+        }
+
+        return substr($raw, 0, $max).'…[truncated]';
+    }
 }

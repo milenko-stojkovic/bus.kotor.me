@@ -41,6 +41,9 @@ Strukturisani ključevi (gde je moguće: **`merchant_transaction_id`** + **`rese
 - `invoice_email_sent` / `invoice_email_send_failed` / `invoice_email_job_exhausted`
 - `free_reservation_email_sent` / `free_reservation_email_send_failed` / `free_reservation_email_job_exhausted`
 - `payment_callback_job_exhausted`, `payment_job_exhausted`, `process_reservation_after_payment_job_exhausted`
+- **Bankart init (create session):** `bankart_create_session_request`, `bankart_create_session_response` (uspjeh), `bankart_create_session_failed` (odbijen odgovor, mreža, config, itd.) — uvek sa `merchant_transaction_id` / `amount` / `currency` gde ima smisla; telo odgovora samo kao skraćeni preview.
+- **`checkout_create_session_failed`** — `createSession` pao u checkout-u (`stage`: postojeći pending, posle unique violation, ili posle novog `temp_data` pre decrement-a pending-a).
+- **`Error classified`** — opciono polje **`stage`**: `create_session` (debit init) ili `payment_callback` (job); v. **`ErrorClassifier`** i `resolution_reason` (npr. **`bank_invalid_amount`** za amount/limit poruke banke).
 - `payment_success_after_canceled_ignored` — bank **SUCCESS** stigao dok je **`temp_data` već `canceled`**; status se **ne** menja u `late_success` (`merchant_transaction_id`, `temp_data_id`); zatim **admin email** istim putem kao fiskal alerti (**`AdminFiscalizationAlertService`**, subject *Contradictory bank outcome…*). Uspeh slanja se i dalje loguje kao **`Admin fiscalization email sent`** sa `alert_type` = `payment_success_after_canceled`.
 - `queue_worker_booted` — jednom po PHP procesu queue workera u **production** (event `WorkerStarting`)
 - `production_fake_driver_active` — fake bank/fiscal u production (throttle keš)

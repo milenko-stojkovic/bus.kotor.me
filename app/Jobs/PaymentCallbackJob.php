@@ -163,7 +163,13 @@ class PaymentCallbackJob implements ShouldQueue, ShouldBeUnique
                 ?? ($this->payload['message'] ?? ($this->payload['errorMessage'] ?? null))
                 ?? ($this->rawPayload['message'] ?? ($this->rawPayload['errorMessage'] ?? null));
 
-            $classified = app(ErrorClassifier::class)->classify('bankart', $rawCode, $rawMessage, is_array($this->rawPayload) ? $this->rawPayload : null);
+            $classified = app(ErrorClassifier::class)->classify(
+                'bankart',
+                $rawCode,
+                $rawMessage,
+                is_array($this->rawPayload) ? $this->rawPayload : null,
+                ['stage' => 'payment_callback'],
+            );
 
             $temp->update([
                 'status' => TempData::STATUS_CANCELED,
