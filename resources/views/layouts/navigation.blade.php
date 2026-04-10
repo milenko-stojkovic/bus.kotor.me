@@ -31,7 +31,7 @@
                         {{ $p('nav_statistics', 'Statistic') }}
                     </x-nav-link>
                     @if(Auth::user()?->isAdmin())
-                        <x-nav-link :href="route('admin.reservations.index')" :active="request()->routeIs('admin.*')">
+                        <x-nav-link :href="route('staff.reservations.index')" :active="request()->routeIs('staff.*')">
                             Admin
                         </x-nav-link>
                     @endif
@@ -101,7 +101,7 @@
                 {{ $p('nav_statistics', 'Statistic') }}
             </x-responsive-nav-link>
             @if(Auth::user()?->isAdmin())
-                <x-responsive-nav-link :href="route('admin.reservations.index')" :active="request()->routeIs('admin.*')">
+                <x-responsive-nav-link :href="route('staff.reservations.index')" :active="request()->routeIs('staff.*')">
                     Admin
                 </x-responsive-nav-link>
             @endif

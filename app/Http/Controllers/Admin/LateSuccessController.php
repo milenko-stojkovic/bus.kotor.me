@@ -91,6 +91,7 @@ class LateSuccessController extends Controller
                 'status' => 'paid',
                 'invoice_amount' => ReservationInvoiceAmount::snapshotForNewReservation('paid', $temp->vehicle_type_id),
                 'email_sent' => \App\Models\Reservation::EMAIL_NOT_SENT,
+                'created_by_admin' => false,
             ]);
 
             $from = $temp->status;

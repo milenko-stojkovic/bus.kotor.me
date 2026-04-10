@@ -1,6 +1,6 @@
 # Project TODO (otvoreno)
 
-**Poslednje ažuriranje:** 2026-04-10  
+**Poslednje ažuriranje:** 2026-04-11  
 
 Stavke su prioritetne grupe. Kada nešto **završiš**, premesti opis u `docs/project-done.md` i ukloni odavde.
 

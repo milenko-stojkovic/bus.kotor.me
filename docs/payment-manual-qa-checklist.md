@@ -54,11 +54,11 @@ Za staging QA:
   - `POST /api/fake-fiscalization`
   - `POST /api/efiscal/deposit`
   - `POST /api/efiscal/fiscalReceipt`
-- Admin late manual review:
-  - `GET /admin/late-success`
-  - `GET /admin/late-success/{id}`
-  - `POST /admin/late-success/{id}/force`
-  - `POST /admin/late-success/{id}/reject`
+- Admin late manual review (staff — `User` + `AdminMiddleware`):
+  - `GET /staff/late-success`
+  - `GET /staff/late-success/{id}`
+  - `POST /staff/late-success/{id}/force`
+  - `POST /staff/late-success/{id}/reject`
 
 ---
 
@@ -164,7 +164,7 @@ Napomena: za QA obavezno evidentirati da li u trenutnoj grani koda postoji autom
 |---|---|
 | Scenario | Admin force create |
 | Preconditions | `temp_data.status=late_manual_review`; admin pristup aktivan |
-| Steps | 1) `GET /admin/late-success` 2) Otvori detalje 3) `POST /admin/late-success/{id}/force` |
+| Steps | 1) `GET /staff/late-success` 2) Otvori detalje 3) `POST /staff/late-success/{id}/force` |
 | Expected DB state | Ako reservation ne postoji: kreira se `reservations` red; `temp_data.status=processed`; `resolution_reason=admin_forced` |
 | Expected UI | Success flash poruka |
 | Expected logs | State transition log sa razlogom admin force |
@@ -174,7 +174,7 @@ Napomena: za QA obavezno evidentirati da li u trenutnoj grani koda postoji autom
 |---|---|
 | Scenario | Admin reject |
 | Preconditions | `temp_data.status=late_manual_review` |
-| Steps | `POST /admin/late-success/{id}/reject` |
+| Steps | `POST /staff/late-success/{id}/reject` |
 | Expected DB state | `temp_data.status=late_rejected`; `resolution_reason=admin_rejected`; nema reda u `reservations` |
 | Expected UI | Success/info poruka o reject-u |
 | Expected logs | State transition ka `late_rejected` |

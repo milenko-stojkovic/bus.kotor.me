@@ -16,7 +16,7 @@
 
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6">
-                    <form method="get" action="{{ route('admin.late-success.index') }}" class="mb-6 grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+                    <form method="get" action="{{ route('staff.late-success.index') }}" class="mb-6 grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
                         <div>
                             <label for="date" class="block text-sm font-medium text-gray-700 mb-1">Datum</label>
                             <input id="date" name="date" type="date" value="{{ $filters['date'] }}"
@@ -44,7 +44,7 @@
                             <button type="submit" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700">
                                 Filtriraj
                             </button>
-                            <a href="{{ route('admin.late-success.index') }}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50">
+                            <a href="{{ route('staff.late-success.index') }}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50">
                                 Reset
                             </a>
                         </div>
@@ -69,7 +69,7 @@
                                         <td class="px-4 py-2 text-gray-900">{{ $row->status }}</td>
                                         <td class="px-4 py-2 text-gray-600">{{ $row->resolution_reason ?? '-' }}</td>
                                         <td class="px-4 py-2">
-                                            <a href="{{ route('admin.late-success.show', $row->id) }}" class="text-indigo-600 hover:text-indigo-800">Detalji</a>
+                                            <a href="{{ route('staff.late-success.show', $row->id) }}" class="text-indigo-600 hover:text-indigo-800">Detalji</a>
                                         </td>
                                     </tr>
                                 @empty

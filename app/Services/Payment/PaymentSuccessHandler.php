@@ -7,6 +7,7 @@ use App\Jobs\SendFreeReservationConfirmationJob;
 use App\Models\DailyParkingData;
 use App\Models\Reservation;
 use App\Models\TempData;
+use App\Services\AdminPanel\Blocking\BlockZoneWorklistService;
 use App\Support\QueueMode;
 use App\Support\ReservationInvoiceAmount;
 use Illuminate\Support\Facades\DB;
@@ -63,6 +64,7 @@ class PaymentSuccessHandler
                 'user_id' => $reservation->user_id,
                 'status' => $reservation->status,
             ]);
+            app(BlockZoneWorklistService::class)->onReservationCreated($reservation, $temp);
             $from = $temp->status;
             $temp->update([
                 'status' => TempData::STATUS_PROCESSED,
@@ -161,6 +163,7 @@ class PaymentSuccessHandler
             'status' => $status,
             'invoice_amount' => ReservationInvoiceAmount::snapshotForNewReservation($status, $temp->vehicle_type_id),
             'email_sent' => Reservation::EMAIL_NOT_SENT,
+            'created_by_admin' => false,
         ]);
     }
 }

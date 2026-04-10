@@ -17,6 +17,9 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\SetLocale::class,
         ]);
         $middleware->redirectGuestsTo(function (\Illuminate\Http\Request $request): string {
+            if ($request->is('admin') || $request->is('admin/*')) {
+                return route('panel_admin.login', absolute: false);
+            }
             if ($request->is('control') || $request->is('control/*')) {
                 return route('control.login', absolute: false);
             }
@@ -25,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
         });
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
+            'admin.panel' => \App\Http\Middleware\EnsureAdminPanelAccess::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

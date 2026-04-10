@@ -1,6 +1,6 @@
 # Konvencije projekta (bus.kotor.me)
 
-**Poslednje ažuriranje:** 2026-04-03  
+**Poslednje ažuriranje:** 2026-04-11  
 
 Za AI i ljude: držati se ovoga pri novim izmenama da ostane konzistentno.
 
@@ -123,6 +123,7 @@ Posle izmene `.env`: `.\laragon-artisan.ps1 config:clear` (ili ista PHP putanja 
 
 - **`temp_data`:** životni ciklus plaćanja i audit; ne brisati pri grešci bez operativnog pravila.
 - **`daily_parking_data`:** uvek paziti na **oba** slota (`drop_off_time_slot_id`, `pick_up_time_slot_id`); ako su isti ID, brojač jednom.
+- **`reservations.created_by_admin`:** boolean, default **`false`** (kolona u bazi; signal za buduća admin/free poslovna pravila — trenutno svi postojeći i standardni tokovi ostaju `false`). Blokiranje i prilagođavanje u glavnom admin panelu: post-lock validacija slotova, prefiltar datuma u UI, redirect sa query **`_fresh`** — v. **[admin-panel.md](./admin-panel.md)** §2.
 - **Idempotency:** ključ `merchant_transaction_id`.
 - **Korisnički ishod plaćanja / besplatnog checkout-a (flash):** session ključ **`checkout_banner`** — niz `level` (`success` | `info` | `error`), `title_key`, `message_key`, `group` (uglavnom **`checkout_result`**). Mapiranje ishoda: **`App\Support\CheckoutResultFlash`**; tekstovi u **`ui_translations`** grupi **`checkout_result`** (seed **`UiTranslationsSeeder`**). Plaćena rezervacija: **`paid_success_*`** (JIR gotov), **`paid_processing_*`** (plaćanje ok, fiskal/mejl još u obradi — npr. async queue), **`fiscal_delayed_*`** (nerešen **`post_fiscalization_data`**). Prikaz: **`resources/views/partials/checkout-result-banner.blade.php`** na **`guest.reserve`** i **`panel.reservations`**.
 - **Redirect posle završnog statusa:** **`PaymentReturnController`** za **`success` / `failed` / `late_success`** šalje korisnika na **`guest.reserve`** (gost) ili **`panel.reservations`** (ulogovan), sa odgovarajućim **`checkout_banner`**. **`GET /payment/return`** na ekranu zadržava samo **`pending`** (tekst + polling na **`/payment/result`**); layout: **`x-guest-layout`** ako nema sesije, **`x-app-layout`** ako je korisnik ulogovan (`resources/views/payment/return.blade.php` + **`payment/partials/return-pending-body.blade.php`**).

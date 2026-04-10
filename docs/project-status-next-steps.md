@@ -1,6 +1,6 @@
 # Project status — indeks
 
-**Poslednje ažuriranje:** 2026-04-10
+**Poslednje ažuriranje:** 2026-04-11
 
 Ovaj fajl je **kratak smerač**. Detalji su podeljeni da bi novi chat mogao da učita samo ono što treba.
 

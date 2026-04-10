@@ -1,6 +1,6 @@
 # Project DONE (urađeno)
 
-**Poslednje ažuriranje:** 2026-04-10  
+**Poslednje ažuriranje:** 2026-04-11  
 
 Hronološki najnovije na vrhu unutar svake sekcije. Pri zatvaranju zadatka dodaj red sa **datumom** (`YYYY-MM-DD`) i kratak opis; istu stavku ukloni iz `docs/project-todo.md`.
 
@@ -8,6 +8,7 @@ Hronološki najnovije na vrhu unutar svake sekcije. Pri zatvaranju zadatka dodaj
 
 ## 2026-04 — Agency panel, besplatan checkout, dokumentacija
 
+- **2026-04-11** — **Glavni admin panel + blokiranje:** rute pod `/admin` (guard `panel_admin`, `admins.admin_access`), login, upozorenja (`admin_alerts`), modul **Blokiranje** (`daily_parking_data.is_blocked`, `block_zone_worklist`, prilagođavanje rezervacije); kolona **`reservations.created_by_admin`** (default `false`, migracija `2026_04_11_120000_*`); odlučujuća validacija novih slotova **posle** `lockForUpdate` (`BlockReservationAdjustmentValidator`); UI datum kao prefiltar; redirect sa **`_fresh`** posle uspešnog Primeni / prilagodi; feature testovi u `tests/Feature/AdminPanel/`; ažurirani **`docs/admin-panel.md`**, **`docs/control-panel.md`**, **`docs/project-conventions.md`** §5.
 - **2026-04-04** — **SUCCESS posle `canceled`:** log nepromenjen; dodat **admin email** (**`AdminFiscalizationAlertService::notifyPaymentSuccessAfterCanceled`**, plain text, snapshot `temp_data` + ulazni payload); **`payment.operations_alert_email`** / **`PAYMENT_OPERATIONS_ALERT_EMAIL`**; fiskal alerti sada koriste isti config primalac; ažurirani `payment-state-machine.md`, `payment-callback-handling.md`, `production-hardening.md`, `payment-states.md`, `.env.example`.
 - **2026-04-06** — **Final production hardening:** `payment_pending_too_long` u `payment:check-pending-inquiry` (prag `stale_pending_warn_after_minutes`, keš throttle); `PaymentStatusInquiryService::isImplemented()` — inquiry se ne poziva dok nije spreman; `HttpOutboundConfig::bankart('status_inquiry')` i per-endpoint HTTP config (`HttpOutboundConfig`, `http-outbound` bankart create_session/status_inquiry, fiscal deposit/receipt); dopunjen kontekst logova (`merchant_transaction_id` / `reservation_id` / `temp_data_id` / `user_id`); `queue_worker_booted` na `WorkerStarting` (production); runbook — restart, memorija, `queue:restart`, provera workera, napomena `EMAIL_SENDING`; ažurirani `production-hardening.md`, `cron-commands.md`, `payment-states.md`. *(Puna Bankart HTTP implementacija inquiry-ja i `PaymentCallbackJob` grana: v. stavku **2026-04-03** ispod.)*
 - **2026-04-03** — **Bankart status inquiry (implementacija):** `RealPaymentStatusInquiryService` (GET `getByMerchantTransactionId`, `BankartSignature` za GET/prazno telo); `inquire()` vraća `outcome` + `raw`; `CheckPendingPaymentStatus` → **`PaymentCallbackJob`** (success/failed), throttle `payment.status_inquiry_throttle_minutes`; `config/payment.php` + `.env.example` (`BANKART_STATUS_INQUIRY_ENABLED`, throttle env); `App\Support\BankartSignature` + refaktor `RealPaymentProvider`; `CheckPendingPaymentStatusInquiryTest`; ažurirani `cron-commands.md`, `payment-states.md`, `production-hardening.md`, `scheduled-tasks-overview.md`.

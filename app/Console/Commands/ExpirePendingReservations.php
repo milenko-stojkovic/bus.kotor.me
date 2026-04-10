@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\DailyParkingData;
 use App\Models\TempData;
+use App\Services\AdminPanel\Blocking\BlockZoneWorklistService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -43,6 +44,7 @@ class ExpirePendingReservations extends Command
                     ->where('date', $temp->reservation_date)
                     ->whereIn('time_slot_id', $slotIds)
                     ->decrement('pending');
+                app(BlockZoneWorklistService::class)->onTempDataFailedOrExpired($temp, 'expired');
             });
         }
 

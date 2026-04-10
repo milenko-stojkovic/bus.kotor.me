@@ -17,7 +17,7 @@
             <div class="bg-white shadow-sm sm:rounded-lg p-6">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-lg font-medium text-gray-900">Privremeni podaci (temp_data) #{{ $row->id }}</h3>
-                    <a href="{{ route('admin.late-success.index') }}" class="text-sm text-indigo-600 hover:text-indigo-800">Nazad na listu</a>
+                    <a href="{{ route('staff.late-success.index') }}" class="text-sm text-indigo-600 hover:text-indigo-800">Nazad na listu</a>
                 </div>
 
                 <dl class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
@@ -47,13 +47,13 @@
                 <div class="bg-white shadow-sm sm:rounded-lg p-6">
                     <h3 class="text-lg font-medium text-gray-900 mb-3">Akcije</h3>
                     <div class="flex flex-wrap gap-2">
-                        <form method="post" action="{{ route('admin.late-success.force', $row->id) }}">
+                        <form method="post" action="{{ route('staff.late-success.force', $row->id) }}">
                             @csrf
                             <button type="submit" class="inline-flex items-center px-4 py-2 bg-amber-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-amber-500">
                                 Prisilno kreiraj rezervaciju
                             </button>
                         </form>
-                        <form method="post" action="{{ route('admin.late-success.reject', $row->id) }}">
+                        <form method="post" action="{{ route('staff.late-success.reject', $row->id) }}">
                             @csrf
                             <button type="submit" class="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-500">
                                 Odbij

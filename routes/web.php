@@ -3,6 +3,9 @@
 use App\Http\Controllers\Admin\LateSuccessController;
 use App\Http\Controllers\Admin\ReservationActionController;
 use App\Http\Controllers\Admin\ReservationListController;
+use App\Http\Controllers\AdminPanel\AuthController as AdminPanelAuthController;
+use App\Http\Controllers\AdminPanel\BlockingController as AdminPanelBlockingController;
+use App\Http\Controllers\AdminPanel\WarningsController as AdminPanelWarningsController;
 use App\Http\Controllers\Control\ControlAuthController;
 use App\Http\Controllers\Control\ControlDashboardController;
 use App\Http\Controllers\CheckoutController;
@@ -18,6 +21,55 @@ use App\Http\Controllers\ReservationStatusController;
 use App\Http\Controllers\UserReservationController;
 use App\Http\Controllers\VehicleController;
 use Illuminate\Support\Facades\Route;
+
+Route::prefix('admin')->name('panel_admin.')->group(function () {
+    Route::middleware('guest:panel_admin')->group(function () {
+        Route::get('login', [AdminPanelAuthController::class, 'create'])->name('login');
+        Route::post('login', [AdminPanelAuthController::class, 'store'])->name('login.store');
+    });
+    Route::middleware(['auth:panel_admin', 'admin.panel'])->group(function () {
+        Route::post('logout', [AdminPanelAuthController::class, 'destroy'])->name('logout');
+        Route::get('/', [AdminPanelWarningsController::class, 'index'])->name('dashboard');
+        Route::post('alerts/{alert}/transition', [AdminPanelWarningsController::class, 'transition'])->name('alerts.transition');
+
+        Route::get('blokiranje', [AdminPanelBlockingController::class, 'index'])->name('blocking');
+        Route::post('blokiranje', [AdminPanelBlockingController::class, 'applyBlock'])->name('blocking.apply');
+        Route::get('blokiranje/dan/{date}', [AdminPanelBlockingController::class, 'day'])->name('blocking.day');
+        Route::post('blokiranje/dan/apply', [AdminPanelBlockingController::class, 'applyUnblock'])->name('blocking.unblock.apply');
+        Route::get('blokiranje/worklist/{row}/prilagodi', [AdminPanelBlockingController::class, 'adjust'])->name('blocking.worklist.adjust');
+        Route::post('blokiranje/worklist/{row}/prilagodi', [AdminPanelBlockingController::class, 'applyAdjust'])->name('blocking.worklist.adjust.apply');
+
+        Route::view('besplatne-rezervacije', 'admin-panel.placeholder', [
+            'navActive' => 'free-reservations',
+            'title' => 'Besplatne rezervacije',
+            'lead' => 'Uskoro.',
+        ])->name('free-reservations');
+
+        Route::view('rezervacije', 'admin-panel.placeholder', [
+            'navActive' => 'reservations',
+            'title' => 'Rezervacije',
+            'lead' => 'Uskoro.',
+        ])->name('reservations');
+
+        Route::view('izvestaji', 'admin-panel.placeholder', [
+            'navActive' => 'reports',
+            'title' => 'Izveštaji',
+            'lead' => 'Uskoro.',
+        ])->name('reports');
+
+        Route::view('podesavanja', 'admin-panel.placeholder', [
+            'navActive' => 'settings',
+            'title' => 'Podešavanja',
+            'lead' => 'Uskoro.',
+        ])->name('settings');
+
+        Route::view('analitika', 'admin-panel.placeholder', [
+            'navActive' => 'analytics',
+            'title' => 'Analitika',
+            'lead' => 'Uskoro.',
+        ])->name('analytics');
+    });
+});
 
 Route::prefix('control')->name('control.')->group(function () {
     Route::middleware('guest:control')->group(function () {
@@ -103,8 +155,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::redirect('/profile/payments', '/panel/statistics')->name('profile.payments');
     Route::redirect('/profile/vehicles', '/panel/vehicles')->name('profile.vehicles.index');
 
-    // Admin panel: pregled rezervacija + manual override (retry fiscalization, resend invoice, mark resolved)
-    Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
+    // Operativni pregled rezervacija (User admin): /staff — manual override (fiskal, račun, resolved)
+    Route::prefix('staff')->name('staff.')->middleware('admin')->group(function () {
         Route::get('/reservations', [ReservationListController::class, 'index'])->name('reservations.index');
         Route::post('/reservations/{id}/retry-fiscalization', [ReservationActionController::class, 'retryFiscalization'])->name('reservations.retry-fiscalization');
         Route::post('/reservations/{id}/resend-invoice', [ReservationActionController::class, 'resendInvoice'])->name('reservations.resend-invoice');

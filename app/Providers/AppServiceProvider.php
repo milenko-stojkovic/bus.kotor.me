@@ -57,6 +57,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         RedirectIfAuthenticated::redirectUsing(function (\Illuminate\Http\Request $request): string {
+            if ($request->routeIs('panel_admin.login')) {
+                return route('panel_admin.dashboard', absolute: false);
+            }
             if ($request->routeIs('control.login')) {
                 return route('control.dashboard', absolute: false);
             }

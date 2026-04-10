@@ -95,7 +95,7 @@ class CheckoutController extends Controller
 
                 foreach ($slotIds as $slotId) {
                     $daily = $dailyRows->get($slotId);
-                    if (! $daily || $daily->availableCapacity() < 1) {
+                    if (! $daily || $daily->is_blocked || $daily->availableCapacity() < 1) {
                         throw new NoCapacityException(__('No availability for selected slot.'));
                     }
                 }

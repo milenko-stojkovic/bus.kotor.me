@@ -157,16 +157,18 @@ final class ReservationBookingPageData
             $arrivalSlots = $allSlots->map(function (ListOfTimeSlot $slot) use ($selectedDate, $dailyBySlotId, $locale) {
                 $daily = $dailyBySlotId->get($slot->id);
                 $spotsLeft = $daily ? $daily->availableCapacity() : 0;
+                $isBlocked = (bool) ($daily?->is_blocked ?? false);
                 $isFree = FreeReservationRules::isFreeWindowSlot($slot);
                 $isPastForToday = $this->isPastSlotForToday($slot, $selectedDate);
                 $isFull = ! $isFree && $spotsLeft < 1;
-                $disabled = $isPastForToday || $isFull;
+                $disabled = $isPastForToday || $isBlocked || $isFull;
 
                 return [
                     'id' => $slot->id,
                     'label' => $this->formatSlotLabel($slot->time_slot, $spotsLeft, $locale),
                     'spots_left' => $spotsLeft,
                     'is_free' => $isFree,
+                    'is_blocked' => $isBlocked,
                     'disabled' => $disabled,
                 ];
             })->all();
@@ -184,6 +186,7 @@ final class ReservationBookingPageData
             $departureSlots = $allSlots->map(function (ListOfTimeSlot $slot) use ($selectedDate, $dailyBySlotId, $arrivalStart, $locale) {
                 $daily = $dailyBySlotId->get($slot->id);
                 $spotsLeft = $daily ? $daily->availableCapacity() : 0;
+                $isBlocked = (bool) ($daily?->is_blocked ?? false);
                 $isFree = FreeReservationRules::isFreeWindowSlot($slot);
                 $isPastForToday = $this->isPastSlotForToday($slot, $selectedDate);
                 $isFull = ! $isFree && $spotsLeft < 1;
@@ -191,13 +194,14 @@ final class ReservationBookingPageData
                 $slotStart = $slot->getStartTimeForDate($selectedDate);
                 $beforeArrival = $arrivalStart && $slotStart ? $slotStart->lt($arrivalStart) : false;
 
-                $disabled = $isPastForToday || $isFull || $beforeArrival;
+                $disabled = $isPastForToday || $isBlocked || $isFull || $beforeArrival;
 
                 return [
                     'id' => $slot->id,
                     'label' => $this->formatSlotLabel($slot->time_slot, $spotsLeft, $locale),
                     'spots_left' => $spotsLeft,
                     'is_free' => $isFree,
+                    'is_blocked' => $isBlocked,
                     'disabled' => $disabled,
                     'before_arrival' => $beforeArrival,
                 ];

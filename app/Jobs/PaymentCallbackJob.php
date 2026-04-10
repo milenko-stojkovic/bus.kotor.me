@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Events\PaymentFailed;
 use App\Models\Reservation;
 use App\Models\TempData;
+use App\Services\AdminPanel\Blocking\BlockZoneWorklistService;
 use App\Services\AdminFiscalizationAlertService;
 use App\Services\Payment\ErrorClassifier;
 use App\Services\Payment\PaymentSuccessHandler;
@@ -173,6 +174,7 @@ class PaymentCallbackJob implements ShouldQueue, ShouldBeUnique
             ]);
             TempData::logStateTransition($temp->merchant_transaction_id, $from, TempData::STATUS_CANCELED, 'CANCEL/ERROR/failed');
             app(PaymentSuccessHandler::class)->releaseSoftLock($temp, false);
+            app(BlockZoneWorklistService::class)->onTempDataFailedOrExpired($temp, 'canceled');
             event(new PaymentFailed($temp));
         });
     }

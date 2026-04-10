@@ -2,9 +2,20 @@
 
 Specifikacija admin funkcionalnosti. Modeli: Reservation, TempData, DailyParkingData, ListOfTimeSlot, ReportEmail, system_config.
 
-**Implementirano (van opšte specifikacije ispod):** pregled i akcije za **`late_manual_review`** / povezane statuse — `App\Http\Controllers\Admin\LateSuccessController` (lista, detalj, **force create** rezervacije, **reject**). Rute pod admin middleware-om (v. `routes/web.php`).
+## Dva odvojena „admin“ toka (2026-04)
 
-**Control panel** (šalter / dolasci) je **odvojen** proizvodni tok: guard **`control`**, model **`App\Models\Admin`**, rute pod **`/control`** — v. **[control-panel.md](./control-panel.md)**. Klasični admin ovde i dalje znači **`User`** + uloga / `AdminMiddleware` na **`/admin`**.
+| Šta | URL prefiks | Auth | Namena |
+|-----|-------------|------|--------|
+| **Glavni admin panel** | `/admin` | Guard **`panel_admin`**, tabela **`admins`**, kolona **`admin_access=1`** (i **`control_access=0`**) | Upozorenja/Informacije (`admin_alerts`), navigacija ka budućim modulima (Blokiranje, …). Login: **`GET /admin/login`**. |
+| **Staff operativa** (rezervacije, late-success) | `/staff` | **`User`** + **`AdminMiddleware`** (uloga admin ili email u `admins`) | `ReservationListController`, `LateSuccessController` — v. `routes/web.php` imena **`staff.*`**. |
+
+**Control panel** (šalter / dolasci): guard **`control`**, **`/control`** — v. **[control-panel.md](./control-panel.md)**. **`admin_access`** i **`control_access`** su međusobno isključivi; isti red u `admins` nikad ne drži oba = 1 (v. migracija + `Admin::booted`).
+
+**Tabela `admin_alerts`:** operativna lista upozorenja (ne inbox); incident **SUCCESS posle `canceled`** upisuje se u **`admin_alerts`** preko **`AdminFiscalizationAlertService::notifyPaymentSuccessAfterCanceled`** (uz postojeći email).
+
+---
+
+**Implementirano (van opšte specifikacije ispod):** pregled i akcije za **`late_manual_review`** / povezane statuse — `App\Http\Controllers\Admin\LateSuccessController` (lista, detalj, **force create** rezervacije, **reject**). Rute su pod prefiksom **`/staff`**, middleware **`admin`** (v. `routes/web.php`).
 
 ---
 
@@ -25,10 +36,23 @@ Specifikacija admin funkcionalnosti. Modeli: Reservation, TempData, DailyParking
 
 | Funkcionalnost | Opis | Modeli / tabele |
 |----------------|------|------------------|
-| **Blokiranje/deblokiranje dana** | Za određeni datum onemogućiti/omogućiti rezervacije (npr. postavljanjem kapaciteta na 0 ili posebnim flagom ako se doda). | `DailyParkingData` po datumu (svi slotovi za taj dan) ili nova kolona/tabela po potrebi |
-| **Blokiranje/deblokiranje time slot-a** | Za određeni datum i jedan slot (ili grupu slotova) onemogućiti/omogućiti rezervacije. | `DailyParkingData`: `capacity` = 0 za blokadu, ili `reserved`/posebna logika |
+| **Blokiranje/deblokiranje dana** | Admin blokira dan/termine bez menjanja `capacity/reserved/pending`. Blokada sprečava novu prodaju preko `daily_parking_data.is_blocked`. | `DailyParkingData.is_blocked` + `block_zone_worklist` |
+| **Rezervacije u blok zoni (worklist)** | Slotovi sa postojećim `reserved>0` ili `pending>0` ne postaju odmah blokirani; ulaze u listu za ručno prilagođavanje. | `block_zone_worklist` |
 
-Napomena: trenutno kapacitet i dostupnost kontrolišu se preko `DailyParkingData` (capacity, reserved, pending). Blokiranje može biti: postavljanje `capacity` na 0 za taj datum+slot, ili dodavanje posebne tabele/kolone (npr. `is_blocked`) ako treba razdvojiti “nema mesta” od “admin blokirao”.
+Napomena: blokiranje je **odvojeno** od kapaciteta. `availableCapacity()` i `pending/reserved` semantika ostaju iste; UI/checkout samo dodatno tretira `is_blocked=1` kao nedostupno.
+
+Rute (admin panel):
+- `GET /admin/blokiranje` (`panel_admin.blocking`)
+- `POST /admin/blokiranje` (`panel_admin.blocking.apply`)
+- `GET /admin/blokiranje/dan/{date}` (`panel_admin.blocking.day`)
+- `POST /admin/blokiranje/dan/apply` (`panel_admin.blocking.unblock.apply`)
+- `GET|POST /admin/blokiranje/worklist/{row}/prilagodi` (prilagođavanje rezervacije)
+
+**`reservations.created_by_admin`:** boolean, default `false` (signal za budući modul „Besplatne rezervacije“ / admin-kreirane free rezervacije). Postojeći tokovi kreiranja rezervacije eksplicitno postavljaju `false`. **Migracija:** `2026_04_11_120000_add_created_by_admin_to_reservations_table.php`.
+
+**Prilagođavanje u blok zoni:** UI datum koristi prefiltar dana (minimum dva teorijski slobodna mesta tog dana — **nije** konačna garancija). Odlučujuća provera novih slotova (`!is_blocked`, `pending=0`, kapacitet; isti slot ID jednom) radi se **posle** `lockForUpdate` na relevantnim `daily_parking_data` redovima (`BlockingController` + `BlockReservationAdjustmentValidator`). Ako finalna validacija padne, nema delimičnih izmena. Posle uspešnog `Primeni` (blok/deblok) ili prilagođavanja redirect nosi `_fresh=timestamp` radi osvežavanja prikaza (bez auto-refresh tokom rada).
+
+**Testovi (izbor):** `tests/Feature/AdminPanel/BlockReservationHardeningTest.php` (default kolone, post-lock odbijanje, `_fresh` na Primeni).
 
 ---
 

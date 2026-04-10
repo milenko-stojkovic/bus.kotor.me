@@ -15,7 +15,7 @@
             @endif
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6">
-                    <form action="{{ route('admin.reservations.index') }}" method="get" class="mb-6 flex flex-wrap gap-2 items-end">
+                    <form action="{{ route('staff.reservations.index') }}" method="get" class="mb-6 flex flex-wrap gap-2 items-end">
                         <div class="flex-1 min-w-[200px]">
                             <label for="q" class="block text-sm font-medium text-gray-700 mb-1">Pretraga (email, tablica, ime, ID transakcije)</label>
                             <input type="text" name="q" id="q" value="{{ old('q', $search) }}"
@@ -26,7 +26,7 @@
                             Pretraži
                         </button>
                         @if($search !== '')
-                            <a href="{{ route('admin.reservations.index') }}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50 focus:outline-none transition">
+                            <a href="{{ route('staff.reservations.index') }}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50 focus:outline-none transition">
                                 Prikaži naredna 3h
                             </a>
                         @endif
@@ -79,16 +79,16 @@
                                         <td class="px-4 py-2">
                                             <div class="flex flex-wrap gap-1">
                                                 @if($r->postFiscalizationDataUnresolved)
-                                                    <form action="{{ route('admin.reservations.retry-fiscalization', $r->id) }}" method="post" class="inline">
+                                                    <form action="{{ route('staff.reservations.retry-fiscalization', $r->id) }}" method="post" class="inline">
                                                         @csrf
                                                         <button type="submit" class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800 hover:bg-amber-200">Retry fiskalizaciju</button>
                                                     </form>
-                                                    <form action="{{ route('admin.reservations.mark-resolved', $r->id) }}" method="post" class="inline">
+                                                    <form action="{{ route('staff.reservations.mark-resolved', $r->id) }}" method="post" class="inline">
                                                         @csrf
                                                         <button type="submit" class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200">Označi rešeno</button>
                                                     </form>
                                                 @endif
-                                                <form action="{{ route('admin.reservations.resend-invoice', $r->id) }}" method="post" class="inline">
+                                                <form action="{{ route('staff.reservations.resend-invoice', $r->id) }}" method="post" class="inline">
                                                     @csrf
                                                     <button type="submit" class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200">Pošalji račun ponovo</button>
                                                 </form>

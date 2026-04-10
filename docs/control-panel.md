@@ -2,7 +2,7 @@
 
 **Poslednje ažuriranje:** 2026-04-03  
 
-Lagani panel za šalter / kontrolu ulaska: **login**, **grupe dolazaka po terminu** i **pretraga rezervacija**. Odvojen je od **agency** panela (`/panel`, `User`) i od **admin** panela (`/admin`, `User` + `AdminMiddleware`).
+Lagani panel za šalter / kontrolu ulaska: **login**, **grupe dolazaka po terminu** i **pretraga rezervacija**. Odvojen je od **agency** panela (`/panel`, `User`), od **glavnog admin panela** (`/admin`, guard `panel_admin`, `admins.admin_access`) i od **operativnog staff pregleda** (`/staff`, `User` + `AdminMiddleware` — rezervacije, late-success).
 
 ---
 

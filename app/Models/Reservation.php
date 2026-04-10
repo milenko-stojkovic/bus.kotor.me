@@ -60,6 +60,7 @@ class Reservation extends Model
         'invoice_sent_at',
         'status',
         'email_sent',
+        'created_by_admin',
     ];
 
     protected function casts(): array
@@ -70,6 +71,7 @@ class Reservation extends Model
             'invoice_sent_at' => 'datetime',
             'invoice_amount' => 'decimal:2',
             'email_sent' => 'integer', // vidi EMAIL_NOT_SENT, EMAIL_SENT, EMAIL_SENDING
+            'created_by_admin' => 'boolean',
         ];
     }
 

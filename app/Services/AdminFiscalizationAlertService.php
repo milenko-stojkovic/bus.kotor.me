@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AdminAlert;
 use App\Models\PostFiscalizationData;
 use App\Models\Reservation;
 use App\Models\TempData;
@@ -75,6 +76,25 @@ class AdminFiscalizationAlertService
             $incomingJson !== false ? $incomingJson : '{}',
         ];
         $body = implode("\n", $lines);
+
+        AdminAlert::query()->create([
+            'type' => 'payment_success_after_canceled',
+            'status' => AdminAlert::STATUS_UNREAD,
+            'title' => 'Contradictory bank outcome: SUCCESS after canceled payment',
+            'message' => sprintf(
+                'Banka je poslala SUCCESS dok je temp_data #%d već canceled (merchant_transaction_id: %s). Rešavanje je van aplikacije.',
+                $temp->id,
+                $temp->merchant_transaction_id ?? '—'
+            ),
+            'payload_json' => [
+                'email_full_body' => $body,
+                'incoming_raw_payload' => $incomingRawPayload,
+                'stored_raw_callback_payload' => is_array($storedPayload) ? $storedPayload : null,
+            ],
+            'merchant_transaction_id' => $temp->merchant_transaction_id,
+            'temp_data_id' => $temp->id,
+            'reservation_id' => $reservationId,
+        ]);
 
         $this->notify($subject, $body, [
             'alert_type' => 'payment_success_after_canceled',

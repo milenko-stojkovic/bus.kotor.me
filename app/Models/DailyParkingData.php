@@ -22,6 +22,7 @@ class DailyParkingData extends Model
         'capacity',
         'reserved',
         'pending',
+        'is_blocked',
     ];
 
     protected function casts(): array
@@ -31,6 +32,7 @@ class DailyParkingData extends Model
             'capacity' => 'integer',
             'reserved' => 'integer',
             'pending' => 'integer',
+            'is_blocked' => 'boolean',
         ];
     }
 
