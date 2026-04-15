@@ -90,9 +90,9 @@ class SendInvoiceEmailJob implements ShouldQueue
             return;
         }
 
-        $email = $reservation->user_id
-            ? ($reservation->user?->email ?? $reservation->email)
-            : $reservation->email;
+        // Primalac mora biti snapshot na rezervaciji (isti kao u PDF-u). user.email se menja u profilu;
+        // admin izmena rezervacije menja samo reservations.email — ne slati na stari nalog.
+        $email = $reservation->email;
         if (empty($email)) {
             $reservation->update(['email_sent' => Reservation::EMAIL_NOT_SENT]);
 

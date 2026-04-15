@@ -87,9 +87,8 @@ class SendFreeReservationConfirmationJob implements ShouldQueue
             return;
         }
 
-        $email = $reservation->user_id
-            ? ($reservation->user?->email ?? $reservation->email)
-            : $reservation->email;
+        // Isto kao SendInvoiceEmailJob: dokument i primalac = reservations.email (snapshot).
+        $email = $reservation->email;
         if ($email === '' || $email === null) {
             $reservation->update(['email_sent' => Reservation::EMAIL_NOT_SENT]);
 

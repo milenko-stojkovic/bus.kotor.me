@@ -73,6 +73,28 @@ Kontroler: **`WarningsController::index`**. Stranica ima tri bloka: **Upozorenja
 
 **`created_by_admin`:** u ovom toku uvek `true`; ostali tokovi i dalje `false` (v. §2 ispod).
 
+### 1.2 Pretraga i izmena rezervacija (admin panel) — implementirano
+
+| Ruta | Namena |
+|------|--------|
+| `GET /admin/rezervacije` | `panel_admin.reservations` — pretraga nad tabelom **`reservations`** (bez `temp_data`). |
+| `GET /admin/rezervacije/{reservation}/uredi` | `panel_admin.reservations.edit` — izmena samo **nerealizovanih** rezervacija (`PanelReservationListService::isRealized` = komplement od „upcoming“; kraj = kraj **pick-up** termina). |
+| `PUT /admin/rezervacije/{reservation}` | `panel_admin.reservations.update` — transakcija, `lockForUpdate` na `daily_parking_data`, finalna validacija **`BlockReservationAdjustmentValidator::assertValidAfterLock`**, izmene `reserved`, update `reservations`, reset `invoice_sent_at` / `email_sent`, dispatch **`SendInvoiceEmailJob`** (paid) ili **`SendFreeReservationConfirmationJob`** (free). |
+| `GET /admin/rezervacije/{reservation}/pdf` | `panel_admin.reservations.pdf` — PDF računa (paid) ili potvrde (free) preko postojećih generatora. |
+
+- **Kontroler:** `App\Http\Controllers\AdminPanel\ReservationController`.
+- **Pretraga:** `AdminReservationSearchService` — svi kriterijumi su **AND** između popunjenih polja; **`merchant_transaction_id`** samo za redove koji ga imaju (admin free bez MTID se time ne nalazi).
+- **Heuristika imena/emaila:** `AdminReservationSearchHeuristic` — jednostavne LIKE varijante (jedno izostavljeno slovo, zamena dva susedna; za ime normalizacija **doo** / **d.o.o.**).
+- **Povratak sa edit strane:** query parametar **`rq`** čuva enkodiran prethodni query string pretrage; **`Odkaži`** i uspešan **`PUT`** vode na `GET /admin/rezervacije?{rq}`.
+- **Izmena termina po tipu:** `AdminReservationSlotRules` — **paid** i **free + `created_by_admin`** mogu na bilo koje validne termine; **free bez admin kreacije** samo u besplatnom prozoru (`FreeReservationRules::isFreeReservation`). Status se **ne** menja u ovom toku.
+- **Kategorija vozila:** u edit formi samo tipovi sa **`price` ≤** cene trenutnog tipa (`vehicle_types` po postojećem poretku cene).
+- **Kalendar:** granice pretrage — `AdminReservationDateBounds` (min = najraniji datum u `reservations`, max = danas + 90 dana); edit — danas … danas + 90.
+- **Email i slanje dokumenta:** račun (paid) i potvrda (free) uvek se šalju na **`reservations.email`** — to je snapshot na rezervaciji, isti izvor kao u PDF-u. **Admin** ima pravo da menja taj snapshot (uključujući email) u toku izmene rezervacije. **`SendInvoiceEmailJob`** i **`SendFreeReservationConfirmationJob`** koriste isključivo **`reservations.email`** kao primaoca; **`users.email`** se ne koristi za odredište čak i kada je **`user_id`** postavljen, da posle admin izmene poruka ne bi išla na zastarelu adresu naloga.
+
+**Bez izmena na `temp_data`:** ovaj modul ne čita i ne piše `temp_data`.
+
+**Testovi:** `tests/Feature/AdminPanel/AdminPanelReservationTest.php` (pretraga po MTID, 403 na edit za realizovanu, update + job, free + potvrda).
+
 ---
 
 ## 2. Blokiranje termina i dana
@@ -97,7 +119,7 @@ Rute (admin panel):
 
 **Upit po datumu:** u modulu blokiranja/prilagođavanja, učitavanje i `lockForUpdate` nad `daily_parking_data` koristi **`whereDate('date', …)`** (ne striktno `where('date', …)`), da se datum uvek poklapa sa vrednošću u bazi i na SQLite-u.
 
-**Testovi (izbor):** `tests/Feature/AdminPanel/AdminPanelAuthTest.php` (guard `panel_admin` vs `web`, 403, logout). `tests/Feature/AdminPanel/BlockReservationHardeningTest.php` (default kolone, post-lock odbijanje, blokiran novi slot bez delimičnih izmena, uspešan adjust + `_fresh`, deblok `_fresh`). `tests/Feature/AdminPanel/AdminWarningsDashboardTest.php` (dashboard nedostupni/blokirani). `tests/Feature/AdminPanel/AdminPanelFreeReservationTest.php` (besplatne rezervacije).
+**Testovi (izbor):** `tests/Feature/AdminPanel/AdminPanelAuthTest.php` (guard `panel_admin` vs `web`, 403, logout). `tests/Feature/AdminPanel/BlockReservationHardeningTest.php` (default kolone, post-lock odbijanje, blokiran novi slot bez delimičnih izmena, uspešan adjust + `_fresh`, deblok `_fresh`). `tests/Feature/AdminPanel/AdminWarningsDashboardTest.php` (dashboard nedostupni/blokirani). `tests/Feature/AdminPanel/AdminPanelFreeReservationTest.php` (besplatne rezervacije). `tests/Feature/AdminPanel/AdminPanelReservationTest.php` (admin pretraga/izmena rezervacija, §1.2).
 
 ---
 
@@ -115,6 +137,8 @@ Rute (admin panel):
 | Funkcionalnost | Opis | Modeli / tabele |
 |----------------|------|------------------|
 | **Ažuriranje e-mailova za izveštaje** | CRUD za adrese na koje se šalju obaveštenja/izveštaji. | `ReportEmail` (tabela `report_emails`) |
+
+**Račun / potvrda rezervacije (korisnik):** primalac = **`reservations.email`** (v. §1.2 — snapshot; admin može menjati).
 
 ---
 

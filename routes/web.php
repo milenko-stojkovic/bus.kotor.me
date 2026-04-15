@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\ReservationListController;
 use App\Http\Controllers\AdminPanel\AuthController as AdminPanelAuthController;
 use App\Http\Controllers\AdminPanel\BlockingController as AdminPanelBlockingController;
 use App\Http\Controllers\AdminPanel\FreeReservationController as AdminPanelFreeReservationController;
+use App\Http\Controllers\AdminPanel\ReservationController as AdminPanelReservationController;
 use App\Http\Controllers\AdminPanel\WarningsController as AdminPanelWarningsController;
 use App\Http\Controllers\Control\ControlAuthController;
 use App\Http\Controllers\Control\ControlDashboardController;
@@ -43,11 +44,10 @@ Route::prefix('admin')->name('panel_admin.')->group(function () {
         Route::get('besplatne-rezervacije', [AdminPanelFreeReservationController::class, 'create'])->name('free-reservations');
         Route::post('besplatne-rezervacije', [AdminPanelFreeReservationController::class, 'store'])->name('free-reservations.store');
 
-        Route::view('rezervacije', 'admin-panel.placeholder', [
-            'navActive' => 'reservations',
-            'title' => 'Rezervacije',
-            'lead' => 'Uskoro.',
-        ])->name('reservations');
+        Route::get('rezervacije', [AdminPanelReservationController::class, 'index'])->name('reservations');
+        Route::get('rezervacije/{reservation}/uredi', [AdminPanelReservationController::class, 'edit'])->name('reservations.edit');
+        Route::put('rezervacije/{reservation}', [AdminPanelReservationController::class, 'update'])->name('reservations.update');
+        Route::get('rezervacije/{reservation}/pdf', [AdminPanelReservationController::class, 'pdf'])->name('reservations.pdf');
 
         Route::view('izvestaji', 'admin-panel.placeholder', [
             'navActive' => 'reports',
