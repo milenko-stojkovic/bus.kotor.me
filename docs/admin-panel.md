@@ -73,6 +73,8 @@ Kontroler: **`WarningsController::index`**. Stranica ima tri bloka: **Upozorenja
 
 **`created_by_admin`:** u ovom toku uvek `true`; ostali tokovi i dalje `false` (v. §2 ispod).
 
+**Tip rezervacije vs `merchant_transaction_id`:** `merchant_transaction_id` je korelacioni / idempotency ključ (v. **[project-conventions.md](./project-conventions.md)** §5); **ne** određuje da li je rezervacija plaćena, besplatna, gost, agencija ili admin-free — za to služe **`status`** i **`created_by_admin`**.
+
 ### 1.2 Pretraga i izmena rezervacija (admin panel) — implementirano
 
 | Ruta | Namena |
@@ -83,7 +85,7 @@ Kontroler: **`WarningsController::index`**. Stranica ima tri bloka: **Upozorenja
 | `GET /admin/rezervacije/{reservation}/pdf` | `panel_admin.reservations.pdf` — PDF računa (paid) ili potvrde (free) preko postojećih generatora. |
 
 - **Kontroler:** `App\Http\Controllers\AdminPanel\ReservationController`.
-- **Pretraga:** `AdminReservationSearchService` — svi kriterijumi su **AND** između popunjenih polja; **`merchant_transaction_id`** samo za redove koji ga imaju (admin free bez MTID se time ne nalazi).
+- **Pretraga:** `AdminReservationSearchService` — svi kriterijumi su **AND** između popunjenih polja; polje **MTID** traži **tačno poklapanje** — rezervacije sa **`merchant_transaction_id` = NULL** (ako postoje) ovim kriterijumom se ne nalaze.
 - **Heuristika imena/emaila:** `AdminReservationSearchHeuristic` — jednostavne LIKE varijante (jedno izostavljeno slovo, zamena dva susedna; za ime normalizacija **doo** / **d.o.o.**).
 - **Povratak sa edit strane:** query parametar **`rq`** čuva enkodiran prethodni query string pretrage; **`Odkaži`** i uspešan **`PUT`** vode na `GET /admin/rezervacije?{rq}`.
 - **Izmena termina po tipu:** `AdminReservationSlotRules` — **paid** i **free + `created_by_admin`** mogu na bilo koje validne termine; **free bez admin kreacije** samo u besplatnom prozoru (`FreeReservationRules::isFreeReservation`). Status se **ne** menja u ovom toku.
@@ -105,6 +107,8 @@ Kontroler: **`WarningsController::index`**. Stranica ima tri bloka: **Upozorenja
 | **Rezervacije u blok zoni (worklist)** | Slotovi sa postojećim `reserved>0` ili `pending>0` ne postaju odmah blokirani; ulaze u listu za ručno prilagođavanje. | `block_zone_worklist` |
 
 Napomena: blokiranje je **odvojeno** od kapaciteta. `availableCapacity()` i `pending/reserved` semantika ostaju iste; UI/checkout samo dodatno tretira `is_blocked=1` kao nedostupno.
+
+**UI (jasno razdvajanje Blokiraj / Deblokiraj):** na **`GET /admin/blokiranje`** u sekciji **Blokiraj** mogu se čekirati samo termini koji **nisu** već blokirani (već blokirani su prikazani kao informacija, bez `slot_ids[]`). Na **`GET /admin/blokiranje/dan/{date}`** (Deblokiraj) mogu se birati samo termini koji **jesu** blokirani; neblokirani su onemogućeni. Opcija **„Blokiraj ceo dan“** i dalje šalje kompletan skup slot ID-jeva; **`BlockingService::applyBlock`** i ranije preskače redove koji su već `is_blocked`.
 
 Rute (admin panel):
 - `GET /admin/blokiranje` (`panel_admin.blocking`)

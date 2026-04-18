@@ -44,7 +44,10 @@
         </section>
 
         <section>
-            <h2 class="text-lg font-semibold text-gray-900 mb-4">Blokiraj</h2>
+            <h2 class="text-lg font-semibold text-gray-900 mb-2">Blokiraj</h2>
+            <p class="text-sm text-gray-600 mb-4 max-w-3xl">
+                Označite <strong>samo termine koji još nisu blokirani</strong>. Već blokirani termini su prikazani samo kao informacija i ne mogu se ponovo birati ovde — za njih koristite <strong>Deblokiraj</strong>.
+            </p>
 
             <form method="GET" action="{{ route('panel_admin.blocking', [], false) }}" class="flex flex-wrap items-end gap-3 mb-4">
                 <div>
@@ -70,18 +73,33 @@
                             $reserved = (int) ($daily?->reserved ?? 0);
                             $pending = (int) ($daily?->pending ?? 0);
                             $blocked = (bool) ($daily?->is_blocked ?? false);
+                            $hasRow = $daily !== null;
                             $hasProblem = $reserved > 0 || $pending > 0;
                         @endphp
-                        <label class="flex items-center gap-2 p-2 rounded border {{ $blocked ? 'border-indigo-200 bg-indigo-50' : 'border-gray-200' }}">
-                            <input type="checkbox" name="slot_ids[]" value="{{ $slot->id }}" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" {{ $blocked ? 'checked' : '' }}>
-                            <span class="text-sm text-gray-900">{{ $slot->time_slot }}</span>
-                            <span class="text-xs text-gray-500 ms-auto">
-                                r:{{ $reserved }} p:{{ $pending }}
-                                @if ($hasProblem)
-                                    <span class="text-amber-700 font-medium">— zahvaćeno</span>
-                                @endif
-                            </span>
-                        </label>
+                        @if ($blocked)
+                            <div class="flex items-center gap-2 p-2 rounded border border-indigo-200 bg-indigo-50 opacity-90">
+                                <input type="checkbox" disabled checked class="rounded border-gray-300 text-indigo-600 opacity-60 cursor-not-allowed" aria-hidden="true">
+                                <span class="text-sm text-gray-900">{{ $slot->time_slot }}</span>
+                                <span class="text-xs font-medium text-indigo-800 ms-auto">Već blokiran</span>
+                            </div>
+                        @elseif (! $hasRow)
+                            <div class="flex items-center gap-2 p-2 rounded border border-gray-200 bg-gray-50 opacity-80">
+                                <input type="checkbox" disabled class="rounded border-gray-300 opacity-50 cursor-not-allowed" aria-hidden="true">
+                                <span class="text-sm text-gray-700">{{ $slot->time_slot }}</span>
+                                <span class="text-xs text-gray-500 ms-auto">Nema podataka za dan</span>
+                            </div>
+                        @else
+                            <label class="flex items-center gap-2 p-2 rounded border border-gray-200 hover:border-gray-300 cursor-pointer">
+                                <input type="checkbox" name="slot_ids[]" value="{{ $slot->id }}" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
+                                <span class="text-sm text-gray-900">{{ $slot->time_slot }}</span>
+                                <span class="text-xs text-gray-500 ms-auto">
+                                    r:{{ $reserved }} p:{{ $pending }}
+                                    @if ($hasProblem)
+                                        <span class="text-amber-700 font-medium">— zahvaćeno</span>
+                                    @endif
+                                </span>
+                            </label>
+                        @endif
                     @endforeach
                 </div>
 

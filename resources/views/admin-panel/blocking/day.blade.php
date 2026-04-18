@@ -11,6 +11,9 @@
             <div>
                 <h1 class="text-lg font-semibold text-gray-900">Deblokiranje</h1>
                 <p class="text-sm text-gray-600">Datum: {{ \Carbon\Carbon::parse($date)->format('d.m.Y.') }}</p>
+                <p class="text-sm text-gray-600 mt-2 max-w-3xl">
+                    Označite <strong>samo termine koji su blokirani</strong>. Termini koji nisu blokirani nisu izbor ovde — za blokadu koristite <strong>Blokiraj</strong> na glavnoj stranici modula.
+                </p>
             </div>
             <a href="{{ route('panel_admin.blocking', [], false) }}" class="text-sm text-indigo-700 hover:underline">Nazad</a>
         </div>
@@ -29,11 +32,27 @@
                     @php
                         $daily = $dailyBySlotId->get($slot->id);
                         $blocked = (bool) ($daily?->is_blocked ?? false);
+                        $hasRow = $daily !== null;
                     @endphp
-                    <label class="flex items-center gap-2 p-2 rounded border {{ $blocked ? 'border-indigo-200 bg-indigo-50' : 'border-gray-200 opacity-60' }}">
-                        <input type="checkbox" name="slot_ids[]" value="{{ $slot->id }}" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" {{ $blocked ? 'checked' : '' }}>
-                        <span class="text-sm text-gray-900">{{ $slot->time_slot }}</span>
-                    </label>
+                    @if ($blocked)
+                        <label class="flex items-center gap-2 p-2 rounded border border-indigo-200 bg-indigo-50 cursor-pointer hover:border-indigo-300">
+                            <input type="checkbox" name="slot_ids[]" value="{{ $slot->id }}" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" checked>
+                            <span class="text-sm text-gray-900">{{ $slot->time_slot }}</span>
+                            <span class="text-xs font-medium text-indigo-800 ms-auto">Blokiran — označite za deblokadu</span>
+                        </label>
+                    @elseif (! $hasRow)
+                        <div class="flex items-center gap-2 p-2 rounded border border-gray-200 bg-gray-50 opacity-80">
+                            <input type="checkbox" disabled class="rounded border-gray-300 opacity-50 cursor-not-allowed" aria-hidden="true">
+                            <span class="text-sm text-gray-700">{{ $slot->time_slot }}</span>
+                            <span class="text-xs text-gray-500 ms-auto">Nema podataka za dan</span>
+                        </div>
+                    @else
+                        <div class="flex items-center gap-2 p-2 rounded border border-gray-200 bg-gray-50 opacity-90">
+                            <input type="checkbox" disabled class="rounded border-gray-300 opacity-50 cursor-not-allowed" aria-hidden="true">
+                            <span class="text-sm text-gray-900">{{ $slot->time_slot }}</span>
+                            <span class="text-xs text-gray-500 ms-auto">Nije blokiran</span>
+                        </div>
+                    @endif
                 @endforeach
             </div>
 

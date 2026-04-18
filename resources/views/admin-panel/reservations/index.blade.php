@@ -1,7 +1,9 @@
 <x-admin-panel-layout :page-title="$pageTitle ?? 'Rezervacije'" nav-active="reservations">
     <div class="space-y-8" x-data="{
         useInterval: {{ old('use_interval', $filters['use_interval'] ?? false) ? 'true' : 'false' }},
+        tick: 0,
         hasAny() {
+            this.tick;
             return !!(
                 (this.$refs.mtid && this.$refs.mtid.value.trim()) ||
                 (this.$refs.dateSingle && this.$refs.dateSingle.value && !this.useInterval) ||
@@ -28,7 +30,9 @@
             <div class="rounded-md bg-red-50 p-4 text-sm text-red-800">{{ session('error') }}</div>
         @endif
 
-        <form method="get" action="{{ route('panel_admin.reservations', [], false) }}" class="bg-white shadow rounded-lg p-6 space-y-4 border border-gray-100">
+        <form method="get" action="{{ route('panel_admin.reservations', [], false) }}" class="bg-white shadow rounded-lg p-6 space-y-4 border border-gray-100"
+            @change="tick++"
+            @input="tick++">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <x-input-label for="merchant_transaction_id" value="Merchant transaction ID" />
