@@ -7,6 +7,7 @@ use App\Http\Controllers\AdminPanel\AuthController as AdminPanelAuthController;
 use App\Http\Controllers\AdminPanel\BlockingController as AdminPanelBlockingController;
 use App\Http\Controllers\AdminPanel\FreeReservationController as AdminPanelFreeReservationController;
 use App\Http\Controllers\AdminPanel\ReservationController as AdminPanelReservationController;
+use App\Http\Controllers\AdminPanel\SettingsController as AdminPanelSettingsController;
 use App\Http\Controllers\AdminPanel\WarningsController as AdminPanelWarningsController;
 use App\Http\Controllers\Control\ControlAuthController;
 use App\Http\Controllers\Control\ControlDashboardController;
@@ -55,11 +56,10 @@ Route::prefix('admin')->name('panel_admin.')->group(function () {
             'lead' => 'Uskoro.',
         ])->name('reports');
 
-        Route::view('podesavanja', 'admin-panel.placeholder', [
-            'navActive' => 'settings',
-            'title' => 'Podešavanja',
-            'lead' => 'Uskoro.',
-        ])->name('settings');
+        Route::get('podesavanja', [AdminPanelSettingsController::class, 'index'])->name('settings');
+        Route::put('podesavanja/capacity', [AdminPanelSettingsController::class, 'updateCapacity'])->name('settings.capacity.update');
+        Route::post('podesavanja/report-emails', [AdminPanelSettingsController::class, 'storeReportEmail'])->name('settings.report-emails.store');
+        Route::delete('podesavanja/report-emails/{reportEmail}', [AdminPanelSettingsController::class, 'destroyReportEmail'])->name('settings.report-emails.destroy');
 
         Route::view('analitika', 'admin-panel.placeholder', [
             'navActive' => 'analytics',

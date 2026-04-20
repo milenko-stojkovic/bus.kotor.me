@@ -156,6 +156,21 @@ Rute (admin panel):
 
 Napomena: `system_config` ima `name` (unique) i `value` (integer). Za admin formu: prikaz/izmena reda gde je `name = 'available_parking_slots'`.
 
+### 5.1 Podešavanja (admin panel) — implementirano
+
+| Ruta | Namena |
+|------|--------|
+| `GET /admin/podesavanja` | `panel_admin.settings` — jedna stranica sa sekcijama Kapacitet i Izvještaji (email adrese). |
+| `PUT /admin/podesavanja/capacity` | `panel_admin.settings.capacity.update` — validacija `1..99`, upis u `system_config.available_parking_slots`. Promena **ne važi retroaktivno** i primenjuje se za nove dane od **danas + 91 dan** (bez retroaktivnog update `daily_parking_data`). |
+| `POST /admin/podesavanja/report-emails` | `panel_admin.settings.report-emails.store` — trim + lowercase + email sintaksa + duplicate zaštita, upis u `report_emails`. |
+| `DELETE /admin/podesavanja/report-emails/{reportEmail}` | `panel_admin.settings.report-emails.destroy` — hard delete uz confirm UI. |
+
+- **Kontroler:** `App\Http\Controllers\AdminPanel\SettingsController`.
+- **Kapacitet (UX):** input je inicijalno read-only; `Promjeni` → editable + `Primjeni`/`Odkaži`. Success poruka sadrži konkretan datum važenja (danas + 91 dan).
+- **Report emails (UX):** lista sortirana abecedno po emailu; `Dodaj email adresu` otvara formu; `Obriši` ima confirm modal.
+
+**Testovi:** `tests/Feature/AdminPanel/AdminPanelSettingsTest.php`.
+
 ---
 
 ## 6. Istorija plaćanja (registrovani korisnici)
