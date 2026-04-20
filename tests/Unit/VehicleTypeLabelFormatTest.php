@@ -5,6 +5,8 @@ namespace Tests\Unit;
 use App\Models\VehicleType;
 use App\Models\VehicleTypeTranslation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Log;
+use Mockery;
 use Tests\TestCase;
 
 class VehicleTypeLabelFormatTest extends TestCase
@@ -43,6 +45,24 @@ class VehicleTypeLabelFormatTest extends TestCase
             'Personal vehicle - 12.00 EUR',
             $vt->formatLabel('en', 'EUR')
         );
+    }
+
+    public function test_format_label_falls_back_to_hash_id_and_logs_warning_when_translation_missing(): void
+    {
+        $vt = VehicleType::query()->create(['price' => 12]);
+        $vt->load('translations');
+
+        Log::shouldReceive('warning')
+            ->once()
+            ->with('vehicle_type_translation_missing', Mockery::on(function (array $context) use ($vt): bool {
+                return ($context['vehicle_type_id'] ?? null) === $vt->id
+                    && ($context['locale'] ?? null) === 'cg'
+                    && ($context['has_name_translation'] ?? null) === false
+                    && ($context['has_description_translation'] ?? null) === false;
+            }));
+
+        $label = $vt->formatLabel('cg', 'EUR');
+        $this->assertSame('#'.$vt->id.' - 12.00 EUR', $label);
     }
 }
 

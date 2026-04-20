@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Tip vozila. Polja: id, price (decimal 10,2), created_at, updated_at (ako postoje u tabeli).
@@ -79,12 +80,21 @@ class VehicleType extends Model
      */
     public function formatLabel(string $locale, string $currency = 'EUR'): string
     {
-        $name = $this->getTranslatedName($locale);
+        $translatedName = $this->getTranslatedName($locale);
+        $translatedDescription = $this->getTranslatedDescription($locale);
+
+        $name = $translatedName;
         if ($name === '') {
+            Log::warning('vehicle_type_translation_missing', [
+                'vehicle_type_id' => $this->id,
+                'locale' => $locale,
+                'has_name_translation' => $translatedName !== '',
+                'has_description_translation' => trim((string) ($translatedDescription ?? '')) !== '',
+            ]);
             $name = '#'.$this->id;
         }
 
-        $desc = trim((string) ($this->getTranslatedDescription($locale) ?? ''));
+        $desc = trim((string) ($translatedDescription ?? ''));
         $price = is_numeric((string) $this->price) ? number_format((float) $this->price, 2, '.', '') : null;
 
         $label = $name;
