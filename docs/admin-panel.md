@@ -73,6 +73,8 @@ Kontroler: **`WarningsController::index`**. Stranica ima tri bloka: **Upozorenja
 
 **`created_by_admin`:** u ovom toku uvek `true`; ostali tokovi i dalje `false` (v. §2 ispod).
 
+**UI (label tipa vozila):** u dropdown-u za tip vozila prikazuje se lokalizovani naziv + opis + cena kao **`Naziv (Opis) - Cena`**. Opis dolazi iz `vehicle_type_translations.description` (fallback: bez opisa ako je NULL/prazan), a formatiranje je centralizovano u `VehicleType::formatLabel($locale, 'EUR')`.
+
 **Tip rezervacije vs `merchant_transaction_id`:** `merchant_transaction_id` je korelacioni / idempotency ključ (v. **[project-conventions.md](./project-conventions.md)** §5); **ne** određuje da li je rezervacija plaćena, besplatna, gost, agencija ili admin-free — za to služe **`status`** i **`created_by_admin`**.
 
 ### 1.2 Pretraga i izmena rezervacija (admin panel) — implementirano
