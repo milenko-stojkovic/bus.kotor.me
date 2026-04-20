@@ -46,7 +46,7 @@
                                     <option value="">{{ $ui('select_vehicle_category') }}</option>
                                     @foreach($vehicleTypes as $type)
                                         <option value="{{ $type->id }}" @selected((string) old('vehicle_type_id') === (string) $type->id)>
-                                            {{ $type->getTranslatedName($locale) }}@if(is_numeric((string) $type->price)) — {{ number_format((float) $type->price, 2, '.', '') }} EUR @endif
+                                            {{ $type->formatLabel($locale, 'EUR') }}
                                         </option>
                                     @endforeach
                                 </select>
@@ -76,7 +76,7 @@
                                 @forelse($vehicles as $vehicle)
                                     <tr>
                                         <td class="px-4 py-3 font-medium text-gray-900">{{ $vehicle->license_plate }}</td>
-                                        <td class="px-4 py-3">{{ $vehicle->vehicleType?->getTranslatedName($locale) }}</td>
+                                        <td class="px-4 py-3">{{ $vehicle->vehicleType?->formatLabel($locale, 'EUR') }}</td>
                                         <td class="px-4 py-3 text-right">
                                             <button
                                                 type="button"

@@ -116,7 +116,7 @@
                                     <option value="">{{ $pn('select_vehicle_option', 'Select vehicle') }}</option>
                                     @foreach ($vehicles as $v)
                                         <option value="{{ $v->id }}" @selected((int)($vehicle_id ?? 0) === (int)$v->id)>
-                                            {{ $v->license_plate }} — {{ $v->vehicleType?->getTranslatedName($locale) ?: ('#'.$v->vehicle_type_id) }}
+                                            {{ $v->license_plate }} — {{ $v->vehicleType?->formatLabel($locale, 'EUR') ?? ('#'.$v->vehicle_type_id) }}
                                         </option>
                                     @endforeach
                                 </select>

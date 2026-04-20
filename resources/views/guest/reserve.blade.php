@@ -89,7 +89,7 @@
                     <option value="">{{ $ui('select_vehicle_category') }}</option>
                     @foreach (($vehicle_types ?? []) as $vt)
                         <option value="{{ $vt->id }}" @selected((int)request('vehicle_type_id') === (int)$vt->id)>
-                            {{ ($vt->getTranslatedName(app()->getLocale()) ?: ('#'.$vt->id)) . (is_numeric((string) $vt->price) ? (' — '.number_format((float) $vt->price, 2, '.', '').' EUR') : '') }}
+                            {{ $vt->formatLabel(app()->getLocale(), 'EUR') }}
                         </option>
                     @endforeach
                 </select>

@@ -116,7 +116,7 @@
                         <option value="">—</option>
                         @foreach ($vehicleTypes as $vt)
                             <option value="{{ $vt->id }}" @selected((string)old('vehicle_type_id', $filters['vehicle_type_id'] ?? '') === (string)$vt->id)>
-                                {{ $vt->getTranslatedName('cg') }} ({{ $vt->price }} €)
+                                {{ $vt->formatLabel('cg', 'EUR') }}
                             </option>
                         @endforeach
                     </select>
@@ -172,7 +172,7 @@
                                     <div><span class="text-gray-500">Ime:</span> {{ $r->user_name }}</div>
                                     <div><span class="text-gray-500">Država:</span> {{ $r->country }}</div>
                                     <div><span class="text-gray-500">Tablica:</span> {{ $r->license_plate }}</div>
-                                    <div><span class="text-gray-500">Vozilo:</span> {{ $r->vehicleType?->getTranslatedName('cg') ?? '—' }}</div>
+                                    <div><span class="text-gray-500">Vozilo:</span> {{ $r->vehicleType?->formatLabel('cg', 'EUR') ?? '—' }}</div>
                                     <div><span class="text-gray-500">Email:</span> {{ $r->email }}</div>
                                     <div><span class="text-gray-500">Status:</span> {{ $r->status }}</div>
                                 </div>

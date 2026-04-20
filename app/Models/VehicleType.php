@@ -58,9 +58,9 @@ class VehicleType extends Model
      */
     public function getTranslatedName(string $locale): string
     {
-        $t = $this->translations()->where('locale', $locale)->first();
+        $t = $this->translationFor($locale);
 
-        return $t?->name ?? $this->translations()->value('name') ?? '';
+        return $t?->name ?? $this->fallbackTranslation()?->name ?? '';
     }
 
     /**
@@ -68,8 +68,57 @@ class VehicleType extends Model
      */
     public function getTranslatedDescription(string $locale): ?string
     {
-        $t = $this->translations()->where('locale', $locale)->first();
+        $t = $this->translationFor($locale);
 
-        return $t?->description ?? $this->translations()->value('description');
+        return $t?->description ?? $this->fallbackTranslation()?->description;
+    }
+
+    /**
+     * User-facing label: "Name (Description) - 12.00 EUR" (description optional).
+     * Locale uses vehicle_type_translations; price comes from vehicle_types.price.
+     */
+    public function formatLabel(string $locale, string $currency = 'EUR'): string
+    {
+        $name = $this->getTranslatedName($locale);
+        if ($name === '') {
+            $name = '#'.$this->id;
+        }
+
+        $desc = trim((string) ($this->getTranslatedDescription($locale) ?? ''));
+        $price = is_numeric((string) $this->price) ? number_format((float) $this->price, 2, '.', '') : null;
+
+        $label = $name;
+        if ($desc !== '') {
+            $label .= ' ('.$desc.')';
+        }
+        if ($price !== null) {
+            $label .= ' - '.$price.' '.$currency;
+        }
+
+        return $label;
+    }
+
+    private function translationFor(string $locale): ?VehicleTypeTranslation
+    {
+        if ($this->relationLoaded('translations')) {
+            /** @var \Illuminate\Support\Collection<int, VehicleTypeTranslation> $t */
+            $t = $this->getRelation('translations');
+
+            return $t->firstWhere('locale', $locale);
+        }
+
+        return $this->translations()->where('locale', $locale)->first();
+    }
+
+    private function fallbackTranslation(): ?VehicleTypeTranslation
+    {
+        if ($this->relationLoaded('translations')) {
+            /** @var \Illuminate\Support\Collection<int, VehicleTypeTranslation> $t */
+            $t = $this->getRelation('translations');
+
+            return $t->first();
+        }
+
+        return $this->translations()->first();
     }
 }

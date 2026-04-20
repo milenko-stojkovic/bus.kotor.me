@@ -179,7 +179,7 @@
                     <select name="vehicle_type_id" id="vehicle_type_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
                         @foreach ($vehicleTypesAllowed as $vt)
                             <option value="{{ $vt->id }}" @selected((string) old('vehicle_type_id', $reservation->vehicle_type_id) === (string) $vt->id)>
-                                {{ $vt->getTranslatedName('cg') }} ({{ $vt->price }} €)
+                                {{ $vt->formatLabel('cg', 'EUR') }}
                             </option>
                         @endforeach
                     </select>

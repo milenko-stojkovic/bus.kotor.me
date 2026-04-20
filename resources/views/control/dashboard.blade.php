@@ -39,7 +39,7 @@
                                     @foreach($group['reservations'] as $reservation)
                                         <tr class="border-b border-gray-100">
                                             <td class="py-2 pr-4 font-medium">{{ $reservation->license_plate }}</td>
-                                            <td class="py-2 pr-4">{{ $reservation->vehicleType->getTranslatedName('cg') }}</td>
+                                            <td class="py-2 pr-4">{{ $reservation->vehicleType->formatLabel('cg', 'EUR') }}</td>
                                         </tr>
                                     @endforeach
                                 </tbody>
@@ -73,7 +73,7 @@
                     <option value="">— Bilo koji —</option>
                     @foreach($vehicleTypes as $vt)
                         <option value="{{ $vt->id }}" @selected((string) old('vehicle_type_id', $searchInput['vehicle_type_id'] ?? '') === (string) $vt->id)>
-                            {{ $vt->getTranslatedName('cg') }}
+                            {{ $vt->formatLabel('cg', 'EUR') }}
                         </option>
                     @endforeach
                 </select>
@@ -117,7 +117,7 @@
                                     <td class="py-2 pr-4">{{ $r->user_name }}</td>
                                     <td class="py-2 pr-4">{{ $r->email }}</td>
                                     <td class="py-2 pr-4 font-medium">{{ $r->license_plate }}</td>
-                                    <td class="py-2 pr-4">{{ $r->vehicleType->getTranslatedName('cg') }}</td>
+                                    <td class="py-2 pr-4">{{ $r->vehicleType->formatLabel('cg', 'EUR') }}</td>
                                 </tr>
                             @endforeach
                         </tbody>

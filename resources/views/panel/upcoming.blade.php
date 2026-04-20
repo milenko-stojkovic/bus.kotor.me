@@ -92,7 +92,7 @@
                                                     <span x-show="editing" class="text-amber-700 text-xs">{{ $p('upcoming_no_eligible_vehicle', 'No eligible vehicle in your fleet.') }}</span>
                                                 @endif
                                             </td>
-                                            <td class="px-3 py-2 text-gray-700">{{ $r->vehicleType?->getTranslatedName($locale) ?? '—' }}</td>
+                                            <td class="px-3 py-2 text-gray-700">{{ $r->vehicleType?->formatLabel($locale, 'EUR') ?? '—' }}</td>
                                             <td class="px-3 py-2 text-right whitespace-nowrap">
                                                 <div x-show="! editing" class="flex justify-end">
                                                     @if ($allowed->isNotEmpty())

@@ -82,7 +82,7 @@
                     <option value="">{{ $ui('select_vehicle_category') }}</option>
                     @foreach (($vehicle_types ?? []) as $vt)
                         <option value="{{ $vt->id }}" @selected((int) old('vehicle_type_id', request('vehicle_type_id')) === (int) $vt->id)>
-                            {{ $vt->getTranslatedName($locale) ?: ('#'.$vt->id) }}
+                            {{ $vt->formatLabel($locale, 'EUR') }}
                         </option>
                     @endforeach
                 </select>
