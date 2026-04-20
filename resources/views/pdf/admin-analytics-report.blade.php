@@ -3,6 +3,7 @@
     $f = (array) ($dataset['filters'] ?? []);
     $fmtMoney = fn (float $v) => number_format($v, 2, '.', '').' EUR';
     $fmtPct = fn (float $v) => number_format($v * 100, 1, '.', '').'%';
+    $st = \App\Support\AdminAnalyticsSectionTexts::all();
 @endphp
 <!doctype html>
 <html lang="sr-Latn-ME">
@@ -28,6 +29,7 @@
     </div>
 
     <h2>KPI</h2>
+    <div class="muted">{{ $st['kpi'] ?? '' }}</div>
     <table class="kpi">
         <tr>
             <td>Ukupan prihod</td><td>{{ $fmtMoney((float)($k['revenue_total'] ?? 0)) }}</td>
@@ -48,6 +50,7 @@
     </table>
 
     <h2>Trend po danima</h2>
+    <div class="muted">{{ $st['trend'] ?? '' }}</div>
     <table>
         <thead>
             <tr>
@@ -69,6 +72,7 @@
     </table>
 
     <h2>Delovi dana</h2>
+    <div class="muted">{{ $st['day_parts'] ?? '' }}</div>
     <table>
         <thead>
             <tr>
@@ -89,6 +93,7 @@
     </table>
 
     <h2>Po tipovima vozila</h2>
+    <div class="muted">{{ $st['vehicle_types'] ?? '' }}</div>
     <table>
         <thead>
             <tr>
@@ -109,6 +114,7 @@
     </table>
 
     <h2>Po državama</h2>
+    <div class="muted">{{ $st['countries'] ?? '' }}</div>
     <table>
         <thead>
             <tr>
@@ -130,6 +136,7 @@
 
     @php($pf = (array)($dataset['paid_vs_free'] ?? []))
     <h2>Paid vs Free</h2>
+    <div class="muted">{{ $st['paid_vs_free'] ?? '' }}</div>
     <table>
         <tbody>
             <tr><td>Paid rezervacije</td><td style="text-align:right">{{ (int)($pf['paid_reservations'] ?? 0) }}</td></tr>
@@ -143,6 +150,7 @@
 
     @php($b = (array)($dataset['blocking'] ?? []))
     <h2>Blokiranje</h2>
+    <div class="muted">{{ $st['blocking'] ?? '' }}</div>
     <table>
         <tbody>
             <tr><td>Blokirani slotovi (redovi)</td><td style="text-align:right">{{ (int)($b['blocked_slot_rows'] ?? 0) }}</td></tr>
@@ -153,6 +161,7 @@
 
     @php($o = (array)($dataset['ops'] ?? []))
     <h2>Operativni problemi / recovery</h2>
+    <div class="muted">{{ $st['ops'] ?? '' }}</div>
     <table>
         <tbody>
             <tr><td>Failed payment pokušaji</td><td style="text-align:right">{{ (int)($o['failed_payments'] ?? 0) }}</td></tr>

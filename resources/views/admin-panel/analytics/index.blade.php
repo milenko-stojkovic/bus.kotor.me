@@ -1,6 +1,7 @@
 @php
     $fmtMoney = fn (float $v) => number_format($v, 2, '.', '').' EUR';
     $fmtPct = fn (float $v) => number_format($v * 100, 1, '.', '').'%';
+    $st = \App\Support\AdminAnalyticsSectionTexts::all();
 @endphp
 
 <x-admin-panel-layout :page-title="$pageTitle ?? 'Analitika'" nav-active="analytics">
@@ -55,6 +56,7 @@
 
         @if ($dataset)
             @php($k = $dataset['kpi'])
+            <p class="text-sm text-gray-600">{{ $st['kpi'] ?? '' }}</p>
             <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div class="bg-white shadow rounded-lg p-4 border border-gray-100">
                     <div class="text-xs text-gray-500">Ukupan prihod</div>
@@ -92,6 +94,7 @@
 
             <section class="bg-white shadow rounded-lg p-6 border border-gray-100">
                 <h2 class="text-base font-semibold text-gray-900">Trend po danima</h2>
+                <p class="text-sm text-gray-600 mt-1">{{ $st['trend'] ?? '' }}</p>
                 <div class="mt-4 overflow-x-auto">
                     <table class="min-w-full text-sm">
                         <thead class="text-xs text-gray-500 uppercase">
@@ -123,6 +126,7 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <section class="bg-white shadow rounded-lg p-6 border border-gray-100">
                     <h2 class="text-base font-semibold text-gray-900">Analiza po delovima dana</h2>
+                    <p class="text-sm text-gray-600 mt-1">{{ $st['day_parts'] ?? '' }}</p>
                     <div class="mt-4 overflow-x-auto">
                         <table class="min-w-full text-sm">
                             <thead class="text-xs text-gray-500 uppercase">
@@ -151,6 +155,7 @@
 
                 <section class="bg-white shadow rounded-lg p-6 border border-gray-100">
                     <h2 class="text-base font-semibold text-gray-900">Paid vs Free</h2>
+                    <p class="text-sm text-gray-600 mt-1">{{ $st['paid_vs_free'] ?? '' }}</p>
                     @php($pf = $dataset['paid_vs_free'])
                     <div class="mt-4 overflow-x-auto">
                         <table class="min-w-full text-sm">
@@ -169,6 +174,7 @@
 
             <section class="bg-white shadow rounded-lg p-6 border border-gray-100">
                 <h2 class="text-base font-semibold text-gray-900">Analiza po tipovima vozila</h2>
+                <p class="text-sm text-gray-600 mt-1">{{ $st['vehicle_types'] ?? '' }}</p>
                 <div class="mt-4 overflow-x-auto">
                     <table class="min-w-full text-sm">
                         <thead class="text-xs text-gray-500 uppercase">
@@ -197,6 +203,7 @@
 
             <section class="bg-white shadow rounded-lg p-6 border border-gray-100">
                 <h2 class="text-base font-semibold text-gray-900">Analiza po državama</h2>
+                <p class="text-sm text-gray-600 mt-1">{{ $st['countries'] ?? '' }}</p>
                 <div class="mt-4 overflow-x-auto">
                     <table class="min-w-full text-sm">
                         <thead class="text-xs text-gray-500 uppercase">
@@ -226,6 +233,7 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <section class="bg-white shadow rounded-lg p-6 border border-gray-100">
                     <h2 class="text-base font-semibold text-gray-900">Blokiranje i izgubljeni kapacitet</h2>
+                    <p class="text-sm text-gray-600 mt-1">{{ $st['blocking'] ?? '' }}</p>
                     @php($b = $dataset['blocking'])
                     <div class="mt-4 space-y-2 text-sm">
                         <div class="flex justify-between"><span class="text-gray-600">Blokirani slotovi (redovi)</span><span class="font-medium">{{ $b['blocked_slot_rows'] }}</span></div>
@@ -259,6 +267,7 @@
 
                 <section class="bg-white shadow rounded-lg p-6 border border-gray-100">
                     <h2 class="text-base font-semibold text-gray-900">Operativni problemi / recovery</h2>
+                    <p class="text-sm text-gray-600 mt-1">{{ $st['ops'] ?? '' }}</p>
                     @php($o = $dataset['ops'])
                     <div class="mt-4 overflow-x-auto">
                         <table class="min-w-full text-sm">
