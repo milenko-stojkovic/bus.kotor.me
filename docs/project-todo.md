@@ -29,3 +29,12 @@ Stavke su prioritetne grupe. Kada nešto **završiš**, premesti opis u `docs/pr
 ## 5. Opciono
 
 - [ ] Migracija **`createSession`** sa sync web requesta na async init preko queue-a.
+
+## 6. Future mobile platform readiness (plan / bez izmena koda sada)
+
+- [ ] **Android (agencije):** planirati Android aplikaciju za agency tokove (ulogovani `/panel`).
+- [ ] **Android (admin + control):** planirati Android aplikaciju za admin panel i control funkcionalnosti.
+- [ ] **Control panel:** plan je da control panel bude **samo na Android-u**.
+- [ ] **iPhone (opciono):** eventualno samo za agencije i samo ako bude traženo (nije prioritet sada).
+- [ ] **Pre mobile produkcije:** uraditi poseban audit backend-a (kontroleri/Blade/session/redirect) i identifikovati mesta koja su previše web-specifična ili nisu API-friendly; definisati šta treba izvesti u čiste servise/API tokove za mobile klijente.
+- [ ] **Ograničenje ovog TODO-a:** u ovoj fazi **NE** menjati PHP kod, rute, validaciju, poslovnu logiku niti uvoditi API — samo plan i evidencija.

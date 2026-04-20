@@ -17,6 +17,8 @@ Ovaj fajl je **kratak smerač**. Detalji su podeljeni da bi novi chat mogao da u
 
 **Radni tok:** završi zadatak → stavku iz `project-todo.md` prebaci u `project-done.md` (sa datumom) → ukloni iz TODO → po potrebi ažuriraj **tematski** dokument ispod (da ostane izvor istine sa kodom).
 
+**Napomena (future plan):** planirana je mobile ekspanzija (Android za agencije i Android za admin/control; control panel samo Android; iPhone eventualno samo agencije). Detalji su u `docs/project-todo.md` (sekcija „Future mobile platform readiness“) — trenutno bez izmena koda.
+
 ---
 
 ## Brzi test (lokalno)

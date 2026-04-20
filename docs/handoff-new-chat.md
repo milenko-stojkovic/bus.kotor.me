@@ -24,6 +24,8 @@ Ako diraš payment / temp_data / callback / inquiry / late_success: prvo docs/pa
 Pravilo ažuriranja: kad nešto završiš, premesti stavku iz docs/project-todo.md u docs/project-done.md (sa datumom). Ne ostavljaj zastarele TODO stavke.
 Ako promena dira domen (payment, fiskal, auth), ažuriraj i odgovarajući tematski fajl u docs/ (v. docs/project-status-next-steps.md i §3 u handoff-new-chat.md). Za payment state machine ažuriraj docs/payment-state-machine.md ako si promenio pravila u kodu.
 
+Future plan (bez izmene koda sada): postoji TODO stavka „Future mobile platform readiness“ (Android agencije; Android admin/control; control panel samo Android; iPhone eventualno samo agencije). Pre mobile produkcije planiran je poseban audit backend-a za mobile/API-friendly upotrebu.
+
 Trenutni zadatak: [OVDE NAPIŠI ŠTA RADIŠ]
 ```
 
