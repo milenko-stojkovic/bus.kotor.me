@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\ReservationListController;
 use App\Http\Controllers\AdminPanel\AuthController as AdminPanelAuthController;
 use App\Http\Controllers\AdminPanel\BlockingController as AdminPanelBlockingController;
 use App\Http\Controllers\AdminPanel\FreeReservationController as AdminPanelFreeReservationController;
+use App\Http\Controllers\AdminPanel\AnalyticsController as AdminPanelAnalyticsController;
 use App\Http\Controllers\AdminPanel\ReservationController as AdminPanelReservationController;
 use App\Http\Controllers\AdminPanel\SettingsController as AdminPanelSettingsController;
 use App\Http\Controllers\AdminPanel\WarningsController as AdminPanelWarningsController;
@@ -61,11 +62,8 @@ Route::prefix('admin')->name('panel_admin.')->group(function () {
         Route::post('podesavanja/report-emails', [AdminPanelSettingsController::class, 'storeReportEmail'])->name('settings.report-emails.store');
         Route::delete('podesavanja/report-emails/{reportEmail}', [AdminPanelSettingsController::class, 'destroyReportEmail'])->name('settings.report-emails.destroy');
 
-        Route::view('analitika', 'admin-panel.placeholder', [
-            'navActive' => 'analytics',
-            'title' => 'Analitika',
-            'lead' => 'Uskoro.',
-        ])->name('analytics');
+        Route::get('analitika', [AdminPanelAnalyticsController::class, 'index'])->name('analytics');
+        Route::get('analitika/pdf', [AdminPanelAnalyticsController::class, 'pdf'])->name('analytics.pdf');
     });
 });
 

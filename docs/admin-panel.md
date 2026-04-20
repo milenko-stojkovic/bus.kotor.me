@@ -173,6 +173,23 @@ Napomena: `system_config` ima `name` (unique) i `value` (integer). Za admin form
 
 ---
 
+## 7. Analitika (admin panel) — implementirano
+
+| Ruta | Namena |
+|------|--------|
+| `GET /admin/analitika` | `panel_admin.analytics` — dashboard sa filterima (period, include free), KPI i tabelama. |
+| `GET /admin/analitika/pdf` | `panel_admin.analytics.pdf` — PDF export za aktivne filtere (isti dataset kao UI). |
+
+- **Filteri:** `date_from`, `date_to` (zatvoren interval, `od <= do`), `include_free` (checkbox).
+- **Source of truth:** rezervacije iz `reservations`, blokiranje iz `daily_parking_data.is_blocked`, operativni problemi iz `temp_data` i `post_fiscalization_data`.
+- **Prihod:** suma `reservations.invoice_amount` za `status = paid` u periodu.
+- **Zauzeti slotovi:** po rezervaciji 1 ako `drop_off_time_slot_id == pick_up_time_slot_id`, inače 2.
+- **Popunjenost (slot-level):** \(occupied\_slots / (broj\_slotova \* broj\_dana)\).
+- **Delovi dana:** grupisanje po početnom vremenu *drop-off* termina (00–07, 07–20, 20–24).
+- **PDF:** `AdminAnalyticsPdfGenerator` (`DomPDF`) koristi view `pdf.admin-analytics-report` i isti dataset iz `AdminAnalyticsService`.
+
+**Testovi:** `tests/Feature/AdminPanel/AdminPanelAnalyticsTest.php`.
+
 ## 6. Istorija plaćanja (registrovani korisnici)
 
 | Funkcionalnost | Opis | Modeli / tabele |

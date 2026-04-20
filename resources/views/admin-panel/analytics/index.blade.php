@@ -1,0 +1,280 @@
+@php
+    $fmtMoney = fn (float $v) => number_format($v, 2, '.', '').' EUR';
+    $fmtPct = fn (float $v) => number_format($v * 100, 1, '.', '').'%';
+@endphp
+
+<x-admin-panel-layout :page-title="$pageTitle ?? 'Analitika'" nav-active="analytics">
+    <div class="space-y-6">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+                <h1 class="text-lg font-semibold text-gray-900">Analitika</h1>
+                <p class="text-sm text-gray-600 mt-1">Pregled metrike i operativnih pokazatelja za izabrani period.</p>
+            </div>
+        </div>
+
+        @if ($errors->any())
+            <div class="rounded-md bg-red-50 p-4 text-sm text-red-800 space-y-1">
+                @foreach ($errors->all() as $err)
+                    <div>{{ $err }}</div>
+                @endforeach
+            </div>
+        @endif
+
+        <form method="get" action="{{ route('panel_admin.analytics', [], false) }}" class="bg-white shadow rounded-lg p-5 border border-gray-100 space-y-4">
+            <input type="hidden" name="show" value="1">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <div>
+                    <x-input-label for="date_from" value="Datum od" />
+                    <input type="date" id="date_from" name="date_from" min="{{ $minDate }}" max="{{ $maxDate }}"
+                           value="{{ $dateFrom }}"
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" />
+                </div>
+                <div>
+                    <x-input-label for="date_to" value="Datum do" />
+                    <input type="date" id="date_to" name="date_to" min="{{ $minDate }}" max="{{ $maxDate }}"
+                           value="{{ $dateTo }}"
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" />
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="include_free" name="include_free" value="1" class="rounded border-gray-300"
+                        @checked($includeFree) />
+                    <label for="include_free" class="text-sm text-gray-700">Uključi besplatne rezervacije</label>
+                </div>
+                <div class="flex gap-2 justify-end">
+                    <button type="submit"
+                        class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700">
+                        Prikaži
+                    </button>
+                    <a href="{{ route('panel_admin.analytics.pdf', ['date_from' => $dateFrom, 'date_to' => $dateTo, 'include_free' => $includeFree ? 1 : 0], false) }}"
+                        class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50">
+                        Generiši PDF
+                    </a>
+                </div>
+            </div>
+        </form>
+
+        @if ($dataset)
+            @php($k = $dataset['kpi'])
+            <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div class="bg-white shadow rounded-lg p-4 border border-gray-100">
+                    <div class="text-xs text-gray-500">Ukupan prihod</div>
+                    <div class="text-lg font-semibold text-gray-900">{{ $fmtMoney($k['revenue_total']) }}</div>
+                </div>
+                <div class="bg-white shadow rounded-lg p-4 border border-gray-100">
+                    <div class="text-xs text-gray-500">Broj rezervacija</div>
+                    <div class="text-lg font-semibold text-gray-900">{{ $k['reservations_total'] }}</div>
+                </div>
+                <div class="bg-white shadow rounded-lg p-4 border border-gray-100">
+                    <div class="text-xs text-gray-500">Paid / Free</div>
+                    <div class="text-lg font-semibold text-gray-900">{{ $k['paid_reservations'] }} / {{ $k['free_reservations'] }}</div>
+                </div>
+                <div class="bg-white shadow rounded-lg p-4 border border-gray-100">
+                    <div class="text-xs text-gray-500">Prosečan prihod po paid</div>
+                    <div class="text-lg font-semibold text-gray-900">{{ $fmtMoney($k['avg_revenue_per_paid']) }}</div>
+                </div>
+                <div class="bg-white shadow rounded-lg p-4 border border-gray-100">
+                    <div class="text-xs text-gray-500">Ukupan broj zauzetih slotova</div>
+                    <div class="text-lg font-semibold text-gray-900">{{ $k['occupied_slots_total'] }}</div>
+                </div>
+                <div class="bg-white shadow rounded-lg p-4 border border-gray-100">
+                    <div class="text-xs text-gray-500">Prosečna popunjenost (slot-level)</div>
+                    <div class="text-lg font-semibold text-gray-900">{{ $fmtPct($k['avg_occupancy_slot_level']) }}</div>
+                </div>
+                <div class="bg-white shadow rounded-lg p-4 border border-gray-100">
+                    <div class="text-xs text-gray-500">Broj blokiranih slotova</div>
+                    <div class="text-lg font-semibold text-gray-900">{{ $k['blocked_slot_rows'] }}</div>
+                </div>
+                <div class="bg-white shadow rounded-lg p-4 border border-gray-100">
+                    <div class="text-xs text-gray-500">Izgubljeni kapacitet (blokiranje)</div>
+                    <div class="text-lg font-semibold text-gray-900">{{ $fmtPct($k['blocked_capacity_pct']) }}</div>
+                </div>
+            </section>
+
+            <section class="bg-white shadow rounded-lg p-6 border border-gray-100">
+                <h2 class="text-base font-semibold text-gray-900">Trend po danima</h2>
+                <div class="mt-4 overflow-x-auto">
+                    <table class="min-w-full text-sm">
+                        <thead class="text-xs text-gray-500 uppercase">
+                            <tr class="border-b">
+                                <th class="py-2 pr-4 text-left">Datum</th>
+                                <th class="py-2 pr-4 text-right">Rezervacije</th>
+                                <th class="py-2 pr-4 text-right">Paid</th>
+                                <th class="py-2 pr-4 text-right">Free</th>
+                                <th class="py-2 pr-4 text-right">Zauzeti slotovi</th>
+                                <th class="py-2 pr-4 text-right">Prihod</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                            @foreach ($dataset['trend_by_day'] as $row)
+                                <tr>
+                                    <td class="py-2 pr-4">{{ $row['date'] }}</td>
+                                    <td class="py-2 pr-4 text-right">{{ $row['reservations'] }}</td>
+                                    <td class="py-2 pr-4 text-right">{{ $row['paid'] }}</td>
+                                    <td class="py-2 pr-4 text-right">{{ $row['free'] }}</td>
+                                    <td class="py-2 pr-4 text-right">{{ $row['occupied_slots'] }}</td>
+                                    <td class="py-2 pr-4 text-right">{{ $fmtMoney($row['revenue']) }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <section class="bg-white shadow rounded-lg p-6 border border-gray-100">
+                    <h2 class="text-base font-semibold text-gray-900">Analiza po delovima dana</h2>
+                    <div class="mt-4 overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <thead class="text-xs text-gray-500 uppercase">
+                                <tr class="border-b">
+                                    <th class="py-2 pr-4 text-left">Prozor</th>
+                                    <th class="py-2 pr-4 text-right">Rezervacije</th>
+                                    <th class="py-2 pr-4 text-right">Zauzeti slotovi</th>
+                                    <th class="py-2 pr-4 text-right">Prihod</th>
+                                    <th class="py-2 pr-4 text-right">Udeo zauzetosti</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">
+                                @foreach ($dataset['day_parts'] as $row)
+                                    <tr>
+                                        <td class="py-2 pr-4">{{ $row['label'] }}</td>
+                                        <td class="py-2 pr-4 text-right">{{ $row['reservations'] }}</td>
+                                        <td class="py-2 pr-4 text-right">{{ $row['occupied_slots'] }}</td>
+                                        <td class="py-2 pr-4 text-right">{{ $fmtMoney($row['revenue']) }}</td>
+                                        <td class="py-2 pr-4 text-right">{{ $fmtPct($row['share_occupied']) }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="bg-white shadow rounded-lg p-6 border border-gray-100">
+                    <h2 class="text-base font-semibold text-gray-900">Paid vs Free</h2>
+                    @php($pf = $dataset['paid_vs_free'])
+                    <div class="mt-4 overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <tbody class="divide-y">
+                                <tr><td class="py-2 pr-4 text-gray-600">Paid rezervacije</td><td class="py-2 pr-4 text-right font-medium">{{ $pf['paid_reservations'] }}</td></tr>
+                                <tr><td class="py-2 pr-4 text-gray-600">Free rezervacije</td><td class="py-2 pr-4 text-right font-medium">{{ $pf['free_reservations'] }}</td></tr>
+                                <tr><td class="py-2 pr-4 text-gray-600">Zauzeti slotovi (paid)</td><td class="py-2 pr-4 text-right font-medium">{{ $pf['paid_occupied_slots'] }}</td></tr>
+                                <tr><td class="py-2 pr-4 text-gray-600">Zauzeti slotovi (free)</td><td class="py-2 pr-4 text-right font-medium">{{ $pf['free_occupied_slots'] }}</td></tr>
+                                <tr><td class="py-2 pr-4 text-gray-600">Prihod (paid)</td><td class="py-2 pr-4 text-right font-medium">{{ $fmtMoney($pf['paid_revenue']) }}</td></tr>
+                                <tr><td class="py-2 pr-4 text-gray-600">% zauzetosti koje troše free (slot-level)</td><td class="py-2 pr-4 text-right font-medium">{{ $fmtPct($pf['free_capacity_pct_by_slots']) }}</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <section class="bg-white shadow rounded-lg p-6 border border-gray-100">
+                <h2 class="text-base font-semibold text-gray-900">Analiza po tipovima vozila</h2>
+                <div class="mt-4 overflow-x-auto">
+                    <table class="min-w-full text-sm">
+                        <thead class="text-xs text-gray-500 uppercase">
+                            <tr class="border-b">
+                                <th class="py-2 pr-4 text-left">Tip vozila</th>
+                                <th class="py-2 pr-4 text-right">Rezervacije</th>
+                                <th class="py-2 pr-4 text-right">Zauzeti slotovi</th>
+                                <th class="py-2 pr-4 text-right">Prihod</th>
+                                <th class="py-2 pr-4 text-right">Prosečno</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                            @foreach ($dataset['by_vehicle_type'] as $row)
+                                <tr>
+                                    <td class="py-2 pr-4">{{ $row['name'] }}</td>
+                                    <td class="py-2 pr-4 text-right">{{ $row['reservations'] }}</td>
+                                    <td class="py-2 pr-4 text-right">{{ $row['occupied_slots'] }}</td>
+                                    <td class="py-2 pr-4 text-right">{{ $fmtMoney($row['revenue']) }}</td>
+                                    <td class="py-2 pr-4 text-right">{{ $fmtMoney($row['avg_revenue']) }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="bg-white shadow rounded-lg p-6 border border-gray-100">
+                <h2 class="text-base font-semibold text-gray-900">Analiza po državama</h2>
+                <div class="mt-4 overflow-x-auto">
+                    <table class="min-w-full text-sm">
+                        <thead class="text-xs text-gray-500 uppercase">
+                            <tr class="border-b">
+                                <th class="py-2 pr-4 text-left">Država</th>
+                                <th class="py-2 pr-4 text-right">Rezervacije</th>
+                                <th class="py-2 pr-4 text-right">Paid</th>
+                                <th class="py-2 pr-4 text-right">Free</th>
+                                <th class="py-2 pr-4 text-right">Prihod</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                            @foreach ($dataset['by_country'] as $row)
+                                <tr>
+                                    <td class="py-2 pr-4">{{ $row['country'] }}</td>
+                                    <td class="py-2 pr-4 text-right">{{ $row['reservations'] }}</td>
+                                    <td class="py-2 pr-4 text-right">{{ $row['paid'] }}</td>
+                                    <td class="py-2 pr-4 text-right">{{ $row['free'] }}</td>
+                                    <td class="py-2 pr-4 text-right">{{ $fmtMoney($row['revenue']) }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <section class="bg-white shadow rounded-lg p-6 border border-gray-100">
+                    <h2 class="text-base font-semibold text-gray-900">Blokiranje i izgubljeni kapacitet</h2>
+                    @php($b = $dataset['blocking'])
+                    <div class="mt-4 space-y-2 text-sm">
+                        <div class="flex justify-between"><span class="text-gray-600">Blokirani slotovi (redovi)</span><span class="font-medium">{{ $b['blocked_slot_rows'] }}</span></div>
+                        <div class="flex justify-between"><span class="text-gray-600">Potpuno blokirani dani</span><span class="font-medium">{{ $b['fully_blocked_days'] }}</span></div>
+                        <div class="flex justify-between"><span class="text-gray-600">% izgubljenog kapaciteta</span><span class="font-medium">{{ $fmtPct($b['blocked_capacity_pct']) }}</span></div>
+                    </div>
+                    @if (!empty($b['top_days']))
+                        <h3 class="mt-4 text-sm font-semibold text-gray-900">Top dani po blokiranju</h3>
+                        <div class="mt-2 overflow-x-auto">
+                            <table class="min-w-full text-sm">
+                                <thead class="text-xs text-gray-500 uppercase">
+                                    <tr class="border-b">
+                                        <th class="py-2 pr-4 text-left">Datum</th>
+                                        <th class="py-2 pr-4 text-right">Blokirani slotovi</th>
+                                        <th class="py-2 pr-4 text-right">Udeo</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y">
+                                    @foreach ($b['top_days'] as $row)
+                                        <tr>
+                                            <td class="py-2 pr-4">{{ $row['date'] }}</td>
+                                            <td class="py-2 pr-4 text-right">{{ $row['blocked_slots'] }}</td>
+                                            <td class="py-2 pr-4 text-right">{{ $fmtPct($row['blocked_slots_pct']) }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
+                </section>
+
+                <section class="bg-white shadow rounded-lg p-6 border border-gray-100">
+                    <h2 class="text-base font-semibold text-gray-900">Operativni problemi / recovery</h2>
+                    @php($o = $dataset['ops'])
+                    <div class="mt-4 overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <tbody class="divide-y">
+                                <tr><td class="py-2 pr-4 text-gray-600">Failed payment pokušaji</td><td class="py-2 pr-4 text-right font-medium">{{ $o['failed_payments'] }}</td></tr>
+                                <tr><td class="py-2 pr-4 text-gray-600">Expired payment pokušaji</td><td class="py-2 pr-4 text-right font-medium">{{ $o['expired_payments'] }}</td></tr>
+                                <tr><td class="py-2 pr-4 text-gray-600">Late success</td><td class="py-2 pr-4 text-right font-medium">{{ $o['late_success'] }}</td></tr>
+                                <tr><td class="py-2 pr-4 text-gray-600">Paid bez fiscal JIR</td><td class="py-2 pr-4 text-right font-medium">{{ $o['paid_without_fiscal_jir'] }}</td></tr>
+                                <tr><td class="py-2 pr-4 text-gray-600">Unresolved post-fiscal</td><td class="py-2 pr-4 text-right font-medium">{{ $o['unresolved_post_fiscal'] }}</td></tr>
+                                <tr><td class="py-2 pr-4 text-gray-600">Resolved post-fiscal (u periodu)</td><td class="py-2 pr-4 text-right font-medium">{{ $o['resolved_post_fiscal'] }}</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        @endif
+    </div>
+</x-admin-panel-layout>
+
