@@ -148,6 +148,29 @@ Rute (admin panel):
 
 ---
 
+## 4.1 Izveštaji (admin panel) — implementirano
+
+- **Nema HTML preview-a**: stranica je samo dvokoračni izbor + PDF export u novom tabu.
+- **Datum bounds (svi pickeri)**: min/max se računaju iz `reservations.created_at` (samo datum deo).
+- **PDF**: uvek na `cg`, generiše se i kad nema podataka (nule/prazni redovi).
+
+| Ruta | Namena |
+|------|--------|
+| `GET /admin/izvestaji` | `panel_admin.reports` — izbor “Kada” + “Kakav”, zatim izbor opsega i dugmad `PDF` / `Odkaži`. |
+| `GET /admin/izvestaji/pdf` | `panel_admin.reports.pdf` — PDF export (inline) za izabrani tip i opseg. |
+
+- **Kontroler:** `App\Http\Controllers\AdminPanel\ReportsController`.
+- **Validacija:** `App\Http\Requests\AdminPanel\AdminPanelReportPdfRequest`.
+- **Bounds:** `App\Services\AdminPanel\Reports\AdminReportsCreatedAtBounds`.
+- **Agregacija:** `App\Services\AdminPanel\Reports\AdminReportsService`.
+- **PDF:** `App\Services\Pdf\AdminReportsPdfGenerator` koristi view `pdf.admin-report`.
+
+**Po uplati:** samo `paid` rezervacije, opseg po `reservations.created_at` (datum), `Ukupan prihod = sum(invoice_amount)`, `Broj transakcija = count(paid)`.
+
+**Po realizaciji:** realizovane rezervacije po važećoj sistemskoj definiciji (istekao `Vrijeme odlaska`), opseg po `reservations.reservation_date` (jer realizacija je u okviru istog dana), `Ukupan prihod` se sabira samo za `paid`, a `Broj realizovanih` broji sve realizovane (paid + free).
+
+**Po tipu vozila:** koristi realizovane rezervacije (bez obzira na status), opseg po `reservation_date`, prikaz 4 fiksna reda + `Ukupno` (naziv na `cg`: name + (description), bez cijene). I bez podataka redovi ostaju sa nulama.
+
 ## 5. Sistemska konfiguracija
 
 | Funkcionalnost | Opis | Modeli / tabele |
@@ -189,6 +212,31 @@ Napomena: `system_config` ima `name` (unique) i `value` (integer). Za admin form
 - **PDF:** `AdminAnalyticsPdfGenerator` (`DomPDF`) koristi view `pdf.admin-analytics-report` i isti dataset iz `AdminAnalyticsService`.
 
 **Testovi:** `tests/Feature/AdminPanel/AdminPanelAnalyticsTest.php`.
+
+---
+
+## 8. Uvid (admin panel) — implementirano
+
+Read-only modul, payment-centric (osnovna jedinica prikaza je `merchant_transaction_id`).
+
+- **Source of truth (search):** `temp_data`
+- **Dopuna:** `reservations` se pridružuje po istom MTID (ako postoji)
+- **Admin-free rezervacije:** ne pripadaju payment lifecycle-u; ako admin unese MTID koji postoji samo kao admin-free rezervacija, prikazuje se kratka napomena (bez payment detalja).
+- **Log timeline:** parsirana lista događaja iz `payments-YYYY-MM-DD.log` (samo linije koje eksplicitno sadrže MTID). Retention je usklađen sa `config('logging.channels.payments.days')`. Ako nema dostupnih logova u retention periodu: prikazuje se poruka *„Detaljni payment logovi nisu dostupni u retention periodu.“*
+- **Search UX:** polja `Država`, `Status (temp_data)` i `Resolution reason` su dropdown; `Tablica` se normalizuje na `A–Z0–9` (ALL CAPS); datumi se prikazuju kao `DD.MM.YYYY.`.
+- **Navigacija:** povratak sa detalja na listu čuva query string (`Nazad` vraća prethodne rezultate pretrage).
+
+| Ruta | Namena |
+|------|--------|
+| `GET /admin/uvid` | `panel_admin.insight` — search/list nad `temp_data` (AND logika za popunjene kriterijume) + link `Detalji`. |
+| `GET /admin/uvid/{merchantTransactionId}` | `panel_admin.insight.show` — detalj case-a (temp_data + rezervacija + timeline + Copy details). |
+
+- **Kontroler:** `App\Http\Controllers\AdminPanel\InsightController`.
+- **Validacija:** `App\Http\Requests\AdminPanel\AdminPanelInsightSearchRequest`.
+- **Servis:** `App\Services\AdminPanel\Insight\AdminInsightService`.
+- **Timeline parser:** `App\Services\AdminPanel\Insight\PaymentLogTimelineService`.
+
+**Testovi:** `tests/Feature/AdminPanel/AdminPanelInsightTest.php`.
 
 ## 6. Istorija plaćanja (registrovani korisnici)
 

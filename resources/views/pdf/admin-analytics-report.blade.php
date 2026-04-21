@@ -170,6 +170,15 @@
             <tr><td>Paid bez fiscal JIR</td><td style="text-align:right">{{ (int)($o['paid_without_fiscal_jir'] ?? 0) }}</td></tr>
             <tr><td>Unresolved post-fiscal</td><td style="text-align:right">{{ (int)($o['unresolved_post_fiscal'] ?? 0) }}</td></tr>
             <tr><td>Resolved post-fiscal (u periodu)</td><td style="text-align:right">{{ (int)($o['resolved_post_fiscal'] ?? 0) }}</td></tr>
+            <tr>
+                <td title="Rezervacije koje su plaćene, ali se u potpunosti nalaze u besplatnim terminima (najčešće rezultat administrativne izmene).">Paid rezervacije u free terminima</td>
+                <td style="text-align:right">{{ (int)($o['paid_reservations_fully_in_free_zone'] ?? 0) }}</td>
+            </tr>
+            <tr>
+                <td colspan="2" class="muted" style="font-size:10px;padding-top:0;padding-bottom:6px">
+                    Rezervacije koje su plaćene, ali se u potpunosti nalaze u besplatnim terminima (najčešće rezultat administrativne izmene).
+                </td>
+            </tr>
         </tbody>
     </table>
 </body>

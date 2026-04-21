@@ -1,0 +1,247 @@
+@php
+    /** @var string $minDate */
+    /** @var string $maxDate */
+@endphp
+
+<x-admin-panel-layout :page-title="$pageTitle ?? 'Izveštaji'" nav-active="reports">
+    <div class="space-y-6" x-data="reportsWizard()">
+        <div>
+            <h1 class="text-lg font-semibold text-gray-900">Izveštaji</h1>
+            <p class="text-sm text-gray-600 mt-1">Izaberi tip izveštaja i vremenski opseg, zatim generiši PDF u novom tabu.</p>
+        </div>
+
+        @if ($errors->any())
+            <div class="rounded-md bg-red-50 p-4 text-sm text-red-800 space-y-1">
+                @foreach ($errors->all() as $err)
+                    <div>{{ $err }}</div>
+                @endforeach
+            </div>
+        @endif
+
+        <div class="bg-white shadow rounded-lg p-6 border border-gray-100">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <div class="text-sm font-semibold text-gray-900 mb-3">Kada</div>
+                    <div class="space-y-2 text-sm text-gray-700">
+                        <label class="flex items-center gap-2">
+                            <input type="radio" name="when" value="daily" class="rounded border-gray-300" x-model="when">
+                            <span>Dnevni</span>
+                        </label>
+                        <label class="flex items-center gap-2">
+                            <input type="radio" name="when" value="monthly" class="rounded border-gray-300" x-model="when">
+                            <span>Mjesečni</span>
+                        </label>
+                        <label class="flex items-center gap-2">
+                            <input type="radio" name="when" value="yearly" class="rounded border-gray-300" x-model="when">
+                            <span>Godišnji</span>
+                        </label>
+                        <label class="flex items-center gap-2">
+                            <input type="radio" name="when" value="period" class="rounded border-gray-300" x-model="when">
+                            <span>Period</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="text-sm font-semibold text-gray-900 mb-3">Kakav</div>
+                    <div class="space-y-2 text-sm text-gray-700">
+                        <label class="flex items-center gap-2">
+                            <input type="radio" name="kind" value="by_payment" class="rounded border-gray-300" x-model="kind">
+                            <span>Po uplati</span>
+                        </label>
+                        <label class="flex items-center gap-2">
+                            <input type="radio" name="kind" value="by_realization" class="rounded border-gray-300" x-model="kind">
+                            <span>Po realizaciji</span>
+                        </label>
+                        <label class="flex items-center gap-2">
+                            <input type="radio" name="kind" value="by_vehicle_type" class="rounded border-gray-300" x-model="kind">
+                            <span>Po tipu vozila</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end">
+                <button type="button"
+                        class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-700"
+                        :disabled="!canProceed()"
+                        @click="step = 2">
+                    Izvještaj
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-white shadow rounded-lg p-6 border border-gray-100" x-show="step === 2" x-cloak>
+            <div class="text-sm font-semibold text-gray-900">Izbor opsega</div>
+            <p class="text-sm text-gray-600 mt-1">Opseg je ograničen na datume kreiranja rezervacija (created_at).</p>
+
+            <form method="get"
+                  target="_blank"
+                  action="{{ route('panel_admin.reports.pdf', [], false) }}"
+                  class="mt-4 space-y-4">
+                <input type="hidden" name="when" :value="when">
+                <input type="hidden" name="kind" :value="kind">
+
+                <template x-if="when === 'daily'">
+                    <div class="max-w-sm">
+                        <x-input-label for="date" value="Datum" />
+                        <input type="date"
+                               id="date"
+                               name="date"
+                               min="{{ $minDate }}"
+                               max="{{ $maxDate }}"
+                               x-model="dailyDate"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" />
+                    </div>
+                </template>
+
+                <template x-if="when === 'monthly'">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-md">
+                        <div>
+                            <x-input-label for="year" value="Godina" />
+                            <select id="year" name="year"
+                                    x-model="monthYear"
+                                    @change="month = ''"
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                                <option value="">—</option>
+                                @for ($y = $minYear; $y <= $maxYear; $y++)
+                                    <option value="{{ $y }}">{{ $y }}</option>
+                                @endfor
+                            </select>
+                        </div>
+                        <div>
+                            <x-input-label for="month" value="Mjesec" />
+                            <select id="month" name="month"
+                                    x-model="month"
+                                    :disabled="!monthYear"
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm disabled:bg-gray-100 disabled:text-gray-400">
+                                <option value="">—</option>
+                                @for ($m = 1; $m <= 12; $m++)
+                                    <option value="{{ $m }}" :disabled="!isMonthlyMonthAllowed({{ $m }})">
+                                        {{ str_pad((string)$m, 2, '0', STR_PAD_LEFT) }}
+                                    </option>
+                                @endfor
+                            </select>
+                        </div>
+                    </div>
+                </template>
+
+                <template x-if="when === 'yearly'">
+                    <div class="max-w-sm">
+                        <x-input-label for="year2" value="Godina" />
+                        <select id="year2" name="year"
+                                x-model="yearlyYear"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                            <option value="">—</option>
+                            @for ($y = $minYear; $y <= $maxYear; $y++)
+                                <option value="{{ $y }}">{{ $y }}</option>
+                            @endfor
+                        </select>
+                    </div>
+                </template>
+
+                <template x-if="when === 'period'">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-md">
+                        <div>
+                            <x-input-label for="date_from" value="Od" />
+                            <input type="date"
+                                   id="date_from"
+                                   name="date_from"
+                                   min="{{ $minDate }}"
+                                   max="{{ $maxDate }}"
+                                   x-model="dateFrom"
+                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" />
+                        </div>
+                        <div>
+                            <x-input-label for="date_to" value="Do" />
+                            <input type="date"
+                                   id="date_to"
+                                   name="date_to"
+                                   :min="dateFrom || '{{ $minDate }}'"
+                                   max="{{ $maxDate }}"
+                                   x-model="dateTo"
+                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" />
+                        </div>
+                    </div>
+                </template>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <a href="{{ route('panel_admin.reports', [], false) }}"
+                       class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50"
+                       @click.prevent="resetAll()">
+                        Odkaži
+                    </a>
+                    <button type="submit"
+                            :disabled="!canGeneratePdf()"
+                            class="inline-flex items-center px-4 py-2 bg-indigo-700 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest shadow-sm hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-indigo-700">
+                        PDF
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function reportsWizard() {
+            return {
+                step: 1,
+                when: '',
+                kind: '',
+                dailyDate: '',
+                dateFrom: '',
+                dateTo: '',
+                monthYear: '',
+                month: '',
+                yearlyYear: '',
+                minDate: @json($minDate),
+                maxDate: @json($maxDate),
+                canProceed() {
+                    return this.when !== '' && this.kind !== '';
+                },
+                canGeneratePdf() {
+                    if (this.step !== 2) return false;
+                    if (!this.canProceed()) return false;
+
+                    if (this.when === 'daily') {
+                        return (this.dailyDate || '') !== '';
+                    }
+                    if (this.when === 'monthly') {
+                        return (this.monthYear || '') !== '' && (this.month || '') !== '';
+                    }
+                    if (this.when === 'yearly') {
+                        return (this.yearlyYear || '') !== '';
+                    }
+                    if (this.when === 'period') {
+                        if ((this.dateFrom || '') === '' || (this.dateTo || '') === '') return false;
+                        return this.dateFrom <= this.dateTo;
+                    }
+
+                    return false;
+                },
+                isMonthlyMonthAllowed(m) {
+                    const y = parseInt(this.monthYear || '0', 10);
+                    if (!y) return false;
+                    // monthStart = YYYY-MM-01, monthEnd = last day of month
+                    const start = new Date(Date.UTC(y, m - 1, 1));
+                    const end = new Date(Date.UTC(y, m, 0));
+                    const min = new Date(this.minDate + 'T00:00:00Z');
+                    const max = new Date(this.maxDate + 'T00:00:00Z');
+                    return end >= min && start <= max;
+                },
+                resetAll() {
+                    this.step = 1;
+                    this.when = '';
+                    this.kind = '';
+                    this.dailyDate = '';
+                    this.dateFrom = '';
+                    this.dateTo = '';
+                    this.monthYear = '';
+                    this.month = '';
+                    this.yearlyYear = '';
+                    window.location = @json(route('panel_admin.reports', [], false));
+                },
+            };
+        }
+    </script>
+</x-admin-panel-layout>
+

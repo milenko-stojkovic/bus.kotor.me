@@ -110,6 +110,7 @@ final class AdminAnalyticsService
 
         // Operational problems / recovery (from existing payment state machine tables).
         $ops = $this->operationalProblems($from, $to);
+        $ops['paid_reservations_fully_in_free_zone'] = $this->countPaidReservationsFullyInFreeZones($reservations, $slotById);
 
         $kpi = [
             'revenue_total' => $revenueTotal,
@@ -145,6 +146,57 @@ final class AdminAnalyticsService
             ],
             'ops' => $ops,
         ];
+    }
+
+    /**
+     * Paid reservations where BOTH drop-off and pick-up slots start in "free zones":
+     * - start hour < 07:00 OR start hour >= 20:00 (parsed from ListOfTimeSlot::time_slot "HH:MM - ...")
+     *
+     * @param  Collection<int, Reservation>  $reservations
+     * @param  Collection<int, ListOfTimeSlot>  $slotById
+     */
+    private function countPaidReservationsFullyInFreeZones(Collection $reservations, Collection $slotById): int
+    {
+        $cnt = 0;
+        foreach ($reservations as $r) {
+            if ($r->status !== 'paid') {
+                continue;
+            }
+
+            $drop = $slotById->get((int) $r->drop_off_time_slot_id);
+            $pick = $slotById->get((int) $r->pick_up_time_slot_id);
+            if (! $this->slotStartsInFreeZone($drop) || ! $this->slotStartsInFreeZone($pick)) {
+                continue;
+            }
+
+            $cnt++;
+        }
+
+        return $cnt;
+    }
+
+    private function slotStartsInFreeZone(?ListOfTimeSlot $slot): bool
+    {
+        $h = $this->slotStartHour($slot?->time_slot ?? '');
+        if ($h === null) {
+            return false;
+        }
+
+        return $h < 7 || $h >= 20;
+    }
+
+    private function slotStartHour(string $timeSlot): ?int
+    {
+        if (! preg_match('/^\s*(\d{1,2}):(\d{2})\s*-\s*/', $timeSlot, $m)) {
+            return null;
+        }
+
+        $h = (int) $m[1];
+        if ($h < 0 || $h > 24) {
+            return null;
+        }
+
+        return $h;
     }
 
     /**

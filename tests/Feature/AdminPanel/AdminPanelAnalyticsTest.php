@@ -117,5 +117,130 @@ class AdminPanelAnalyticsTest extends TestCase
         $pdf->assertOk();
         $this->assertSame('application/pdf', $pdf->headers->get('Content-Type'));
     }
+
+    public function test_analytics_date_from_min_is_oldest_realized_reservation_date_with_fallbacks(): void
+    {
+        $admin = $this->seedAdmin();
+        $this->actingAs($admin, 'panel_admin');
+
+        $slot = ListOfTimeSlot::query()->create(['time_slot' => '09:00 - 09:20']);
+        $vt = VehicleType::query()->create(['price' => 10]);
+
+        // Past date => realized by definition (day < today).
+        $past = Carbon::now()->subDays(10)->toDateString();
+        Reservation::query()->create([
+            'merchant_transaction_id' => 'mt-analytics-min-1',
+            'drop_off_time_slot_id' => $slot->id,
+            'pick_up_time_slot_id' => $slot->id,
+            'reservation_date' => $past,
+            'user_name' => 'X',
+            'country' => 'ME',
+            'license_plate' => 'KO1',
+            'vehicle_type_id' => $vt->id,
+            'email' => 'x@example.com',
+            'status' => 'paid',
+            'invoice_amount' => '0.00',
+            'email_sent' => Reservation::EMAIL_NOT_SENT,
+        ]);
+
+        $this->get(route('panel_admin.analytics', [], false))
+            ->assertOk()
+            ->assertSee('name="date_from"', false)
+            ->assertSee('min="'.$past.'"', false);
+    }
+
+    public function test_ops_indicator_counts_paid_reservations_fully_in_free_zones(): void
+    {
+        $admin = $this->seedAdmin();
+        $this->actingAs($admin, 'panel_admin');
+
+        $slotMorning = ListOfTimeSlot::query()->create(['time_slot' => '06:00 - 06:20']);
+        $slotEvening = ListOfTimeSlot::query()->create(['time_slot' => '21:00 - 21:20']);
+        $slotDayA = ListOfTimeSlot::query()->create(['time_slot' => '08:00 - 08:20']);
+        $slotDayB = ListOfTimeSlot::query()->create(['time_slot' => '09:00 - 09:20']);
+
+        $vt = VehicleType::query()->create(['price' => 10]);
+        foreach (['cg', 'en'] as $loc) {
+            VehicleTypeTranslation::query()->create([
+                'vehicle_type_id' => $vt->id,
+                'locale' => $loc,
+                'name' => 'VT',
+                'description' => 'd',
+            ]);
+        }
+
+        $d = Carbon::now()->addDays(2)->toDateString();
+        foreach ([$slotMorning, $slotEvening, $slotDayA, $slotDayB] as $s) {
+            DailyParkingData::query()->create([
+                'date' => $d,
+                'time_slot_id' => $s->id,
+                'capacity' => 5,
+                'reserved' => 0,
+                'pending' => 0,
+                'is_blocked' => false,
+            ]);
+        }
+
+        // Should count: paid, both slots in free zones (morning + evening).
+        Reservation::query()->create([
+            'merchant_transaction_id' => 'mt-analytics-freezone-paid-1',
+            'drop_off_time_slot_id' => $slotMorning->id,
+            'pick_up_time_slot_id' => $slotEvening->id,
+            'reservation_date' => $d,
+            'user_name' => 'A',
+            'country' => 'ME',
+            'license_plate' => 'KO1',
+            'vehicle_type_id' => $vt->id,
+            'email' => 'a@example.com',
+            'status' => 'paid',
+            'invoice_amount' => '10.00',
+            'email_sent' => Reservation::EMAIL_NOT_SENT,
+        ]);
+
+        // Should NOT count: paid, mixed free morning + paid day window.
+        Reservation::query()->create([
+            'merchant_transaction_id' => 'mt-analytics-freezone-paid-mixed',
+            'drop_off_time_slot_id' => $slotMorning->id,
+            'pick_up_time_slot_id' => $slotDayA->id,
+            'reservation_date' => $d,
+            'user_name' => 'B',
+            'country' => 'ME',
+            'license_plate' => 'KO2',
+            'vehicle_type_id' => $vt->id,
+            'email' => 'b@example.com',
+            'status' => 'paid',
+            'invoice_amount' => '20.00',
+            'email_sent' => Reservation::EMAIL_NOT_SENT,
+        ]);
+
+        // Should NOT count: free, fully in free zones.
+        Reservation::query()->create([
+            'merchant_transaction_id' => 'mt-analytics-freezone-free-1',
+            'drop_off_time_slot_id' => $slotMorning->id,
+            'pick_up_time_slot_id' => $slotEvening->id,
+            'reservation_date' => $d,
+            'user_name' => 'C',
+            'country' => 'ME',
+            'license_plate' => 'KO3',
+            'vehicle_type_id' => $vt->id,
+            'email' => 'c@example.com',
+            'status' => 'free',
+            'invoice_amount' => '0.00',
+            'email_sent' => Reservation::EMAIL_NOT_SENT,
+        ]);
+
+        $html = $this->get(route('panel_admin.analytics', [
+            'show' => 1,
+            'date_from' => $d,
+            'date_to' => $d,
+            'include_free' => 1,
+        ], false))->assertOk()->getContent();
+
+        $this->assertStringContainsString('Paid rezervacije u free terminima', $html);
+        $this->assertMatchesRegularExpression(
+            '/Paid rezervacije u free terminima[\s\S]*?<td[^>]*>\s*1\s*<\/td>/i',
+            $html,
+        );
+    }
 }
 

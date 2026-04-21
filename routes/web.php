@@ -7,6 +7,8 @@ use App\Http\Controllers\AdminPanel\AuthController as AdminPanelAuthController;
 use App\Http\Controllers\AdminPanel\BlockingController as AdminPanelBlockingController;
 use App\Http\Controllers\AdminPanel\FreeReservationController as AdminPanelFreeReservationController;
 use App\Http\Controllers\AdminPanel\AnalyticsController as AdminPanelAnalyticsController;
+use App\Http\Controllers\AdminPanel\InsightController as AdminPanelInsightController;
+use App\Http\Controllers\AdminPanel\ReportsController as AdminPanelReportsController;
 use App\Http\Controllers\AdminPanel\ReservationController as AdminPanelReservationController;
 use App\Http\Controllers\AdminPanel\SettingsController as AdminPanelSettingsController;
 use App\Http\Controllers\AdminPanel\WarningsController as AdminPanelWarningsController;
@@ -51,11 +53,11 @@ Route::prefix('admin')->name('panel_admin.')->group(function () {
         Route::put('rezervacije/{reservation}', [AdminPanelReservationController::class, 'update'])->name('reservations.update');
         Route::get('rezervacije/{reservation}/pdf', [AdminPanelReservationController::class, 'pdf'])->name('reservations.pdf');
 
-        Route::view('izvestaji', 'admin-panel.placeholder', [
-            'navActive' => 'reports',
-            'title' => 'Izveštaji',
-            'lead' => 'Uskoro.',
-        ])->name('reports');
+        Route::get('uvid', [AdminPanelInsightController::class, 'index'])->name('insight');
+        Route::get('uvid/{merchantTransactionId}', [AdminPanelInsightController::class, 'show'])->name('insight.show');
+
+        Route::get('izvestaji', [AdminPanelReportsController::class, 'index'])->name('reports');
+        Route::get('izvestaji/pdf', [AdminPanelReportsController::class, 'pdf'])->name('reports.pdf');
 
         Route::get('podesavanja', [AdminPanelSettingsController::class, 'index'])->name('settings');
         Route::put('podesavanja/capacity', [AdminPanelSettingsController::class, 'updateCapacity'])->name('settings.capacity.update');

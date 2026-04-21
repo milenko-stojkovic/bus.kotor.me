@@ -4,7 +4,7 @@ namespace App\Http\Controllers\AdminPanel;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AdminPanel\AdminPanelAnalyticsRequest;
-use App\Services\AdminPanel\Reservation\AdminReservationDateBounds;
+use App\Services\AdminPanel\Analytics\AdminAnalyticsDateBounds;
 use App\Services\AdminPanel\Analytics\AdminAnalyticsService;
 use App\Services\Pdf\AdminAnalyticsPdfGenerator;
 use Illuminate\Http\Request;
@@ -14,11 +14,11 @@ class AnalyticsController extends Controller
 {
     public function index(
         Request $request,
-        AdminReservationDateBounds $bounds,
+        AdminAnalyticsDateBounds $bounds,
         AdminAnalyticsService $analytics,
     ): View {
-        $min = $bounds->searchMinDate()->toDateString();
-        $max = $bounds->searchMaxDate()->toDateString();
+        $min = $bounds->minFromDate()->toDateString();
+        $max = $bounds->maxToDate()->toDateString();
 
         $dateFrom = (string) $request->query('date_from', $min);
         $dateTo = (string) $request->query('date_to', $max);

@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\AdminPanel;
 
-use App\Services\AdminPanel\Reservation\AdminReservationDateBounds;
+use App\Services\AdminPanel\Analytics\AdminAnalyticsDateBounds;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -15,9 +15,9 @@ class AdminPanelAnalyticsRequest extends FormRequest
 
     public function rules(): array
     {
-        $bounds = app(AdminReservationDateBounds::class);
-        $min = $bounds->searchMinDate()->toDateString();
-        $max = $bounds->searchMaxDate()->toDateString();
+        $bounds = app(AdminAnalyticsDateBounds::class);
+        $min = $bounds->minFromDate()->toDateString();
+        $max = $bounds->maxToDate()->toDateString();
 
         return [
             'date_from' => ['required', 'date', 'after_or_equal:'.$min, 'before_or_equal:'.$max],
