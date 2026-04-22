@@ -204,11 +204,16 @@ Napomena: `system_config` ima `name` (unique) i `value` (integer). Za admin form
 | `GET /admin/analitika/pdf` | `panel_admin.analytics.pdf` — PDF export za aktivne filtere (isti dataset kao UI). |
 
 - **Filteri:** `date_from`, `date_to` (zatvoren interval, `od <= do`), `include_free` (checkbox).
+- **Datum od (min):** najstariji datum **realizovane** rezervacije (fallback: najstariji `reservation_date`, pa danas ako nema rezervacija).
+- **Datum do (max):** danas + 90 dana.
 - **Source of truth:** rezervacije iz `reservations`, blokiranje iz `daily_parking_data.is_blocked`, operativni problemi iz `temp_data` i `post_fiscalization_data`.
 - **Prihod:** suma `reservations.invoice_amount` za `status = paid` u periodu.
 - **Zauzeti slotovi:** po rezervaciji 1 ako `drop_off_time_slot_id == pick_up_time_slot_id`, inače 2.
 - **Popunjenost (slot-level):** \(occupied\_slots / (broj\_slotova \* broj\_dana)\).
 - **Delovi dana:** grupisanje po početnom vremenu *drop-off* termina (00–07, 07–20, 20–24).
+- **Operativni indikatori (ops):**
+  - **Paid rezervacije u free terminima**: broj `paid` rezervacija čiji su i drop-off i pick-up u “free zonama” (00–07 ili 20–24).
+  - **Duplo plaćanje istog termina**: broj **parova** `paid` rezervacija za isti datum i iste tablice sa bar jednim zajedničkim slotom (drop/pick presek). `include_free` ne utiče (računa se samo `paid`).
 - **PDF:** `AdminAnalyticsPdfGenerator` (`DomPDF`) koristi view `pdf.admin-analytics-report` i isti dataset iz `AdminAnalyticsService`.
 
 **Testovi:** `tests/Feature/AdminPanel/AdminPanelAnalyticsTest.php`.
