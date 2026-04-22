@@ -181,14 +181,6 @@
             </div>
 
             <div class="space-y-2">
-                <label class="flex items-start gap-2 text-sm">
-                    <input type="checkbox" name="accept_privacy" value="1" class="mt-1 rounded border-gray-300" {{ old('accept_privacy') ? 'checked' : '' }} required>
-                    <span>{{ \App\Support\UiText::t('reservation', 'accept_privacy') }}</span>
-                </label>
-                <x-input-error class="mt-2" :messages="$errors->get('accept_privacy')" />
-            </div>
-
-            <div class="space-y-2">
                 <div class="text-sm font-semibold text-gray-900">{{ $ui('vehicles_title', 'Vozila') }}</div>
 
                 <template x-for="(row, idx) in vehicles" :key="idx">
@@ -259,6 +251,14 @@
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <div class="space-y-2">
+                <label class="flex items-start gap-2 text-sm">
+                    <input type="checkbox" name="accept_privacy" value="1" class="mt-1 rounded border-gray-300" {{ old('accept_privacy') ? 'checked' : '' }} required>
+                    <span>{{ \App\Support\UiText::t('reservation', 'accept_privacy') }}</span>
+                </label>
+                <x-input-error class="mt-2" :messages="$errors->get('accept_privacy')" />
             </div>
 
             <button
