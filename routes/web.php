@@ -16,6 +16,7 @@ use App\Http\Controllers\Control\ControlAuthController;
 use App\Http\Controllers\Control\ControlDashboardController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\FakeBankCompleteController;
+use App\Http\Controllers\FreeReservationRequestController;
 use App\Http\Controllers\GuestReservationController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\LocaleController;
@@ -82,6 +83,11 @@ Route::prefix('control')->name('control.')->group(function () {
 
 Route::get('/', LandingController::class)->name('landing');
 Route::get('/guest/reserve', GuestReservationController::class)->name('guest.reserve');
+
+// Public: "Učenici/humanitarci" free-reservation request intake (step 1 only).
+Route::get('/free-reservation-request', [FreeReservationRequestController::class, 'create'])->name('free-request.create');
+Route::post('/free-reservation-request', [FreeReservationRequestController::class, 'store'])->name('free-request.store');
+Route::get('/free-reservation-request/success', [FreeReservationRequestController::class, 'success'])->name('free-request.success');
 
 // Guest: manually change UI language (session). Auth uses users.lang.
 Route::get('/locale/{locale}', LocaleController::class)->name('locale.switch');

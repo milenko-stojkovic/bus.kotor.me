@@ -449,6 +449,64 @@ class UiTranslationsSeeder extends Seeder
             ['group' => 'panel', 'key' => 'booking_vehicle_label', 'locale' => 'cg', 'text' => 'Vozilo'],
             ['group' => 'panel', 'key' => 'select_vehicle_option', 'locale' => 'en', 'text' => 'Select vehicle'],
             ['group' => 'panel', 'key' => 'select_vehicle_option', 'locale' => 'cg', 'text' => 'Izaberite vozilo'],
+
+            // Landing: third branch (students/humanitarian) → free reservation request form
+            ['group' => 'landing', 'key' => 'students_title', 'locale' => 'en', 'text' => 'Students / humanitarian'],
+            ['group' => 'landing', 'key' => 'students_title', 'locale' => 'cg', 'text' => 'Učenici/humanitarci'],
+            ['group' => 'landing', 'key' => 'students_description', 'locale' => 'en', 'text' => 'For educational institutions and humanitarian organisations'],
+            ['group' => 'landing', 'key' => 'students_description', 'locale' => 'cg', 'text' => 'Za obrazovne ustanove i humanitarne organizacije'],
+            ['group' => 'landing', 'key' => 'students_cta', 'locale' => 'en', 'text' => 'Free reservations request form'],
+            ['group' => 'landing', 'key' => 'students_cta', 'locale' => 'cg', 'text' => 'Forma za besplatne rezervacije'],
+
+            // Public free-reservation request intake (step 1)
+            ['group' => 'free_request', 'key' => 'title', 'locale' => 'en', 'text' => 'Free reservations request form'],
+            ['group' => 'free_request', 'key' => 'title', 'locale' => 'cg', 'text' => 'Forma za besplatne rezervacije'],
+            ['group' => 'free_request', 'key' => 'legal_summary', 'locale' => 'en', 'text' => 'Temporary summary (placeholder). The official text will be provided after legal verification.'],
+            ['group' => 'free_request', 'key' => 'legal_summary', 'locale' => 'cg', 'text' => 'Privremeni sažetak (placeholder). Zvanični tekst će biti dodat nakon pravne verifikacije.'],
+            ['group' => 'free_request', 'key' => 'intro_note', 'locale' => 'en', 'text' => 'Submitting this form does not mean a reservation is automatically created. The data is sent to administrators who will first verify authenticity and then create reservations according to your request and our capacities. Please submit the request as early as possible. All fields are required.'],
+            ['group' => 'free_request', 'key' => 'intro_note', 'locale' => 'cg', 'text' => 'Popunjena forma ne znači da je rezervacija automatski napravljena. Podaci se upućuju administratorima koji će prvo da provjere autentičnost podataka, a potom da naprave rezervaciju u skladu sa Vašim željama i našim kapacitetima. Iz tog razloga Vas molimo da što ranije pošaljete zahtjev (popunite formu) kako bi izgledi da dobijete željene termine bili što veći. Sva polja su obavezna.'],
+            ['group' => 'free_request', 'key' => 'institution_name', 'locale' => 'en', 'text' => 'Institution/organisation name'],
+            ['group' => 'free_request', 'key' => 'institution_name', 'locale' => 'cg', 'text' => 'Naziv institucije/organizacije'],
+            ['group' => 'free_request', 'key' => 'institution_name_hint', 'locale' => 'en', 'text' => 'Not the carrier/agency name'],
+            ['group' => 'free_request', 'key' => 'institution_name_hint', 'locale' => 'cg', 'text' => 'Ne naziv autoprevoznika/agencije'],
+            ['group' => 'free_request', 'key' => 'country', 'locale' => 'en', 'text' => 'Country'],
+            ['group' => 'free_request', 'key' => 'country', 'locale' => 'cg', 'text' => 'Država'],
+            ['group' => 'free_request', 'key' => 'select_country', 'locale' => 'en', 'text' => 'Select country'],
+            ['group' => 'free_request', 'key' => 'select_country', 'locale' => 'cg', 'text' => 'Izaberite državu'],
+            ['group' => 'free_request', 'key' => 'institution_email', 'locale' => 'en', 'text' => 'Institution/organisation email'],
+            ['group' => 'free_request', 'key' => 'institution_email', 'locale' => 'cg', 'text' => 'Email institucije/organizacije'],
+            ['group' => 'free_request', 'key' => 'institution_email_hint', 'locale' => 'en', 'text' => 'Not the carrier/agency email'],
+            ['group' => 'free_request', 'key' => 'institution_email_hint', 'locale' => 'cg', 'text' => 'Ne email autoprevoznika/agencije'],
+            ['group' => 'free_request', 'key' => 'institution_phone', 'locale' => 'en', 'text' => 'Institution/organisation phone'],
+            ['group' => 'free_request', 'key' => 'institution_phone', 'locale' => 'cg', 'text' => 'Telefon institucije/organizacije'],
+            ['group' => 'free_request', 'key' => 'institution_phone_hint', 'locale' => 'en', 'text' => 'Not the carrier/agency phone'],
+            ['group' => 'free_request', 'key' => 'institution_phone_hint', 'locale' => 'cg', 'text' => 'Ne telefon autoprevoznika/agencije'],
+            ['group' => 'free_request', 'key' => 'vehicles_title', 'locale' => 'en', 'text' => 'Vehicles'],
+            ['group' => 'free_request', 'key' => 'vehicles_title', 'locale' => 'cg', 'text' => 'Vozila'],
+            ['group' => 'free_request', 'key' => 'license_plate', 'locale' => 'en', 'text' => 'License plate'],
+            ['group' => 'free_request', 'key' => 'license_plate', 'locale' => 'cg', 'text' => 'Registarska tablica'],
+            ['group' => 'free_request', 'key' => 'vehicle_type', 'locale' => 'en', 'text' => 'Vehicle category'],
+            ['group' => 'free_request', 'key' => 'vehicle_type', 'locale' => 'cg', 'text' => 'Kategorija vozila'],
+            ['group' => 'free_request', 'key' => 'select_vehicle_category', 'locale' => 'en', 'text' => 'Select category'],
+            ['group' => 'free_request', 'key' => 'select_vehicle_category', 'locale' => 'cg', 'text' => 'Izaberite kategoriju'],
+            ['group' => 'free_request', 'key' => 'add_vehicle', 'locale' => 'en', 'text' => 'Add next vehicle'],
+            ['group' => 'free_request', 'key' => 'add_vehicle', 'locale' => 'cg', 'text' => 'Dodaj naredno vozilo'],
+            ['group' => 'free_request', 'key' => 'remove_vehicle', 'locale' => 'en', 'text' => 'Remove vehicle'],
+            ['group' => 'free_request', 'key' => 'remove_vehicle', 'locale' => 'cg', 'text' => 'Ukloni vozilo'],
+            ['group' => 'free_request', 'key' => 'remove_vehicle_confirm', 'locale' => 'en', 'text' => 'Are you sure you want to remove this vehicle?'],
+            ['group' => 'free_request', 'key' => 'remove_vehicle_confirm', 'locale' => 'cg', 'text' => 'Da li si siguran da želite da uklonite to vozilo?'],
+            ['group' => 'free_request', 'key' => 'remove_vehicle_yes', 'locale' => 'en', 'text' => 'Yes'],
+            ['group' => 'free_request', 'key' => 'remove_vehicle_yes', 'locale' => 'cg', 'text' => 'Da'],
+            ['group' => 'free_request', 'key' => 'remove_vehicle_no', 'locale' => 'en', 'text' => 'No'],
+            ['group' => 'free_request', 'key' => 'remove_vehicle_no', 'locale' => 'cg', 'text' => 'Ne'],
+            ['group' => 'free_request', 'key' => 'submit', 'locale' => 'en', 'text' => 'Submit request'],
+            ['group' => 'free_request', 'key' => 'submit', 'locale' => 'cg', 'text' => 'Podnesi zahtjev'],
+            ['group' => 'free_request', 'key' => 'success_title', 'locale' => 'en', 'text' => 'Request submitted'],
+            ['group' => 'free_request', 'key' => 'success_title', 'locale' => 'cg', 'text' => 'Zahtjev poslat'],
+            ['group' => 'free_request', 'key' => 'success_message', 'locale' => 'en', 'text' => 'Your request has been submitted successfully. An administrator will contact you.'],
+            ['group' => 'free_request', 'key' => 'success_message', 'locale' => 'cg', 'text' => 'Zahtjev je uspješno poslat. Administrator će Vas kontaktirati.'],
+            ['group' => 'free_request', 'key' => 'success_click_anywhere', 'locale' => 'en', 'text' => 'Click anywhere to return to the landing page.'],
+            ['group' => 'free_request', 'key' => 'success_click_anywhere', 'locale' => 'cg', 'text' => 'Kliknite bilo gdje da se vratite na početnu stranicu.'],
         ];
 
         $rows = array_map(function (array $row) use ($now): array {
@@ -469,5 +527,11 @@ class UiTranslationsSeeder extends Seeder
         Cache::forget('ui_translations:group=panel:locale=cg');
         Cache::forget('ui_translations:group=panel:locale=en');
         Cache::forget('ui_translations:any:group=panel:key=vehicle_remove_blocked_upcoming');
+        Cache::forget('ui_translations:group=landing:locale=cg');
+        Cache::forget('ui_translations:group=landing:locale=en');
+        Cache::forget('ui_translations:group=free_request:locale=cg');
+        Cache::forget('ui_translations:group=free_request:locale=en');
+        Cache::forget('ui_translations:any:group=landing:key=students_title');
+        Cache::forget('ui_translations:any:group=free_request:key=title');
     }
 }

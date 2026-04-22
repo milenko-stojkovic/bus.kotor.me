@@ -15,6 +15,12 @@
   - **`user_name`** (kolona u bazi — ime sa forme; u V2 guest formi polje se šalje kao **`name`**, backend mapira u snapshot `user_name`), `country`, `email`, `license_plate`, `vehicle_type_id`
 - Kada guest plati, podaci se čuvaju u tabeli, ali **nema veze sa `users`**.
 
+## Javna forma “Učenici/humanitarci” (zahtjev, ne rezervacija)
+
+- Na landing stranici postoji posebna grana **“Učenici/humanitarci”** koja vodi na javnu formu za podnošenje **zahtjeva** za besplatne rezervacije.
+- Ovo **nije** checkout i **ne kreira** `reservations` niti `temp_data` u trenutku slanja forme.
+- Forma upisuje trajni zapis u tabelu **`free_reservation_requests`** (+ vozila u **`free_reservation_request_vehicles`**), šalje admin email i kreira admin warning kao pointer.
+
 ## Pravila u kodu
 
 1. **Gde se koristi `user_id`** – uvek proveriti da li je korisnik autentifikovan.
