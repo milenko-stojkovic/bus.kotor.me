@@ -10,6 +10,14 @@ Logika mora ostati konzistentna: **temp_data** kao soft lock i audit, zatim upis
 
 ### 1. Korisnik (ulogovan ili anoniman) krene plaćanje
 
+- **Pre payment/session dela (business validacija rezervacije):** pre bilo kakvog kreiranja `temp_data` ili `createSession`, checkout proverava da li već postoji konfliktna rezervacija u tabeli **`reservations`** za:
+  - isti `reservation_date`
+  - ista (normalizovana) `license_plate` (ALL CAPS, bez razmaka i spec. znakova; samo `[A-Z0-9]`)
+  - i **isti drop-off** (`drop_off_time_slot_id`) **ili** **isti pick-up** (`pick_up_time_slot_id`)
+  - **VAŽNO:** cross-match `drop=pick` / `pick=drop` se **ne** smatra duplikatom (dozvoljeno je “ostavi jednu grupu / pokupi drugu”).
+  - Provera se u ovoj iteraciji radi **samo nad `reservations`** (ne nad `temp_data`) da se izbegnu lažne zabrane zbog neuspešnih/isteklih payment pokušaja.
+  - Ako je konflikt detektovan, checkout prekida tok i vraća korisnika na formu sa porukom, bez `temp_data` i bez `createSession`.
+
 - Upis u **temp_data**:
   - `merchant_transaction_id`
   - termini: `drop_off_time_slot_id`, `pick_up_time_slot_id`, `reservation_date`

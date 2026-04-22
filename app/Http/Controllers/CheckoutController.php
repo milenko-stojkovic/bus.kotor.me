@@ -13,6 +13,7 @@ use App\Models\Reservation;
 use App\Models\TempData;
 use App\Models\Vehicle;
 use App\Services\Payment\PaymentSuccessHandler;
+use App\Services\Reservation\DuplicateReservationAttemptService;
 use App\Services\Reservation\FreeReservationRules;
 use App\Support\CheckoutResultFlash;
 use App\Support\UiText;
@@ -43,6 +44,7 @@ class CheckoutController extends Controller
         CheckoutReservationRequest $request,
         PaymentService $paymentService,
         PaymentSuccessHandler $successHandler,
+        DuplicateReservationAttemptService $duplicateAttemptService,
     ): RedirectResponse|Response|JsonResponse {
         $date = $request->validated('reservation_date');
         $dropOffSlotId = (int) $request->validated('drop_off_time_slot_id');
@@ -58,6 +60,16 @@ class CheckoutController extends Controller
 
         $isFree = FreeReservationRules::isFreeReservation($arrivalSlot, $departureSlot);
         $snapshot = $this->resolveSnapshotInput($request);
+
+        // Business validation (pre-payment): prevent duplicate attempts for same date+plate+same drop OR same pick.
+        // NOTE: intentionally does NOT block cross-match (drop=pick / pick=drop).
+        if ($duplicateAttemptService->existsConflict($date, (string) $snapshot['license_plate'], $dropOffSlotId, $pickUpSlotId)) {
+            $message = 'Već postoji rezervacija za ovaj datum, odabrani termin i ovu registarsku tablicu. Proverite podatke ili kontaktirajte podršku.';
+
+            return $request->expectsJson()
+                ? response()->json(['message' => $message], 422)
+                : back()->withInput()->with('error', $message)->withErrors(['reservation' => $message]);
+        }
 
         // Već postoji pending za iste slotove + user/email
         $existingBySlot = $this->findExistingPendingForSlot($request, $date, $dropOffSlotId, $pickUpSlotId);

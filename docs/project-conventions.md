@@ -71,6 +71,15 @@ Preporučeni oblik (naslovi ili bold oznake moraju biti eksplicitni):
 - **Sintaksa (`php -l`):** ne pokretati gol `php -l` ako Windows nudi „Open with…“ — koristi **`.\laragon-php.ps1 -l putanja\do\fajla.php`** ili **`.\laragon-php.cmd -l putanja\do\fajla.php`**.
 - **AI / automatizacija (Cursor agent, skripte):** iz korena repoa **`.\laragon-artisan.ps1`** ili **`.\laragon-artisan.cmd`** (npr. `test`, `migrate`, `queue:work`) — **ne** `php artisan ...` osim ako je `php` u PATH-u. Isto **`.\laragon-php.ps1`** / **`.\laragon-php.cmd`** umesto `php` za `-l`. Kada korisnik ima strogu Execution Policy, u primerima predložiti **`.cmd`**.
 - **Queue:** za lokalni QA bez workera, **`QUEUE_CONNECTION=sync`** u `.env` — tada **nema** posebnog workera (jobovi se izvršavaju u istom zahtevu). Za **`database`** / **`redis`** mora da radi **`queue:work`** (npr. **`.\laragon-artisan.cmd queue:work --tries=1`**). **Provera da li worker radi (Windows):** u Task Manageru pogledati **`php.exe`** i komandnu liniju da sadrži `artisan queue:work`, ili u PowerShellu npr. `Get-CimInstance Win32_Process -Filter "Name = 'php.exe'" | Select-Object CommandLine`. Ako se poslovi gomilaju, proveri tabelu **`jobs`** (driver `database`). **Test mejlova:** uz `sync` dovoljno je **`MAIL_MAILER=log`** (ili Mailtrap); uz asinhroni red pokreni worker pre akcije koja dispatchuje mejl.
+- **Queue worker u pozadini (PowerShell, bez zauzimanja terminala):** ako `php` nije u PATH-u, koristi **punu putanju** do Laragon `php.exe`.
+  - Pokretanje:
+    - `$php = "C:\laragon\bin\php\php-8.3.30-Win32-vs16-x64\php.exe"` (prilagodi verziju)
+    - `Start-Job -Name "buskotor-queue" -ScriptBlock { Set-Location "C:\laragon\www\bus.kotor.me"; $php = $using:php; while ($true) { & $php artisan queue:work --sleep=1 --tries=1 --timeout=120; Start-Sleep -Seconds 1 } }`
+  - Provera:
+    - `Get-Job -Name "buskotor-queue"`
+    - `Receive-Job -Name "buskotor-queue" -Keep`
+  - Zaustavljanje:
+    - `Stop-Job -Name "buskotor-queue"; Remove-Job -Name "buskotor-queue"`
 
 ### Fake QA: sync vs queue režim
 
