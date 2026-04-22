@@ -53,6 +53,7 @@ class FreeReservationRequestStoreRequest extends FormRequest
             'country' => ['required', 'string', 'max:100'],
             'institution_email' => ['required', 'email', 'max:255'],
             'institution_phone' => ['required', 'string', 'max:32', 'regex:/^\+\d+$/'],
+            'accept_privacy' => ['required', 'accepted'],
 
             'vehicles' => ['required', 'array', 'min:1', 'max:9'],
             'vehicles.*.license_plate' => ['required', 'string', 'max:50', 'regex:/^[A-Z0-9]+$/'],

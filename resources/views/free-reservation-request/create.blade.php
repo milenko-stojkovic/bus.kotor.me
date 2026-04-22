@@ -130,9 +130,9 @@
         <form method="POST" action="{{ route('free-request.store', [], false) }}" class="space-y-4" x-data="freeRequestForm()">
             @csrf
 
-            <input type="hidden" name="reservation_date" value="{{ $selected_date ?? '' }}">
-            <input type="hidden" name="drop_off_time_slot_id" value="{{ $arrival_id ?? '' }}">
-            <input type="hidden" name="pick_up_time_slot_id" value="{{ $departure_id ?? '' }}">
+            <input type="hidden" name="reservation_date" id="post_reservation_date" value="{{ $selected_date ?? '' }}">
+            <input type="hidden" name="drop_off_time_slot_id" id="post_drop_off_time_slot_id" value="{{ $arrival_id ?? '' }}">
+            <input type="hidden" name="pick_up_time_slot_id" id="post_pick_up_time_slot_id" value="{{ $departure_id ?? '' }}">
 
             <div>
                 <x-input-label for="institution_name" :value="$ui('institution_name', 'Naziv institucije/organizacije')" />
@@ -178,6 +178,14 @@
                 />
                 <p class="mt-1 text-xs text-gray-500">{{ $ui('institution_phone_hint', 'Ne telefon autoprevoznika/agencije') }}</p>
                 <x-input-error class="mt-2" :messages="$errors->get('institution_phone')" />
+            </div>
+
+            <div class="space-y-2">
+                <label class="flex items-start gap-2 text-sm">
+                    <input type="checkbox" name="accept_privacy" value="1" class="mt-1 rounded border-gray-300" {{ old('accept_privacy') ? 'checked' : '' }} required>
+                    <span>{{ \App\Support\UiText::t('reservation', 'accept_privacy') }}</span>
+                </label>
+                <x-input-error class="mt-2" :messages="$errors->get('accept_privacy')" />
             </div>
 
             <div class="space-y-2">
@@ -271,6 +279,11 @@
                 vehicles: @json($vehiclesOld),
                 showConfirm: false,
                 pendingRemoveIdx: null,
+                init() {
+                    window.addEventListener('free-request-sync', () => {
+                        this.tick++;
+                    });
+                },
 
                 normalizePlate(v) {
                     if (typeof v !== 'string') return '';
@@ -345,9 +358,24 @@
             const date = document.getElementById('reservation_date');
             const arrival = document.getElementById('drop_off_time_slot_id');
             const departure = document.getElementById('pick_up_time_slot_id');
-            if (date) date.addEventListener('change', () => stepForm.submit());
-            if (arrival) arrival.addEventListener('change', () => stepForm.submit());
-            if (departure) departure.addEventListener('change', () => stepForm.submit());
+            const postDate = document.getElementById('post_reservation_date');
+            const postArrival = document.getElementById('post_drop_off_time_slot_id');
+            const postDeparture = document.getElementById('post_pick_up_time_slot_id');
+
+            function sync() {
+                if (postDate && date) postDate.value = date.value || '';
+                if (postArrival && arrival) postArrival.value = arrival.value || '';
+                if (postDeparture && departure) postDeparture.value = departure.value || '';
+                // trigger Alpine recompute if present
+                window.dispatchEvent(new Event('free-request-sync'));
+            }
+
+            if (date) date.addEventListener('change', () => { sync(); stepForm.submit(); });
+            if (arrival) arrival.addEventListener('change', () => { sync(); stepForm.submit(); });
+            if (departure) departure.addEventListener('change', () => { sync(); stepForm.submit(); });
+
+            // initial sync for cases when GET params already selected
+            sync();
         })();
     </script>
 </x-guest-layout>

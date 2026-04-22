@@ -52,6 +52,7 @@ class FreeReservationRequestIntakeTest extends TestCase
             'country' => 'ME',
             'institution_email' => 'school@example.com',
             'institution_phone' => '+38267111222',
+            'accept_privacy' => 1,
             'vehicles' => [
                 ['license_plate' => 'ko-123-ab', 'vehicle_type_id' => $vt->id],
                 ['license_plate' => 'KO999', 'vehicle_type_id' => $vt->id],
@@ -99,6 +100,7 @@ class FreeReservationRequestIntakeTest extends TestCase
             'country' => 'ME',
             'institution_email' => 'x@example.com',
             'institution_phone' => '+382 67 111 222', // invalid: spaces
+            'accept_privacy' => 1,
             'vehicles' => [
                 ['license_plate' => 'KO123', 'vehicle_type_id' => $vt->id],
             ],
