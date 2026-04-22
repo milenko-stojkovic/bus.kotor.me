@@ -205,7 +205,8 @@ final class AdminAnalyticsService
      * - both reservations paid
      * - same reservation_date
      * - same license_plate
-     * - slot sets {drop_off, pick_up} intersect (any common slot)
+     * - same drop_off_time_slot_id OR same pick_up_time_slot_id
+     *   (NOTE: cross match drop=pick / pick=drop is intentionally NOT counted)
      *
      * Counts PAIRS (i < j) within each (date, plate) group.
      *
@@ -236,7 +237,7 @@ final class AdminAnalyticsService
                     $b1 = (int) $b->drop_off_time_slot_id;
                     $b2 = (int) $b->pick_up_time_slot_id;
 
-                    $overlap = ($a1 === $b1) || ($a1 === $b2) || ($a2 === $b1) || ($a2 === $b2);
+                    $overlap = ($a1 === $b1) || ($a2 === $b2);
                     if ($overlap) {
                         $pairs++;
                     }

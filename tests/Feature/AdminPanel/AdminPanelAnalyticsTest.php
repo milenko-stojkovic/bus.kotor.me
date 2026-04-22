@@ -274,7 +274,7 @@ class AdminPanelAnalyticsTest extends TestCase
             ]);
         }
 
-        // Pair that SHOULD count (same date, same plate, overlap on slot1).
+        // Pair that SHOULD count (same date, same plate, same drop-off).
         Reservation::query()->create([
             'merchant_transaction_id' => 'mt-dbl-1',
             'drop_off_time_slot_id' => $slot1->id,
@@ -299,6 +299,36 @@ class AdminPanelAnalyticsTest extends TestCase
             'license_plate' => 'KO123',
             'vehicle_type_id' => $vt->id,
             'email' => 'b@example.com',
+            'status' => 'paid',
+            'invoice_amount' => '10.00',
+            'email_sent' => Reservation::EMAIL_NOT_SENT,
+        ]);
+
+        // Same date/plate but only cross-match (pick-up of first == drop-off of second) -> should NOT count.
+        Reservation::query()->create([
+            'merchant_transaction_id' => 'mt-dbl-x1',
+            'drop_off_time_slot_id' => $slot2->id,
+            'pick_up_time_slot_id' => $slot3->id,
+            'reservation_date' => $d,
+            'user_name' => 'X1',
+            'country' => 'ME',
+            'license_plate' => 'KO555',
+            'vehicle_type_id' => $vt->id,
+            'email' => 'x1@example.com',
+            'status' => 'paid',
+            'invoice_amount' => '10.00',
+            'email_sent' => Reservation::EMAIL_NOT_SENT,
+        ]);
+        Reservation::query()->create([
+            'merchant_transaction_id' => 'mt-dbl-x2',
+            'drop_off_time_slot_id' => $slot3->id,
+            'pick_up_time_slot_id' => $slot1->id,
+            'reservation_date' => $d,
+            'user_name' => 'X2',
+            'country' => 'ME',
+            'license_plate' => 'KO555',
+            'vehicle_type_id' => $vt->id,
+            'email' => 'x2@example.com',
             'status' => 'paid',
             'invoice_amount' => '10.00',
             'email_sent' => Reservation::EMAIL_NOT_SENT,
