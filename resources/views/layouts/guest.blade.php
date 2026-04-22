@@ -19,9 +19,9 @@
         <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-gray-100">
             <div class="w-full sm:max-w-lg flex justify-end px-6">
                 <div class="flex gap-2 text-sm">
-                <a href="{{ route('locale.switch', ['locale' => 'cg'], false) }}" class="{{ app()->getLocale() === 'cg' ? 'font-semibold' : 'text-gray-500' }}">CG</a>
+                <a href="/locale/cg" class="{{ app()->getLocale() === 'cg' ? 'font-semibold' : 'text-gray-500' }}">CG</a>
                 <span class="text-gray-300">|</span>
-                <a href="{{ route('locale.switch', ['locale' => 'en'], false) }}" class="{{ app()->getLocale() === 'en' ? 'font-semibold' : 'text-gray-500' }}">EN</a>
+                <a href="/locale/en" class="{{ app()->getLocale() === 'en' ? 'font-semibold' : 'text-gray-500' }}">EN</a>
                 </div>
             </div>
             <div>
