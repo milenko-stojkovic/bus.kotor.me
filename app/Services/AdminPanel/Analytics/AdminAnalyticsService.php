@@ -111,6 +111,7 @@ final class AdminAnalyticsService
         // Operational problems / recovery (from existing payment state machine tables).
         $ops = $this->operationalProblems($from, $to);
         $ops['paid_reservations_fully_in_free_zone'] = $this->countPaidReservationsFullyInFreeZones($reservations, $slotById);
+        $ops['double_paid_same_slot_pairs'] = $this->countDoublePaidSameSlotPairs($from, $to);
 
         $kpi = [
             'revenue_total' => $revenueTotal,
@@ -197,6 +198,53 @@ final class AdminAnalyticsService
         }
 
         return $h;
+    }
+
+    /**
+     * Suspicious double payment pairs:
+     * - both reservations paid
+     * - same reservation_date
+     * - same license_plate
+     * - slot sets {drop_off, pick_up} intersect (any common slot)
+     *
+     * Counts PAIRS (i < j) within each (date, plate) group.
+     *
+     * NOTE: independent from include_free filter (paid only).
+     */
+    private function countDoublePaidSameSlotPairs(Carbon $from, Carbon $to): int
+    {
+        $rows = Reservation::query()
+            ->where('status', 'paid')
+            ->whereDate('reservation_date', '>=', $from->toDateString())
+            ->whereDate('reservation_date', '<=', $to->toDateString())
+            ->get(['id', 'reservation_date', 'license_plate', 'drop_off_time_slot_id', 'pick_up_time_slot_id']);
+
+        $groups = $rows->groupBy(fn (Reservation $r) => $r->reservation_date->toDateString().'|'.(string) $r->license_plate);
+
+        $pairs = 0;
+        foreach ($groups as $g) {
+            $list = $g->values();
+            $n = $list->count();
+            for ($i = 0; $i < $n; $i++) {
+                /** @var Reservation $a */
+                $a = $list[$i];
+                $a1 = (int) $a->drop_off_time_slot_id;
+                $a2 = (int) $a->pick_up_time_slot_id;
+                for ($j = $i + 1; $j < $n; $j++) {
+                    /** @var Reservation $b */
+                    $b = $list[$j];
+                    $b1 = (int) $b->drop_off_time_slot_id;
+                    $b2 = (int) $b->pick_up_time_slot_id;
+
+                    $overlap = ($a1 === $b1) || ($a1 === $b2) || ($a2 === $b1) || ($a2 === $b2);
+                    if ($overlap) {
+                        $pairs++;
+                    }
+                }
+            }
+        }
+
+        return $pairs;
     }
 
     /**

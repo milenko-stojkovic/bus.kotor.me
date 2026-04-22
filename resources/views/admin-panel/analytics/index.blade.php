@@ -289,6 +289,17 @@
                                         Rezervacije koje su plaćene, ali se u potpunosti nalaze u besplatnim terminima (najčešće rezultat administrativne izmene).
                                     </td>
                                 </tr>
+                                <tr>
+                                    <td class="py-2 pr-4 text-gray-600 align-top" title="Sumnjivi slučajevi gde su za isti datum i iste tablice plaćene rezervacije sa bar jednim zajedničkim terminom.">
+                                        Duplo plaćanje istog termina
+                                    </td>
+                                    <td class="py-2 pr-4 text-right font-medium align-top">{{ (int)($o['double_paid_same_slot_pairs'] ?? 0) }}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2" class="pb-2 text-xs text-gray-500">
+                                        Sumnjivi slučajevi gde su za isti datum i iste tablice plaćene rezervacije sa bar jednim zajedničkim terminom.
+                                    </td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
