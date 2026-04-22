@@ -136,14 +136,14 @@
 
             <div>
                 <x-input-label for="institution_name" :value="$ui('institution_name', 'Naziv institucije/organizacije')" />
-                <x-text-input id="institution_name" name="institution_name" type="text" class="mt-1 block w-full" :value="old('institution_name')" required />
+                <x-text-input id="institution_name" name="institution_name" type="text" class="mt-1 block w-full" :value="old('institution_name')" x-model="institution_name" required />
                 <p class="mt-1 text-xs text-gray-500">{{ $ui('institution_name_hint', 'Ne naziv autoprevoznika/agencije') }}</p>
                 <x-input-error class="mt-2" :messages="$errors->get('institution_name')" />
             </div>
 
             <div>
                 <x-input-label for="country" :value="$ui('country', 'Država')" />
-                <select id="country" name="country" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
+                <select id="country" name="country" x-model="country" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
                     <option value="">{{ $ui('select_country', 'Izaberite državu') }}</option>
                     @foreach (($countries ?? []) as $code => $labels)
                         @php
@@ -157,7 +157,7 @@
 
             <div>
                 <x-input-label for="institution_email" :value="$ui('institution_email', 'Email institucije/organizacije')" />
-                <x-text-input id="institution_email" name="institution_email" type="email" class="mt-1 block w-full" :value="old('institution_email')" required />
+                <x-text-input id="institution_email" name="institution_email" type="email" class="mt-1 block w-full" :value="old('institution_email')" x-model="institution_email" required />
                 <p class="mt-1 text-xs text-gray-500">{{ $ui('institution_email_hint', 'Ne email autoprevoznika/agencije') }}</p>
                 <x-input-error class="mt-2" :messages="$errors->get('institution_email')" />
             </div>
@@ -170,6 +170,7 @@
                     type="text"
                     class="mt-1 block w-full"
                     :value="old('institution_phone')"
+                    x-model="institution_phone"
                     required
                     autocomplete="off"
                     inputmode="tel"
@@ -255,7 +256,7 @@
 
             <div class="space-y-2">
                 <label class="flex items-start gap-2 text-sm">
-                    <input type="checkbox" name="accept_privacy" value="1" class="mt-1 rounded border-gray-300" {{ old('accept_privacy') ? 'checked' : '' }} required>
+                    <input type="checkbox" name="accept_privacy" value="1" x-model="accept_privacy" class="mt-1 rounded border-gray-300" {{ old('accept_privacy') ? 'checked' : '' }} required>
                     <span>{{ \App\Support\UiText::t('reservation', 'accept_privacy') }}</span>
                 </label>
                 <x-input-error class="mt-2" :messages="$errors->get('accept_privacy')" />
@@ -278,6 +279,11 @@
                 vehicles: @json($vehiclesOld),
                 showConfirm: false,
                 pendingRemoveIdx: null,
+                institution_name: @json(old('institution_name', '')),
+                country: @json(old('country', '')),
+                institution_email: @json(old('institution_email', '')),
+                institution_phone: @json(old('institution_phone', '')),
+                accept_privacy: @json((bool) old('accept_privacy', false)),
                 init() {
                     window.addEventListener('free-request-sync', () => {
                         this.tick++;
@@ -331,21 +337,17 @@
                 get canSubmit() {
                     // Touch tick so Alpine recomputes
                     void this.tick;
-                    const form = document.querySelector('form[action="{{ route('free-request.store', [], false) }}"]');
-                    if (!form) return false;
-
-                    // basic required fields (HTML required)
-                    const required = Array.from(form.querySelectorAll('[required]'));
-                    for (const el of required) {
-                        if (el.tagName === 'SELECT' || el.tagName === 'INPUT') {
-                            if (!el.value) return false;
-                        }
-                    }
                     // reservation date/slots are hidden inputs (must be present)
-                    const date = form.querySelector('input[name="reservation_date"]');
-                    const drop = form.querySelector('input[name="drop_off_time_slot_id"]');
-                    const pick = form.querySelector('input[name="pick_up_time_slot_id"]');
-                    if (!date?.value || !drop?.value || !pick?.value) return false;
+                    const date = document.getElementById('post_reservation_date')?.value || '';
+                    const drop = document.getElementById('post_drop_off_time_slot_id')?.value || '';
+                    const pick = document.getElementById('post_pick_up_time_slot_id')?.value || '';
+                    if (!date || !drop || !pick) return false;
+
+                    if (!this.institution_name || String(this.institution_name).trim().length < 2) return false;
+                    if (!this.country) return false;
+                    if (!this.institution_email) return false;
+                    if (!this.institution_phone) return false;
+                    if (!this.accept_privacy) return false;
 
                     // vehicle rows must all be filled
                     if (!Array.isArray(this.vehicles) || this.vehicles.length < 1 || this.vehicles.length > 9) return false;
