@@ -48,6 +48,9 @@ Route::prefix('admin')->name('panel_admin.')->group(function () {
 
         Route::get('besplatne-rezervacije', [AdminPanelFreeReservationController::class, 'create'])->name('free-reservations');
         Route::post('besplatne-rezervacije', [AdminPanelFreeReservationController::class, 'store'])->name('free-reservations.store');
+        Route::post('besplatne-rezervacije/zahtjevi/{freeReservationRequest}/fulfill', [AdminPanelFreeReservationController::class, 'fulfillRequest'])->name('free-reservation-requests.fulfill');
+        Route::put('besplatne-rezervacije/zahtjevi/{freeReservationRequest}', [AdminPanelFreeReservationController::class, 'updateRequest'])->name('free-reservation-requests.update');
+        Route::delete('besplatne-rezervacije/zahtjevi/{freeReservationRequest}', [AdminPanelFreeReservationController::class, 'rejectRequest'])->name('free-reservation-requests.reject');
 
         Route::get('rezervacije', [AdminPanelReservationController::class, 'index'])->name('reservations');
         Route::get('rezervacije/{reservation}/uredi', [AdminPanelReservationController::class, 'edit'])->name('reservations.edit');

@@ -151,6 +151,12 @@ class UiTranslationsSeeder extends Seeder
             ['group' => 'emails', 'key' => 'free_reservation_body', 'locale' => 'en', 'text' => "Hello,\n\nYour free parking reservation #%1\$d is confirmed for %2\$s.\nNo payment was required — this email is not a fiscal invoice.\nA PDF confirmation is attached.\n\nThank you."],
             ['group' => 'emails', 'key' => 'free_reservation_body', 'locale' => 'cg', 'text' => "Zdravo,\n\nVaša besplatna rezervacija parkinga #%1\$d potvrđena je za %2\$s.\nPlaćanje nije bilo potrebno — ovaj email nije fiskalni račun.\nU prilogu je PDF potvrda.\n\nHvala vam."],
 
+            // Free reservation request (multi-reservation fulfillment) email
+            ['group' => 'emails', 'key' => 'free_request_fulfilled_subject', 'locale' => 'en', 'text' => 'Free reservations request processed (%1$d)'],
+            ['group' => 'emails', 'key' => 'free_request_fulfilled_subject', 'locale' => 'cg', 'text' => 'Zahtjev za besplatne rezervacije je obrađen (%1$d)'],
+            ['group' => 'emails', 'key' => 'free_request_fulfilled_body', 'locale' => 'en', 'text' => "Hello,\n\nYour request has been processed and free reservation confirmations are attached.\nVehicle count: %1\$d\nDate: %2\$s\n\nThank you."],
+            ['group' => 'emails', 'key' => 'free_request_fulfilled_body', 'locale' => 'cg', 'text' => "Zdravo,\n\nVaš zahtjev je obrađen i potvrde besplatnih rezervacija su u prilogu.\nBroj vozila: %1\$d\nDatum: %2\$s\n\nHvala vam."],
+
             ['group' => 'emails', 'key' => 'paid_invoice_email_subject', 'locale' => 'en', 'text' => 'Reservation confirmation #%1$d'],
             ['group' => 'emails', 'key' => 'paid_invoice_email_subject', 'locale' => 'cg', 'text' => 'Potvrda rezervacije #%1$d'],
             ['group' => 'emails', 'key' => 'paid_invoice_email_body', 'locale' => 'en', 'text' => "Hello,\n\nYour paid parking reservation #%1\$d is confirmed for date %2\$s.%3\$s\n\nA PDF copy of your invoice or confirmation is attached.\n\nThank you."],
@@ -533,5 +539,8 @@ class UiTranslationsSeeder extends Seeder
         Cache::forget('ui_translations:group=free_request:locale=en');
         Cache::forget('ui_translations:any:group=landing:key=students_title');
         Cache::forget('ui_translations:any:group=free_request:key=title');
+        Cache::forget('ui_translations:group=emails:locale=cg');
+        Cache::forget('ui_translations:group=emails:locale=en');
+        Cache::forget('ui_translations:any:group=emails:key=free_request_fulfilled_subject');
     }
 }

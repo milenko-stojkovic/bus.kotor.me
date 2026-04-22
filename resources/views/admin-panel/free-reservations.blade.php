@@ -144,6 +144,146 @@
                 Napravi besplatnu rezervaciju
             </x-primary-button>
         </form>
+
+        {{-- Step 2: pregled pristiglih zahtjeva (read-only). --}}
+        <div class="pt-2 space-y-3">
+            <div class="space-y-1">
+                <h2 class="text-lg font-semibold text-gray-900">Pristigli zahtjevi (učenička/humanitarna)</h2>
+                <p class="text-sm text-gray-600">Prikazani su samo aktivni zahtjevi (submitted/updated). Telefon se ovdje ne prikazuje.</p>
+            </div>
+
+            @php
+                /** @var \Illuminate\Support\Collection<int, \App\Models\FreeReservationRequest> $freeReservationRequests */
+                $freeReservationRequests = $freeReservationRequests ?? collect();
+            @endphp
+
+            @forelse ($freeReservationRequests as $req)
+                <div class="bg-white shadow rounded-lg p-5 border border-gray-200 space-y-3">
+                    @if (! (bool) ($req->can_fulfill ?? false))
+                        <div class="rounded-md bg-amber-50 p-3 text-sm text-amber-900 border border-amber-200">
+                            Za traženi datum i termine nema dovoljno slobodnih kapaciteta za ovaj zahtjev.
+                        </div>
+                    @endif
+
+                    <div class="flex items-start justify-between gap-4">
+                        <div class="space-y-1">
+                            <div class="text-base font-semibold text-gray-900">{{ $req->institution_name }}</div>
+                            <div class="text-sm text-gray-700">{{ $req->institution_email }}</div>
+                            <div class="text-sm text-gray-700">{{ $req->institution_phone }}</div>
+                        </div>
+                        <div class="text-xs text-gray-600 text-right">
+                            <div><span class="font-semibold">Status:</span> {{ $req->status }}</div>
+                            <div><span class="font-semibold">Locale:</span> {{ $req->locale }}</div>
+                            <div><span class="font-semibold">Podnijeto:</span> {{ $req->created_at?->format('d.m.Y. H:i') }}</div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                        <div>
+                            <div class="text-xs font-medium text-gray-500">Država</div>
+                            <div class="mt-1 text-gray-900">{{ $req->country }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs font-medium text-gray-500">Datum</div>
+                            <div class="mt-1 text-gray-900">{{ $req->reservation_date?->format('d.m.Y.') }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs font-medium text-gray-500">Vrijeme dolaska</div>
+                            <div class="mt-1 text-gray-900">{{ $req->dropOffTimeSlot?->time_slot ?? '—' }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs font-medium text-gray-500">Vrijeme odlaska</div>
+                            <div class="mt-1 text-gray-900">{{ $req->pickUpTimeSlot?->time_slot ?? '—' }}</div>
+                        </div>
+                    </div>
+
+                    <div class="text-sm">
+                        <div class="text-xs font-medium text-gray-500">Vozila ({{ $req->vehicles->count() }})</div>
+                        <div class="mt-2 space-y-1">
+                            @foreach ($req->vehicles as $v)
+                                @php
+                                    $vtName = $v->vehicleType?->getTranslatedName('cg') ?: ('#'.$v->vehicle_type_id);
+                                    $vtDesc = trim((string) ($v->vehicleType?->getTranslatedDescription('cg') ?? ''));
+                                @endphp
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="font-semibold text-gray-900">{{ $v->license_plate }}</div>
+                                    <div class="text-gray-700 text-right">
+                                        {{ $vtName }}@if ($vtDesc !== '') ({{ $vtDesc }})@endif
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <div class="pt-2 flex flex-wrap gap-2">
+                        <form method="POST" action="{{ route('panel_admin.free-reservation-requests.fulfill', ['freeReservationRequest' => $req->id], false) }}">
+                            @csrf
+                            <input type="hidden" name="confirm" value="1">
+                            <button
+                                type="submit"
+                                class="inline-flex items-center justify-center rounded-md bg-gray-800 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-white hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                @disabled(! (bool) ($req->can_fulfill ?? false))
+                                onclick="return confirm('Da li si siguran da želiš da napraviš ovu/e admin free rezervaciju/e?');"
+                            >
+                                Napravi besplatnu/e rezervaciju/e
+                            </button>
+                        </form>
+
+                        <details class="w-full">
+                            <summary class="inline-flex cursor-pointer select-none items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-widest text-gray-800 hover:bg-gray-50">
+                                Izmijeni zahtjev
+                            </summary>
+                            <div class="mt-3 rounded-md border border-gray-200 p-3 bg-gray-50 space-y-2">
+                                <form method="POST" action="{{ route('panel_admin.free-reservation-requests.update', ['freeReservationRequest' => $req->id], false) }}" class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+                                    @csrf
+                                    @method('PUT')
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600">Datum</label>
+                                        <input type="date" name="reservation_date" value="{{ $req->reservation_date?->toDateString() }}" min="{{ now()->toDateString() }}" max="{{ now()->addDays(90)->toDateString() }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600">Vrijeme dolaska</label>
+                                        <select name="drop_off_time_slot_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
+                                            @foreach (\App\Models\ListOfTimeSlot::query()->orderBy('id')->get() as $s)
+                                                <option value="{{ $s->id }}" @selected((int)$req->drop_off_time_slot_id === (int)$s->id)>{{ $s->time_slot }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600">Vrijeme odlaska</label>
+                                        <select name="pick_up_time_slot_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
+                                            @foreach (\App\Models\ListOfTimeSlot::query()->orderBy('id')->get() as $s)
+                                                <option value="{{ $s->id }}" @selected((int)$req->pick_up_time_slot_id === (int)$s->id)>{{ $s->time_slot }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="flex gap-2 justify-end">
+                                        <button type="submit" class="inline-flex items-center justify-center rounded-md bg-gray-800 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-white hover:bg-gray-700">Izmijeni</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </details>
+
+                        <form method="POST" action="{{ route('panel_admin.free-reservation-requests.reject', ['freeReservationRequest' => $req->id], false) }}">
+                            @csrf
+                            @method('DELETE')
+                            <input type="hidden" name="confirm" value="1">
+                            <button
+                                type="submit"
+                                class="inline-flex items-center justify-center rounded-md bg-red-600 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-white hover:bg-red-700"
+                                onclick="return confirm('Da li si siguran da želiš da odbaciš ovaj zahtjev?');"
+                            >
+                                Odbaci zahtjev
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            @empty
+                <div class="rounded-md bg-gray-50 p-4 text-sm text-gray-700 border border-gray-200">
+                    Trenutno nema aktivnih zahtjeva.
+                </div>
+            @endforelse
+        </div>
     </div>
 
     <script>
