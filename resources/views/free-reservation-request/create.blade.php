@@ -25,7 +25,38 @@
     <div class="space-y-6">
         <div class="space-y-1">
             <h1 class="text-lg font-semibold">{{ $ui('title', 'Forma za besplatne rezervacije') }}</h1>
-            <p class="text-sm text-gray-600">{{ $ui('legal_summary', 'Privremeni sažetak (placeholder).') }}</p>
+            @php
+                $legalTitle = $ui('legal_title', $locale === 'cg' ? 'Ko može podnijeti zahtjev?' : 'Who can submit a request?');
+                $legalBody = $ui('legal_body', '');
+                $legalNote = $ui('legal_note', '');
+                $legalRef = $ui('legal_reference', '');
+                $lines = preg_split("/\r?\n/", (string) $legalBody) ?: [];
+                $lines = array_values(array_filter(array_map(fn ($l) => trim((string) $l), $lines), fn ($l) => $l !== ''));
+                $introLine = $lines[0] ?? '';
+                $bulletLines = array_slice($lines, 1);
+                $bulletLines = array_map(function (string $l): string {
+                    return ltrim($l, "- \t");
+                }, $bulletLines);
+            @endphp
+            <div class="text-sm text-gray-700 space-y-2">
+                <div class="font-semibold text-gray-900">{{ $legalTitle }}</div>
+                @if ($introLine !== '')
+                    <p>{{ $introLine }}</p>
+                @endif
+                @if (!empty($bulletLines))
+                    <ul class="list-disc pl-5 space-y-1">
+                        @foreach ($bulletLines as $b)
+                            <li>{{ $b }}</li>
+                        @endforeach
+                    </ul>
+                @endif
+                @if (trim((string) $legalNote) !== '')
+                    <p>{{ $legalNote }}</p>
+                @endif
+                @if (trim((string) $legalRef) !== '')
+                    <div class="text-xs text-gray-500">{{ $legalRef }}</div>
+                @endif
+            </div>
         </div>
 
         <div class="rounded-md bg-amber-50 p-4 text-sm text-amber-900">

@@ -467,6 +467,17 @@ class UiTranslationsSeeder extends Seeder
             // Public free-reservation request intake (step 1)
             ['group' => 'free_request', 'key' => 'title', 'locale' => 'en', 'text' => 'Free reservations request form'],
             ['group' => 'free_request', 'key' => 'title', 'locale' => 'cg', 'text' => 'Forma za besplatne rezervacije'],
+            // Legal intro (final short version, cg/en)
+            ['group' => 'free_request', 'key' => 'legal_title', 'locale' => 'en', 'text' => 'Who can submit a request?'],
+            ['group' => 'free_request', 'key' => 'legal_title', 'locale' => 'cg', 'text' => 'Ko može podnijeti zahtjev?'],
+            ['group' => 'free_request', 'key' => 'legal_body', 'locale' => 'en', 'text' => "Educational institutions and humanitarian organizations may request free reservations for:\n- persons with severe disabilities,\n- pupils and students in school-related activities,\n- humanitarian organizations and their beneficiaries."],
+            ['group' => 'free_request', 'key' => 'legal_body', 'locale' => 'cg', 'text' => "Obrazovne ustanove i humanitarne organizacije mogu podnijeti zahtjev za besplatnu rezervaciju za:\n- lica sa teškim smetnjama,\n- učenike i studente u okviru školskih aktivnosti,\n- humanitarne organizacije i njihove korisnike."],
+            ['group' => 'free_request', 'key' => 'legal_note', 'locale' => 'en', 'text' => 'Approval requires appropriate proof (e.g. school certificate, medical confirmation, or similar document).'],
+            ['group' => 'free_request', 'key' => 'legal_note', 'locale' => 'cg', 'text' => 'Za odobrenje je potrebno dostaviti odgovarajući dokaz (potvrda škole, ljekara ili drugi relevantan dokument).'],
+            ['group' => 'free_request', 'key' => 'legal_reference', 'locale' => 'en', 'text' => 'In accordance with: Official Gazette of Montenegro – Municipal Regulations, No. 11/2024, Decision on Fees for the Economic Use of Cultural Assets of the Municipality of Kotor.'],
+            ['group' => 'free_request', 'key' => 'legal_reference', 'locale' => 'cg', 'text' => 'U skladu sa: Službeni list Crne Gore – Opštinski propisi, broj 11/2024, Odluka o naknadi za ekonomsko iskorišćavanje kulturnih dobara Opštine Kotor.'],
+
+            // Backwards compatible (no longer shown in UI, kept for old deployments)
             ['group' => 'free_request', 'key' => 'legal_summary', 'locale' => 'en', 'text' => 'Temporary summary (placeholder). The official text will be provided after legal verification.'],
             ['group' => 'free_request', 'key' => 'legal_summary', 'locale' => 'cg', 'text' => 'Privremeni sažetak (placeholder). Zvanični tekst će biti dodat nakon pravne verifikacije.'],
             ['group' => 'free_request', 'key' => 'intro_note', 'locale' => 'en', 'text' => 'Submitting this form does not mean a reservation is automatically created. The data is sent to administrators who will first verify authenticity and then create reservations according to your request and our capacities. Please submit the request as early as possible. All fields are required.'],
