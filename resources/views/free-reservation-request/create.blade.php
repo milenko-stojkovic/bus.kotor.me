@@ -186,7 +186,7 @@
 
                 <template x-for="(row, idx) in vehicles" :key="idx">
                     <div class="grid grid-cols-1 md:grid-cols-12 gap-2 items-start">
-                        <div class="md:col-span-5">
+                        <div class="md:col-span-6 min-w-0">
                             <x-input-label :value="$ui('license_plate', 'Registarska tablica')" />
                             <input
                                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
@@ -201,7 +201,7 @@
                             />
                         </div>
 
-                        <div class="md:col-span-5">
+                        <div class="md:col-span-4 min-w-0">
                             <x-input-label :value="$ui('vehicle_type', 'Kategorija vozila')" />
                             <select
                                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
@@ -216,7 +216,7 @@
                             </select>
                         </div>
 
-                        <div class="md:col-span-2 flex gap-2 md:justify-end pt-6">
+                        <div class="md:col-span-2 flex gap-2 md:justify-end pt-6 min-w-0">
                             <button
                                 type="button"
                                 class="inline-flex items-center justify-center rounded-md bg-gray-800 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-white hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
