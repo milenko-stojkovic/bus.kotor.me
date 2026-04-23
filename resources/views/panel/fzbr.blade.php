@@ -252,9 +252,23 @@
             const all = @json($fzbrVehicleOptions);
 
             return {
+                tick: 0,
                 rows: [{ vehicle_id: '' }],
                 showConfirm: false,
                 pendingRemoveIdx: null,
+
+                init() {
+                    const docs = document.getElementById('documents');
+                    if (docs) {
+                        docs.addEventListener('change', () => { this.tick++; });
+                        docs.addEventListener('input', () => { this.tick++; });
+                    }
+                    const privacy = document.querySelector('input[name="accept_privacy"]');
+                    if (privacy) {
+                        privacy.addEventListener('change', () => { this.tick++; });
+                        privacy.addEventListener('input', () => { this.tick++; });
+                    }
+                },
 
                 get selectedIds() {
                     return this.rows.map(r => String(r.vehicle_id || '')).filter(v => v !== '');
@@ -307,6 +321,8 @@
                 },
 
                 get canSubmit() {
+                    // Touch tick so Alpine recomputes when file/checkbox changes.
+                    void this.tick;
                     const date = document.getElementById('post_reservation_date')?.value || '';
                     const drop = document.getElementById('post_drop_off_time_slot_id')?.value || '';
                     const pick = document.getElementById('post_pick_up_time_slot_id')?.value || '';
