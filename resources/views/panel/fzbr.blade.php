@@ -94,7 +94,7 @@
                                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                 @disabled(empty($selected_date))
                             >
-                                <option value="">{{ \\App\\Support\\UiText::t('reservation', 'select_time_slot') }}</option>
+                                <option value="">{{ \App\Support\UiText::t('reservation', 'select_time_slot') }}</option>
                                 @foreach (($arrival_slots ?? []) as $s)
                                     <option value="{{ $s['id'] }}" @selected((int)($arrival_id ?? 0) === (int)$s['id']) @disabled((bool)$s['disabled'])>
                                         {{ $s['label'] }}
@@ -110,14 +110,14 @@
                                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                 @disabled($departure_disabled ?? true)
                             >
-                                <option value="">{{ \\App\\Support\\UiText::t('reservation', 'select_time_slot') }}</option>
+                                <option value="">{{ \App\Support\UiText::t('reservation', 'select_time_slot') }}</option>
                                 @foreach (($departure_slots ?? []) as $s)
                                     <option value="{{ $s['id'] }}" @selected((int)($departure_id ?? 0) === (int)$s['id']) @disabled((bool)$s['disabled'])>
                                         {{ $s['label'] }}
                                     </option>
                                 @endforeach
                             </select>
-                            <p class="mt-1 text-xs text-gray-500">{{ \\App\\Support\\UiText::t('reservation', 'departure_disabled_hint') }}</p>
+                            <p class="mt-1 text-xs text-gray-500">{{ \App\Support\UiText::t('reservation', 'departure_disabled_hint') }}</p>
                         </div>
                     </div>
                 </div>
