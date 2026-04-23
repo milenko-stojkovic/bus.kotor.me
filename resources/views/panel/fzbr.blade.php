@@ -11,7 +11,7 @@
 
     $title = $ui('fzbr_title', 'Formular za besplatnu rezervaciju');
     $desc = $ui('fzbr_description', $locale === 'cg' ? $descFallbackCg : $descFallbackEn);
-    $descLines = preg_split(\"/\\r?\\n/\", trim((string) $desc)) ?: [];
+    $descLines = preg_split("/\\r?\\n/", trim((string) $desc)) ?: [];
     $descLines = array_values(array_filter(array_map('trim', $descLines), fn ($l) => $l !== ''));
 
     $uploadLabel = $ui('documents_label', 'Osnov za zahtjev za besplatnu rezervaciju');
@@ -52,7 +52,7 @@
                         $bullets = [];
                         foreach ($descLines as $l) {
                             if (str_starts_with($l, '-')) {
-                                $bullets[] = ltrim($l, \"- \\t\");
+                                $bullets[] = ltrim($l, "- \t");
                             } else {
                                 $intro[] = $l;
                             }
@@ -75,7 +75,7 @@
                 <div class="bg-white shadow sm:rounded-lg p-6 space-y-4">
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div class="sm:col-span-1">
-                            <x-input-label for="reservation_date" :value="\\App\\Support\\UiText::t('reservation', 'date')" />
+                            <x-input-label for="reservation_date" :value="\App\Support\UiText::t('reservation', 'date')" />
                             <input
                                 id="reservation_date"
                                 name="reservation_date"
@@ -87,7 +87,7 @@
                             />
                         </div>
                         <div class="sm:col-span-1">
-                            <x-input-label for="drop_off_time_slot_id" :value="\\App\\Support\\UiText::t('reservation', 'arrival_time')" />
+                            <x-input-label for="drop_off_time_slot_id" :value="\App\Support\UiText::t('reservation', 'arrival_time')" />
                             <select
                                 id="drop_off_time_slot_id"
                                 name="drop_off_time_slot_id"
@@ -103,7 +103,7 @@
                             </select>
                         </div>
                         <div class="sm:col-span-1">
-                            <x-input-label for="pick_up_time_slot_id" :value="\\App\\Support\\UiText::t('reservation', 'departure_time')" />
+                            <x-input-label for="pick_up_time_slot_id" :value="\App\Support\UiText::t('reservation', 'departure_time')" />
                             <select
                                 id="pick_up_time_slot_id"
                                 name="pick_up_time_slot_id"
@@ -196,7 +196,7 @@
                         name="documents[]"
                         type="file"
                         multiple
-                        accept=\"image/*,application/pdf\"
+                        accept="image/*,application/pdf"
                         class="block w-full text-sm text-gray-700 file:mr-4 file:rounded-md file:border-0 file:bg-gray-800 file:px-3 file:py-2 file:text-xs file:font-semibold file:uppercase file:tracking-widest file:text-white hover:file:bg-gray-700"
                         required
                     />
@@ -296,7 +296,7 @@
                     if (this.selectedIds.length < 1) return false;
                     const docs = document.getElementById('documents');
                     if (!docs || !docs.files || docs.files.length < 1) return false;
-                    const privacy = document.querySelector('input[name=\"accept_privacy\"]');
+                    const privacy = document.querySelector('input[name="accept_privacy"]');
                     if (!privacy || !privacy.checked) return false;
                     return true;
                 },
