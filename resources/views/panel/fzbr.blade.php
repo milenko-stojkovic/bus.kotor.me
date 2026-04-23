@@ -48,13 +48,21 @@
                         @endif
                     @endforeach
                     @php
+                        // Split into: intro (before first bullet), bullets, outro (after bullets).
                         $intro = [];
                         $bullets = [];
+                        $outro = [];
+                        $seenBullet = false;
                         foreach ($descLines as $l) {
                             if (str_starts_with($l, '-')) {
+                                $seenBullet = true;
                                 $bullets[] = ltrim($l, "- \t");
-                            } else {
+                                continue;
+                            }
+                            if (! $seenBullet) {
                                 $intro[] = $l;
+                            } else {
+                                $outro[] = $l;
                             }
                         }
                     @endphp
@@ -68,6 +76,9 @@
                             @endforeach
                         </ul>
                     @endif
+                    @foreach ($outro as $pLine)
+                        <p>{{ $pLine }}</p>
+                    @endforeach
                 </div>
             </div>
 
@@ -136,7 +147,6 @@
                     <template x-for="(row, idx) in rows" :key="idx">
                         <div class="grid grid-cols-1 md:grid-cols-12 gap-2 items-start">
                             <div class="md:col-span-10 min-w-0">
-                                <x-input-label :value="$p('nav_vehicles', 'Vehicles')" />
                                 <select
                                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                     :name="`vehicles[${idx}]`"
