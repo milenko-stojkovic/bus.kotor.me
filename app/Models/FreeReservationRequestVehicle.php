@@ -11,8 +11,10 @@ class FreeReservationRequestVehicle extends Model
 
     protected $fillable = [
         'request_id',
+        'agency_vehicle_id',
         'license_plate',
         'vehicle_type_id',
+        'vehicle_type_label',
     ];
 
     public function request(): BelongsTo

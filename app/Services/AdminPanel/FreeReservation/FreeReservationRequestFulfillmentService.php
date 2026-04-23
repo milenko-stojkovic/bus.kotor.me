@@ -166,6 +166,11 @@ class FreeReservationRequestFulfillmentService
                 }
             });
 
+            // Isto kao SendFreeReservationConfirmationJob: jedan zajednički mejl pokriva sve redove u reservations.
+            foreach ($reservations as $r) {
+                $r->markConfirmationEmailSent();
+            }
+
             Log::channel('payments')->info('free_reservation_request_multi_email_sent', [
                 'free_reservation_request_id' => $req->id,
                 'email' => $email,
@@ -194,7 +199,7 @@ class FreeReservationRequestFulfillmentService
 
     private function cleanupAfterSuccess(FreeReservationRequest $req): void
     {
-        // Remove warning pointers (if any), then hard delete request (cascade deletes vehicles).
+        // Remove warning pointers (if any), then mark request as fulfilled (keep record + snapshots + documents).
         AdminAlert::query()
             ->where('type', 'free_reservation_request')
             ->whereNull('removed_at')
@@ -205,7 +210,9 @@ class FreeReservationRequestFulfillmentService
                 'removed_at' => now(),
             ]);
 
-        $req->delete();
+        $req->update([
+            'status' => FreeReservationRequest::STATUS_FULFILLED,
+        ]);
     }
 }
 

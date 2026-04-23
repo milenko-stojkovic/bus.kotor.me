@@ -9,13 +9,16 @@ use App\Http\Requests\AdminPanel\AdminFreeReservationRequestFulfillRequest;
 use App\Http\Requests\AdminPanel\AdminFreeReservationRequestRejectRequest;
 use App\Http\Requests\AdminPanel\AdminFreeReservationRequestUpdateRequest;
 use App\Models\FreeReservationRequest;
+use App\Models\FreeReservationRequestAttachment;
 use App\Services\AdminPanel\FreeReservation\FreeReservationRequestAvailability;
 use App\Services\AdminPanel\FreeReservation\FreeReservationRequestFulfillmentService;
 use App\Services\AdminPanel\FreeReservation\AdminDirectFreeReservationService;
 use App\Services\Reservation\ReservationBookingPageData;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class FreeReservationController extends Controller
@@ -33,6 +36,7 @@ class FreeReservationController extends Controller
                 'dropOffTimeSlot',
                 'pickUpTimeSlot',
                 'vehicles.vehicleType.translations',
+                'attachments',
             ])
             ->orderByDesc('created_at')
             ->get();
@@ -157,8 +161,34 @@ class FreeReservationController extends Controller
                 'removed_at' => now(),
             ]);
 
-        $freeReservationRequest->delete();
+        $freeReservationRequest->update([
+            'status' => FreeReservationRequest::STATUS_REJECTED,
+        ]);
 
-        return back()->with('status', 'Zahtjev je odbačen i uklonjen.');
+        return back()->with('status', 'Zahtjev je odbačen.');
+    }
+
+    public function previewAttachment(
+        Request $request,
+        FreeReservationRequest $freeReservationRequest,
+        FreeReservationRequestAttachment $attachment,
+    ): BinaryFileResponse {
+        if ((int) $attachment->request_id !== (int) $freeReservationRequest->id) {
+            abort(404);
+        }
+
+        $path = (string) $attachment->stored_path;
+        if ($path === '' || ! Storage::disk('local')->exists($path)) {
+            abort(404);
+        }
+
+        $absolute = Storage::disk('local')->path($path);
+        $mime = is_string($attachment->mime_type) && $attachment->mime_type !== '' ? $attachment->mime_type : null;
+
+        return response()->file($absolute, [
+            'Content-Type' => $mime,
+            'Content-Disposition' => 'inline; filename="'.addslashes((string) $attachment->original_name).'"',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 }

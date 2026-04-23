@@ -21,6 +21,9 @@
                     <x-nav-link :href="route('panel.vehicles')" :active="request()->routeIs('panel.vehicles', 'panel.vehicles.store', 'panel.vehicles.update', 'panel.vehicles.destroy')">
                         {{ $p('nav_vehicles', 'Vehicles') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('panel.fzbr.create')" :active="request()->routeIs('panel.fzbr.*')">
+                        {{ $p('nav_fzbr', 'FZBR') }}
+                    </x-nav-link>
                     <x-nav-link :href="route('panel.upcoming')" :active="request()->routeIs('panel.upcoming')">
                         {{ $p('nav_upcoming', 'Upcoming reservations') }}
                     </x-nav-link>
@@ -90,6 +93,9 @@
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('panel.vehicles')" :active="request()->routeIs('panel.vehicles', 'panel.vehicles.store', 'panel.vehicles.update', 'panel.vehicles.destroy')">
                 {{ $p('nav_vehicles', 'Vehicles') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('panel.fzbr.create')" :active="request()->routeIs('panel.fzbr.*')">
+                {{ $p('nav_fzbr', 'FZBR') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('panel.upcoming')" :active="request()->routeIs('panel.upcoming')">
                 {{ $p('nav_upcoming', 'Upcoming reservations') }}

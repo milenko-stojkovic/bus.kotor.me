@@ -3,6 +3,7 @@
 namespace Tests\Feature\AdminPanel;
 
 use App\Models\Admin;
+use App\Models\AdminAlert;
 use App\Models\DailyParkingData;
 use App\Models\ListOfTimeSlot;
 use Carbon\Carbon;
@@ -34,6 +35,28 @@ class AdminWarningsDashboardTest extends TestCase
             ->assertDontSee('plaćeni termin', false)
             ->assertSee('Nedostupni dani i termini', false)
             ->assertSee('Blokirani dani i termini', false);
+    }
+
+    public function test_warnings_dashboard_shows_status_text_but_no_transition_buttons(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-04-10 12:00:00', config('app.timezone')));
+
+        $admin = $this->makeAdmin();
+        AdminAlert::query()->create([
+            'type' => 'free_reservation_request',
+            'status' => AdminAlert::STATUS_UNREAD,
+            'title' => 'Zahtjev',
+            'message' => 'Stigao je zahtjev.',
+            'payload_json' => ['free_reservation_request_id' => 1],
+        ]);
+
+        $this->actingAs($admin, 'panel_admin')
+            ->get('/admin')
+            ->assertOk()
+            ->assertSee('Status:', false)
+            ->assertDontSee('U obradi', false)
+            ->assertDontSee('Završen', false)
+            ->assertDontSee('Ukloni', false);
     }
 
     public function test_blocked_consecutive_slots_merge_to_single_span(): void

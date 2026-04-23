@@ -262,6 +262,23 @@
                 <x-input-error class="mt-2" :messages="$errors->get('accept_privacy')" />
             </div>
 
+            @php
+                $finalNoticeTitleFallback = $locale === 'cg' ? 'Napomena:' : 'Note:';
+                $finalNoticeBodyFallbackCg = "Unešena email adresa i broj telefona su ključni za identifikaciju podnosioca zahtjeva.\nBroj telefona mora pripadati odgovornom licu koje je upoznato sa zahtjevom.\n\nDokle god ne dođe do komunikacije sa administratorom, rezervacija neće biti napravljena.\nMolimo Vas da još jednom provjerite unešene podatke.\n\nSami snosite odgovornost za tačnost unešenih podataka.";
+                $finalNoticeBodyFallbackEn = "The provided email address and phone number are essential for identifying the request submitter.\nThe phone number must belong to a responsible person familiar with the request.\n\nThe reservation will not be created until communication with the administrator is established.\nPlease double-check the entered information.\n\nYou are responsible for the accuracy of the submitted data.";
+                $finalNoticeBodyFallback = $locale === 'cg' ? $finalNoticeBodyFallbackCg : $finalNoticeBodyFallbackEn;
+                $finalNoticeTitle = $ui('final_notice_title', $finalNoticeTitleFallback);
+                $finalNoticeBody = $ui('final_notice_body', $finalNoticeBodyFallback);
+                $finalNoticeParagraphs = preg_split("/\r?\n\r?\n/", trim((string) $finalNoticeBody)) ?: [];
+                $finalNoticeParagraphs = array_values(array_filter(array_map('trim', $finalNoticeParagraphs), fn ($p) => $p !== ''));
+            @endphp
+            <div class="rounded-md border border-gray-200 bg-gray-50 p-4 text-sm space-y-3 text-gray-700">
+                <div class="font-semibold text-gray-900">{{ $finalNoticeTitle }}</div>
+                @foreach ($finalNoticeParagraphs as $paragraph)
+                    <p class="leading-relaxed">{!! nl2br(e($paragraph)) !!}</p>
+                @endforeach
+            </div>
+
             <button
                 type="submit"
                 class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"

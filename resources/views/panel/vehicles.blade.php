@@ -114,6 +114,9 @@
             <div class="absolute inset-0 bg-black/50" x-on:click="deleteOpen = false"></div>
             <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6 space-y-4" x-on:click.stop>
                 <p class="text-sm text-gray-700">{{ $pn('vehicles_remove_confirm') }}</p>
+                <p class="text-xs text-gray-500">
+                    {{ $pn('vehicles_remove_workflow_hint', 'If this vehicle is used in upcoming reservations, you will be guided through a replacement workflow before it can be removed.') }}
+                </p>
                 <form :action="deleteUrl" method="post" class="flex flex-wrap gap-2 justify-end">
                     @csrf
                     @method('delete')

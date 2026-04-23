@@ -51,6 +51,7 @@ Route::prefix('admin')->name('panel_admin.')->group(function () {
         Route::post('besplatne-rezervacije/zahtjevi/{freeReservationRequest}/fulfill', [AdminPanelFreeReservationController::class, 'fulfillRequest'])->name('free-reservation-requests.fulfill');
         Route::put('besplatne-rezervacije/zahtjevi/{freeReservationRequest}', [AdminPanelFreeReservationController::class, 'updateRequest'])->name('free-reservation-requests.update');
         Route::delete('besplatne-rezervacije/zahtjevi/{freeReservationRequest}', [AdminPanelFreeReservationController::class, 'rejectRequest'])->name('free-reservation-requests.reject');
+        Route::get('besplatne-rezervacije/zahtjevi/{freeReservationRequest}/attachments/{attachment}/preview', [AdminPanelFreeReservationController::class, 'previewAttachment'])->name('free-reservation-requests.attachments.preview');
 
         Route::get('rezervacije', [AdminPanelReservationController::class, 'index'])->name('reservations');
         Route::get('rezervacije/{reservation}/uredi', [AdminPanelReservationController::class, 'edit'])->name('reservations.edit');
@@ -87,10 +88,7 @@ Route::prefix('control')->name('control.')->group(function () {
 Route::get('/', LandingController::class)->name('landing');
 Route::get('/guest/reserve', GuestReservationController::class)->name('guest.reserve');
 
-// Public: "Učenici/humanitarci" free-reservation request intake (step 1 only).
-Route::get('/free-reservation-request', [FreeReservationRequestController::class, 'create'])->name('free-request.create');
-Route::post('/free-reservation-request', [FreeReservationRequestController::class, 'store'])->name('free-request.store');
-Route::get('/free-reservation-request/success', [FreeReservationRequestController::class, 'success'])->name('free-request.success');
+// NOTE: Public "free reservation request" flow was retired. Agencies submit from /panel (FZBR).
 
 // Guest: manually change UI language (session). Auth uses users.lang.
 Route::get('/locale/{locale}', LocaleController::class)->name('locale.switch');
@@ -149,6 +147,10 @@ Route::middleware(['auth', 'verified'])->prefix('panel')->name('panel.')->group(
     Route::post('/vehicles', [VehicleController::class, 'store'])->name('vehicles.store');
     Route::patch('/vehicles/{vehicle}', [VehicleController::class, 'update'])->name('vehicles.update');
     Route::delete('/vehicles/{vehicle}', [VehicleController::class, 'destroy'])->name('vehicles.destroy');
+    Route::get('/vehicles/{vehicle}/remove', [VehicleController::class, 'remove'])->name('vehicles.remove');
+    Route::post('/vehicles/{vehicle}/remove', [VehicleController::class, 'applyRemove'])->name('vehicles.remove.apply');
+    Route::get('/fzbr', [\App\Http\Controllers\Panel\FzbrController::class, 'create'])->name('fzbr.create');
+    Route::post('/fzbr', [\App\Http\Controllers\Panel\FzbrController::class, 'store'])->name('fzbr.store');
     Route::get('/upcoming', [PanelController::class, 'upcoming'])->name('upcoming');
     Route::get('/realized', [PanelController::class, 'realized'])->name('realized');
     Route::get('/statistics', [PanelController::class, 'statistics'])->name('statistics');

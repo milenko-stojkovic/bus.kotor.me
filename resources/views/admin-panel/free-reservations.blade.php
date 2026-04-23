@@ -169,7 +169,6 @@
                         <div class="space-y-1">
                             <div class="text-base font-semibold text-gray-900">{{ $req->institution_name }}</div>
                             <div class="text-sm text-gray-700">{{ $req->institution_email }}</div>
-                            <div class="text-sm text-gray-700">{{ $req->institution_phone }}</div>
                         </div>
                         <div class="text-xs text-gray-600 text-right">
                             <div><span class="font-semibold">Status:</span> {{ $req->status }}</div>
@@ -202,7 +201,8 @@
                         <div class="mt-2 space-y-1">
                             @foreach ($req->vehicles as $v)
                                 @php
-                                    $vtName = $v->vehicleType?->getTranslatedName('cg') ?: ('#'.$v->vehicle_type_id);
+                                    $vtName = $v->vehicle_type_label
+                                        ?: ($v->vehicleType?->getTranslatedName('cg') ?: ('#'.$v->vehicle_type_id));
                                     $vtDesc = trim((string) ($v->vehicleType?->getTranslatedDescription('cg') ?? ''));
                                 @endphp
                                 <div class="flex items-start justify-between gap-3">
@@ -213,6 +213,32 @@
                                 </div>
                             @endforeach
                         </div>
+                    </div>
+
+                    <div class="text-sm">
+                        <div class="text-xs font-medium text-gray-500">Dokumenta ({{ $req->attachments->count() }})</div>
+                        @if ($req->attachments->isEmpty())
+                            <div class="mt-1 text-gray-700">—</div>
+                        @else
+                            <ul class="mt-2 space-y-1">
+                                @foreach ($req->attachments as $a)
+                                    <li class="flex flex-wrap items-center justify-between gap-2">
+                                        <div class="text-gray-900">
+                                            {{ $a->original_name }}
+                                            <span class="text-xs text-gray-500">({{ $a->mime_type ?: '—' }}, {{ number_format(((int) $a->size_bytes) / 1024, 0) }} KB)</span>
+                                        </div>
+                                        <a
+                                            href="{{ route('panel_admin.free-reservation-requests.attachments.preview', ['freeReservationRequest' => $req->id, 'attachment' => $a->id], false) }}"
+                                            target="_blank"
+                                            rel="noopener"
+                                            class="text-xs font-semibold uppercase tracking-widest text-indigo-700 hover:text-indigo-900 underline"
+                                        >
+                                            Pregledaj
+                                        </a>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @endif
                     </div>
 
                     <div class="pt-2 flex flex-wrap gap-2">
@@ -257,7 +283,14 @@
                                             @endforeach
                                         </select>
                                     </div>
-                                    <div class="flex gap-2 justify-end">
+                                    <div class="flex flex-wrap gap-2 justify-end sm:col-span-2">
+                                        <button
+                                            type="button"
+                                            class="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-widest text-gray-800 hover:bg-gray-100"
+                                            onclick="this.closest('details').open = false"
+                                        >
+                                            Otkaži
+                                        </button>
                                         <button type="submit" class="inline-flex items-center justify-center rounded-md bg-gray-800 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-white hover:bg-gray-700">Izmijeni</button>
                                     </div>
                                 </form>

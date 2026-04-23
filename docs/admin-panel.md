@@ -65,12 +65,14 @@ Kontroler: **`WarningsController::index`**. Stranica ima tri bloka: **Upozorenja
 | `POST /admin/besplatne-rezervacije` | `panel_admin.free-reservations.store` — kreiranje. |
 
 - **Kontroler:** `App\Http\Controllers\AdminPanel\FreeReservationController`; **validacija:** `AdminFreeReservationRequest`.
-- **Pristigli zahtjevi (step 2, read-only):** na dnu iste strane prikazuje se lista aktivnih zahtjeva iz javne forme “Učenici/humanitarci”:
+- **Pristigli zahtjevi (FZBR, agencije; step 2, operativna lista):** na dnu iste strane prikazuje se lista aktivnih zahtjeva iz **agency panela** (`/panel/fzbr`):
   - izvor istine: `free_reservation_requests` + `free_reservation_request_vehicles` (ne `admin_alerts`)
   - prikazuju se samo statusi: **`submitted`**, **`updated`** (ne prikazuje `fulfilled`/`rejected`)
   - sortiranje: `created_at DESC`
-  - eager loading (bez N+1): `with(['dropOffTimeSlot','pickUpTimeSlot','vehicles.vehicleType.translations'])`
-  - **telefon se namjerno ne prikazuje** u ovoj sekciji (dostupan je u bazi i emailu iz step 1).
+  - eager loading (bez N+1): `with(['dropOffTimeSlot','pickUpTimeSlot','vehicles.vehicleType.translations','attachments'])`
+  - **telefon se ne prikazuje** (agency tok; podnosilac = user/agencija nalog)
+  - **Dokumenta (private/local storage):** prilozi su u `free_reservation_request_attachments` i prikazuju se kao lista sa linkom za **preview** (admin-only ruta streamuje fajl inline).
+  - **Retention:** posle **fulfill** / **reject** zahtjev se **ne briše**. Samo se setuje status (`fulfilled`/`rejected`) i uklanja se upozorenje (pointer).
 - **Podaci stranice / slotovi:** `ReservationBookingPageData::forAdminPanel()` — isti `buildSlotPayload` / `FreeReservationRules` kao gost; UI jezik fiksno **cg** (`App::setLocale('cg')` u kontroleru).
 - **Bez `temp_data`:** `App\Services\AdminPanel\FreeReservation\AdminDirectFreeReservationService` u transakciji zaključava `daily_parking_data` po `whereDate` + `time_slot_id`, proverava `!is_blocked` i `availableCapacity() >= 1`, kreira `Reservation` (`status=free`, `created_by_admin=true`, `user_id=null`, `preferred_locale=cg`, `invoice_amount` preko `ReservationInvoiceAmount`), **increment `reserved`** po jedinstvenom slotu (isti ID jednom), zatim `SendFreeReservationConfirmationJob`.
 - **Worklist:** `BlockZoneWorklistService::onReservationCreated($reservation, null)` ako postoji red po istom `merchant_transaction_id` (retko za novi UUID).

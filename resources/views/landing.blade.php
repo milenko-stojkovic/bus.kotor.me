@@ -39,19 +39,6 @@
                     {{ $ui('agency_cta') }}
                 </a>
             </div>
-
-            <div class="rounded-lg border border-gray-200 p-4">
-                <div class="font-semibold">{{ $ui('students_title', 'Učenici/humanitarci') }}</div>
-                <div class="mt-1 text-sm text-gray-600">
-                    {{ $ui('students_description', 'Za obrazovne ustanove i humanitarne organizacije') }}
-                </div>
-                <a
-                    href="{{ route('free-request.create', [], false) }}"
-                    class="mt-3 inline-flex w-full items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-800 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition"
-                >
-                    {{ $ui('students_cta', 'Forma za besplatne rezervacije') }}
-                </a>
-            </div>
         </div>
     </div>
 </x-guest-layout>

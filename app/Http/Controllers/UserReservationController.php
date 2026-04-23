@@ -6,10 +6,12 @@ use App\Http\Requests\UpdateReservationVehicleRequest;
 use App\Jobs\SendInvoiceEmailJob;
 use App\Models\Reservation;
 use App\Models\Vehicle;
+use App\Services\Reservation\VehicleReplacementCandidateService;
 use App\Services\Pdf\FreeReservationPdfGenerator;
 use App\Services\Pdf\PaidInvoicePdfGenerator;
 use App\Services\Reservation\ReservationBookingPageData;
 use App\Support\UiText;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -89,23 +91,63 @@ class UserReservationController extends Controller
 
     public function updateVehicle(UpdateReservationVehicleRequest $request, int $id): RedirectResponse
     {
+        $user = $request->user();
+        $newVehicleId = (int) $request->validated('vehicle_id');
+
+        /** @var Reservation $reservation */
         $reservation = Reservation::query()
-            ->where('user_id', $request->user()->id)
+            ->where('user_id', $user->id)
             ->whereKey($id)
+            ->with(['pickUpTimeSlot', 'dropOffTimeSlot', 'vehicleType'])
             ->firstOrFail();
 
+        /** @var Vehicle $vehicle */
         $vehicle = Vehicle::query()
-            ->where('user_id', $request->user()->id)
-            ->whereKey($request->validated('vehicle_id'))
+            ->where('user_id', $user->id)
+            ->whereKey($newVehicleId)
+            ->with('vehicleType')
             ->firstOrFail();
 
-        $reservation->update([
-            'vehicle_id' => $vehicle->id,
-            'license_plate' => $vehicle->license_plate,
-            // Snapshot tipa vozila mora da prati izabrano vozilo,
-            // ali `invoice_amount` ostaje nepromijenjen (historijska tačnost cijene).
-            'vehicle_type_id' => $vehicle->vehicle_type_id,
-        ]);
+        $svc = app(VehicleReplacementCandidateService::class);
+
+        DB::transaction(function () use ($user, $reservation, $vehicle, $svc): void {
+            // Lock reservation row + all same-date reservations for selected vehicle to prevent races.
+            $lockedReservation = Reservation::query()
+                ->where('user_id', $user->id)
+                ->whereKey($reservation->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if (! \App\Services\Reservation\PanelReservationListService::isUpcoming($lockedReservation)) {
+                abort(422);
+            }
+
+            $categoryPrice = (float) ($lockedReservation->vehicleType?->price ?? 0);
+            $newPrice = (float) ($vehicle->vehicleType?->price ?? 0);
+            if ($newPrice > $categoryPrice + 0.000001) {
+                abort(422);
+            }
+
+            $date = $lockedReservation->reservation_date?->toDateString() ?? '';
+            $sameDate = Reservation::query()
+                ->where('user_id', $user->id)
+                ->where('vehicle_id', $vehicle->id)
+                ->whereDate('reservation_date', $date)
+                ->lockForUpdate()
+                ->get();
+
+            // Re-check conflict rule under lock.
+            if ($svc->hasConflictWithUpcoming($user, $vehicle->id, $lockedReservation, ignoreReservationIds: [$lockedReservation->id])) {
+                abort(422);
+            }
+
+            $lockedReservation->update([
+                'vehicle_id' => $vehicle->id,
+                'license_plate' => $vehicle->license_plate,
+                'vehicle_type_id' => $vehicle->vehicle_type_id,
+            ]);
+        });
+
         $reservation->refresh();
 
         if ($reservation->status === 'paid') {

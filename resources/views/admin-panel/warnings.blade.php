@@ -45,26 +45,6 @@
                                         onclick="(function(btn){var t=atob(btn.dataset.b64);navigator.clipboard.writeText(t).then(function(){btn.replaceWith(Object.assign(document.createElement('span'),{className:'text-xs text-green-700',textContent:'Kopirano'}));}).catch(function(){alert('Kopiranje nije uspelo');});})(this)">
                                         Copy details
                                     </button>
-                                    @if ($alert->status === \App\Models\AdminAlert::STATUS_UNREAD)
-                                        <form method="POST" action="{{ route('panel_admin.alerts.transition', $alert, false) }}">
-                                            @csrf
-                                            <input type="hidden" name="action" value="in_progress">
-                                            <x-secondary-button type="submit">U obradi</x-secondary-button>
-                                        </form>
-                                    @elseif ($alert->status === \App\Models\AdminAlert::STATUS_IN_PROGRESS)
-                                        <form method="POST" action="{{ route('panel_admin.alerts.transition', $alert, false) }}">
-                                            @csrf
-                                            <input type="hidden" name="action" value="done">
-                                            <x-secondary-button type="submit">Završen</x-secondary-button>
-                                        </form>
-                                    @elseif ($alert->status === \App\Models\AdminAlert::STATUS_DONE)
-                                        <form method="POST" action="{{ route('panel_admin.alerts.transition', $alert, false) }}"
-                                            onsubmit="return confirm('Ukloniti ovaj alert sa liste?');">
-                                            @csrf
-                                            <input type="hidden" name="action" value="remove">
-                                            <x-danger-button type="submit">Ukloni</x-danger-button>
-                                        </form>
-                                    @endif
                                 </div>
                             </div>
                         </li>

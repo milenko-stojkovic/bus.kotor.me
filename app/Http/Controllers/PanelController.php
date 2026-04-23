@@ -4,18 +4,30 @@ namespace App\Http\Controllers;
 
 use App\Services\Reservation\PanelReservationListService;
 use App\Services\Reservation\PanelStatisticsService;
+use App\Services\Reservation\VehicleReplacementCandidateService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class PanelController extends Controller
 {
-    public function upcoming(Request $request, PanelReservationListService $lists): View
+    public function upcoming(Request $request, PanelReservationListService $lists, VehicleReplacementCandidateService $candidates): View
     {
         $user = $request->user();
+        $upcoming = $lists->upcomingFor($user);
+        $vehicles = $user->vehicles()->with('vehicleType')->orderBy('license_plate')->get();
+
+        $allowedByReservationId = [];
+        foreach ($upcoming as $r) {
+            $categoryMaxPrice = (float) ($r->vehicleType?->price ?? 0);
+            $allowedByReservationId[(int) $r->id] = $candidates->candidatesForReservation($user, $r, [
+                'max_price' => $categoryMaxPrice,
+            ]);
+        }
 
         return view('panel.upcoming', [
-            'reservations' => $lists->upcomingFor($user),
-            'vehicles' => $user->vehicles()->with('vehicleType')->orderBy('license_plate')->get(),
+            'reservations' => $upcoming,
+            'vehicles' => $vehicles,
+            'allowedVehiclesByReservationId' => $allowedByReservationId,
         ]);
     }
 

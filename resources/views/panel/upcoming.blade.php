@@ -59,11 +59,7 @@
                                 <tbody class="divide-y divide-gray-200">
                                     @foreach ($reservations as $r)
                                         @php
-                                            $categoryMaxPrice = (float) ($r->vehicleType?->price ?? 0);
-                                            $allowed = $vehicles->filter(
-                                                fn ($v) => (float) ($v->vehicleType->price ?? 0)
-                                                    <= $categoryMaxPrice + 0.000001
-                                            );
+                                            $allowed = collect($allowedVehiclesByReservationId[$r->id] ?? []);
                                             $formId = 'upcoming-veh-form-'.$r->id;
                                             $initialVehicleId = $r->vehicle_id ?? $allowed->first()?->id;
                                         @endphp

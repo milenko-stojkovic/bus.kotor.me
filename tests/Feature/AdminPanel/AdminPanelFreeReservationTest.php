@@ -6,6 +6,7 @@ use App\Jobs\SendFreeReservationConfirmationJob;
 use App\Models\AdminAlert;
 use App\Models\Admin;
 use App\Models\FreeReservationRequest;
+use App\Models\FreeReservationRequestAttachment;
 use App\Models\FreeReservationRequestVehicle;
 use App\Models\DailyParkingData;
 use App\Models\ListOfTimeSlot;
@@ -17,6 +18,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class AdminPanelFreeReservationTest extends TestCase
@@ -223,8 +225,8 @@ class AdminPanelFreeReservationTest extends TestCase
         $this->assertStringContainsString('KO999', $html);
         $this->assertStringContainsString('Autobus', $html);
 
-        // Phone is shown in step 3 operativni prikaz
-        $this->assertStringContainsString('+38267111222', $html);
+        // Phone is NOT shown in operativni prikaz (agency FZBR model)
+        $this->assertStringNotContainsString('+38267111222', $html);
     }
 
     public function test_request_card_disables_fulfill_when_capacity_insufficient(): void
@@ -322,8 +324,9 @@ class AdminPanelFreeReservationTest extends TestCase
         $this->assertSame(FreeReservationRequest::STATUS_UPDATED, $req->status);
     }
 
-    public function test_reject_request_hard_deletes_request_and_removes_warning(): void
+    public function test_reject_request_marks_request_rejected_and_removes_warning_pointer_but_keeps_request(): void
     {
+        Storage::fake('local');
         $admin = $this->seedAdmin();
         $this->actingAs($admin, 'panel_admin');
 
@@ -348,18 +351,31 @@ class AdminPanelFreeReservationTest extends TestCase
             'payload_json' => ['free_reservation_request_id' => $req->id],
         ]);
 
+        Storage::disk('local')->put('free-reservation-requests/'.$req->id.'/doc.pdf', 'PDF');
+        FreeReservationRequestAttachment::query()->create([
+            'request_id' => $req->id,
+            'original_name' => 'doc.pdf',
+            'stored_path' => 'free-reservation-requests/'.$req->id.'/doc.pdf',
+            'mime_type' => 'application/pdf',
+            'size_bytes' => 3,
+        ]);
+
         $this->delete(route('panel_admin.free-reservation-requests.reject', ['freeReservationRequest' => $req->id], false), [
             'confirm' => 1,
         ])->assertRedirect();
 
-        $this->assertSame(0, FreeReservationRequest::query()->count());
+        $req->refresh();
+        $this->assertSame(FreeReservationRequest::STATUS_REJECTED, $req->status);
+        $this->assertSame(1, FreeReservationRequestAttachment::query()->where('request_id', $req->id)->count());
+        Storage::disk('local')->assertExists('free-reservation-requests/'.$req->id.'/doc.pdf');
         $alert = AdminAlert::query()->first();
         $this->assertNotNull($alert);
         $this->assertNotNull($alert->removed_at);
     }
 
-    public function test_fulfill_creates_one_free_reservation_per_vehicle_and_deletes_request_on_mail_success(): void
+    public function test_fulfill_creates_one_free_reservation_per_vehicle_and_marks_request_fulfilled_without_deleting_it(): void
     {
+        Storage::fake('local');
         Mail::fake();
 
         $admin = $this->seedAdmin();
@@ -404,6 +420,16 @@ class AdminPanelFreeReservationTest extends TestCase
             'payload_json' => ['free_reservation_request_id' => $req->id],
         ]);
 
+        // One attachment must survive fulfill (retention).
+        Storage::disk('local')->put('free-reservation-requests/'.$req->id.'/doc.pdf', 'PDF');
+        FreeReservationRequestAttachment::query()->create([
+            'request_id' => $req->id,
+            'original_name' => 'doc.pdf',
+            'stored_path' => 'free-reservation-requests/'.$req->id.'/doc.pdf',
+            'mime_type' => 'application/pdf',
+            'size_bytes' => 3,
+        ]);
+
         // Mock PDF generator to avoid DomPDF
         $this->app->instance(\App\Services\Pdf\FreeReservationPdfGenerator::class, new class extends \App\Services\Pdf\FreeReservationPdfGenerator {
             public function renderBinary(\App\Models\Reservation $reservation): string
@@ -417,7 +443,10 @@ class AdminPanelFreeReservationTest extends TestCase
         ])->assertRedirect();
 
         $this->assertSame(2, Reservation::query()->where('status', 'free')->count());
-        $this->assertSame(0, FreeReservationRequest::query()->count());
+        $req->refresh();
+        $this->assertSame(FreeReservationRequest::STATUS_FULFILLED, $req->status);
+        $this->assertSame(1, FreeReservationRequestAttachment::query()->where('request_id', $req->id)->count());
+        Storage::disk('local')->assertExists('free-reservation-requests/'.$req->id.'/doc.pdf');
 
         $res = Reservation::query()->orderBy('id')->get();
         $this->assertSame($d, $res[0]->reservation_date->toDateString());
@@ -426,6 +455,10 @@ class AdminPanelFreeReservationTest extends TestCase
         $this->assertTrue((bool) $res[0]->created_by_admin);
         $this->assertSame('KO111', $res[0]->license_plate);
         $this->assertSame('en', $res[0]->preferred_locale);
+        foreach ($res as $row) {
+            $this->assertSame(Reservation::EMAIL_SENT, (int) $row->email_sent);
+            $this->assertNotNull($row->invoice_sent_at);
+        }
 
         $alert = AdminAlert::query()->first();
         $this->assertNotNull($alert);
@@ -536,9 +569,53 @@ class AdminPanelFreeReservationTest extends TestCase
         ])->assertRedirect();
 
         $this->assertSame(1, Reservation::query()->count());
-        $this->assertSame(1, FreeReservationRequest::query()->count());
+        $req->refresh();
+        $this->assertSame(FreeReservationRequest::STATUS_SUBMITTED, $req->status);
+        $this->assertSame(
+            Reservation::EMAIL_NOT_SENT,
+            (int) Reservation::query()->value('email_sent')
+        );
         $alert = AdminAlert::query()->first();
         $this->assertNotNull($alert);
         $this->assertNull($alert->removed_at);
+    }
+
+    public function test_admin_can_preview_free_request_attachment_from_private_storage(): void
+    {
+        Storage::fake('local');
+
+        $admin = $this->seedAdmin();
+        $this->actingAs($admin, 'panel_admin');
+
+        $slotA = ListOfTimeSlot::query()->create(['time_slot' => '10:00 - 10:20']);
+        $slotB = ListOfTimeSlot::query()->create(['time_slot' => '11:00 - 11:20']);
+        $req = FreeReservationRequest::query()->create([
+            'locale' => 'cg',
+            'institution_name' => 'Agencija',
+            'institution_email' => 'agency@example.com',
+            'institution_phone' => null,
+            'reservation_date' => Carbon::now()->addDays(3)->toDateString(),
+            'drop_off_time_slot_id' => $slotA->id,
+            'pick_up_time_slot_id' => $slotB->id,
+            'country' => 'ME',
+            'status' => FreeReservationRequest::STATUS_SUBMITTED,
+        ]);
+
+        Storage::disk('local')->put('free-reservation-requests/'.$req->id.'/doc.pdf', '%PDF-1.4');
+        $att = FreeReservationRequestAttachment::query()->create([
+            'request_id' => $req->id,
+            'original_name' => 'doc.pdf',
+            'stored_path' => 'free-reservation-requests/'.$req->id.'/doc.pdf',
+            'mime_type' => 'application/pdf',
+            'size_bytes' => 8,
+        ]);
+
+        $this->get(route('panel_admin.free-reservation-requests.attachments.preview', [
+            'freeReservationRequest' => $req->id,
+            'attachment' => $att->id,
+        ], false))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf')
+            ->assertHeader('x-content-type-options', 'nosniff');
     }
 }

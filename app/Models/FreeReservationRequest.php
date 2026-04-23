@@ -14,6 +14,7 @@ class FreeReservationRequest extends Model
     public const STATUS_REJECTED = 'rejected';
 
     protected $fillable = [
+        'user_id',
         'locale',
         'institution_name',
         'institution_email',
@@ -35,6 +36,11 @@ class FreeReservationRequest extends Model
     public function vehicles(): HasMany
     {
         return $this->hasMany(FreeReservationRequestVehicle::class, 'request_id');
+    }
+
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(FreeReservationRequestAttachment::class, 'request_id');
     }
 
     public function dropOffTimeSlot(): BelongsTo
