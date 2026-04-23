@@ -224,14 +224,22 @@
         </div>
     </div>
 
+    @php
+        $fzbrVehicleOptions = ($userVehicles ?? collect())->map(function (\App\Models\Vehicle $v) use ($locale): array {
+            $vtName = $v->vehicleType?->getTranslatedName($locale) ?: ('#'.$v->vehicle_type_id);
+            $vtDesc = trim((string) ($v->vehicleType?->getTranslatedDescription($locale) ?? ''));
+            $label = $v->license_plate.' — '.($vtDesc !== '' ? ($vtName.' ('.$vtDesc.')') : $vtName);
+
+            return [
+                'id' => (int) $v->id,
+                'label' => $label,
+            ];
+        })->values();
+    @endphp
+
     <script>
         function fzbrForm() {
-            const all = @json(($userVehicles ?? collect())->map(function ($v) use ($locale) {
-                $vtName = $v->vehicleType?->getTranslatedName($locale) ?: ('#' . $v->vehicle_type_id);
-                $vtDesc = String($v->vehicleType?->getTranslatedDescription($locale) || '').trim();
-                const label = $v->license_plate + ' — ' + (vtDesc ? (vtName + ' (' + vtDesc + ')') : vtName);
-                return ['id' => (int)$v->id, 'label' => $label];
-            })->values());
+            const all = @json($fzbrVehicleOptions);
 
             return {
                 rows: [{ vehicle_id: '' }],
