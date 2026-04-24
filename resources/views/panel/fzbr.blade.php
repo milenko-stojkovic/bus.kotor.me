@@ -9,8 +9,12 @@
     $descFallbackCg = "Naknadu za ekonomsko iskorišćavanje kulturnih dobara ne plaćaju obveznici naknade pod uslovom da organizuju prevoz putnika koja su:\n- lica sa teškim čulnim i tjelesnim smetnjama;\n- učesnici školskih ekskurzija, odnosno učenici i studenti čiji boravak organizuju škole i fakulteti u okviru redovnih programa, održavanja obrazovnih, sportskih i kulturnih manifestacija sa teritorije Crne Gore;\n- strani državljani koji su po međunarodnim konvencijama i sporazumima oslobođeni plaćanja taksi i koji organizovano, preko zvaničnih humanitarnih organizacija, dolaze radi pružanja humanitarne pomoći.\nLica ne plaćaju naknadu ako podnesu dokaz o ispunjavanju uslova iz stava 1 ovog člana (potvrda obrazovne institucije, ljekara, međunarodna konvencija, sporazum i dr.).";
     $descFallbackEn = "Economic fees for the use of cultural assets are not paid by fee payers provided that they organise passenger transport of:\n- persons with severe sensory and physical disabilities;\n- participants of school excursions, i.e. pupils and students whose stay is organised by schools and faculties within regular programmes and educational, sports and cultural events from Montenegro;\n- foreign citizens who are exempt from paying fees under international conventions and agreements and who arrive in an organised manner through official humanitarian organisations to provide humanitarian aid.\nThe fee is not paid if proof of meeting the conditions is submitted (certificate from an educational institution, doctor, international convention, agreement, etc.).";
 
+    $instructionFallbackCg = 'Nakon slanja formulara, formular dolazi na odobravanje kod administratora Bus Kotor servisa. Odobravanje zavisi od raspoloživih kapaciteta za traženi datum. Stoga, molim Vas da formular podnesete što ranije - najmanje jedan dan ranije prije željenog datuma, da bi izgledi za odobravanje bili što bolji.';
+    $instructionFallbackEn = 'After submitting the form, it is sent to the Bus Kotor service administrator for approval. Approval depends on available capacity for the requested date. Therefore, please submit the form as early as possible — at least one day before the desired date — to maximize the chance of approval.';
+
     $title = $ui('fzbr_title', 'Formular za besplatnu rezervaciju');
     $desc = $ui('fzbr_description', $locale === 'cg' ? $descFallbackCg : $descFallbackEn);
+    $instruction = trim((string) $ui('fzbr_instruction', $locale === 'cg' ? $instructionFallbackCg : $instructionFallbackEn));
     $descLines = preg_split("/\\r?\\n/", trim((string) $desc)) ?: [];
     $descLines = array_values(array_filter(array_map('trim', $descLines), fn ($l) => $l !== ''));
 
@@ -80,8 +84,15 @@
                         <p>{{ $pLine }}</p>
                     @endforeach
                 </div>
+
+                @if ($instruction !== '')
+                    <div class="rounded-md bg-gray-50 border border-gray-200 p-3 text-sm text-gray-700">
+                        {{ $instruction }}
+                    </div>
+                @endif
             </div>
 
+            {{-- Cjelina 1: Datum + vrijeme + vozila --}}
             <form method="GET" action="{{ route('panel.fzbr.create', [], false) }}" class="space-y-4" id="fzbrStepForm">
                 <div class="bg-white shadow sm:rounded-lg p-6 space-y-4">
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -131,73 +142,75 @@
                             <p class="mt-1 text-xs text-gray-500">{{ \App\Support\UiText::t('reservation', 'departure_disabled_hint') }}</p>
                         </div>
                     </div>
+
+                    <div class="pt-2 space-y-2">
+                        <div class="text-sm font-semibold text-gray-900">{{ $ui('vehicles_title', 'Vozila') }}</div>
+
+                        <template x-for="(row, idx) in rows" :key="idx">
+                            <div class="grid grid-cols-1 md:grid-cols-12 gap-2 items-start">
+                                <div class="md:col-span-10 min-w-0">
+                                    <select
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        :name="`vehicles[${idx}]`"
+                                        form="fzbrPostForm"
+                                        x-model="row.vehicle_id"
+                                        required
+                                    >
+                                        <option value="">{{ $ui('select_vehicle', 'Izaberite vozilo') }}</option>
+                                        <template x-for="opt in optionsFor(idx)" :key="opt.id">
+                                            <option :value="opt.id" x-text="opt.label"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                                <div class="md:col-span-2 flex gap-2 md:justify-end pt-6 min-w-0">
+                                    <button
+                                        type="button"
+                                        class="inline-flex items-center justify-center rounded-md bg-gray-800 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-white hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        x-show="isAddVisible(idx)"
+                                        :disabled="!canAdd(idx)"
+                                        @click="addRow()"
+                                    >
+                                        {{ $ui('add_vehicle', 'Dodaj vozilo') }}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-widest text-gray-800 hover:bg-gray-50"
+                                        x-show="!isAddVisible(idx)"
+                                        @click="confirmRemove(idx)"
+                                    >
+                                        {{ $ui('remove_vehicle', 'Ukloni vozilo') }}
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+
+                        <p class="text-xs text-gray-500">{{ $ui('vehicles_limit', 'Minimum 1, maksimum 9 vozila.') }}</p>
+                    </div>
                 </div>
             </form>
 
-            <form method="POST" action="{{ route('panel.fzbr.store', [], false) }}" enctype="multipart/form-data" class="space-y-4 bg-white shadow sm:rounded-lg p-6">
+            <div x-show="showConfirm" class="fixed inset-0 z-50 flex items-center justify-center">
+                <div class="absolute inset-0 bg-black/50" @click="cancelRemove()"></div>
+                <div class="relative w-[92%] max-w-md rounded-lg bg-white shadow-lg p-4 space-y-3" @click.stop>
+                    <div class="font-semibold">{{ $ui('remove_vehicle_confirm', 'Da li si siguran da želiš da ukloniš ovo vozilo?') }}</div>
+                    <div class="flex justify-end gap-2">
+                        <button type="button" class="rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-widest text-gray-800 hover:bg-gray-50" @click="cancelRemove()">
+                            {{ $ui('remove_vehicle_no', 'Ne') }}
+                        </button>
+                        <button type="button" class="rounded-md bg-red-600 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-white hover:bg-red-700" @click="applyRemove()">
+                            {{ $ui('remove_vehicle_yes', 'Da') }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Cjelina 2: Dokumenta + privatnost + submit --}}
+            <form method="POST" id="fzbrPostForm" action="{{ route('panel.fzbr.store', [], false) }}" enctype="multipart/form-data" class="space-y-4 bg-white shadow sm:rounded-lg p-6">
                 @csrf
 
                 <input type="hidden" name="reservation_date" id="post_reservation_date" value="{{ $selected_date ?? '' }}">
                 <input type="hidden" name="drop_off_time_slot_id" id="post_drop_off_time_slot_id" value="{{ $arrival_id ?? '' }}">
                 <input type="hidden" name="pick_up_time_slot_id" id="post_pick_up_time_slot_id" value="{{ $departure_id ?? '' }}">
-
-                <div class="space-y-2">
-                    <div class="text-sm font-semibold text-gray-900">{{ $ui('vehicles_title', 'Vozila') }}</div>
-
-                    <template x-for="(row, idx) in rows" :key="idx">
-                        <div class="grid grid-cols-1 md:grid-cols-12 gap-2 items-start">
-                            <div class="md:col-span-10 min-w-0">
-                                <select
-                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                    :name="`vehicles[${idx}]`"
-                                    x-model="row.vehicle_id"
-                                    required
-                                >
-                                    <option value="">{{ $ui('select_vehicle', 'Izaberite vozilo') }}</option>
-                                    <template x-for="opt in optionsFor(idx)" :key="opt.id">
-                                        <option :value="opt.id" x-text="opt.label"></option>
-                                    </template>
-                                </select>
-                            </div>
-                            <div class="md:col-span-2 flex gap-2 md:justify-end pt-6 min-w-0">
-                                <button
-                                    type="button"
-                                    class="inline-flex items-center justify-center rounded-md bg-gray-800 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-white hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    x-show="isAddVisible(idx)"
-                                    :disabled="!canAdd(idx)"
-                                    @click="addRow()"
-                                >
-                                    {{ $ui('add_vehicle', 'Dodaj vozilo') }}
-                                </button>
-                                <button
-                                    type="button"
-                                    class="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-widest text-gray-800 hover:bg-gray-50"
-                                    x-show="!isAddVisible(idx)"
-                                    @click="confirmRemove(idx)"
-                                >
-                                    {{ $ui('remove_vehicle', 'Ukloni vozilo') }}
-                                </button>
-                            </div>
-                        </div>
-                    </template>
-
-                    <div x-show="showConfirm" class="fixed inset-0 z-50 flex items-center justify-center">
-                        <div class="absolute inset-0 bg-black/50" @click="cancelRemove()"></div>
-                        <div class="relative w-[92%] max-w-md rounded-lg bg-white shadow-lg p-4 space-y-3" @click.stop>
-                            <div class="font-semibold">{{ $ui('remove_vehicle_confirm', 'Da li si siguran da želiš da ukloniš ovo vozilo?') }}</div>
-                            <div class="flex justify-end gap-2">
-                                <button type="button" class="rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-widest text-gray-800 hover:bg-gray-50" @click="cancelRemove()">
-                                    {{ $ui('remove_vehicle_no', 'Ne') }}
-                                </button>
-                                <button type="button" class="rounded-md bg-red-600 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-white hover:bg-red-700" @click="applyRemove()">
-                                    {{ $ui('remove_vehicle_yes', 'Da') }}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <p class="text-xs text-gray-500">{{ $ui('vehicles_limit', 'Minimum 1, maksimum 9 vozila.') }}</p>
-                </div>
 
                 <div class="space-y-2">
                     <x-input-label for="documents" :value="$uploadLabel" />

@@ -67,8 +67,8 @@
                 x-model="lang"
                 required
             >
-                <option value="cg">cg</option>
-                <option value="en">en</option>
+                <option value="cg">{{ $u('lang_cg', 'cg') }}</option>
+                <option value="en">{{ $u('lang_en', 'en') }}</option>
             </select>
             <x-input-error class="mt-2" :messages="$errors->get('lang')" />
         </div>
@@ -92,16 +92,16 @@
             @if ($user instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! $user->hasVerifiedEmail())
                 <div class="mt-3">
                     <p class="text-sm text-gray-800">
-                        {{ __('Your email address is unverified.') }}
+                        {{ $u('email_unverified', 'Your email address is unverified.') }}
 
                         <button form="send-verification" type="submit" class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                            {{ __('Click here to re-send the verification email.') }}
+                            {{ $u('email_resend_verification', 'Click here to re-send the verification email.') }}
                         </button>
                     </p>
 
                     @if (session('status') === 'verification-link-sent')
                         <p class="mt-2 font-medium text-sm text-green-600">
-                            {{ __('A new verification link has been sent to your email address.') }}
+                            {{ $u('email_verification_sent', 'A new verification link has been sent to your email address.') }}
                         </p>
                     @endif
                 </div>

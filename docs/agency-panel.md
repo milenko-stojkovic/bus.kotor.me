@@ -26,6 +26,29 @@ Prefiks ruta: **`/panel`**, middleware **`auth`** + **`verified`**. Gornja navig
 
 ---
 
+## FZBR (Formular za besplatnu rezervaciju)
+
+Stranica: **`GET /panel/fzbr`** (`panel.fzbr.create`).
+
+Forma je podijeljena u dvije cjeline:
+
+- **Cjelina 1 (termin + vozila):**
+  - Datum
+  - Vrijeme dolaska
+  - Vrijeme odlaska
+  - Vozila (iz voznog parka ulogovane agencije; min 1, max 9; bez duplikata)
+
+- **Cjelina 2 (dokaz + saglasnost + slanje):**
+  - Upload dokumentacije (slike/PDF, ukupno do 10 MB)
+  - Saglasnost politike privatnosti
+  - Dugme “Podnesi zahtjev”
+
+Na vrhu stranice prikazuje se:
+- **pravno objašnjenje** (ključ `free_request.fzbr_description`)
+- **instrukcija korisniku** u odvojenom info-bloku (ključ `free_request.fzbr_instruction`)
+
+---
+
 ## Predstojeće vs realizovane
 
 Servis: **`App\Services\Reservation\PanelReservationListService`**.

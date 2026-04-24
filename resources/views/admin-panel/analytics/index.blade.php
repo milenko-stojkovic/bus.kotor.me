@@ -71,7 +71,7 @@
                     <div class="text-lg font-semibold text-gray-900">{{ $k['paid_reservations'] }} / {{ $k['free_reservations'] }}</div>
                 </div>
                 <div class="bg-white shadow rounded-lg p-4 border border-gray-100">
-                    <div class="text-xs text-gray-500">Prosečan prihod po paid</div>
+                    <div class="text-xs text-gray-500">Prosječan prihod po paid</div>
                     <div class="text-lg font-semibold text-gray-900">{{ $fmtMoney($k['avg_revenue_per_paid']) }}</div>
                 </div>
                 <div class="bg-white shadow rounded-lg p-4 border border-gray-100">
@@ -79,7 +79,7 @@
                     <div class="text-lg font-semibold text-gray-900">{{ $k['occupied_slots_total'] }}</div>
                 </div>
                 <div class="bg-white shadow rounded-lg p-4 border border-gray-100">
-                    <div class="text-xs text-gray-500">Prosečna popunjenost (slot-level)</div>
+                    <div class="text-xs text-gray-500">Prosječna popunjenost (slot-level)</div>
                     <div class="text-lg font-semibold text-gray-900">{{ $fmtPct($k['avg_occupancy_slot_level']) }}</div>
                 </div>
                 <div class="bg-white shadow rounded-lg p-4 border border-gray-100">
@@ -183,7 +183,7 @@
                                 <th class="py-2 pr-4 text-right">Rezervacije</th>
                                 <th class="py-2 pr-4 text-right">Zauzeti slotovi</th>
                                 <th class="py-2 pr-4 text-right">Prihod</th>
-                                <th class="py-2 pr-4 text-right">Prosečno</th>
+                                <th class="py-2 pr-4 text-right">Prosječno</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y">
@@ -196,6 +196,100 @@
                                     <td class="py-2 pr-4 text-right">{{ $fmtMoney($row['avg_revenue']) }}</td>
                                 </tr>
                             @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="bg-white shadow rounded-lg p-6 border border-gray-100">
+                <h2 class="text-base font-semibold text-gray-900">Analiza po agencijama</h2>
+                <p class="text-sm text-gray-600 mt-1">{{ $st['agencies'] ?? '' }}</p>
+                <div class="mt-4 overflow-x-auto">
+                    <table class="min-w-full text-sm">
+                        <thead class="text-xs text-gray-500 uppercase">
+                            <tr class="border-b">
+                                <th class="py-2 pr-4 text-left">Agencija</th>
+                                <th class="py-2 pr-4 text-right">Prihod</th>
+                                <th class="py-2 pr-4 text-right">% prihoda</th>
+                                <th class="py-2 pr-4 text-right">Rezervacije</th>
+                                <th class="py-2 pr-4 text-right">Paid</th>
+                                <th class="py-2 pr-4 text-right">Free</th>
+                                <th class="py-2 pr-4 text-right">% free</th>
+                                <th class="py-2 pr-4 text-right">Prosj. prihod (paid)</th>
+                                <th class="py-2 pr-4 text-right">Zauzeti slotovi</th>
+                                <th class="py-2 pr-4 text-right">Prosj. slotova</th>
+                                <th class="py-2 pr-4 text-left">Najčešći tip vozila</th>
+                                <th class="py-2 pr-4 text-right">% tipa</th>
+                                <th class="py-2 pr-4 text-right">Jutro %</th>
+                                <th class="py-2 pr-4 text-right">Dan %</th>
+                                <th class="py-2 pr-4 text-right">Veče %</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                            @forelse (($dataset['by_agency'] ?? []) as $row)
+                                <tr>
+                                    <td class="py-2 pr-4 font-medium text-gray-900">{{ $row['agency'] }}</td>
+                                    <td class="py-2 pr-4 text-right">{{ $fmtMoney((float) $row['revenue']) }}</td>
+                                    <td class="py-2 pr-4 text-right">{{ $fmtPct((float) $row['revenue_share']) }}</td>
+                                    <td class="py-2 pr-4 text-right">{{ (int) $row['reservations_total'] }}</td>
+                                    <td class="py-2 pr-4 text-right">{{ (int) $row['paid_reservations'] }}</td>
+                                    <td class="py-2 pr-4 text-right">{{ (int) $row['free_reservations'] }}</td>
+                                    <td class="py-2 pr-4 text-right">{{ $fmtPct((float) $row['free_pct']) }}</td>
+                                    <td class="py-2 pr-4 text-right">{{ $fmtMoney((float) $row['avg_revenue_per_paid']) }}</td>
+                                    <td class="py-2 pr-4 text-right">{{ (int) $row['occupied_slots'] }}</td>
+                                    <td class="py-2 pr-4 text-right">{{ number_format((float) $row['avg_slots_per_reservation'], 2, '.', '') }}</td>
+                                    <td class="py-2 pr-4 text-gray-900">{{ $row['top_vehicle_type'] }}</td>
+                                    <td class="py-2 pr-4 text-right">{{ $fmtPct((float) $row['top_vehicle_type_pct']) }}</td>
+                                    <td class="py-2 pr-4 text-right">{{ $fmtPct((float) $row['morning_pct']) }}</td>
+                                    <td class="py-2 pr-4 text-right">{{ $fmtPct((float) $row['day_pct']) }}</td>
+                                    <td class="py-2 pr-4 text-right">{{ $fmtPct((float) $row['evening_pct']) }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="15" class="py-3 pr-4 text-sm text-gray-500">Nema podataka za izabrani period.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="bg-white shadow rounded-lg p-6 border border-gray-100">
+                <h2 class="text-base font-semibold text-gray-900">Admin free (FZBR) po agencijama</h2>
+                <p class="text-sm text-gray-600 mt-1">{{ $st['admin_free_agencies'] ?? '' }}</p>
+                <div class="mt-4 overflow-x-auto">
+                    <table class="min-w-full text-sm">
+                        <thead class="text-xs text-gray-500 uppercase">
+                            <tr class="border-b">
+                                <th class="py-2 pr-4 text-left">Agencija</th>
+                                <th class="py-2 pr-4 text-right">Broj FZBR rezervacija</th>
+                                <th class="py-2 pr-4 text-right">Zauzeti slotovi</th>
+                                <th class="py-2 pr-4 text-right">Prosj. slotova</th>
+                                <th class="py-2 pr-4 text-left">Najčešći tip vozila</th>
+                                <th class="py-2 pr-4 text-right">% tipa</th>
+                                <th class="py-2 pr-4 text-right">Jutro %</th>
+                                <th class="py-2 pr-4 text-right">Dan %</th>
+                                <th class="py-2 pr-4 text-right">Veče %</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                            @forelse (($dataset['admin_free_by_agency'] ?? []) as $row)
+                                <tr>
+                                    <td class="py-2 pr-4 font-medium text-gray-900">{{ $row['agency'] }}</td>
+                                    <td class="py-2 pr-4 text-right">{{ (int) $row['reservations'] }}</td>
+                                    <td class="py-2 pr-4 text-right">{{ (int) $row['occupied_slots'] }}</td>
+                                    <td class="py-2 pr-4 text-right">{{ number_format((float) $row['avg_slots_per_reservation'], 2, '.', '') }}</td>
+                                    <td class="py-2 pr-4 text-gray-900">{{ $row['top_vehicle_type'] }}</td>
+                                    <td class="py-2 pr-4 text-right">{{ $fmtPct((float) $row['top_vehicle_type_pct']) }}</td>
+                                    <td class="py-2 pr-4 text-right">{{ $fmtPct((float) $row['morning_pct']) }}</td>
+                                    <td class="py-2 pr-4 text-right">{{ $fmtPct((float) $row['day_pct']) }}</td>
+                                    <td class="py-2 pr-4 text-right">{{ $fmtPct((float) $row['evening_pct']) }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="9" class="py-3 pr-4 text-sm text-gray-500">Nema podataka za izabrani period.</td>
+                                </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
@@ -279,25 +373,25 @@
                                 <tr><td class="py-2 pr-4 text-gray-600">Unresolved post-fiscal</td><td class="py-2 pr-4 text-right font-medium">{{ $o['unresolved_post_fiscal'] }}</td></tr>
                                 <tr><td class="py-2 pr-4 text-gray-600">Resolved post-fiscal (u periodu)</td><td class="py-2 pr-4 text-right font-medium">{{ $o['resolved_post_fiscal'] }}</td></tr>
                                 <tr>
-                                    <td class="py-2 pr-4 text-gray-600 align-top" title="Rezervacije koje su plaćene, ali se u potpunosti nalaze u besplatnim terminima (najčešće rezultat administrativne izmene).">
+                                    <td class="py-2 pr-4 text-gray-600 align-top" title="Rezervacije koje su plaćene, ali se u potpunosti nalaze u besplatnim terminima (najčešće rezultat administrativne izmjene).">
                                         Paid rezervacije u free terminima
                                     </td>
                                     <td class="py-2 pr-4 text-right font-medium align-top">{{ (int)($o['paid_reservations_fully_in_free_zone'] ?? 0) }}</td>
                                 </tr>
                                 <tr>
                                     <td colspan="2" class="pb-2 text-xs text-gray-500">
-                                        Rezervacije koje su plaćene, ali se u potpunosti nalaze u besplatnim terminima (najčešće rezultat administrativne izmene).
+                                        Rezervacije koje su plaćene, ali se u potpunosti nalaze u besplatnim terminima (najčešće rezultat administrativne izmjene).
                                     </td>
                                 </tr>
                                 <tr>
-                                    <td class="py-2 pr-4 text-gray-600 align-top" title="Sumnjivi slučajevi gde su za isti datum i iste tablice plaćene rezervacije sa bar jednim zajedničkim terminom.">
+                                    <td class="py-2 pr-4 text-gray-600 align-top" title="Sumnjivi slučajevi gdje su za isti datum i iste tablice plaćene rezervacije sa bar jednim zajedničkim terminom.">
                                         Duplo plaćanje istog termina
                                     </td>
                                     <td class="py-2 pr-4 text-right font-medium align-top">{{ (int)($o['double_paid_same_slot_pairs'] ?? 0) }}</td>
                                 </tr>
                                 <tr>
                                     <td colspan="2" class="pb-2 text-xs text-gray-500">
-                                        Sumnjivi slučajevi gde su za isti datum i iste tablice plaćene rezervacije sa bar jednim zajedničkim terminom.
+                                        Sumnjivi slučajevi gdje su za isti datum i iste tablice plaćene rezervacije sa bar jednim zajedničkim terminom.
                                     </td>
                                 </tr>
                             </tbody>

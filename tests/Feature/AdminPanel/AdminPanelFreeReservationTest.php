@@ -610,6 +610,14 @@ class AdminPanelFreeReservationTest extends TestCase
             'size_bytes' => 8,
         ]);
 
+        AdminAlert::query()->create([
+            'type' => 'free_reservation_request',
+            'status' => AdminAlert::STATUS_UNREAD,
+            'title' => 't',
+            'message' => 'm',
+            'payload_json' => ['free_reservation_request_id' => $req->id],
+        ]);
+
         $this->get(route('panel_admin.free-reservation-requests.attachments.preview', [
             'freeReservationRequest' => $req->id,
             'attachment' => $att->id,
@@ -617,5 +625,9 @@ class AdminPanelFreeReservationTest extends TestCase
             ->assertOk()
             ->assertHeader('content-type', 'application/pdf')
             ->assertHeader('x-content-type-options', 'nosniff');
+
+        $alert = AdminAlert::query()->first();
+        $this->assertNotNull($alert);
+        $this->assertSame(AdminAlert::STATUS_IN_PROGRESS, $alert->status);
     }
 }

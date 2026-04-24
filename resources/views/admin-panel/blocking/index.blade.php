@@ -138,7 +138,7 @@
                                         </div>
                                         @if ($row->status === \App\Models\BlockZoneWorklist::STATUS_PENDING_PAYMENT)
                                             <div class="mt-2 text-sm text-amber-800">
-                                                Pending payment. Ručno refresh-ujte stranicu da proverite promenu stanja.
+                                                Plaćanje je u obradi. Ručno osvježite stranicu da provjerite promjenu statusa.
                                             </div>
                                         @endif
                                     </div>

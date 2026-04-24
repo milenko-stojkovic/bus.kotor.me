@@ -35,7 +35,7 @@
                                     <p class="mt-2 text-sm text-gray-700 whitespace-pre-wrap">{{ $alert->message }}</p>
                                     <dl class="mt-3 text-xs text-gray-500 space-y-1">
                                         <div><span class="font-medium text-gray-600">Status:</span> {{ $statusLabel($alert->status) }}</div>
-                                        <div><span class="font-medium text-gray-600">Kreirano:</span> {{ $alert->created_at?->timezone(config('app.timezone'))->format('Y-m-d H:i') }}</div>
+                                        <div><span class="font-medium text-gray-600">Kreirano:</span> {{ $alert->created_at?->timezone(config('app.timezone'))->format('d.m.Y. H:i') }}</div>
                                     </dl>
                                 </div>
                                 <div class="flex flex-col sm:flex-row gap-2 shrink-0">

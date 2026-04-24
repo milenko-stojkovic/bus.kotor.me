@@ -8,6 +8,7 @@ use App\Http\Requests\AdminPanel\AdminFreeReservationRequest;
 use App\Http\Requests\AdminPanel\AdminFreeReservationRequestFulfillRequest;
 use App\Http\Requests\AdminPanel\AdminFreeReservationRequestRejectRequest;
 use App\Http\Requests\AdminPanel\AdminFreeReservationRequestUpdateRequest;
+use App\Models\AdminAlert;
 use App\Models\FreeReservationRequest;
 use App\Models\FreeReservationRequestAttachment;
 use App\Services\AdminPanel\FreeReservation\FreeReservationRequestAvailability;
@@ -176,6 +177,16 @@ class FreeReservationController extends Controller
         if ((int) $attachment->request_id !== (int) $freeReservationRequest->id) {
             abort(404);
         }
+
+        // Mark related warning as "in progress" once an admin previews documentation.
+        AdminAlert::query()
+            ->where('type', 'free_reservation_request')
+            ->whereNull('removed_at')
+            ->where('payload_json->free_reservation_request_id', $freeReservationRequest->id)
+            ->where('status', AdminAlert::STATUS_UNREAD)
+            ->update([
+                'status' => AdminAlert::STATUS_IN_PROGRESS,
+            ]);
 
         $path = (string) $attachment->stored_path;
         if ($path === '' || ! Storage::disk('local')->exists($path)) {

@@ -68,7 +68,7 @@
         </div>
 
         <p class="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md p-3">
-            Kalendar i lista termina su <strong>prefilter</strong>. Konačna provera dostupnosti radi se pri „Primjeni promjenu“, nakon zaključavanja redova u bazi.
+            Kalendar i lista termina su <strong>prefilter</strong>. Konačna provjera dostupnosti radi se pri „Primjeni promjenu“, nakon zaključavanja redova u bazi.
         </p>
 
         <form x-ref="mainForm" method="post" action="{{ route('panel_admin.reservations.update', $reservation, false) }}"

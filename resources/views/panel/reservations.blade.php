@@ -5,9 +5,10 @@
     $locale = app()->getLocale();
     $minDate = now()->toDateString();
     $maxDate = now()->addDays(90)->toDateString();
-    $termsTitle = $locale === 'cg' ? 'Uslovi korišćenja' : 'Terms and Conditions';
-    $termsLinkLabel = $locale === 'cg' ? 'uslovima korišćenja' : 'terms and conditions';
-    $locationLabel = $locale === 'cg' ? 'Lokacija:' : 'Location:';
+    $termsTitle = $pn('terms_modal_title', $locale === 'cg' ? 'Uslovi korišćenja' : 'Terms and Conditions');
+    $termsLinkLabel = $pn('terms_link_label', $locale === 'cg' ? 'uslovima korišćenja' : 'terms and conditions');
+    $termsPrefix = $pn('terms_accept_prefix', $locale === 'cg' ? 'Saglasan/a sam sa' : 'I agree to the');
+    $locationLabel = $pn('location_label', $locale === 'cg' ? 'Lokacija:' : 'Location:');
     $countriesCfg = (array) config('countries', []);
     $cc = $u->country ?? '';
     $countryDisplay = $cc;
@@ -163,7 +164,7 @@
                                 <label class="flex items-start gap-2 text-sm">
                                     <input type="checkbox" name="accept_terms" value="1" class="mt-1 rounded border-gray-300" {{ old('accept_terms') ? 'checked' : '' }} required>
                                     <span>
-                                        {{ $locale === 'cg' ? 'Saglasan/a sam sa' : 'I agree to the' }}
+                                        {{ $termsPrefix }}
                                         <button type="button" id="openTermsModalPanel" class="underline text-blue-700 hover:text-blue-900">
                                             {{ $termsLinkLabel }}
                                         </button>
@@ -201,7 +202,7 @@
                     <div class="flex items-center justify-between border-b px-4 py-3">
                         <h2 class="text-base font-semibold">{{ $termsTitle }}</h2>
                         <button type="button" id="closeTermsModalPanel" class="rounded px-2 py-1 text-sm text-gray-600 hover:bg-gray-100">
-                            {{ $locale === 'cg' ? 'Zatvori' : 'Close' }}
+                            {{ $pn('action_close', $locale === 'cg' ? 'Zatvori' : 'Close') }}
                         </button>
                     </div>
                     <div class="max-h-[70vh] overflow-y-auto px-4 py-3 text-sm text-gray-700 space-y-3">

@@ -148,8 +148,8 @@
         {{-- Step 2: pregled pristiglih zahtjeva (read-only). --}}
         <div class="pt-2 space-y-3">
             <div class="space-y-1">
-                <h2 class="text-lg font-semibold text-gray-900">Pristigli zahtjevi (učenička/humanitarna)</h2>
-                <p class="text-sm text-gray-600">Prikazani su samo aktivni zahtjevi (submitted/updated). Telefon se ovdje ne prikazuje.</p>
+                <h2 class="text-lg font-semibold text-gray-900">Pristigli FZBR zahtjevi</h2>
+                <p class="text-sm text-gray-600">Prikazani su samo aktivni zahtjevi (submitted/updated).</p>
             </div>
 
             @php

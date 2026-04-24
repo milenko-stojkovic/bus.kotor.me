@@ -37,7 +37,7 @@
         </tr>
         <tr>
             <td>Paid / Free</td><td>{{ (int)($k['paid_reservations'] ?? 0) }} / {{ (int)($k['free_reservations'] ?? 0) }}</td>
-            <td>Prosečno (paid)</td><td>{{ $fmtMoney((float)($k['avg_revenue_per_paid'] ?? 0)) }}</td>
+            <td>Prosječno (paid)</td><td>{{ $fmtMoney((float)($k['avg_revenue_per_paid'] ?? 0)) }}</td>
         </tr>
         <tr>
             <td>Zauzeti slotovi</td><td>{{ (int)($k['occupied_slots_total'] ?? 0) }}</td>
@@ -97,7 +97,7 @@
     <table>
         <thead>
             <tr>
-                <th>Tip</th><th>Rez.</th><th>Zauzeti slotovi</th><th>Prihod</th><th>Prosečno</th>
+                <th>Tip</th><th>Rez.</th><th>Zauzeti slotovi</th><th>Prihod</th><th>Prosječno</th>
             </tr>
         </thead>
         <tbody>
@@ -108,6 +108,64 @@
                     <td style="text-align:right">{{ $row['occupied_slots'] }}</td>
                     <td style="text-align:right">{{ $fmtMoney((float)$row['revenue']) }}</td>
                     <td style="text-align:right">{{ $fmtMoney((float)$row['avg_revenue']) }}</td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
+
+    <h2>Po agencijama</h2>
+    <div class="muted">{{ $st['agencies'] ?? '' }}</div>
+    <table>
+        <thead>
+            <tr>
+                <th>Agencija</th>
+                <th>Prihod</th>
+                <th>% prihoda</th>
+                <th>Rez.</th>
+                <th>Paid</th>
+                <th>Free</th>
+                <th>% free</th>
+                <th>Prosj. prihod</th>
+                <th>Zauzeti slotovi</th>
+                <th>Najčešći tip</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (($dataset['by_agency'] ?? []) as $row)
+                <tr>
+                    <td>{{ $row['agency'] }}</td>
+                    <td style="text-align:right">{{ $fmtMoney((float) $row['revenue']) }}</td>
+                    <td style="text-align:right">{{ $fmtPct((float) $row['revenue_share']) }}</td>
+                    <td style="text-align:right">{{ (int) $row['reservations_total'] }}</td>
+                    <td style="text-align:right">{{ (int) $row['paid_reservations'] }}</td>
+                    <td style="text-align:right">{{ (int) $row['free_reservations'] }}</td>
+                    <td style="text-align:right">{{ $fmtPct((float) $row['free_pct']) }}</td>
+                    <td style="text-align:right">{{ $fmtMoney((float) $row['avg_revenue_per_paid']) }}</td>
+                    <td style="text-align:right">{{ (int) $row['occupied_slots'] }}</td>
+                    <td>{{ $row['top_vehicle_type'] }}</td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
+
+    <h2>Admin free (FZBR) po agencijama</h2>
+    <div class="muted">{{ $st['admin_free_agencies'] ?? '' }}</div>
+    <table>
+        <thead>
+            <tr>
+                <th>Agencija</th>
+                <th>Rez.</th>
+                <th>Zauzeti slotovi</th>
+                <th>Najčešći tip</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (($dataset['admin_free_by_agency'] ?? []) as $row)
+                <tr>
+                    <td>{{ $row['agency'] }}</td>
+                    <td style="text-align:right">{{ (int) $row['reservations'] }}</td>
+                    <td style="text-align:right">{{ (int) $row['occupied_slots'] }}</td>
+                    <td>{{ $row['top_vehicle_type'] }}</td>
                 </tr>
             @endforeach
         </tbody>
@@ -171,21 +229,21 @@
             <tr><td>Unresolved post-fiscal</td><td style="text-align:right">{{ (int)($o['unresolved_post_fiscal'] ?? 0) }}</td></tr>
             <tr><td>Resolved post-fiscal (u periodu)</td><td style="text-align:right">{{ (int)($o['resolved_post_fiscal'] ?? 0) }}</td></tr>
             <tr>
-                <td title="Rezervacije koje su plaćene, ali se u potpunosti nalaze u besplatnim terminima (najčešće rezultat administrativne izmene).">Paid rezervacije u free terminima</td>
+                <td title="Rezervacije koje su plaćene, ali se u potpunosti nalaze u besplatnim terminima (najčešće rezultat administrativne izmjene).">Paid rezervacije u free terminima</td>
                 <td style="text-align:right">{{ (int)($o['paid_reservations_fully_in_free_zone'] ?? 0) }}</td>
             </tr>
             <tr>
                 <td colspan="2" class="muted" style="font-size:10px;padding-top:0;padding-bottom:6px">
-                    Rezervacije koje su plaćene, ali se u potpunosti nalaze u besplatnim terminima (najčešće rezultat administrativne izmene).
+                    Rezervacije koje su plaćene, ali se u potpunosti nalaze u besplatnim terminima (najčešće rezultat administrativne izmjene).
                 </td>
             </tr>
             <tr>
-                <td title="Sumnjivi slučajevi gde su za isti datum i iste tablice plaćene rezervacije sa bar jednim zajedničkim terminom.">Duplo plaćanje istog termina</td>
+                <td title="Sumnjivi slučajevi gdje su za isti datum i iste tablice plaćene rezervacije sa bar jednim zajedničkim terminom.">Duplo plaćanje istog termina</td>
                 <td style="text-align:right">{{ (int)($o['double_paid_same_slot_pairs'] ?? 0) }}</td>
             </tr>
             <tr>
                 <td colspan="2" class="muted" style="font-size:10px;padding-top:0;padding-bottom:6px">
-                    Sumnjivi slučajevi gde su za isti datum i iste tablice plaćene rezervacije sa bar jednim zajedničkim terminom.
+                    Sumnjivi slučajevi gdje su za isti datum i iste tablice plaćene rezervacije sa bar jednim zajedničkim terminom.
                 </td>
             </tr>
         </tbody>

@@ -65,12 +65,11 @@ Kontroler: **`WarningsController::index`**. Stranica ima tri bloka: **Upozorenja
 | `POST /admin/besplatne-rezervacije` | `panel_admin.free-reservations.store` — kreiranje. |
 
 - **Kontroler:** `App\Http\Controllers\AdminPanel\FreeReservationController`; **validacija:** `AdminFreeReservationRequest`.
-- **Pristigli zahtjevi (FZBR, agencije; step 2, operativna lista):** na dnu iste strane prikazuje se lista aktivnih zahtjeva iz **agency panela** (`/panel/fzbr`):
+- **Pristigli FZBR zahtjevi:** na dnu iste strane prikazuje se lista aktivnih zahtjeva iz **agency panela** (`/panel/fzbr`):
   - izvor istine: `free_reservation_requests` + `free_reservation_request_vehicles` (ne `admin_alerts`)
   - prikazuju se samo statusi: **`submitted`**, **`updated`** (ne prikazuje `fulfilled`/`rejected`)
   - sortiranje: `created_at DESC`
   - eager loading (bez N+1): `with(['dropOffTimeSlot','pickUpTimeSlot','vehicles.vehicleType.translations','attachments'])`
-  - **telefon se ne prikazuje** (agency tok; podnosilac = user/agencija nalog)
   - **Dokumenta (private/local storage):** prilozi su u `free_reservation_request_attachments` i prikazuju se kao lista sa linkom za **preview** (admin-only ruta streamuje fajl inline).
   - **Retention:** posle **fulfill** / **reject** zahtjev se **ne briše**. Samo se setuje status (`fulfilled`/`rejected`) i uklanja se upozorenje (pointer).
 - **Podaci stranice / slotovi:** `ReservationBookingPageData::forAdminPanel()` — isti `buildSlotPayload` / `FreeReservationRules` kao gost; UI jezik fiksno **cg** (`App::setLocale('cg')` u kontroleru).
@@ -219,6 +218,8 @@ Napomena: `system_config` ima `name` (unique) i `value` (integer). Za admin form
 - **Zauzeti slotovi:** po rezervaciji 1 ako `drop_off_time_slot_id == pick_up_time_slot_id`, inače 2.
 - **Popunjenost (slot-level):** \(occupied\_slots / (broj\_slotova \* broj\_dana)\).
 - **Delovi dana:** grupisanje po početnom vremenu *drop-off* termina (00–07, 07–20, 20–24).
+- **Analiza po agencijama:** pregled prihoda, rezervacija i zauzetosti po registrovanim korisnicima (`reservations.user_id`), sortirano po prihodu opadajuće. Prihod = suma `invoice_amount` za `paid`; free se prikazuje kao posebna kolona i procenat.
+- **Admin free (FZBR) po agencijama:** poseban prikaz besplatnih rezervacija koje su kreirali administratori (`reservations.status = free` + `created_by_admin = true`), grupisano po agencijama (`user_id`), uz “Bez agencije” za `user_id = null`. Ne utiče na KPI i ne zavisi od `include_free`.
 - **Operativni indikatori (ops):**
   - **Paid rezervacije u free terminima**: broj `paid` rezervacija čiji su i drop-off i pick-up u “free zonama” (00–07 ili 20–24).
   - **Duplo plaćanje istog termina**: broj **parova** `paid` rezervacija za isti datum i iste tablice sa bar jednim zajedničkim slotom (drop/pick presek). `include_free` ne utiče (računa se samo `paid`).

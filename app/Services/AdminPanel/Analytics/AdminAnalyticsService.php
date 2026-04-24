@@ -28,12 +28,25 @@ final class AdminAnalyticsService
         $dayCount = (int) $from->diffInDays($to) + 1;
 
         $reservations = Reservation::query()
-            ->with(['vehicleType.translations', 'dropOffTimeSlot', 'pickUpTimeSlot'])
+            ->with(['user', 'vehicleType.translations', 'dropOffTimeSlot', 'pickUpTimeSlot'])
             // Use whereDate to be safe across SQLite/MySQL date storage differences.
             ->whereDate('reservation_date', '>=', $from->toDateString())
             ->whereDate('reservation_date', '<=', $to->toDateString())
             ->when(! $includeFree, fn ($q) => $q->where('status', 'paid'))
             ->get();
+
+        // Extra free reservations for agency breakdown when include_free is OFF.
+        // Keep it lightweight: only what we need for counts/percentages.
+        $freeForAgencyWhenExcluded = collect();
+        if (! $includeFree) {
+            $freeForAgencyWhenExcluded = Reservation::query()
+                ->where('status', 'free')
+                ->whereNotNull('user_id')
+                ->where('created_by_admin', false)
+                ->whereDate('reservation_date', '>=', $from->toDateString())
+                ->whereDate('reservation_date', '<=', $to->toDateString())
+                ->get(['id', 'user_id']);
+        }
 
         $paid = $reservations->where('status', 'paid');
         $free = $reservations->where('status', 'free');
@@ -95,6 +108,19 @@ final class AdminAnalyticsService
         // Vehicle types.
         $byVehicleType = $this->groupByVehicleType($reservations);
 
+        // Agencies (registered users).
+        $byAgency = $this->groupByAgency($reservations, $slotById, $revenueTotal, $includeFree, $freeForAgencyWhenExcluded);
+
+        // Admin free (FZBR) — separate section, independent from include_free.
+        $adminFreeReservations = Reservation::query()
+            ->with(['user', 'vehicleType.translations', 'dropOffTimeSlot', 'pickUpTimeSlot'])
+            ->where('status', 'free')
+            ->where('created_by_admin', true)
+            ->whereDate('reservation_date', '>=', $from->toDateString())
+            ->whereDate('reservation_date', '<=', $to->toDateString())
+            ->get();
+        $adminFreeByAgency = $this->groupAdminFreeByAgency($adminFreeReservations, $slotById);
+
         // Countries.
         $byCountry = $this->groupByCountry($reservations);
 
@@ -137,6 +163,8 @@ final class AdminAnalyticsService
             'trend_by_day' => $trendByDay,
             'day_parts' => $dayParts,
             'by_vehicle_type' => $byVehicleType,
+            'by_agency' => $byAgency,
+            'admin_free_by_agency' => $adminFreeByAgency,
             'by_country' => $byCountry,
             'paid_vs_free' => $paidVsFree,
             'blocking' => [
@@ -334,6 +362,280 @@ final class AdminAnalyticsService
         });
 
         return $groups->sortByDesc('revenue')->values()->all();
+    }
+
+    /**
+     * @param  Collection<int, Reservation>  $reservations  Main analytics dataset (respects include_free).
+     * @param  Collection<int, ListOfTimeSlot>  $slotById
+     * @param  Collection<int, Reservation>  $freeForAgencyWhenExcluded  Free reservations by agency (only when include_free=false).
+     * @return list<array{
+     *   key:string,
+     *   user_id:int|null,
+     *   agency:string,
+     *   revenue:float,
+     *   revenue_share:float,
+     *   reservations_total:int,
+     *   paid_reservations:int,
+     *   free_reservations:int,
+     *   free_pct:float,
+     *   avg_revenue_per_paid:float,
+     *   occupied_slots:int,
+     *   avg_slots_per_reservation:float,
+     *   top_vehicle_type:string,
+     *   top_vehicle_type_pct:float,
+     *   morning_pct:float,
+     *   day_pct:float,
+     *   evening_pct:float
+     * }>
+     */
+    private function groupByAgency(
+        Collection $reservations,
+        Collection $slotById,
+        float $revenueTotal,
+        bool $includeFree,
+        Collection $freeForAgencyWhenExcluded,
+    ): array {
+        $locale = 'cg';
+
+        // Exclude admin-created reservations from "agency" focus. Guest handled separately.
+        $agencyRows = $reservations
+            ->filter(fn (Reservation $r) => $r->user_id !== null && ! (bool) $r->created_by_admin);
+
+        $freeExtraByUserId = $freeForAgencyWhenExcluded
+            ->groupBy(fn (Reservation $r) => (int) $r->user_id)
+            ->map(fn (Collection $rows) => $rows->count());
+
+        $groups = $agencyRows->groupBy(fn (Reservation $r) => (int) $r->user_id)->map(
+            function (Collection $rows, int $userId) use ($slotById, $revenueTotal, $includeFree, $freeExtraByUserId, $locale): array {
+                $paidRows = $rows->where('status', 'paid');
+                $freeRows = $rows->where('status', 'free');
+
+                $paidCount = $paidRows->count();
+                $freeCount = $includeFree ? $freeRows->count() : (int) ($freeExtraByUserId->get($userId, 0));
+
+                $reservationsTotal = $rows->count(); // already respects include_free
+                $rev = (float) $paidRows->sum(fn (Reservation $r) => (float) ($r->invoice_amount ?? 0));
+
+                $occupiedSlots = $this->occupiedSlotsFor($rows);
+
+                // Most common vehicle type (within the dataset).
+                $topVehicleType = '—';
+                $topVehicleTypePct = 0.0;
+                if ($reservationsTotal > 0) {
+                    $counts = $rows->groupBy('vehicle_type_id')->map(fn (Collection $g) => $g->count())->sortDesc();
+                    $topId = $counts->keys()->first();
+                    $topCount = (int) ($counts->first() ?? 0);
+
+                    /** @var Reservation|null $first */
+                    $first = $rows->firstWhere('vehicle_type_id', $topId);
+                    $vt = $first?->vehicleType;
+                    if ($vt instanceof VehicleType) {
+                        $name = $vt->getTranslatedName($locale);
+                        $desc = trim((string) ($vt->getTranslatedDescription($locale) ?? ''));
+                        $label = $name !== '' ? $name : ('#'.$vt->id);
+                        if ($desc !== '') {
+                            $label .= ' ('.$desc.')';
+                        }
+                        $topVehicleType = $label;
+                    } else {
+                        $topVehicleType = $topId !== null ? ('#'.$topId) : '—';
+                    }
+                    $topVehicleTypePct = $reservationsTotal > 0 ? ($topCount / $reservationsTotal) : 0.0;
+                }
+
+                // Day-part distribution by occupied slots (within the dataset).
+                $occMorning = 0;
+                $occDay = 0;
+                $occEvening = 0;
+                foreach ($rows as $r) {
+                    $dropSlot = $slotById->get((int) $r->drop_off_time_slot_id);
+                    $part = AdminAnalyticsDefinitions::dayPartForSlot($dropSlot);
+                    $occ = ((int) $r->drop_off_time_slot_id === (int) $r->pick_up_time_slot_id) ? 1 : 2;
+                    if ($part === AdminAnalyticsDefinitions::PART_FREE_MORNING) {
+                        $occMorning += $occ;
+                    } elseif ($part === AdminAnalyticsDefinitions::PART_FREE_EVENING) {
+                        $occEvening += $occ;
+                    } else {
+                        $occDay += $occ;
+                    }
+                }
+                $occTotal = max(0, $occupiedSlots);
+                $morningPct = $occTotal > 0 ? ($occMorning / $occTotal) : 0.0;
+                $dayPct = $occTotal > 0 ? ($occDay / $occTotal) : 0.0;
+                $eveningPct = $occTotal > 0 ? ($occEvening / $occTotal) : 0.0;
+
+                /** @var Reservation|null $firstRow */
+                $firstRow = $rows->first();
+                $u = $firstRow?->user;
+                $agencyName = trim((string) ($u?->name ?? ''));
+                if ($agencyName === '') {
+                    $agencyName = trim((string) ($firstRow?->user_name ?? ''));
+                }
+                if ($agencyName === '') {
+                    $agencyName = '#'.$userId;
+                }
+
+                $freePct = ($paidCount + $freeCount) > 0 ? ($freeCount / ($paidCount + $freeCount)) : 0.0;
+
+                return [
+                    'key' => 'user:'.$userId,
+                    'user_id' => $userId,
+                    'agency' => $agencyName,
+                    'revenue' => $rev,
+                    'revenue_share' => $revenueTotal > 0 ? ($rev / $revenueTotal) : 0.0,
+                    'reservations_total' => $reservationsTotal,
+                    'paid_reservations' => $paidCount,
+                    'free_reservations' => $freeCount,
+                    'free_pct' => $freePct,
+                    'avg_revenue_per_paid' => $paidCount > 0 ? ($rev / $paidCount) : 0.0,
+                    'occupied_slots' => $occupiedSlots,
+                    'avg_slots_per_reservation' => $reservationsTotal > 0 ? ($occupiedSlots / $reservationsTotal) : 0.0,
+                    'top_vehicle_type' => $topVehicleType,
+                    'top_vehicle_type_pct' => $topVehicleTypePct,
+                    'morning_pct' => $morningPct,
+                    'day_pct' => $dayPct,
+                    'evening_pct' => $eveningPct,
+                ];
+            }
+        );
+
+        // Optional "Guest / bez naloga" row.
+        $guestRows = $reservations->filter(fn (Reservation $r) => $r->user_id === null && ! (bool) $r->created_by_admin);
+        if ($guestRows->isNotEmpty()) {
+            $paidRows = $guestRows->where('status', 'paid');
+            $freeRows = $guestRows->where('status', 'free');
+            $rev = (float) $paidRows->sum(fn (Reservation $r) => (float) ($r->invoice_amount ?? 0));
+            $paidCount = $paidRows->count();
+            $freeCount = $freeRows->count();
+            $reservationsTotal = $guestRows->count();
+            $occupiedSlots = $this->occupiedSlotsFor($guestRows);
+            $freePct = ($paidCount + $freeCount) > 0 ? ($freeCount / ($paidCount + $freeCount)) : 0.0;
+
+            $groups->put('guest', [
+                'key' => 'guest',
+                'user_id' => null,
+                'agency' => 'Guest / bez naloga',
+                'revenue' => $rev,
+                'revenue_share' => $revenueTotal > 0 ? ($rev / $revenueTotal) : 0.0,
+                'reservations_total' => $reservationsTotal,
+                'paid_reservations' => $paidCount,
+                'free_reservations' => $freeCount,
+                'free_pct' => $freePct,
+                'avg_revenue_per_paid' => $paidCount > 0 ? ($rev / $paidCount) : 0.0,
+                'occupied_slots' => $occupiedSlots,
+                'avg_slots_per_reservation' => $reservationsTotal > 0 ? ($occupiedSlots / $reservationsTotal) : 0.0,
+                'top_vehicle_type' => '—',
+                'top_vehicle_type_pct' => 0.0,
+                'morning_pct' => 0.0,
+                'day_pct' => 0.0,
+                'evening_pct' => 0.0,
+            ]);
+        }
+
+        return $groups->sortByDesc('revenue')->values()->all();
+    }
+
+    /**
+     * Admin-created free reservations (FZBR) grouped by agency (user_id), plus "Bez agencije" for null user_id.
+     *
+     * @param  Collection<int, Reservation>  $adminFreeReservations  filtered: status=free AND created_by_admin=true
+     * @param  Collection<int, ListOfTimeSlot>  $slotById
+     * @return list<array{
+     *   key:string,
+     *   user_id:int|null,
+     *   agency:string,
+     *   reservations:int,
+     *   occupied_slots:int,
+     *   avg_slots_per_reservation:float,
+     *   top_vehicle_type:string,
+     *   top_vehicle_type_pct:float,
+     *   morning_pct:float,
+     *   day_pct:float,
+     *   evening_pct:float
+     * }>
+     */
+    private function groupAdminFreeByAgency(Collection $adminFreeReservations, Collection $slotById): array
+    {
+        $locale = 'cg';
+
+        $groups = $adminFreeReservations
+            ->groupBy(fn (Reservation $r) => $r->user_id === null ? 'none' : (string) (int) $r->user_id)
+            ->map(function (Collection $rows, string $key) use ($slotById, $locale): array {
+                $reservationsTotal = $rows->count();
+                $occupiedSlots = $this->occupiedSlotsFor($rows);
+
+                $agencyName = 'Bez agencije';
+                $userId = null;
+                if ($key !== 'none') {
+                    $userId = (int) $key;
+                    /** @var Reservation|null $first */
+                    $first = $rows->first();
+                    $u = $first?->user;
+                    $agencyName = trim((string) ($u?->name ?? ''));
+                    if ($agencyName === '') {
+                        $agencyName = '#'.$userId;
+                    }
+                }
+
+                // Most common vehicle type.
+                $topVehicleType = '—';
+                $topVehicleTypePct = 0.0;
+                if ($reservationsTotal > 0) {
+                    $counts = $rows->groupBy('vehicle_type_id')->map(fn (Collection $g) => $g->count())->sortDesc();
+                    $topId = $counts->keys()->first();
+                    $topCount = (int) ($counts->first() ?? 0);
+
+                    /** @var Reservation|null $firstByType */
+                    $firstByType = $rows->firstWhere('vehicle_type_id', $topId);
+                    $vt = $firstByType?->vehicleType;
+                    if ($vt instanceof VehicleType) {
+                        $name = $vt->getTranslatedName($locale);
+                        $desc = trim((string) ($vt->getTranslatedDescription($locale) ?? ''));
+                        $label = $name !== '' ? $name : ('#'.$vt->id);
+                        if ($desc !== '') {
+                            $label .= ' ('.$desc.')';
+                        }
+                        $topVehicleType = $label;
+                    } else {
+                        $topVehicleType = $topId !== null ? ('#'.$topId) : '—';
+                    }
+                    $topVehicleTypePct = $reservationsTotal > 0 ? ($topCount / $reservationsTotal) : 0.0;
+                }
+
+                // Day-part distribution by occupied slots.
+                $occMorning = 0;
+                $occDay = 0;
+                $occEvening = 0;
+                foreach ($rows as $r) {
+                    $dropSlot = $slotById->get((int) $r->drop_off_time_slot_id);
+                    $part = AdminAnalyticsDefinitions::dayPartForSlot($dropSlot);
+                    $occ = ((int) $r->drop_off_time_slot_id === (int) $r->pick_up_time_slot_id) ? 1 : 2;
+                    if ($part === AdminAnalyticsDefinitions::PART_FREE_MORNING) {
+                        $occMorning += $occ;
+                    } elseif ($part === AdminAnalyticsDefinitions::PART_FREE_EVENING) {
+                        $occEvening += $occ;
+                    } else {
+                        $occDay += $occ;
+                    }
+                }
+                $occTotal = max(0, $occupiedSlots);
+
+                return [
+                    'key' => $key === 'none' ? 'none' : 'user:'.$userId,
+                    'user_id' => $userId,
+                    'agency' => $agencyName,
+                    'reservations' => $reservationsTotal,
+                    'occupied_slots' => $occupiedSlots,
+                    'avg_slots_per_reservation' => $reservationsTotal > 0 ? ($occupiedSlots / $reservationsTotal) : 0.0,
+                    'top_vehicle_type' => $topVehicleType,
+                    'top_vehicle_type_pct' => $topVehicleTypePct,
+                    'morning_pct' => $occTotal > 0 ? ($occMorning / $occTotal) : 0.0,
+                    'day_pct' => $occTotal > 0 ? ($occDay / $occTotal) : 0.0,
+                    'evening_pct' => $occTotal > 0 ? ($occEvening / $occTotal) : 0.0,
+                ];
+            });
+
+        return $groups->sortByDesc('reservations')->values()->all();
     }
 
     /**

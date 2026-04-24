@@ -33,7 +33,7 @@
         </div>
 
         <p class="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md p-3">
-            Kalendar ispod je samo <strong>prefilter</strong> (teorijski dani sa najmanje dva raspoloživa termina). Konačna provera novih termina radi se pri „Primeni prilagođavanje“, posle zaključavanja redova u bazi.
+            Kalendar ispod je samo <strong>prefilter</strong> (teorijski dani sa najmanje dva raspoloživa termina). Konačna provjera novih termina radi se pri „Primeni prilagođavanje“, posle zaključavanja redova u bazi.
         </p>
 
         <form method="POST" action="{{ route('panel_admin.blocking.worklist.adjust.apply', $row, false) }}" class="bg-white shadow rounded-lg p-5 space-y-4">
