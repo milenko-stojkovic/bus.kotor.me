@@ -178,6 +178,22 @@ Rute (admin panel):
 
 **Po tipu vozila:** koristi realizovane rezervacije (bez obzira na status), opseg po `reservation_date`, prikaz 4 fiksna reda + `Ukupno` (naziv na `cg`: name + (description), bez cijene). I bez podataka redovi ostaju sa nulama.
 
+### 4.1.1 Izvještaj: Obaveze po avansima (snapshot) — implementirano (feature-flag)
+
+**Svrha:** formalni snapshot izvještaj “stanje obaveza po avansima” na izabrani dan (npr. kraj fiskalne godine).
+
+**Feature flag:** `config('features.advance_payments')` (ako je OFF → opcija nije vidljiva + endpoint vraća 404).
+
+**Kakav:** `advance_obligations` (dozvoljen samo `when=daily`)
+
+**Računanje (source-of-truth):** isključivo `agency_advance_transactions` (ledger), filter `created_at <= endOfDay(date)`:
+- uplaćeno: SUM(type=topup)
+- iskorišćeno: ABS(SUM(type=usage))
+- korekcije: SUM(type=correction)
+- preostalo/obaveza: SUM(svih amount)
+
+PDF naslov: `Izvještaj o obavezama po osnovu avansnih uplata na dan DD.MM.YYYY.`
+
 ## 5. Sistemska konfiguracija
 
 | Funkcionalnost | Opis | Modeli / tabele |
@@ -227,6 +243,19 @@ Napomena: `system_config` ima `name` (unique) i `value` (integer). Za admin form
 
 **Testovi:** `tests/Feature/AdminPanel/AdminPanelAnalyticsTest.php`.
 
+### 7.1 Stanje avansa po agencijama (Analitika) — implementirano (feature-flag)
+
+UI sekcija na dnu Analytics strane: **“Stanje avansa po agencijama”** (samo kada je `advance_payments` ON).
+
+- **Ukupno stanje avansa:** SUM(agency_advance_transactions.amount) preko svih agencija
+- Tabela po agencijama (samo agencije koje imaju bar 1 ledger red):
+  - Uplaćeno ukupno (type=topup)
+  - Iskorišćeno ukupno (ABS(type=usage))
+  - Korekcije ukupno (type=correction)
+  - Trenutno stanje (SUM)
+  - Poslednja aktivnost (MAX(created_at))
+  - Link na detalj agencije (`panel_admin.agencies.show`)
+
 ---
 
 ## 8. Uvid (admin panel) — implementirano
@@ -257,6 +286,49 @@ Read-only modul, payment-centric (osnovna jedinica prikaza je `merchant_transact
 | Funkcionalnost | Opis | Modeli / tabele |
 |----------------|------|------------------|
 | **Pristup history plaćanja** | Admin vidi istoriju rezervacija za registrovane korisnike (po `user_id`). | `Reservation` gde je `user_id` set; prikaz po user-u (npr. izbor korisnika ili pregled jednog korisnika). |
+
+---
+
+## 9. Agencije (admin panel) — implementirano (feature-flag delovi)
+
+Rute:
+- `GET /admin/agencije` → `panel_admin.agencies.index`
+- `GET /admin/agencije/{user}` → `panel_admin.agencies.show`
+
+Stranice su read-only za većinu avans podataka; napredne akcije su iza feature flag-a.
+
+### 9.1 Lista agencija
+
+Kolone (izbor):
+- ime, email, datum registracije
+- broj rezervacija
+- **saldo avansa** (SQL SUM preko `agency_advance_transactions`) — prikazuje se samo ako je `advance_payments` ON
+
+### 9.2 Detalj agencije
+
+Kada je `advance_payments` ON, prikazuje:
+- trenutno stanje avansa (`AgencyAdvanceService::balance`)
+- ledger istoriju (`agency_advance_transactions`)
+- topup istoriju (`agency_advance_topups`)
+
+### 9.3 Admin korekcija avansa
+
+Na detalju agencije admin može dodati korekciju:
+- kreira se novi ledger red `agency_advance_transactions` sa `type=correction` i `note=razlog`
+- negativna korekcija ne sme spustiti saldo ispod 0 (konzervativno pravilo)
+
+Ruta:
+- `POST /admin/agencije/{user}/avans/korekcija` → `panel_admin.agencies.advance.correction.store`
+
+### 9.4 Retry slanja potvrde topup-a
+
+U “Topup istorija” tabeli se prikazuje kolona “Potvrda”:
+- ako je topup `paid` a `confirmation_sent_at` je null → dugme “Pošalji potvrdu ponovo”
+
+Ruta:
+- `POST /admin/agencije/{user}/avans/topups/{topup}/confirmation/resend` → `panel_admin.agencies.advance.topups.confirmation.resend`
+
+Idempotency i evidencija slanja su u `agency_advance_topups.confirmation_sent_at` / `confirmation_email`.
 
 Guest rezervacije (`user_id` = null) nemaju “istoriju po korisniku”; mogu se pretraživati po email-u, tablici, datumu itd.
 

@@ -1,6 +1,6 @@
 # Agency panel (ulogovani korisnik, `/panel`)
 
-**Poslednje ažuriranje:** 2026-03-31
+**Poslednje ažuriranje:** 2026-04-27
 
 Prefiks ruta: **`/panel`**, middleware **`auth`** + **`verified`**. Gornja navigacija: `resources/views/layouts/navigation.blade.php`.
 
@@ -15,6 +15,9 @@ Prefiks ruta: **`/panel`**, middleware **`auth`** + **`verified`**. Gornja navig
 | `GET /panel/realized` | `panel.realized` | Realizovane, link na PDF u novom tabu |
 | `GET /panel/vehicles` | `panel.vehicles` | Vozila |
 | `GET /panel/fzbr` | `panel.fzbr.create` | FZBR (Formular za besplatnu rezervaciju) — podnošenje zahtjeva |
+| `GET /panel/avans` | `panel.advance.index` | Avans: stanje, ledger i istorija topup pokušaja |
+| `POST /panel/avans/topup` | `panel.advance.topup.store` | Pokretanje avansne uplate (kreira topup attempt + start payment) |
+| `GET /panel/avans/return` | `panel.advance.return` | Povratak sa banke (status se čita iz baze) |
 | `GET /panel/statistics` | `panel.statistics` | Statistika: ukupno plaćeno, broj realizovanih posjeta, tabela po tablicama |
 | `GET /panel/user` | `panel.user` | Korisnik: ime, jezik, email, lozinka |
 | `PATCH /profile` | `profile.update` | Čuva profil (uključujući lozinku ako je uneta) |
@@ -23,6 +26,62 @@ Prefiks ruta: **`/panel`**, middleware **`auth`** + **`verified`**. Gornja navig
 | `GET /panel/reservations/{id}/invoice` | `panel.reservations.invoice` | PDF **download** |
 
 `GET /profile` redirectuje na `/panel/user` (`profile.edit`).
+
+---
+
+## Avans (advance payments) — implementirano (feature-flag)
+
+**Feature flag:** `config('features.advance_payments')` (ENV `ADVANCE_PAYMENTS_ENABLED`).
+
+Ako je flag **OFF**:
+- navigaciona stavka **Avans** se vidi kao disabled (bez linka) uz tooltip
+- avans rute (`/panel/avans*`) vraćaju **404**
+- na strani **Rezervacije** se ne prikazuju avans opcije
+
+Ako je flag **ON**:
+
+### 1) Uplate avansa (topup)
+
+- **Stranica:** `GET /panel/avans` (`panel.advance.index`)
+- Prikazuje:
+  - trenutno stanje avansa (saldo) = **SUM(agency_advance_transactions.amount)**
+  - ledger istoriju (poslednjih 50)
+  - istoriju topup pokušaja (poslednjih 50)
+
+**Pokretanje uplate:** `POST /panel/avans/topup`
+- kreira `agency_advance_topups` red (status `pending`, MTID UUID)
+- startuje payment session (Bankart) ili u fake driveru odmah tretira kao `paid`
+- **ne koristi `temp_data`**
+
+**Potvrda uplate (paid):**
+- topup prelazi u `paid` (callback / fake)
+- kreira se ledger red u `agency_advance_transactions`:
+  - `type=topup`, `reference_type=advance_topup`, `reference_id=topup.id`, `amount=+X`
+- **avansna uplata se NE fiskalizuje**
+
+### 2) Potvrda o evidentiranoj avansnoj uplati (PDF + email)
+
+Nakon uspešnog topup-a (`paid`) šalje se email agenciji sa PDF potvrdom u prilogu:
+- dokument je **potvrda**, **nije račun** i **nije fiskalni račun**
+- evidencija slanja je na topup attempt-u:
+  - `agency_advance_topups.confirmation_sent_at`
+  - `agency_advance_topups.confirmation_email`
+
+### 3) Plaćanje rezervacije iz avansa
+
+Na `GET /panel/reservations` (rezervacije/checkout), kada je flag ON:
+- prikazuje se **Raspoloživi avans** i izbor načina plaćanja:
+  - kartica (postojeći tok)
+  - avans (`payment_method=advance`) — disabled ako saldo nije dovoljan
+
+Backend tok `payment_method=advance`:
+- **ne koristi `temp_data`** i **ne ide na Bankart**
+- u transakciji zaključava (lock) agenciju + relevantne `daily_parking_data` redove
+- finalno proverava saldo pod lock-om
+- kreira `Reservation` odmah kao `paid` sa `payment_method=advance`
+- kreira ledger `agency_advance_transactions` red:
+  - `type=usage`, `amount=-invoice_amount`, `reference_type=reservation`, `reference_id=reservation.id`
+- pokreće standardni post-payment pipeline za `paid` rezervacije (invoice/fiskalizacija kao i inače)
 
 ---
 
