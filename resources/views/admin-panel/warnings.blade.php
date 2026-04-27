@@ -117,5 +117,27 @@
                 </ul>
             @endif
         </section>
+
+        {{-- Operativni pregled kapaciteta po slotovima (danas/sjutra) --}}
+        @php
+            $charts = $capacityCharts ?? null;
+        @endphp
+        @if (is_array($charts) && isset($charts['today'], $charts['tomorrow']))
+            <section class="space-y-6">
+                @include('partials.daily-capacity-chart', [
+                    'dataset' => $charts['today'],
+                    'title' => 'Kapacitet po terminima — danas',
+                    'chartId' => 'capacity-chart-admin-today',
+                    'scriptId' => 'capacity-chart-admin-today-data',
+                ])
+
+                @include('partials.daily-capacity-chart', [
+                    'dataset' => $charts['tomorrow'],
+                    'title' => 'Kapacitet po terminima — sjutra',
+                    'chartId' => 'capacity-chart-admin-tomorrow',
+                    'scriptId' => 'capacity-chart-admin-tomorrow-data',
+                ])
+            </section>
+        @endif
     </div>
 </x-admin-panel-layout>

@@ -1,6 +1,6 @@
 # Konvencije projekta (bus.kotor.me)
 
-**Poslednje ažuriranje:** 2026-04-11  
+**Poslednje ažuriranje:** 2026-04-27  
 
 Za AI i ljude: držati se ovoga pri novim izmenama da ostane konzistentno.
 
@@ -70,6 +70,24 @@ Preporučeni oblik (naslovi ili bold oznake moraju biti eksplicitni):
      `C:\laragon\bin\php\php-8.3.30-Win32-vs16-x64\php.exe artisan ...`
 - **Sintaksa (`php -l`):** ne pokretati gol `php -l` ako Windows nudi „Open with…“ — koristi **`.\laragon-php.ps1 -l putanja\do\fajla.php`** ili **`.\laragon-php.cmd -l putanja\do\fajla.php`**.
 - **AI / automatizacija (Cursor agent, skripte):** iz korena repoa **`.\laragon-artisan.ps1`** ili **`.\laragon-artisan.cmd`** (npr. `test`, `migrate`, `queue:work`) — **ne** `php artisan ...` osim ako je `php` u PATH-u. Isto **`.\laragon-php.ps1`** / **`.\laragon-php.cmd`** umesto `php` za `-l`. Kada korisnik ima strogu Execution Policy, u primerima predložiti **`.cmd`**.
+
+---
+
+## 3.1 Blade napomena (parse error)
+
+- U ovom projektu **izbegavati** Blade shorthand `@php($x = ...)` — u praksi je na Windows okruženju više puta izazvao kompajlirani view sa **ParseError** (`unexpected token "endif"`). Umesto toga koristi blok:
+
+```php
+@php
+    $x = ...;
+@endphp
+```
+
+---
+
+## 3.2 Admin UI: jezik (sr-Latn-ME)
+
+- U admin panelu koristiti ispravan oblik: **„Izvještaji“** (ne „Izveštaji“).
 - **Queue:** za lokalni QA bez workera, **`QUEUE_CONNECTION=sync`** u `.env` — tada **nema** posebnog workera (jobovi se izvršavaju u istom zahtevu). Za **`database`** / **`redis`** mora da radi **`queue:work`** (npr. **`.\laragon-artisan.cmd queue:work --tries=1`**). **Provera da li worker radi (Windows):** u Task Manageru pogledati **`php.exe`** i komandnu liniju da sadrži `artisan queue:work`, ili u PowerShellu npr. `Get-CimInstance Win32_Process -Filter "Name = 'php.exe'" | Select-Object CommandLine`. Ako se poslovi gomilaju, proveri tabelu **`jobs`** (driver `database`). **Test mejlova:** uz `sync` dovoljno je **`MAIL_MAILER=log`** (ili Mailtrap); uz asinhroni red pokreni worker pre akcije koja dispatchuje mejl.
 - **Queue worker u pozadini (PowerShell, bez zauzimanja terminala):** ako `php` nije u PATH-u, koristi **punu putanju** do Laragon `php.exe`.
   - Pokretanje:

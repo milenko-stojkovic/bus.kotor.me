@@ -10,6 +10,7 @@ use App\Services\Reservation\VehicleReplacementCandidateService;
 use App\Services\Pdf\FreeReservationPdfGenerator;
 use App\Services\Pdf\PaidInvoicePdfGenerator;
 use App\Services\Reservation\ReservationBookingPageData;
+use App\Services\AgencyAdvance\AgencyAdvanceService;
 use App\Support\UiText;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\RedirectResponse;
@@ -22,6 +23,17 @@ class UserReservationController extends Controller
     public function index(Request $request, ReservationBookingPageData $bookingPageData): View
     {
         $booking = $bookingPageData->forAuthenticated($request, $request->user());
+
+        $booking['advanceBalance'] = null;
+
+        if ((bool) config('features.advance_payments')) {
+            $balance = app(AgencyAdvanceService::class)->balance((int) $request->user()->id);
+            $price = (string) ($booking['paid_amount'] ?? '0.00');
+            $canPay = is_numeric($balance) && is_numeric($price) && ((float) $balance + 0.000001) >= (float) $price;
+            $booking['advance_balance'] = $balance;
+            $booking['advance_can_pay'] = $canPay;
+            $booking['advanceBalance'] = $balance;
+        }
 
         return view('panel.reservations', $booking);
     }

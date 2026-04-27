@@ -38,6 +38,11 @@ class FreeReservationRequest extends Model
         return $this->hasMany(FreeReservationRequestVehicle::class, 'request_id');
     }
 
+    public function segments(): HasMany
+    {
+        return $this->hasMany(FreeReservationRequestSegment::class, 'request_id')->orderBy('position');
+    }
+
     public function attachments(): HasMany
     {
         return $this->hasMany(FreeReservationRequestAttachment::class, 'request_id');

@@ -7,12 +7,17 @@ use App\Http\Requests\Control\ControlReservationSearchRequest;
 use App\Models\Reservation;
 use App\Models\VehicleType;
 use App\Services\Control\ControlArrivalSlots;
+use App\Services\Operations\DailyCapacityChartService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 class ControlDashboardController extends Controller
 {
-    public function index(ControlReservationSearchRequest $request, ControlArrivalSlots $arrivals): View|RedirectResponse
+    public function index(
+        ControlReservationSearchRequest $request,
+        ControlArrivalSlots $arrivals,
+        DailyCapacityChartService $capacityCharts
+    ): View|RedirectResponse
     {
         if ($request->submittedSearch() && ! $request->hasSearchCriteria()) {
             return redirect()
@@ -40,6 +45,7 @@ class ControlDashboardController extends Controller
             'searchResults' => $searchResults,
             'vehicleTypes' => $vehicleTypes,
             'searchInput' => $request->only(['date', 'name', 'email', 'vehicle_type_id', 'license_plate']),
+            'capacityCharts' => $capacityCharts->todayAndTomorrow(),
         ]);
     }
 

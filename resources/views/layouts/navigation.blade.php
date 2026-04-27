@@ -1,5 +1,6 @@
 @php
     $p = fn (string $key, ?string $fallback = null) => \App\Support\UiText::t('panel', $key, $fallback);
+    $advanceEnabled = (bool) config('features.advance_payments');
 @endphp
 <nav x-data="{ open: false }" class="bg-white border-b border-gray-100">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -15,6 +16,15 @@
                     <x-nav-link :href="route('panel.reservations')" :active="request()->routeIs('panel.reservations', 'panel.reservations.invoice')">
                         {{ $p('nav_reservations', 'Reservations') }}
                     </x-nav-link>
+                    @if ($advanceEnabled)
+                        <x-nav-link :href="route('panel.advance.index')" :active="request()->routeIs('panel.advance.*')">
+                            {{ $p('nav_advance', 'Avans') }}
+                        </x-nav-link>
+                    @else
+                        <span class="px-3 py-2 text-sm text-gray-400 cursor-not-allowed" title="{{ $p('advance_disabled_hint', 'Funkcionalnost trenutno nije dostupna') }}">
+                            {{ $p('nav_advance', 'Avans') }}
+                        </span>
+                    @endif
                     <x-nav-link :href="route('panel.user')" :active="request()->routeIs('panel.user')">
                         {{ $p('nav_user', 'User') }}
                     </x-nav-link>
@@ -88,6 +98,15 @@
             <x-responsive-nav-link :href="route('panel.reservations')" :active="request()->routeIs('panel.reservations', 'panel.reservations.invoice')">
                 {{ $p('nav_reservations', 'Reservations') }}
             </x-responsive-nav-link>
+            @if ($advanceEnabled)
+                <x-responsive-nav-link :href="route('panel.advance.index')" :active="request()->routeIs('panel.advance.*')">
+                    {{ $p('nav_advance', 'Avans') }}
+                </x-responsive-nav-link>
+            @else
+                <span class="block px-3 py-2 text-sm text-gray-400 cursor-not-allowed" title="{{ $p('advance_disabled_hint', 'Funkcionalnost trenutno nije dostupna') }}">
+                    {{ $p('nav_advance', 'Avans') }}
+                </span>
+            @endif
             <x-responsive-nav-link :href="route('panel.user')" :active="request()->routeIs('panel.user')">
                 {{ $p('nav_user', 'User') }}
             </x-responsive-nav-link>

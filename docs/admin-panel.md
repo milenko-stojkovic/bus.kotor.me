@@ -66,10 +66,10 @@ Kontroler: **`WarningsController::index`**. Stranica ima tri bloka: **Upozorenja
 
 - **Kontroler:** `App\Http\Controllers\AdminPanel\FreeReservationController`; **validacija:** `AdminFreeReservationRequest`.
 - **Pristigli FZBR zahtjevi:** na dnu iste strane prikazuje se lista aktivnih zahtjeva iz **agency panela** (`/panel/fzbr`):
-  - izvor istine: `free_reservation_requests` + `free_reservation_request_vehicles` (ne `admin_alerts`)
+  - izvor istine: `free_reservation_requests` → `free_reservation_request_segments` → `free_reservation_request_vehicles` (+ `free_reservation_request_attachments`)
   - prikazuju se samo statusi: **`submitted`**, **`updated`** (ne prikazuje `fulfilled`/`rejected`)
   - sortiranje: `created_at DESC`
-  - eager loading (bez N+1): `with(['dropOffTimeSlot','pickUpTimeSlot','vehicles.vehicleType.translations','attachments'])`
+  - eager loading (bez N+1): `with(['segments.dropOffTimeSlot','segments.pickUpTimeSlot','segments.vehicles.vehicleType.translations','attachments'])`
   - **Dokumenta (private/local storage):** prilozi su u `free_reservation_request_attachments` i prikazuju se kao lista sa linkom za **preview** (admin-only ruta streamuje fajl inline).
   - **Retention:** posle **fulfill** / **reject** zahtjev se **ne briše**. Samo se setuje status (`fulfilled`/`rejected`) i uklanja se upozorenje (pointer).
 - **Podaci stranice / slotovi:** `ReservationBookingPageData::forAdminPanel()` — isti `buildSlotPayload` / `FreeReservationRules` kao gost; UI jezik fiksno **cg** (`App::setLocale('cg')` u kontroleru).

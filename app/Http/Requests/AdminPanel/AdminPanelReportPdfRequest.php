@@ -11,6 +11,10 @@ class AdminPanelReportPdfRequest extends FormRequest
 {
     public function authorize(): bool
     {
+        if ((string) $this->input('kind', '') === 'advance_obligations' && ! (bool) config('features.advance_payments')) {
+            abort(404);
+        }
+
         return true;
     }
 
@@ -22,7 +26,7 @@ class AdminPanelReportPdfRequest extends FormRequest
 
         return [
             'when' => ['required', Rule::in(['daily', 'monthly', 'yearly', 'period'])],
-            'kind' => ['required', Rule::in(['by_payment', 'by_realization', 'by_vehicle_type'])],
+            'kind' => ['required', Rule::in(['by_payment', 'by_realization', 'by_vehicle_type', 'advance_obligations'])],
 
             // Daily
             'date' => ['nullable', 'date', 'after_or_equal:'.$min, 'before_or_equal:'.$max],
@@ -47,6 +51,12 @@ class AdminPanelReportPdfRequest extends FormRequest
 
         $validator->after(function (Validator $v) use ($min, $max, $minYear, $maxYear): void {
             $when = (string) $this->input('when', '');
+            $kind = (string) $this->input('kind', '');
+
+            if ($kind === 'advance_obligations' && $when !== 'daily') {
+                $v->errors()->add('when', 'Za ovaj izvještaj je dozvoljen samo dnevni izbor.');
+                return;
+            }
 
             if ($when === 'daily') {
                 if ((string) $this->input('date', '') === '') {

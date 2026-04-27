@@ -186,30 +186,65 @@
                             <div class="text-xs font-medium text-gray-500">Datum</div>
                             <div class="mt-1 text-gray-900">{{ $req->reservation_date?->format('d.m.Y.') }}</div>
                         </div>
-                        <div>
-                            <div class="text-xs font-medium text-gray-500">Vrijeme dolaska</div>
-                            <div class="mt-1 text-gray-900">{{ $req->dropOffTimeSlot?->time_slot ?? '—' }}</div>
-                        </div>
-                        <div>
-                            <div class="text-xs font-medium text-gray-500">Vrijeme odlaska</div>
-                            <div class="mt-1 text-gray-900">{{ $req->pickUpTimeSlot?->time_slot ?? '—' }}</div>
-                        </div>
                     </div>
 
-                    <div class="text-sm">
-                        <div class="text-xs font-medium text-gray-500">Vozila ({{ $req->vehicles->count() }})</div>
-                        <div class="mt-2 space-y-1">
-                            @foreach ($req->vehicles as $v)
+                    @php
+                        $totalVehicles = (int) ($req->segments?->sum(fn ($s) => (int) $s->vehicles?->count()) ?? 0);
+                    @endphp
+                    <div class="text-sm space-y-3">
+                        <div class="text-xs font-medium text-gray-500">Segmenti ({{ $req->segments->count() }}) / Vozila ukupno ({{ $totalVehicles }})</div>
+                        <div class="space-y-3">
+                            @foreach ($req->segments as $i => $seg)
                                 @php
-                                    $vtName = $v->vehicle_type_label
-                                        ?: ($v->vehicleType?->getTranslatedName('cg') ?: ('#'.$v->vehicle_type_id));
-                                    $vtDesc = trim((string) ($v->vehicleType?->getTranslatedDescription('cg') ?? ''));
+                                    $segVehicles = $seg->vehicles ?? collect();
                                 @endphp
-                                <div class="flex items-start justify-between gap-3">
-                                    <div class="font-semibold text-gray-900">{{ $v->license_plate }}</div>
-                                    <div class="text-gray-700 text-right">
-                                        {{ $vtName }}@if ($vtDesc !== '') ({{ $vtDesc }})@endif
+                                <div class="rounded-md border border-gray-200 p-3 bg-gray-50 space-y-2">
+                                    <div class="flex flex-wrap items-center justify-between gap-2">
+                                        <div class="font-semibold text-gray-900">Dolazak i odlazak {{ $i + 1 }}</div>
+                                        <div class="text-xs text-gray-600">
+                                            <span class="font-semibold">Vozila:</span> {{ $segVehicles->count() }}
+                                        </div>
                                     </div>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                                        <div>
+                                            <div class="text-xs font-medium text-gray-500">Vrijeme dolaska</div>
+                                            <div class="mt-1 text-gray-900">{{ $seg->dropOffTimeSlot?->time_slot ?? '—' }}</div>
+                                        </div>
+                                        <div>
+                                            <div class="text-xs font-medium text-gray-500">Vrijeme odlaska</div>
+                                            <div class="mt-1 text-gray-900">{{ $seg->pickUpTimeSlot?->time_slot ?? '—' }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="space-y-1">
+                                        @foreach ($segVehicles as $v)
+                                            @php
+                                                $vtName = $v->vehicle_type_label
+                                                    ?: ($v->vehicleType?->getTranslatedName('cg') ?: ('#'.$v->vehicle_type_id));
+                                                $vtDesc = trim((string) ($v->vehicleType?->getTranslatedDescription('cg') ?? ''));
+                                            @endphp
+                                            <div class="flex items-start justify-between gap-3">
+                                                <div class="font-semibold text-gray-900">{{ $v->license_plate }}</div>
+                                                <div class="text-gray-700 text-right">
+                                                    {{ $vtName }}@if ($vtDesc !== '') ({{ $vtDesc }})@endif
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+
+                                    @php
+                                        $segAvail = collect($req->segments_availability ?? [])->firstWhere('segment_id', (int) $seg->id);
+                                    @endphp
+                                    @if (is_array($segAvail))
+                                        <div class="text-xs text-gray-700 pt-1">
+                                            <span class="font-semibold">Availability:</span>
+                                            @if (($segAvail['can_fulfill'] ?? false))
+                                                OK
+                                            @else
+                                                Nema kapaciteta
+                                            @endif
+                                            (required: {{ (int) ($segAvail['required'] ?? 0) }}, min_available: {{ $segAvail['min_available'] ?? '—' }})
+                                        </div>
+                                    @endif
                                 </div>
                             @endforeach
                         </div>
@@ -267,21 +302,31 @@
                                         <label class="block text-xs font-medium text-gray-600">Datum</label>
                                         <input type="date" name="reservation_date" value="{{ $req->reservation_date?->toDateString() }}" min="{{ now()->toDateString() }}" max="{{ now()->addDays(90)->toDateString() }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
                                     </div>
-                                    <div>
-                                        <label class="block text-xs font-medium text-gray-600">Vrijeme dolaska</label>
-                                        <select name="drop_off_time_slot_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
-                                            @foreach (\App\Models\ListOfTimeSlot::query()->orderBy('id')->get() as $s)
-                                                <option value="{{ $s->id }}" @selected((int)$req->drop_off_time_slot_id === (int)$s->id)>{{ $s->time_slot }}</option>
+                                    <div class="sm:col-span-2">
+                                        <div class="text-xs font-medium text-gray-600">Segmenti</div>
+                                        <div class="mt-2 space-y-2">
+                                            @foreach ($req->segments as $i => $seg)
+                                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                    <input type="hidden" name="segments[{{ $i }}][id]" value="{{ $seg->id }}">
+                                                    <div>
+                                                        <label class="block text-xs font-medium text-gray-600">Dolazak {{ $i + 1 }}</label>
+                                                        <select name="segments[{{ $i }}][drop_off_time_slot_id]" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
+                                                            @foreach (\App\Models\ListOfTimeSlot::query()->orderBy('id')->get() as $s)
+                                                                <option value="{{ $s->id }}" @selected((int)$seg->drop_off_time_slot_id === (int)$s->id)>{{ $s->time_slot }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label class="block text-xs font-medium text-gray-600">Odlazak {{ $i + 1 }}</label>
+                                                        <select name="segments[{{ $i }}][pick_up_time_slot_id]" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
+                                                            @foreach (\App\Models\ListOfTimeSlot::query()->orderBy('id')->get() as $s)
+                                                                <option value="{{ $s->id }}" @selected((int)$seg->pick_up_time_slot_id === (int)$s->id)>{{ $s->time_slot }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                </div>
                                             @endforeach
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-medium text-gray-600">Vrijeme odlaska</label>
-                                        <select name="pick_up_time_slot_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
-                                            @foreach (\App\Models\ListOfTimeSlot::query()->orderBy('id')->get() as $s)
-                                                <option value="{{ $s->id }}" @selected((int)$req->pick_up_time_slot_id === (int)$s->id)>{{ $s->time_slot }}</option>
-                                            @endforeach
-                                        </select>
+                                        </div>
                                     </div>
                                     <div class="flex flex-wrap gap-2 justify-end sm:col-span-2">
                                         <button

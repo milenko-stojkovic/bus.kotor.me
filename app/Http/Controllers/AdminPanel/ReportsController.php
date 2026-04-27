@@ -23,7 +23,7 @@ class ReportsController extends Controller
 
         return view('admin-panel.reports.index', [
             'navActive' => 'reports',
-            'pageTitle' => 'Izveštaji',
+            'pageTitle' => 'Izvještaji',
             'minDate' => $min,
             'maxDate' => $max,
             'minYear' => $minYear,
@@ -69,6 +69,24 @@ class ReportsController extends Controller
                 'to' => $to->toDateString(),
                 'data' => $reports->byVehicleType($from, $to),
             ],
+            'advance_obligations' => (function () use ($v, $reports): array {
+                if (! (bool) config('features.advance_payments')) {
+                    abort(404);
+                }
+
+                $d = Carbon::parse((string) $v['date'])->startOfDay();
+                $label = $this->fmtDateCg($d);
+
+                return [
+                    'title' => 'Izvještaj o obavezama po osnovu avansnih uplata na dan '.$label,
+                    'subtitle' => 'Prikaz predstavlja stanje neiskorišćenih avansnih sredstava po agencijama na izabrani dan.',
+                    'kind' => 'advance_obligations',
+                    'period' => $label,
+                    'from' => $d->toDateString(),
+                    'to' => $d->toDateString(),
+                    'data' => $reports->advanceObligationsSnapshot($d->copy()->endOfDay()),
+                ];
+            })(),
             default => abort(400),
         };
 

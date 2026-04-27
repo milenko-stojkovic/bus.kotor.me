@@ -92,102 +92,150 @@
                 @endif
             </div>
 
-            {{-- Cjelina 1: Datum + vrijeme + vozila --}}
-            <form method="GET" action="{{ route('panel.fzbr.create', [], false) }}" class="space-y-4" id="fzbrStepForm">
-                <div class="bg-white shadow sm:rounded-lg p-6 space-y-4">
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div class="sm:col-span-1">
-                            <x-input-label for="reservation_date" :value="\App\Support\UiText::t('reservation', 'date')" />
-                            <input
-                                id="reservation_date"
-                                name="reservation_date"
-                                type="date"
-                                min="{{ $minDate }}"
-                                max="{{ $maxDate }}"
-                                value="{{ $selected_date ?? '' }}"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                            />
-                        </div>
-                        <div class="sm:col-span-1">
-                            <x-input-label for="drop_off_time_slot_id" :value="\App\Support\UiText::t('reservation', 'arrival_time')" />
-                            <select
-                                id="drop_off_time_slot_id"
-                                name="drop_off_time_slot_id"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                @disabled(empty($selected_date))
-                            >
-                                <option value="">{{ \App\Support\UiText::t('reservation', 'select_time_slot') }}</option>
-                                @foreach (($arrival_slots ?? []) as $s)
-                                    <option value="{{ $s['id'] }}" @selected((int)($arrival_id ?? 0) === (int)$s['id']) @disabled((bool)$s['disabled'])>
-                                        {{ $s['label'] }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="sm:col-span-1">
-                            <x-input-label for="pick_up_time_slot_id" :value="\App\Support\UiText::t('reservation', 'departure_time')" />
-                            <select
-                                id="pick_up_time_slot_id"
-                                name="pick_up_time_slot_id"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                @disabled($departure_disabled ?? true)
-                            >
-                                <option value="">{{ \App\Support\UiText::t('reservation', 'select_time_slot') }}</option>
-                                @foreach (($departure_slots ?? []) as $s)
-                                    <option value="{{ $s['id'] }}" @selected((int)($departure_id ?? 0) === (int)$s['id']) @disabled((bool)$s['disabled'])>
-                                        {{ $s['label'] }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            <p class="mt-1 text-xs text-gray-500">{{ \App\Support\UiText::t('reservation', 'departure_disabled_hint') }}</p>
-                        </div>
+            {{-- Cjelina 1: Datum + segmenti (dolazak/odlazak) + vozila --}}
+            <div class="bg-white shadow sm:rounded-lg p-6 space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
+                    <div class="sm:col-span-1">
+                        <x-input-label for="reservation_date" :value="\App\Support\UiText::t('reservation', 'date')" />
+                        <input
+                            id="reservation_date"
+                            name="reservation_date"
+                            type="date"
+                            min="{{ $minDate }}"
+                            max="{{ $maxDate }}"
+                            x-model="selectedDate"
+                            x-on:change="onDateChange()"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                            form="fzbrPostForm"
+                            required
+                        />
                     </div>
-
-                    <div class="pt-2 space-y-2">
-                        <div class="text-sm font-semibold text-gray-900">{{ $ui('vehicles_title', 'Vozila') }}</div>
-
-                        <template x-for="(row, idx) in rows" :key="idx">
-                            <div class="grid grid-cols-1 md:grid-cols-12 gap-2 items-start">
-                                <div class="md:col-span-10 min-w-0">
-                                    <select
-                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                        :name="`vehicles[${idx}]`"
-                                        form="fzbrPostForm"
-                                        x-model="row.vehicle_id"
-                                        required
-                                    >
-                                        <option value="">{{ $ui('select_vehicle', 'Izaberite vozilo') }}</option>
-                                        <template x-for="opt in optionsFor(idx)" :key="opt.id">
-                                            <option :value="opt.id" x-text="opt.label"></option>
-                                        </template>
-                                    </select>
-                                </div>
-                                <div class="md:col-span-2 flex gap-2 md:justify-end pt-6 min-w-0">
-                                    <button
-                                        type="button"
-                                        class="inline-flex items-center justify-center rounded-md bg-gray-800 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-white hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                                        x-show="isAddVisible(idx)"
-                                        :disabled="!canAdd(idx)"
-                                        @click="addRow()"
-                                    >
-                                        {{ $ui('add_vehicle', 'Dodaj vozilo') }}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        class="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-widest text-gray-800 hover:bg-gray-50"
-                                        x-show="!isAddVisible(idx)"
-                                        @click="confirmRemove(idx)"
-                                    >
-                                        {{ $ui('remove_vehicle', 'Ukloni vozilo') }}
-                                    </button>
-                                </div>
-                            </div>
-                        </template>
-
-                        <p class="text-xs text-gray-500">{{ $ui('vehicles_limit', 'Minimum 1, maksimum 9 vozila.') }}</p>
+                    <div class="sm:col-span-2 flex sm:justify-end pt-6">
+                        <button
+                            type="button"
+                            class="inline-flex items-center justify-center rounded-md bg-gray-800 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-white hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            :disabled="segments.length >= 5"
+                            @click="addSegment()"
+                        >
+                            {{ $ui('add_segment', 'Dodaj dolazak i odlazak') }}
+                        </button>
                     </div>
                 </div>
-            </form>
+
+                <template x-for="(seg, sIdx) in segments" :key="seg.key">
+                    <div class="rounded-md border border-gray-200 p-4 space-y-3">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="text-sm font-semibold text-gray-900">
+                                {{ $ui('segment_title', 'Dolazak i odlazak') }} <span x-text="sIdx + 1"></span>
+                            </div>
+                            <button
+                                type="button"
+                                class="text-xs font-semibold uppercase tracking-widest text-gray-700 hover:text-gray-900"
+                                x-show="segments.length > 1"
+                                @click="removeSegment(sIdx)"
+                            >
+                                {{ $ui('remove_segment', 'Ukloni segment') }}
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block font-medium text-sm text-gray-700" x-bind:for="'seg_' + sIdx + '_drop'">
+                                    {{ \App\Support\UiText::t('reservation', 'arrival_time') }}
+                                </label>
+                                <select
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    :id="'seg_' + sIdx + '_drop'"
+                                    :name="'segments[' + sIdx + '][drop_off_time_slot_id]'"
+                                    x-model="seg.drop"
+                                    form="fzbrPostForm"
+                                    required
+                                    :disabled="!selectedDate"
+                                    @change="onArrivalChange(sIdx)"
+                                >
+                                    <option value="">{{ \App\Support\UiText::t('reservation', 'select_time_slot') }}</option>
+                                    <template x-for="opt in arrivalSlots" :key="opt.id">
+                                        <option :value="opt.id" :disabled="!!opt.disabled" x-text="opt.label"></option>
+                                    </template>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block font-medium text-sm text-gray-700" x-bind:for="'seg_' + sIdx + '_pick'">
+                                    {{ \App\Support\UiText::t('reservation', 'departure_time') }}
+                                </label>
+                                <select
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    :id="'seg_' + sIdx + '_pick'"
+                                    :name="'segments[' + sIdx + '][pick_up_time_slot_id]'"
+                                    x-model="seg.pick"
+                                    form="fzbrPostForm"
+                                    required
+                                    :disabled="!selectedDate || !seg.drop"
+                                >
+                                    <option value="">{{ \App\Support\UiText::t('reservation', 'select_time_slot') }}</option>
+                                    <template x-for="opt in (seg.departureSlots || [])" :key="opt.id">
+                                        <option :value="opt.id" :disabled="!!opt.disabled" x-text="opt.label"></option>
+                                    </template>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="pt-1 space-y-2">
+                            <div class="text-sm font-semibold text-gray-900">{{ $ui('vehicles_title', 'Vozila') }}</div>
+
+                            <template x-for="(row, vIdx) in seg.rows" :key="`${seg.key}_${vIdx}`">
+                                <div class="grid grid-cols-1 md:grid-cols-12 gap-2 items-start">
+                                    <div class="md:col-span-10 min-w-0">
+                                        <select
+                                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                            :name="'segments[' + sIdx + '][vehicles][' + vIdx + ']'"
+                                            form="fzbrPostForm"
+                                            x-model="row.vehicle_id"
+                                            @change="onVehiclesChanged(sIdx)"
+                                            required
+                                        >
+                                            <option value="">{{ $ui('select_vehicle', 'Izaberite vozilo') }}</option>
+                                            <template x-for="opt in optionsForVehicle(sIdx, vIdx)" :key="opt.id">
+                                                <option :value="opt.id" x-text="opt.label"></option>
+                                            </template>
+                                        </select>
+                                    </div>
+                                    <div class="md:col-span-2 flex gap-2 md:justify-end pt-6 min-w-0">
+                                        <button
+                                            type="button"
+                                            class="inline-flex items-center justify-center rounded-md bg-gray-800 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-white hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            x-show="vIdx === seg.rows.length - 1"
+                                            :disabled="!canAddVehicle(sIdx, vIdx)"
+                                            @click="addVehicleRow(sIdx)"
+                                        >
+                                            {{ $ui('add_vehicle', 'Dodaj vozilo') }}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-widest text-gray-800 hover:bg-gray-50"
+                                            x-show="vIdx !== seg.rows.length - 1"
+                                            @click="confirmRemoveVehicle(sIdx, vIdx)"
+                                        >
+                                            {{ $ui('remove_vehicle', 'Ukloni vozilo') }}
+                                        </button>
+                                    </div>
+                                </div>
+                            </template>
+
+                            @php
+                                $maxSegVehicles = (int) ($maxVehiclesPerSegment ?? 0);
+                                if ($maxSegVehicles <= 0) {
+                                    $maxSegVehicles = 9;
+                                }
+                                $limitTpl = (string) $ui('vehicles_limit_dynamic', 'Maksimalan broj vozila po segmentu: %1$d.');
+                                $limitText = sprintf($limitTpl, $maxSegVehicles);
+                            @endphp
+                            <p class="text-xs text-gray-500">{{ $limitText }}</p>
+                        </div>
+                    </div>
+                </template>
+            </div>
 
             <div x-show="showConfirm" class="fixed inset-0 z-50 flex items-center justify-center">
                 <div class="absolute inset-0 bg-black/50" @click="cancelRemove()"></div>
@@ -207,10 +255,6 @@
             {{-- Cjelina 2: Dokumenta + privatnost + submit --}}
             <form method="POST" id="fzbrPostForm" action="{{ route('panel.fzbr.store', [], false) }}" enctype="multipart/form-data" class="space-y-4 bg-white shadow sm:rounded-lg p-6">
                 @csrf
-
-                <input type="hidden" name="reservation_date" id="post_reservation_date" value="{{ $selected_date ?? '' }}">
-                <input type="hidden" name="drop_off_time_slot_id" id="post_drop_off_time_slot_id" value="{{ $arrival_id ?? '' }}">
-                <input type="hidden" name="pick_up_time_slot_id" id="post_pick_up_time_slot_id" value="{{ $departure_id ?? '' }}">
 
                 <div class="space-y-2">
                     <x-input-label for="documents" :value="$uploadLabel" />
@@ -263,12 +307,19 @@
     <script>
         function fzbrForm() {
             const all = @json($fzbrVehicleOptions);
+            const maxVehiclesPerSegment = {{ (int) ($maxVehiclesPerSegment ?? 0) }};
 
             return {
                 tick: 0,
-                rows: [{ vehicle_id: '' }],
+                maxVehiclesPerSegment,
+                selectedDate: '',
+                arrivalSlots: [],
+                segments: [
+                    { key: 'seg_1', drop: '', pick: '', departureSlots: [], rows: [{ vehicle_id: '' }] },
+                ],
+
                 showConfirm: false,
-                pendingRemoveIdx: null,
+                pending: { sIdx: null, vIdx: null },
 
                 init() {
                     const docs = document.getElementById('documents');
@@ -281,66 +332,209 @@
                         privacy.addEventListener('change', () => { this.tick++; });
                         privacy.addEventListener('input', () => { this.tick++; });
                     }
+                    const date = document.getElementById('reservation_date');
+                    if (date) {
+                        date.addEventListener('change', () => { this.tick++; });
+                        date.addEventListener('input', () => { this.tick++; });
+                    }
+
+                    // initial load if date prefilled (browser restore / old input)
+                    const initial = document.getElementById('reservation_date')?.value || '';
+                    if (initial) {
+                        this.selectedDate = initial;
+                        this.onDateChange();
+                    }
                 },
 
-                get selectedIds() {
-                    return this.rows.map(r => String(r.vehicle_id || '')).filter(v => v !== '');
+                async fetchSlots(params) {
+                    const qs = new URLSearchParams(params);
+                    const res = await fetch('{{ route('panel.fzbr.slots', [], false) }}' + '?' + qs.toString(), {
+                        headers: { 'Accept': 'application/json' },
+                        credentials: 'same-origin',
+                    });
+                    if (!res.ok) throw new Error('slots fetch failed');
+                    return await res.json();
                 },
 
-                optionsFor(idx) {
-                    const current = String(this.rows[idx]?.vehicle_id || '');
-                    const selected = new Set(this.selectedIds.filter(v => v !== current));
+                segmentVehicleRequired(seg) {
+                    const rows = Array.isArray(seg?.rows) ? seg.rows : [];
+                    const selected = rows.map(r => String(r?.vehicle_id || '')).filter(v => v !== '');
+                    if (selected.length > 0) return selected.length;
+                    return Math.max(1, rows.length);
+                },
+
+                maxSegmentVehicleRequired() {
+                    let m = 1;
+                    for (const seg of this.segments) {
+                        m = Math.max(m, this.segmentVehicleRequired(seg));
+                    }
+                    return m;
+                },
+
+                // opts.resetDepartures: default true (e.g. date change). Pass false when only vehicle counts changed
+                // so departure stays selected if still valid. (No Blade double-brace syntax in this file's scripts.)
+                async onDateChange(opts = {}) {
+                    const resetDepartures = opts.resetDepartures !== false;
+                    const date = String(this.selectedDate || '');
+                    if (!date) {
+                        this.arrivalSlots = [];
+                        for (const seg of this.segments) {
+                            seg.drop = '';
+                            seg.pick = '';
+                            seg.departureSlots = [];
+                        }
+                        return;
+                    }
+
+                    try {
+                        const required = String(this.maxSegmentVehicleRequired());
+                        const data = await this.fetchSlots({ reservation_date: date, required });
+                        this.arrivalSlots = Array.isArray(data.arrival_slots) ? data.arrival_slots : [];
+
+                        for (let i = 0; i < this.segments.length; i++) {
+                            const seg = this.segments[i];
+                            const allowedArrival = new Set(this.arrivalSlots.filter(s => !s.disabled).map(s => String(s.id)));
+                            if (seg.drop && !allowedArrival.has(String(seg.drop))) {
+                                seg.drop = '';
+                            }
+                            if (!seg.drop) {
+                                seg.pick = '';
+                                seg.departureSlots = [];
+                                continue;
+                            }
+                            if (resetDepartures) {
+                                seg.pick = '';
+                                seg.departureSlots = [];
+                            }
+                            await this.onArrivalChange(i);
+                        }
+                    } catch (e) {
+                        // fail closed: no slots selectable if endpoint fails
+                        this.arrivalSlots = [];
+                        for (const seg of this.segments) {
+                            seg.drop = '';
+                            seg.pick = '';
+                            seg.departureSlots = [];
+                        }
+                    }
+                },
+
+                async onArrivalChange(sIdx) {
+                    const date = String(this.selectedDate || '');
+                    const seg = this.segments[sIdx];
+                    if (!date || !seg) return;
+                    const drop = String(seg.drop || '');
+                    if (!drop) {
+                        seg.pick = '';
+                        seg.departureSlots = [];
+                        return;
+                    }
+
+                    try {
+                        const required = String(this.segmentVehicleRequired(seg));
+                        const data = await this.fetchSlots({ reservation_date: date, drop_off_time_slot_id: drop, required });
+                        seg.departureSlots = Array.isArray(data.departure_slots) ? data.departure_slots : [];
+                        const allowed = new Set(seg.departureSlots.filter(s => !s.disabled).map(s => String(s.id)));
+                        if (seg.pick && !allowed.has(String(seg.pick))) {
+                            seg.pick = '';
+                        }
+                    } catch (e) {
+                        seg.pick = '';
+                        seg.departureSlots = [];
+                    }
+                },
+
+                addSegment() {
+                    if (this.segments.length >= 5) return;
+                    const n = this.segments.length + 1;
+                    this.segments.push({ key: `seg_${Date.now()}_${n}`, drop: '', pick: '', departureSlots: [], rows: [{ vehicle_id: '' }] });
+                },
+
+                removeSegment(sIdx) {
+                    if (this.segments.length <= 1) return;
+                    this.segments.splice(sIdx, 1);
+                    if (this.selectedDate) {
+                        this.onDateChange();
+                    }
+                },
+
+                selectedIdsInSegment(sIdx) {
+                    const seg = this.segments[sIdx];
+                    if (!seg) return [];
+                    return seg.rows.map(r => String(r.vehicle_id || '')).filter(v => v !== '');
+                },
+
+                optionsForVehicle(sIdx, vIdx) {
+                    const seg = this.segments[sIdx];
+                    const current = String(seg?.rows?.[vIdx]?.vehicle_id || '');
+                    const selected = new Set(this.selectedIdsInSegment(sIdx).filter(v => v !== current));
                     return all.filter(o => !selected.has(String(o.id)) || String(o.id) === current);
                 },
 
-                isAddVisible(idx) {
-                    return idx === this.rows.length - 1;
-                },
-
-                canAdd(idx) {
-                    if (this.rows.length >= 9) return false;
-                    const v = String(this.rows[idx]?.vehicle_id || '');
+                canAddVehicle(sIdx, vIdx) {
+                    const seg = this.segments[sIdx];
+                    if (!seg) return false;
+                    if (this.maxVehiclesPerSegment > 0 && seg.rows.length >= this.maxVehiclesPerSegment) return false;
+                    const v = String(seg.rows[vIdx]?.vehicle_id || '');
                     return v !== '';
                 },
 
-                addRow() {
-                    if (this.rows.length >= 9) return;
-                    const last = this.rows[this.rows.length - 1];
+                addVehicleRow(sIdx) {
+                    const seg = this.segments[sIdx];
+                    if (!seg) return;
+                    if (this.maxVehiclesPerSegment > 0 && seg.rows.length >= this.maxVehiclesPerSegment) return;
+                    const last = seg.rows[seg.rows.length - 1];
                     if (!last || !String(last.vehicle_id || '')) return;
-                    this.rows.push({ vehicle_id: '' });
+                    seg.rows.push({ vehicle_id: '' });
+                    this.onVehiclesChanged(sIdx);
                 },
 
-                confirmRemove(idx) {
-                    this.pendingRemoveIdx = idx;
+                confirmRemoveVehicle(sIdx, vIdx) {
+                    this.pending = { sIdx, vIdx };
                     this.showConfirm = true;
                 },
 
                 cancelRemove() {
                     this.showConfirm = false;
-                    this.pendingRemoveIdx = null;
+                    this.pending = { sIdx: null, vIdx: null };
                 },
 
                 applyRemove() {
-                    const idx = this.pendingRemoveIdx;
-                    if (idx === null) return;
-                    if (this.rows.length <= 1) {
-                        this.rows[0].vehicle_id = '';
+                    const { sIdx, vIdx } = this.pending || {};
+                    if (sIdx === null || vIdx === null) return;
+                    const seg = this.segments[sIdx];
+                    if (!seg) return;
+                    if (seg.rows.length <= 1) {
+                        seg.rows[0].vehicle_id = '';
                     } else {
-                        this.rows.splice(idx, 1);
-                        if (this.rows.length < 1) this.rows = [{ vehicle_id: '' }];
+                        seg.rows.splice(vIdx, 1);
+                        if (seg.rows.length < 1) seg.rows = [{ vehicle_id: '' }];
                     }
                     this.showConfirm = false;
-                    this.pendingRemoveIdx = null;
+                    this.pending = { sIdx: null, vIdx: null };
+                    this.onVehiclesChanged(sIdx);
+                },
+
+                async onVehiclesChanged(sIdx) {
+                    void this.tick;
+                    // Changing required vehicle count can change which slots are eligible.
+                    if (!this.selectedDate) return;
+                    // Do not wipe departure picks: onArrivalChange() revalidates against new capacity.
+                    await this.onDateChange({ resetDepartures: false });
                 },
 
                 get canSubmit() {
-                    // Touch tick so Alpine recomputes when file/checkbox changes.
                     void this.tick;
-                    const date = document.getElementById('post_reservation_date')?.value || '';
-                    const drop = document.getElementById('post_drop_off_time_slot_id')?.value || '';
-                    const pick = document.getElementById('post_pick_up_time_slot_id')?.value || '';
-                    if (!date || !drop || !pick) return false;
-                    if (this.selectedIds.length < 1) return false;
+                    const date = document.getElementById('reservation_date')?.value || '';
+                    if (!date) return false;
+
+                    if (!this.segments || this.segments.length < 1 || this.segments.length > 5) return false;
+                    for (const seg of this.segments) {
+                        if (!String(seg.drop || '') || !String(seg.pick || '')) return false;
+                        const ids = (seg.rows || []).map(r => String(r.vehicle_id || '')).filter(v => v !== '');
+                        if (ids.length < 1) return false;
+                    }
+
                     const docs = document.getElementById('documents');
                     if (!docs || !docs.files || docs.files.length < 1) return false;
                     const privacy = document.querySelector('input[name="accept_privacy"]');
@@ -349,28 +543,6 @@
                 },
             }
         }
-
-        (function () {
-            const stepForm = document.getElementById('fzbrStepForm');
-            if (!stepForm) return;
-            const date = document.getElementById('reservation_date');
-            const arrival = document.getElementById('drop_off_time_slot_id');
-            const departure = document.getElementById('pick_up_time_slot_id');
-            const postDate = document.getElementById('post_reservation_date');
-            const postArrival = document.getElementById('post_drop_off_time_slot_id');
-            const postDeparture = document.getElementById('post_pick_up_time_slot_id');
-
-            function sync() {
-                if (postDate && date) postDate.value = date.value || '';
-                if (postArrival && arrival) postArrival.value = arrival.value || '';
-                if (postDeparture && departure) postDeparture.value = departure.value || '';
-            }
-
-            if (date) date.addEventListener('change', () => { sync(); stepForm.submit(); });
-            if (arrival) arrival.addEventListener('change', () => { sync(); stepForm.submit(); });
-            if (departure) departure.addEventListener('change', () => { sync(); stepForm.submit(); });
-            sync();
-        })();
     </script>
 </x-app-layout>
 

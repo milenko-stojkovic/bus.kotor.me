@@ -2,11 +2,12 @@
 
 namespace App\Services\AdminPanel\Reports;
 
+use Carbon\Carbon;
 use App\Models\Reservation;
 use App\Models\VehicleType;
 use App\Services\Reservation\PanelReservationListService;
-use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 final class AdminReportsService
 {
@@ -83,6 +84,54 @@ final class AdminReportsService
         return [
             'rows' => $out,
             'total' => $total,
+        ];
+    }
+
+    /**
+     * Snapshot of advance obligations "as of" a given timestamp (end-of-day).
+     * Ledger (agency_advance_transactions) is the source of truth.
+     *
+     * @return array{rows:list<array{agency_user_id:int,agency:string,email:string,topup_total:float,usage_total:float,correction_total:float,balance:float}>,total_obligations_eur:float,as_of:string}
+     */
+    public function advanceObligationsSnapshot(Carbon $asOf): array
+    {
+        $rows = DB::table('agency_advance_transactions as aat')
+            ->join('users', 'users.id', '=', 'aat.agency_user_id')
+            ->where('aat.created_at', '<=', $asOf->toDateTimeString())
+            ->select([
+                'aat.agency_user_id',
+                'users.name as agency_name',
+                'users.email as agency_email',
+                DB::raw("COALESCE(SUM(CASE WHEN aat.type = 'topup' THEN aat.amount ELSE 0 END), 0) as topup_total"),
+                // usage is negative; return as positive total
+                DB::raw("COALESCE(-1 * SUM(CASE WHEN aat.type = 'usage' THEN aat.amount ELSE 0 END), 0) as usage_total"),
+                DB::raw("COALESCE(SUM(CASE WHEN aat.type = 'correction' THEN aat.amount ELSE 0 END), 0) as correction_total"),
+                DB::raw('COALESCE(SUM(aat.amount), 0) as balance'),
+            ])
+            ->groupBy('aat.agency_user_id', 'users.name', 'users.email')
+            ->orderByDesc(DB::raw('COALESCE(SUM(aat.amount), 0)'))
+            ->get();
+
+        $out = [];
+        $total = 0.0;
+        foreach ($rows as $r) {
+            $bal = (float) $r->balance;
+            $out[] = [
+                'agency_user_id' => (int) $r->agency_user_id,
+                'agency' => (string) $r->agency_name,
+                'email' => (string) $r->agency_email,
+                'topup_total' => (float) $r->topup_total,
+                'usage_total' => (float) $r->usage_total,
+                'correction_total' => (float) $r->correction_total,
+                'balance' => $bal,
+            ];
+            $total += $bal;
+        }
+
+        return [
+            'rows' => $out,
+            'total_obligations_eur' => $total,
+            'as_of' => $asOf->toDateTimeString(),
         ];
     }
 

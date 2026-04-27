@@ -3,7 +3,7 @@
         <h1 class="text-2xl font-semibold text-gray-900">Kontrola</h1>
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4 text-sm">
             <span class="text-gray-600">
-                Posljednji osvježaj:
+                Posljednje osvježavanje:
                 <time id="last-refresh-time" datetime=""></time>
             </span>
             <button type="button" id="btn-refresh-now" class="inline-flex justify-center rounded-md bg-slate-700 px-4 py-2 font-medium text-white hover:bg-slate-800">
@@ -50,6 +50,27 @@
             </div>
         @endif
     </section>
+
+    @php
+        $charts = $capacityCharts ?? null;
+    @endphp
+    @if (is_array($charts) && isset($charts['today'], $charts['tomorrow']))
+        <div class="mb-10 space-y-6">
+            @include('partials.daily-capacity-chart', [
+                'dataset' => $charts['today'],
+                'title' => 'Kapacitet po terminima — danas',
+                'chartId' => 'capacity-chart-control-today',
+                'scriptId' => 'capacity-chart-control-today-data',
+            ])
+
+            @include('partials.daily-capacity-chart', [
+                'dataset' => $charts['tomorrow'],
+                'title' => 'Kapacitet po terminima — sjutra',
+                'chartId' => 'capacity-chart-control-tomorrow',
+                'scriptId' => 'capacity-chart-control-tomorrow-data',
+            ])
+        </div>
+    @endif
 
     <section class="bg-white shadow rounded-lg p-4 sm:p-6">
         <h2 class="text-lg font-semibold text-gray-900 mb-4">Pretraga rezervacija</h2>

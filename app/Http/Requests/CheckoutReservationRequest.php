@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Validation\Rule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 class CheckoutReservationRequest extends FormRequest
 {
@@ -33,10 +34,16 @@ class CheckoutReservationRequest extends FormRequest
         $authUser = $this->user();
         $usingSavedVehicle = $authUser !== null && $this->filled('vehicle_id');
         $panelAuthBooking = $authUser !== null && $this->boolean('auth_panel_booking');
+        $advanceEnabled = (bool) config('features.advance_payments');
 
         return [
             // Opciono: ako frontend pošalje, koristi se za dupli klik; inače backend generiše UUID
             'merchant_transaction_id' => ['nullable', 'string', 'max:64'],
+            'payment_method' => [
+                $panelAuthBooking ? 'nullable' : 'prohibited',
+                'string',
+                'in:card,advance',
+            ],
             'auth_panel_booking' => ['nullable', 'boolean'],
             'vehicle_id' => [
                 $panelAuthBooking ? 'required' : 'nullable',
@@ -61,5 +68,26 @@ class CheckoutReservationRequest extends FormRequest
             'accept_terms' => ['required', 'accepted'],
             'accept_privacy' => ['required', 'accepted'],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            $authUser = $this->user();
+            $panelAuthBooking = $authUser !== null && $this->boolean('auth_panel_booking');
+            if (! $panelAuthBooking) {
+                return;
+            }
+
+            $method = $this->input('payment_method');
+            $method = is_string($method) ? trim($method) : '';
+            if ($method === '') {
+                return;
+            }
+
+            if ($method === 'advance' && ! (bool) config('features.advance_payments')) {
+                $validator->errors()->add('payment_method', 'Avansno plaćanje trenutno nije dostupno.');
+            }
+        });
     }
 }

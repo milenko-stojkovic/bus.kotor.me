@@ -6,6 +6,7 @@ use App\Mail\AgencyFreeReservationRequestSubmittedMail;
 use App\Models\AdminAlert;
 use App\Models\FreeReservationRequest;
 use App\Models\FreeReservationRequestAttachment;
+use App\Models\FreeReservationRequestSegment;
 use App\Models\FreeReservationRequestVehicle;
 use App\Models\ListOfTimeSlot;
 use App\Models\Reservation;
@@ -52,9 +53,18 @@ class FzbrIntakeTest extends TestCase
 
         $this->post(route('panel.fzbr.store', [], false), [
             'reservation_date' => $d,
-            'drop_off_time_slot_id' => $drop->id,
-            'pick_up_time_slot_id' => $pick->id,
-            'vehicles' => [$v1->id, $v2->id],
+            'segments' => [
+                [
+                    'drop_off_time_slot_id' => $drop->id,
+                    'pick_up_time_slot_id' => $pick->id,
+                    'vehicles' => [$v1->id],
+                ],
+                [
+                    'drop_off_time_slot_id' => $drop->id,
+                    'pick_up_time_slot_id' => $pick->id,
+                    'vehicles' => [$v2->id],
+                ],
+            ],
             'documents' => [
                 UploadedFile::fake()->create('osnov.pdf', 120, 'application/pdf'),
                 UploadedFile::fake()->image('dokaz.jpg', 800, 600),
@@ -72,8 +82,14 @@ class FzbrIntakeTest extends TestCase
         $this->assertNull($req->institution_phone);
         $this->assertSame($d, $req->reservation_date->toDateString());
 
+        $segments = FreeReservationRequestSegment::query()->where('request_id', $req->id)->orderBy('position')->get();
+        $this->assertCount(2, $segments);
+
         $snapVehicles = FreeReservationRequestVehicle::query()->where('request_id', $req->id)->orderBy('id')->get();
         $this->assertCount(2, $snapVehicles);
+        $this->assertNotNull($snapVehicles[0]->segment_id);
+        $this->assertNotNull($snapVehicles[1]->segment_id);
+        $this->assertNotSame((int) $snapVehicles[0]->segment_id, (int) $snapVehicles[1]->segment_id);
         $this->assertSame($v1->id, (int) $snapVehicles[0]->agency_vehicle_id);
         $this->assertSame('KO111AA', $snapVehicles[0]->license_plate);
         $this->assertSame($vt->id, (int) $snapVehicles[0]->vehicle_type_id);

@@ -32,11 +32,10 @@ Stranica: **`GET /panel/fzbr`** (`panel.fzbr.create`).
 
 Forma je podijeljena u dvije cjeline:
 
-- **Cjelina 1 (termin + vozila):**
-  - Datum
-  - Vrijeme dolaska
-  - Vrijeme odlaska
-  - Vozila (iz voznog parka ulogovane agencije; min 1, max 9; bez duplikata)
+- **Cjelina 1 (datum + segmenti + vozila):**
+  - Datum (jedan datum po zahtjevu)
+  - Segmenti (min 1, max 5): svaki segment je jedan par **Vrijeme dolaska** + **Vrijeme odlaska**
+  - Vozila po segmentu (iz voznog parka ulogovane agencije; min 1; max = `system_config.available_parking_slots`; bez duplikata unutar segmenta)
 
 - **Cjelina 2 (dokaz + saglasnost + slanje):**
   - Upload dokumentacije (slike/PDF, ukupno do 10 MB)

@@ -12,10 +12,14 @@ use App\Models\ListOfTimeSlot;
 use App\Models\Reservation;
 use App\Models\TempData;
 use App\Models\Vehicle;
+use App\Models\User;
+use App\Models\AgencyAdvanceTransaction;
 use App\Services\Payment\PaymentSuccessHandler;
 use App\Services\Reservation\DuplicateReservationAttemptService;
 use App\Services\Reservation\FreeReservationRules;
 use App\Support\CheckoutResultFlash;
+use App\Support\QueueMode;
+use App\Support\ReservationInvoiceAmount;
 use App\Support\UiText;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -23,6 +27,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use App\Jobs\ProcessReservationAfterPaymentJob;
 
 /**
  * Checkout: validacija, dostupnost, temp_data (pending), sync createSession, redirect na banku.
@@ -60,6 +65,131 @@ class CheckoutController extends Controller
 
         $isFree = FreeReservationRules::isFreeReservation($arrivalSlot, $departureSlot);
         $snapshot = $this->resolveSnapshotInput($request);
+        $panelAuthBooking = $request->user() !== null && $request->boolean('auth_panel_booking');
+        $paymentMethod = $panelAuthBooking ? (string) ($request->validated('payment_method') ?? 'card') : 'card';
+
+        // Agency advance payment (feature-flagged). Only for authenticated panel booking; never for guest.
+        if ($panelAuthBooking && $paymentMethod === 'advance' && ! $isFree) {
+            if (! (bool) config('features.advance_payments')) {
+                $msg = 'Avansno plaćanje trenutno nije dostupno.';
+                return back()->withInput()->with('error', $msg)->withErrors(['payment_method' => $msg]);
+            }
+
+            $invoiceAmount = ReservationInvoiceAmount::snapshotForNewReservation('paid', $snapshot['vehicle_type_id'] ?? null);
+            $userId = (int) $request->user()->id;
+
+            // Allow frontend-supplied merchant_transaction_id for double-submit idempotency.
+            $merchantTransactionId = $request->validated('merchant_transaction_id');
+            $merchantTransactionId = is_string($merchantTransactionId) && trim($merchantTransactionId) !== ''
+                ? trim($merchantTransactionId)
+                : Str::uuid()->toString();
+
+            try {
+                $reservation = DB::transaction(function () use ($date, $dropOffSlotId, $pickUpSlotId, $snapshot, $invoiceAmount, $userId, $merchantTransactionId) {
+                    // Lock agency user row to serialize advance spending (prevents double-spend).
+                    User::query()->whereKey($userId)->lockForUpdate()->first();
+
+                    $slotIds = array_values(array_unique([(int) $dropOffSlotId, (int) $pickUpSlotId]));
+                    $dailyRows = DailyParkingData::query()
+                        ->whereDate('date', $date)
+                        ->whereIn('time_slot_id', $slotIds)
+                        ->lockForUpdate()
+                        ->get()
+                        ->keyBy('time_slot_id');
+
+                    foreach ($slotIds as $slotId) {
+                        $daily = $dailyRows->get($slotId);
+                        if (! $daily || $daily->is_blocked || $daily->availableCapacity() < 1) {
+                            throw new NoCapacityException(__('No availability for selected slot.'));
+                        }
+                    }
+
+                    // Balance under lock.
+                    $balance = (float) (DB::table('agency_advance_transactions')
+                        ->where('agency_user_id', $userId)
+                        ->selectRaw('COALESCE(SUM(amount), 0) as s')
+                        ->value('s') ?? 0);
+                    $need = (float) $invoiceAmount;
+                    if ($balance + 0.000001 < $need) {
+                        $msg = 'Raspoloživi avans nije dovoljan za ovu rezervaciju. Možete izabrati plaćanje karticom ili izvršiti avansnu uplatu.';
+                        abort(422, $msg);
+                    }
+
+                    // Create reservation paid immediately (no temp_data, no bank).
+                    $reservation = Reservation::create([
+                        'user_id' => $userId,
+                        'vehicle_id' => $snapshot['vehicle_id'],
+                        'merchant_transaction_id' => $merchantTransactionId,
+                        'payment_method' => 'advance',
+                        'drop_off_time_slot_id' => (int) $dropOffSlotId,
+                        'pick_up_time_slot_id' => (int) $pickUpSlotId,
+                        'reservation_date' => $date,
+                        'user_name' => $snapshot['user_name'],
+                        'country' => $snapshot['country'],
+                        'license_plate' => $snapshot['license_plate'],
+                        'vehicle_type_id' => $snapshot['vehicle_type_id'],
+                        'email' => $snapshot['email'],
+                        'preferred_locale' => $snapshot['preferred_locale'] ?? app()->getLocale(),
+                        'status' => 'paid',
+                        'invoice_amount' => $invoiceAmount,
+                        'email_sent' => Reservation::EMAIL_NOT_SENT,
+                        'created_by_admin' => false,
+                    ]);
+
+                    // Consume capacity immediately.
+                    foreach ($slotIds as $slotId) {
+                        /** @var DailyParkingData|null $row */
+                        $row = $dailyRows->get($slotId);
+                        if ($row) {
+                            $row->increment('reserved');
+                        }
+                    }
+
+                    // Ledger usage (negative).
+                    AgencyAdvanceTransaction::query()->create([
+                        'agency_user_id' => $userId,
+                        'amount' => number_format(-1 * (float) $invoiceAmount, 2, '.', ''),
+                        'type' => AgencyAdvanceTransaction::TYPE_USAGE,
+                        'reference_type' => 'reservation',
+                        'reference_id' => (int) $reservation->id,
+                        'merchant_transaction_id' => $reservation->merchant_transaction_id,
+                        'note' => 'Plaćanje rezervacije iz avansa',
+                    ]);
+
+                    return $reservation;
+                });
+            } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+                // Double submit with same merchant_transaction_id: return existing reservation.
+                $existing = Reservation::query()->where('merchant_transaction_id', $merchantTransactionId)->first();
+                if ($existing) {
+                    $reservation = $existing;
+                } else {
+                    throw $e;
+                }
+            } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+                if ($e->getStatusCode() === 422) {
+                    return back()->withInput()->with('error', $e->getMessage())->withErrors(['payment_method' => $e->getMessage()]);
+                }
+                throw $e;
+            } catch (NoCapacityException $e) {
+                $message = $e->getMessage();
+                return $request->expectsJson()
+                    ? response()->json(['message' => $message], 422)
+                    : response($message, 422);
+            }
+
+            // Dispatch invoice/fiscal pipeline as for paid reservations.
+            $bankFake = (string) config('services.bank.driver', 'fake') === 'fake';
+            $fiscalFake = (string) config('services.fiscalization.driver', 'fake') === 'fake';
+            if ($bankFake && $fiscalFake) {
+                QueueMode::dispatchForFakeE2e(new ProcessReservationAfterPaymentJob($reservation->id));
+            } else {
+                ProcessReservationAfterPaymentJob::dispatch($reservation->id);
+            }
+
+            return redirect()->to(route('panel.reservations', [], false))
+                ->with('checkout_banner', CheckoutResultFlash::forReservationSuccess(false, true, false));
+        }
 
         // Business validation (pre-payment): prevent duplicate attempts for same date+plate+same drop OR same pick.
         // NOTE: intentionally does NOT block cross-match (drop=pick / pick=drop).

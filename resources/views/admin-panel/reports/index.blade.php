@@ -3,10 +3,10 @@
     /** @var string $maxDate */
 @endphp
 
-<x-admin-panel-layout :page-title="$pageTitle ?? 'Izveštaji'" nav-active="reports">
+<x-admin-panel-layout :page-title="$pageTitle ?? 'Izvještaji'" nav-active="reports">
     <div class="space-y-6" x-data="reportsWizard()">
         <div>
-            <h1 class="text-lg font-semibold text-gray-900">Izveštaji</h1>
+            <h1 class="text-lg font-semibold text-gray-900">Izvještaji</h1>
             <p class="text-sm text-gray-600 mt-1">Izaberi tip izveštaja i vremenski opseg, zatim generiši PDF u novom tabu.</p>
         </div>
 
@@ -28,18 +28,23 @@
                             <span>Dnevni</span>
                         </label>
                         <label class="flex items-center gap-2">
-                            <input type="radio" name="when" value="monthly" class="rounded border-gray-300" x-model="when">
+                            <input type="radio" name="when" value="monthly" class="rounded border-gray-300" x-model="when" :disabled="kind === 'advance_obligations'">
                             <span>Mjesečni</span>
                         </label>
                         <label class="flex items-center gap-2">
-                            <input type="radio" name="when" value="yearly" class="rounded border-gray-300" x-model="when">
+                            <input type="radio" name="when" value="yearly" class="rounded border-gray-300" x-model="when" :disabled="kind === 'advance_obligations'">
                             <span>Godišnji</span>
                         </label>
                         <label class="flex items-center gap-2">
-                            <input type="radio" name="when" value="period" class="rounded border-gray-300" x-model="when">
+                            <input type="radio" name="when" value="period" class="rounded border-gray-300" x-model="when" :disabled="kind === 'advance_obligations'">
                             <span>Period</span>
                         </label>
                     </div>
+                    @if ((bool) config('features.advance_payments'))
+                        <div class="text-xs text-gray-500 mt-2" x-show="kind === 'advance_obligations'">
+                            Za “Obaveze po avansima” koristi se samo dnevni izbor (stanje na dan).
+                        </div>
+                    @endif
                 </div>
 
                 <div>
@@ -57,6 +62,12 @@
                             <input type="radio" name="kind" value="by_vehicle_type" class="rounded border-gray-300" x-model="kind">
                             <span>Po tipu vozila</span>
                         </label>
+                        @if ((bool) config('features.advance_payments'))
+                            <label class="flex items-center gap-2">
+                                <input type="radio" name="kind" value="advance_obligations" class="rounded border-gray-300" x-model="kind" @change="when = 'daily'">
+                                <span>Obaveze po avansima</span>
+                            </label>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -73,7 +84,8 @@
 
         <div class="bg-white shadow rounded-lg p-6 border border-gray-100" x-show="step === 2" x-cloak>
             <div class="text-sm font-semibold text-gray-900">Izbor opsega</div>
-            <p class="text-sm text-gray-600 mt-1">Opseg je ograničen na datume kreiranja rezervacija (created_at).</p>
+            <p class="text-sm text-gray-600 mt-1" x-show="kind !== 'advance_obligations'">Opseg je ograničen na datume kreiranja rezervacija (created_at).</p>
+            <p class="text-sm text-gray-600 mt-1" x-show="kind === 'advance_obligations'">Snapshot izvještaj: stanje se računa po ledger transakcijama (created_at) zaključno sa krajem izabranog dana.</p>
 
             <form method="get"
                   target="_blank"
@@ -84,7 +96,8 @@
 
                 <template x-if="when === 'daily'">
                     <div class="max-w-sm">
-                        <x-input-label for="date" value="Datum" />
+                        <label for="date" class="block text-sm font-medium text-gray-700" x-show="kind !== 'advance_obligations'">Datum</label>
+                        <label for="date" class="block text-sm font-medium text-gray-700" x-show="kind === 'advance_obligations'">Stanje na dan</label>
                         <input type="date"
                                id="date"
                                name="date"

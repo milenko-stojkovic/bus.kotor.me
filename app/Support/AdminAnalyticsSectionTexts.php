@@ -20,6 +20,7 @@ final class AdminAnalyticsSectionTexts
             'paid_vs_free' => 'Odnos plaćenih i besplatnih rezervacija i njihov uticaj na zauzetost.',
             'blocking' => 'Kapacitet izgubljen zbog administrativnog blokiranja termina i dana.',
             'ops' => 'Operativni signali o problematičnim pokušajima plaćanja i fiskalnim kašnjenjima.',
+            'advance_balances' => 'Pregled trenutnog stanja neiskorišćenih avansnih sredstava po agencijama. Ovaj iznos ne predstavlja prihod, već evidenciju raspoloživih sredstava za buduće usluge.',
         ];
     }
 }

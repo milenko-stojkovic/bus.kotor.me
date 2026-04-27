@@ -19,6 +19,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
@@ -34,9 +35,9 @@ class FreeReservationController extends Controller
                 FreeReservationRequest::STATUS_UPDATED,
             ])
             ->with([
-                'dropOffTimeSlot',
-                'pickUpTimeSlot',
-                'vehicles.vehicleType.translations',
+                'segments.dropOffTimeSlot',
+                'segments.pickUpTimeSlot',
+                'segments.vehicles.vehicleType.translations',
                 'attachments',
             ])
             ->orderByDesc('created_at')
@@ -47,8 +48,9 @@ class FreeReservationController extends Controller
         foreach ($requests as $r) {
             $a = $availability->forRequest($r);
             $r->setAttribute('can_fulfill', (bool) $a['can_fulfill']);
-            $r->setAttribute('required_vehicles', (int) $a['required']);
+            $r->setAttribute('required_vehicles', (int) $a['required']); // total demanded vehicles across all segments
             $r->setAttribute('min_available', $a['min_available']);
+            $r->setAttribute('segments_availability', $a['segments'] ?? []);
         }
 
         return view('admin-panel.free-reservations', array_merge(
@@ -116,31 +118,57 @@ class FreeReservationController extends Controller
     ): RedirectResponse {
         App::setLocale('cg');
 
-        // Final availability check for requested vehicle count.
-        $freeReservationRequest->loadMissing('vehicles');
-        $required = (int) $freeReservationRequest->vehicles->count();
+        $freeReservationRequest->loadMissing(['segments.vehicles']);
         $date = (string) $request->validated('reservation_date');
-        $drop = (int) $request->validated('drop_off_time_slot_id');
-        $pick = (int) $request->validated('pick_up_time_slot_id');
+        /** @var array<int, array{id:int,drop_off_time_slot_id:int,pick_up_time_slot_id:int}> $segmentsIn */
+        $segmentsIn = $request->validated('segments', []);
 
-        // Reuse helper by temporarily setting fields for computation (no save yet).
+        // Reuse helper by cloning and applying new date/slots to segments (no save yet).
         $clone = clone $freeReservationRequest;
         $clone->reservation_date = \Carbon\Carbon::parse($date);
-        $clone->drop_off_time_slot_id = $drop;
-        $clone->pick_up_time_slot_id = $pick;
-        $clone->setRelation('vehicles', $freeReservationRequest->vehicles);
+        $cloneSegs = $freeReservationRequest->segments->map(function ($seg) use ($date, $segmentsIn) {
+            $in = collect($segmentsIn)->firstWhere('id', (int) $seg->id);
+            $new = clone $seg;
+            $new->reservation_date = \Carbon\Carbon::parse($date);
+            if (is_array($in)) {
+                $new->drop_off_time_slot_id = (int) $in['drop_off_time_slot_id'];
+                $new->pick_up_time_slot_id = (int) $in['pick_up_time_slot_id'];
+            }
+            $new->setRelation('vehicles', $seg->vehicles);
+            return $new;
+        });
+        $clone->setRelation('segments', $cloneSegs);
 
         $a = $availability->forRequest($clone);
-        if (! $a['can_fulfill'] || $required < 1) {
+        if (! $a['can_fulfill']) {
             return back()->with('error', 'Za izabrani datum i termine nema dovoljno slobodnih kapaciteta za ovaj zahtjev.');
         }
 
-        $freeReservationRequest->update([
-            'reservation_date' => $date,
-            'drop_off_time_slot_id' => $drop,
-            'pick_up_time_slot_id' => $pick,
-            'status' => FreeReservationRequest::STATUS_UPDATED,
-        ]);
+        DB::transaction(function () use ($freeReservationRequest, $date, $segmentsIn): void {
+            $freeReservationRequest->update([
+                'reservation_date' => $date,
+                // Legacy: keep synced with first segment after update.
+                'drop_off_time_slot_id' => (int) ($segmentsIn[0]['drop_off_time_slot_id'] ?? $freeReservationRequest->drop_off_time_slot_id),
+                'pick_up_time_slot_id' => (int) ($segmentsIn[0]['pick_up_time_slot_id'] ?? $freeReservationRequest->pick_up_time_slot_id),
+                'status' => FreeReservationRequest::STATUS_UPDATED,
+            ]);
+
+            foreach ($segmentsIn as $segIn) {
+                $segId = (int) ($segIn['id'] ?? 0);
+                if ($segId < 1) {
+                    continue;
+                }
+                $seg = $freeReservationRequest->segments->firstWhere('id', $segId);
+                if (! $seg) {
+                    continue;
+                }
+                $seg->update([
+                    'reservation_date' => $date,
+                    'drop_off_time_slot_id' => (int) $segIn['drop_off_time_slot_id'],
+                    'pick_up_time_slot_id' => (int) $segIn['pick_up_time_slot_id'],
+                ]);
+            }
+        });
 
         return back()->with('status', 'Zahtjev je izmijenjen.');
     }

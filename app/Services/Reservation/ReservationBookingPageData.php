@@ -17,6 +17,44 @@ use Illuminate\Http\Request;
 final class ReservationBookingPageData
 {
     /**
+     * Small helper for dynamic slot UIs (e.g. agency FZBR) that want the same
+     * availability rules as the booking pages, but via JSON.
+     *
+     * @return array{
+     *   selected_date: ?string,
+     *   arrival_slots: array<int, array<string, mixed>>,
+     *   departure_slots: array<int, array<string, mixed>>,
+     *   departure_disabled: bool
+     * }
+     */
+    public function slotPayload(
+        string $dateStr,
+        ?int $arrivalId,
+        ?int $departureId,
+        string $locale,
+        int $requiredVehicles = 1,
+        bool $strictFreeWindowCapacity = false,
+    ): array {
+        $selectedDate = $this->parseAllowedDate($dateStr);
+        $slotPayload = $this->buildSlotPayload(
+            $selectedDate,
+            $arrivalId,
+            $departureId,
+            $locale,
+            $requiredVehicles,
+            $strictFreeWindowCapacity,
+        );
+
+        unset($slotPayload['effective_departure_id'], $slotPayload['selected_arrival_slot'], $slotPayload['selected_departure_slot']);
+
+        return array_merge($slotPayload, [
+            'selected_date' => $selectedDate?->toDateString(),
+            // Echo the same value used for capacity checks (callers may clamp before passing).
+            'required_vehicles' => max(1, (int) $requiredVehicles),
+        ]);
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function forGuest(Request $request): array
@@ -181,8 +219,16 @@ final class ReservationBookingPageData
      *   selected_departure_slot: ?ListOfTimeSlot
      * }
      */
-    private function buildSlotPayload(?Carbon $selectedDate, ?int $arrivalId, ?int $departureId, string $locale): array
-    {
+    private function buildSlotPayload(
+        ?Carbon $selectedDate,
+        ?int $arrivalId,
+        ?int $departureId,
+        string $locale,
+        int $requiredVehicles = 1,
+        bool $strictFreeWindowCapacity = false,
+    ): array {
+        $required = max(1, (int) $requiredVehicles);
+
         $allSlots = ListOfTimeSlot::query()->orderBy('id')->get();
         $dailyBySlotId = collect();
         if ($selectedDate) {
@@ -194,13 +240,14 @@ final class ReservationBookingPageData
 
         $arrivalSlots = [];
         if ($selectedDate) {
-            $arrivalSlots = $allSlots->map(function (ListOfTimeSlot $slot) use ($selectedDate, $dailyBySlotId, $locale) {
+            $arrivalSlots = $allSlots->map(function (ListOfTimeSlot $slot) use ($selectedDate, $dailyBySlotId, $locale, $required, $strictFreeWindowCapacity) {
                 $daily = $dailyBySlotId->get($slot->id);
                 $spotsLeft = $daily ? $daily->availableCapacity() : 0;
                 $isBlocked = (bool) ($daily?->is_blocked ?? false);
                 $isFree = FreeReservationRules::isFreeWindowSlot($slot);
                 $isPastForToday = $this->isPastSlotForToday($slot, $selectedDate);
-                $isFull = ! $isFree && $spotsLeft < 1;
+                $capacityConstrained = (! $isFree) || $strictFreeWindowCapacity;
+                $isFull = $capacityConstrained && $spotsLeft < $required;
                 $disabled = $isPastForToday || $isBlocked || $isFull;
 
                 return [
@@ -223,13 +270,14 @@ final class ReservationBookingPageData
         if (! $departureDisabled && $selectedArrivalSlot) {
             $arrivalStart = $selectedArrivalSlot->getStartTimeForDate($selectedDate);
 
-            $departureSlots = $allSlots->map(function (ListOfTimeSlot $slot) use ($selectedDate, $dailyBySlotId, $arrivalStart, $locale) {
+            $departureSlots = $allSlots->map(function (ListOfTimeSlot $slot) use ($selectedDate, $dailyBySlotId, $arrivalStart, $locale, $required, $strictFreeWindowCapacity) {
                 $daily = $dailyBySlotId->get($slot->id);
                 $spotsLeft = $daily ? $daily->availableCapacity() : 0;
                 $isBlocked = (bool) ($daily?->is_blocked ?? false);
                 $isFree = FreeReservationRules::isFreeWindowSlot($slot);
                 $isPastForToday = $this->isPastSlotForToday($slot, $selectedDate);
-                $isFull = ! $isFree && $spotsLeft < 1;
+                $capacityConstrained = (! $isFree) || $strictFreeWindowCapacity;
+                $isFull = $capacityConstrained && $spotsLeft < $required;
 
                 $slotStart = $slot->getStartTimeForDate($selectedDate);
                 $beforeArrival = $arrivalStart && $slotStart ? $slotStart->lt($arrivalStart) : false;

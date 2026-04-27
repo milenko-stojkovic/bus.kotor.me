@@ -4,7 +4,7 @@
     $st = \App\Support\AdminAnalyticsSectionTexts::all();
 @endphp
 
-<x-admin-panel-layout :page-title="$pageTitle ?? 'Analitika'" nav-active="analytics">
+@component('layouts.admin-panel', ['pageTitle' => $pageTitle ?? 'Analitika', 'navActive' => 'analytics'])
     <div class="space-y-6">
         <div class="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -55,7 +55,9 @@
         </form>
 
         @if ($dataset)
-            @php($k = $dataset['kpi'])
+            @php
+                $k = $dataset['kpi'];
+            @endphp
             <p class="text-sm text-gray-600">{{ $st['kpi'] ?? '' }}</p>
             <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div class="bg-white shadow rounded-lg p-4 border border-gray-100">
@@ -156,7 +158,9 @@
                 <section class="bg-white shadow rounded-lg p-6 border border-gray-100">
                     <h2 class="text-base font-semibold text-gray-900">Paid vs Free</h2>
                     <p class="text-sm text-gray-600 mt-1">{{ $st['paid_vs_free'] ?? '' }}</p>
-                    @php($pf = $dataset['paid_vs_free'])
+                    @php
+                        $pf = $dataset['paid_vs_free'];
+                    @endphp
                     <div class="mt-4 overflow-x-auto">
                         <table class="min-w-full text-sm">
                             <tbody class="divide-y">
@@ -328,7 +332,9 @@
                 <section class="bg-white shadow rounded-lg p-6 border border-gray-100">
                     <h2 class="text-base font-semibold text-gray-900">Blokiranje i izgubljeni kapacitet</h2>
                     <p class="text-sm text-gray-600 mt-1">{{ $st['blocking'] ?? '' }}</p>
-                    @php($b = $dataset['blocking'])
+                    @php
+                        $b = $dataset['blocking'];
+                    @endphp
                     <div class="mt-4 space-y-2 text-sm">
                         <div class="flex justify-between"><span class="text-gray-600">Blokirani slotovi (redovi)</span><span class="font-medium">{{ $b['blocked_slot_rows'] }}</span></div>
                         <div class="flex justify-between"><span class="text-gray-600">Potpuno blokirani dani</span><span class="font-medium">{{ $b['fully_blocked_days'] }}</span></div>
@@ -362,7 +368,9 @@
                 <section class="bg-white shadow rounded-lg p-6 border border-gray-100">
                     <h2 class="text-base font-semibold text-gray-900">Operativni problemi / recovery</h2>
                     <p class="text-sm text-gray-600 mt-1">{{ $st['ops'] ?? '' }}</p>
-                    @php($o = $dataset['ops'])
+                    @php
+                        $o = $dataset['ops'];
+                    @endphp
                     <div class="mt-4 overflow-x-auto">
                         <table class="min-w-full text-sm">
                             <tbody class="divide-y">
@@ -399,7 +407,71 @@
                     </div>
                 </section>
             </div>
+
+            @if ((bool) config('features.advance_payments'))
+                <section class="bg-white shadow rounded-lg p-6 border border-gray-100">
+                    <h2 class="text-base font-semibold text-gray-900">Stanje avansa po agencijama</h2>
+                    <p class="text-sm text-gray-600 mt-1">{{ $st['advance_balances'] ?? '' }}</p>
+
+                    @php
+                        $advTotal = (float) ($dataset['advance_balances_total'] ?? 0);
+                        $advRows = (array) ($dataset['advance_balances_by_agency'] ?? []);
+                        $fmtSignedMoney = function (float $v): string {
+                            $sign = $v > 0.000001 ? '+' : '';
+                            return $sign.number_format($v, 2, '.', '').' EUR';
+                        };
+                    @endphp
+
+                    <div class="mt-4 flex flex-wrap items-baseline justify-between gap-3">
+                        <div class="text-sm text-gray-600">Ukupno stanje avansa:</div>
+                        <div class="text-lg font-semibold text-gray-900">{{ $fmtMoney($advTotal) }}</div>
+                    </div>
+
+                    <div class="mt-4 overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <thead class="text-xs text-gray-500 uppercase">
+                                <tr class="border-b">
+                                    <th class="py-2 pr-4 text-left">Agencija</th>
+                                    <th class="py-2 pr-4 text-left">Email</th>
+                                    <th class="py-2 pr-4 text-right">Uplaćeno ukupno</th>
+                                    <th class="py-2 pr-4 text-right">Iskorišćeno ukupno</th>
+                                    <th class="py-2 pr-4 text-right">Korekcije ukupno</th>
+                                    <th class="py-2 pr-4 text-right">Trenutno stanje</th>
+                                    <th class="py-2 pr-4 text-left">Poslednja aktivnost</th>
+                                    <th class="py-2 pr-4 text-right">Detalji</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">
+                                @forelse ($advRows as $row)
+                                    <tr>
+                                        <td class="py-2 pr-4 font-medium text-gray-900">{{ $row['agency'] }}</td>
+                                        <td class="py-2 pr-4 text-gray-700">{{ $row['email'] }}</td>
+                                        <td class="py-2 pr-4 text-right">{{ $fmtMoney((float) ($row['topup_total'] ?? 0)) }}</td>
+                                        <td class="py-2 pr-4 text-right">{{ $fmtMoney((float) ($row['usage_total'] ?? 0)) }}</td>
+                                        <td class="py-2 pr-4 text-right">{{ $fmtSignedMoney((float) ($row['correction_total'] ?? 0)) }}</td>
+                                        <td class="py-2 pr-4 text-right font-semibold">{{ $fmtMoney((float) ($row['balance'] ?? 0)) }}</td>
+                                        <td class="py-2 pr-4 text-gray-700 whitespace-nowrap">
+                                            @if (!empty($row['last_activity']))
+                                                {{ \Carbon\Carbon::parse((string) $row['last_activity'])->format('d.m.Y. H:i') }}
+                                            @else
+                                                —
+                                            @endif
+                                        </td>
+                                        <td class="py-2 pr-4 text-right whitespace-nowrap">
+                                            <a class="text-indigo-700 underline font-medium" href="{{ route('panel_admin.agencies.show', ['user' => $row['agency_user_id']], false) }}">Detalji</a>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="8" class="py-3 pr-4 text-sm text-gray-500">Nema agencija sa avansnim transakcijama.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            @endif
         @endif
     </div>
-</x-admin-panel-layout>
+@endcomponent
 

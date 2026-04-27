@@ -31,8 +31,10 @@
         </div>
     </div>
 
-    @php($kind = (string)($dataset['kind'] ?? ''))
-    @php($data = (array)($dataset['data'] ?? []))
+    @php
+        $kind = (string)($dataset['kind'] ?? '');
+        $data = (array)($dataset['data'] ?? []);
+    @endphp
 
     @if ($kind === 'by_payment')
         <div class="card">
@@ -71,6 +73,55 @@
                 <tr>
                     <td><strong>Ukupno</strong></td>
                     <td class="right"><strong>{{ (int)($data['total'] ?? 0) }}</strong></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    @elseif ($kind === 'advance_obligations')
+        @php
+            $rows = (array)($data['rows'] ?? []);
+            $total = (float)($data['total_obligations_eur'] ?? 0);
+            $fmtSigned = function (float $v) use ($fmtMoney): string {
+                $sign = $v > 0.000001 ? '+' : '';
+                return $sign.$fmtMoney($v);
+            };
+        @endphp
+
+        <div class="card">
+            @if (empty($rows))
+                <div class="muted">Nema evidentiranih avansnih obaveza na izabrani dan.</div>
+            @else
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Agencija</th>
+                        <th>Email</th>
+                        <th class="right">Uplaćeno do datuma</th>
+                        <th class="right">Iskorišćeno do datuma</th>
+                        <th class="right">Korekcije do datuma</th>
+                        <th class="right">Preostalo / obaveza</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach ($rows as $row)
+                        <tr>
+                            <td>{{ (string)($row['agency'] ?? '') }}</td>
+                            <td>{{ (string)($row['email'] ?? '') }}</td>
+                            <td class="right">{{ $fmtMoney((float)($row['topup_total'] ?? 0)) }}</td>
+                            <td class="right">{{ $fmtMoney((float)($row['usage_total'] ?? 0)) }}</td>
+                            <td class="right">{{ $fmtSigned((float)($row['correction_total'] ?? 0)) }}</td>
+                            <td class="right"><strong>{{ $fmtSigned((float)($row['balance'] ?? 0)) }}</strong></td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </table>
+            @endif
+
+            <table style="margin-top: 10px">
+                <tbody>
+                <tr>
+                    <td><strong>Ukupno obaveza</strong></td>
+                    <td class="right"><strong>{{ $fmtSigned($total) }}</strong></td>
                 </tr>
                 </tbody>
             </table>

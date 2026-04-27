@@ -33,20 +33,34 @@ class FreeReservationRequestFulfillmentService
      */
     public function fulfill(FreeReservationRequest $req): array
     {
-        $req->loadMissing(['vehicles', 'dropOffTimeSlot', 'pickUpTimeSlot']);
-        $vehicleCount = (int) $req->vehicles->count();
-        if ($vehicleCount < 1) {
+        $req->loadMissing(['segments.vehicles']);
+        if ((int) $req->segments->count() < 1) {
             throw new AdminFreeReservationSlotsUnavailableException;
         }
 
         $date = $req->reservation_date?->toDateString() ?? '';
-        $drop = (int) $req->drop_off_time_slot_id;
-        $pick = (int) $req->pick_up_time_slot_id;
-        $slotIds = array_values(array_unique([$drop, $pick]));
+        if ($date === '') {
+            throw new AdminFreeReservationSlotsUnavailableException;
+        }
+
+        // Demand per slot across all segments (so shared slots are validated correctly).
+        $demandBySlotId = [];
+        foreach ($req->segments as $seg) {
+            $required = (int) $seg->vehicles->count();
+            if ($required < 1) {
+                throw new AdminFreeReservationSlotsUnavailableException;
+            }
+            $slotIds = array_values(array_unique([(int) $seg->drop_off_time_slot_id, (int) $seg->pick_up_time_slot_id]));
+            foreach ($slotIds as $slotId) {
+                $demandBySlotId[$slotId] = (int) ($demandBySlotId[$slotId] ?? 0) + $required;
+            }
+        }
+
+        $slotIds = array_values(array_unique(array_map('intval', array_keys($demandBySlotId))));
         sort($slotIds);
 
         /** @var list<Reservation> $created */
-        $created = DB::transaction(function () use ($req, $vehicleCount, $date, $drop, $pick, $slotIds): array {
+        $created = DB::transaction(function () use ($req, $date, $slotIds, $demandBySlotId): array {
             /** @var array<int, DailyParkingData> $locked */
             $locked = [];
             foreach ($slotIds as $slotId) {
@@ -55,39 +69,45 @@ class FreeReservationRequestFulfillmentService
                     ->where('time_slot_id', $slotId)
                     ->lockForUpdate()
                     ->first();
-                if ($row === null || $row->is_blocked || $row->availableCapacity() < $vehicleCount) {
+                $demand = (int) ($demandBySlotId[$slotId] ?? 0);
+                if ($row === null || $row->is_blocked || $row->availableCapacity() < $demand) {
                     throw new AdminFreeReservationSlotsUnavailableException;
                 }
                 $locked[$slotId] = $row;
             }
 
             $out = [];
-            foreach ($req->vehicles as $v) {
-                $mtid = Str::uuid()->toString();
-                $reservation = Reservation::query()->create([
-                    'user_id' => null,
-                    'vehicle_id' => null,
-                    'merchant_transaction_id' => $mtid,
-                    'drop_off_time_slot_id' => $drop,
-                    'pick_up_time_slot_id' => $pick,
-                    'reservation_date' => $date,
-                    'user_name' => $req->institution_name,
-                    'country' => $req->country,
-                    'license_plate' => $v->license_plate,
-                    'vehicle_type_id' => (int) $v->vehicle_type_id,
-                    'email' => $req->institution_email,
-                    'preferred_locale' => $req->locale,
-                    'status' => 'free',
-                    'invoice_amount' => ReservationInvoiceAmount::snapshotForNewReservation('free', (int) $v->vehicle_type_id),
-                    'email_sent' => Reservation::EMAIL_NOT_SENT,
-                    'created_by_admin' => true,
-                ]);
-                $this->blockZoneWorklistService->onReservationCreated($reservation, null);
-                $out[] = $reservation;
+            foreach ($req->segments as $seg) {
+                $drop = (int) $seg->drop_off_time_slot_id;
+                $pick = (int) $seg->pick_up_time_slot_id;
+
+                foreach ($seg->vehicles as $v) {
+                    $mtid = Str::uuid()->toString();
+                    $reservation = Reservation::query()->create([
+                        'user_id' => null,
+                        'vehicle_id' => null,
+                        'merchant_transaction_id' => $mtid,
+                        'drop_off_time_slot_id' => $drop,
+                        'pick_up_time_slot_id' => $pick,
+                        'reservation_date' => $date,
+                        'user_name' => $req->institution_name,
+                        'country' => $req->country,
+                        'license_plate' => $v->license_plate,
+                        'vehicle_type_id' => (int) $v->vehicle_type_id,
+                        'email' => $req->institution_email,
+                        'preferred_locale' => $req->locale,
+                        'status' => 'free',
+                        'invoice_amount' => ReservationInvoiceAmount::snapshotForNewReservation('free', (int) $v->vehicle_type_id),
+                        'email_sent' => Reservation::EMAIL_NOT_SENT,
+                        'created_by_admin' => true,
+                    ]);
+                    $this->blockZoneWorklistService->onReservationCreated($reservation, null);
+                    $out[] = $reservation;
+                }
             }
 
             foreach ($slotIds as $slotId) {
-                $locked[$slotId]->increment('reserved', $vehicleCount);
+                $locked[$slotId]->increment('reserved', (int) ($demandBySlotId[$slotId] ?? 0));
             }
 
             return $out;

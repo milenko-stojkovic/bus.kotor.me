@@ -3,13 +3,17 @@
 namespace Tests\Feature\AdminPanel;
 
 use App\Models\Admin;
+use App\Models\AgencyAdvanceTopup;
+use App\Models\AgencyAdvanceTransaction;
 use App\Models\DailyParkingData;
 use App\Models\ListOfTimeSlot;
 use App\Models\Reservation;
+use App\Models\User;
 use App\Models\VehicleType;
 use App\Models\VehicleTypeTranslation;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Services\AdminPanel\Reports\AdminReportsService;
 use Tests\TestCase;
 
 class AdminPanelReportsTest extends TestCase
@@ -34,7 +38,132 @@ class AdminPanelReportsTest extends TestCase
 
         $this->get(route('panel_admin.reports', [], false))
             ->assertOk()
-            ->assertSee('Izveštaji', false);
+            ->assertSee('Izvještaji', false);
+    }
+
+    public function test_advance_obligations_option_hidden_and_pdf_blocked_when_feature_flag_off(): void
+    {
+        config(['features.advance_payments' => false]);
+
+        $admin = $this->seedAdmin();
+        $this->actingAs($admin, 'panel_admin');
+
+        $html = $this->get(route('panel_admin.reports', [], false))->assertOk()->getContent();
+        $this->assertStringNotContainsString('Obaveze po avansima', $html);
+
+        $this->get(route('panel_admin.reports.pdf', [
+            'when' => 'daily',
+            'kind' => 'advance_obligations',
+            'date' => Carbon::now()->toDateString(),
+        ], false))->assertNotFound();
+    }
+
+    public function test_advance_obligations_snapshot_computes_from_ledger_only_and_pdf_generates_when_feature_on(): void
+    {
+        config(['features.advance_payments' => true]);
+
+        $admin = $this->seedAdmin();
+        $this->actingAs($admin, 'panel_admin');
+
+        $a = User::factory()->create(['name' => 'Agency A', 'email' => 'a@ex.com']);
+        $b = User::factory()->create(['name' => 'Agency B', 'email' => 'b@ex.com']);
+        $noLedger = User::factory()->create(['name' => 'Agency NoLedger', 'email' => 'n@ex.com']);
+
+        $snapshotDay = Carbon::parse('2026-04-10')->startOfDay();
+        $before = $snapshotDay->copy()->subDay()->setTime(12, 0, 0);
+        $after = $snapshotDay->copy()->addDay()->setTime(12, 0, 0);
+
+        // Agency A: before snapshot included
+        $tx1 = AgencyAdvanceTransaction::query()->create([
+            'agency_user_id' => $a->id,
+            'amount' => '100.00',
+            'type' => AgencyAdvanceTransaction::TYPE_TOPUP,
+        ]);
+        $tx1->forceFill(['created_at' => $before, 'updated_at' => $before])->save();
+
+        $tx2 = AgencyAdvanceTransaction::query()->create([
+            'agency_user_id' => $a->id,
+            'amount' => '-30.00',
+            'type' => AgencyAdvanceTransaction::TYPE_USAGE,
+        ]);
+        $tx2->forceFill(['created_at' => $before, 'updated_at' => $before])->save();
+
+        $tx3 = AgencyAdvanceTransaction::query()->create([
+            'agency_user_id' => $a->id,
+            'amount' => '-5.00',
+            'type' => AgencyAdvanceTransaction::TYPE_CORRECTION,
+        ]);
+        $tx3->forceFill(['created_at' => $before, 'updated_at' => $before])->save();
+
+        // After snapshot: must be excluded
+        $txAfter = AgencyAdvanceTransaction::query()->create([
+            'agency_user_id' => $a->id,
+            'amount' => '999.00',
+            'type' => AgencyAdvanceTransaction::TYPE_TOPUP,
+        ]);
+        $txAfter->forceFill(['created_at' => $after, 'updated_at' => $after])->save();
+
+        // Agency B: balance 50
+        $txB = AgencyAdvanceTransaction::query()->create([
+            'agency_user_id' => $b->id,
+            'amount' => '50.00',
+            'type' => AgencyAdvanceTransaction::TYPE_TOPUP,
+        ]);
+        $txB->forceFill(['created_at' => $before, 'updated_at' => $before])->save();
+
+        // Pending topup without ledger must not show up
+        AgencyAdvanceTopup::query()->create([
+            'agency_user_id' => $noLedger->id,
+            'merchant_transaction_id' => 'mtid-pending-1',
+            'amount' => '777.00',
+            'status' => AgencyAdvanceTopup::STATUS_PENDING,
+        ]);
+
+        $svc = app(AdminReportsService::class);
+        $snap = $svc->advanceObligationsSnapshot($snapshotDay->copy()->endOfDay());
+        $this->assertSame('2026-04-10 23:59:59', substr($snap['as_of'], 0, 19));
+
+        $this->assertSame(115.0, (float) $snap['total_obligations_eur']); // A: 65, B: 50
+        $names = array_map(fn ($r) => $r['agency'], $snap['rows']);
+        $this->assertContains('Agency A', $names);
+        $this->assertContains('Agency B', $names);
+        $this->assertNotContains('Agency NoLedger', $names);
+
+        // Sorted by balance desc: A(65) before B(50)
+        $this->assertSame('Agency A', $snap['rows'][0]['agency']);
+
+        // PDF endpoint should work (daily only)
+        $pdf = $this->get(route('panel_admin.reports.pdf', [
+            'when' => 'daily',
+            'kind' => 'advance_obligations',
+            'date' => $snapshotDay->toDateString(),
+        ], false));
+        $pdf->assertOk();
+        $this->assertSame('application/pdf', $pdf->headers->get('Content-Type'));
+    }
+
+    public function test_advance_obligations_empty_snapshot_generates_and_total_is_zero(): void
+    {
+        config(['features.advance_payments' => true]);
+
+        $admin = $this->seedAdmin();
+        $this->actingAs($admin, 'panel_admin');
+
+        // With no reservations/advance tx, bounds fallback to today.
+        $d = Carbon::now()->startOfDay();
+        $svc = app(AdminReportsService::class);
+        $snap = $svc->advanceObligationsSnapshot($d->copy()->endOfDay());
+
+        $this->assertSame(0.0, (float) $snap['total_obligations_eur']);
+        $this->assertCount(0, $snap['rows']);
+
+        $pdf = $this->get(route('panel_admin.reports.pdf', [
+            'when' => 'daily',
+            'kind' => 'advance_obligations',
+            'date' => $d->toDateString(),
+        ], false));
+        $pdf->assertOk();
+        $this->assertSame('application/pdf', $pdf->headers->get('Content-Type'));
     }
 
     public function test_reports_pdf_exports_work_for_all_kinds(): void

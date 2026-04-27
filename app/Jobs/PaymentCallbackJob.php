@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Events\PaymentFailed;
 use App\Models\Reservation;
 use App\Models\TempData;
+use App\Services\AgencyAdvance\AdvanceTopupProcessor;
 use App\Services\AdminPanel\Blocking\BlockZoneWorklistService;
 use App\Services\AdminFiscalizationAlertService;
 use App\Services\Payment\ErrorClassifier;
@@ -74,6 +75,17 @@ class PaymentCallbackJob implements ShouldQueue, ShouldBeUnique
 
         $temp = TempData::where('merchant_transaction_id', $txId)->first();
         if (! $temp) {
+            // Not a reservation/temp_data payment. Try agency advance topups (feature-flag gated).
+            if ((bool) config('features.advance_payments')) {
+                if ($callbackStatus === 'success') {
+                    app(AdvanceTopupProcessor::class)->markPaid($txId, $this->rawPayload);
+                } else {
+                    app(AdvanceTopupProcessor::class)->markFailed($txId, $this->rawPayload);
+                }
+
+                return;
+            }
+
             Log::channel('payments')->warning('Payment callback job skipped: temp_data not found', [
                 'merchant_transaction_id' => $txId,
                 'reservation_id' => $reservationIdEarly,

@@ -12,6 +12,7 @@ use App\Http\Controllers\AdminPanel\ReportsController as AdminPanelReportsContro
 use App\Http\Controllers\AdminPanel\ReservationController as AdminPanelReservationController;
 use App\Http\Controllers\AdminPanel\SettingsController as AdminPanelSettingsController;
 use App\Http\Controllers\AdminPanel\WarningsController as AdminPanelWarningsController;
+use App\Http\Controllers\AdminPanel\AgencyController as AdminPanelAgencyController;
 use App\Http\Controllers\Control\ControlAuthController;
 use App\Http\Controllers\Control\ControlDashboardController;
 use App\Http\Controllers\CheckoutController;
@@ -57,6 +58,11 @@ Route::prefix('admin')->name('panel_admin.')->group(function () {
         Route::get('rezervacije/{reservation}/uredi', [AdminPanelReservationController::class, 'edit'])->name('reservations.edit');
         Route::put('rezervacije/{reservation}', [AdminPanelReservationController::class, 'update'])->name('reservations.update');
         Route::get('rezervacije/{reservation}/pdf', [AdminPanelReservationController::class, 'pdf'])->name('reservations.pdf');
+
+        Route::get('agencije', [AdminPanelAgencyController::class, 'index'])->name('agencies.index');
+        Route::get('agencije/{user}', [AdminPanelAgencyController::class, 'show'])->name('agencies.show');
+        Route::post('agencije/{user}/avans/korekcija', [AdminPanelAgencyController::class, 'storeAdvanceCorrection'])->name('agencies.advance.correction.store');
+        Route::post('agencije/{user}/avans/topups/{topup}/confirmation/resend', [AdminPanelAgencyController::class, 'resendAdvanceTopupConfirmation'])->name('agencies.advance.topups.confirmation.resend');
 
         Route::get('uvid', [AdminPanelInsightController::class, 'index'])->name('insight');
         Route::get('uvid/{merchantTransactionId}', [AdminPanelInsightController::class, 'show'])->name('insight.show');
@@ -150,7 +156,11 @@ Route::middleware(['auth', 'verified'])->prefix('panel')->name('panel.')->group(
     Route::get('/vehicles/{vehicle}/remove', [VehicleController::class, 'remove'])->name('vehicles.remove');
     Route::post('/vehicles/{vehicle}/remove', [VehicleController::class, 'applyRemove'])->name('vehicles.remove.apply');
     Route::get('/fzbr', [\App\Http\Controllers\Panel\FzbrController::class, 'create'])->name('fzbr.create');
+    Route::get('/fzbr/slots', [\App\Http\Controllers\Panel\FzbrController::class, 'slots'])->name('fzbr.slots');
     Route::post('/fzbr', [\App\Http\Controllers\Panel\FzbrController::class, 'store'])->name('fzbr.store');
+    Route::get('/avans', [\App\Http\Controllers\Panel\AdvanceController::class, 'index'])->name('advance.index');
+    Route::post('/avans/topup', [\App\Http\Controllers\Panel\AdvanceController::class, 'storeTopup'])->name('advance.topup.store');
+    Route::get('/avans/return', [\App\Http\Controllers\Panel\AdvanceController::class, 'paymentReturn'])->name('advance.return');
     Route::get('/upcoming', [PanelController::class, 'upcoming'])->name('upcoming');
     Route::get('/realized', [PanelController::class, 'realized'])->name('realized');
     Route::get('/statistics', [PanelController::class, 'statistics'])->name('statistics');

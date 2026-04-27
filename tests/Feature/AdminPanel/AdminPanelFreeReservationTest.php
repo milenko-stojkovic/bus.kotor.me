@@ -7,6 +7,7 @@ use App\Models\AdminAlert;
 use App\Models\Admin;
 use App\Models\FreeReservationRequest;
 use App\Models\FreeReservationRequestAttachment;
+use App\Models\FreeReservationRequestSegment;
 use App\Models\FreeReservationRequestVehicle;
 use App\Models\DailyParkingData;
 use App\Models\ListOfTimeSlot;
@@ -181,8 +182,16 @@ class AdminPanelFreeReservationTest extends TestCase
             ...$base,
             'status' => FreeReservationRequest::STATUS_SUBMITTED,
         ]);
+        $submittedSeg = FreeReservationRequestSegment::query()->create([
+            'request_id' => $submitted->id,
+            'reservation_date' => $submitted->reservation_date->toDateString(),
+            'drop_off_time_slot_id' => $slotA->id,
+            'pick_up_time_slot_id' => $slotB->id,
+            'position' => 1,
+        ]);
         FreeReservationRequestVehicle::query()->create([
             'request_id' => $submitted->id,
+            'segment_id' => $submittedSeg->id,
             'license_plate' => 'KO123AB',
             'vehicle_type_id' => $vt->id,
         ]);
@@ -193,8 +202,16 @@ class AdminPanelFreeReservationTest extends TestCase
             'institution_email' => 'redcross@example.com',
             'status' => FreeReservationRequest::STATUS_UPDATED,
         ]);
+        $updatedSeg = FreeReservationRequestSegment::query()->create([
+            'request_id' => $updated->id,
+            'reservation_date' => $updated->reservation_date->toDateString(),
+            'drop_off_time_slot_id' => $slotA->id,
+            'pick_up_time_slot_id' => $slotB->id,
+            'position' => 1,
+        ]);
         FreeReservationRequestVehicle::query()->create([
             'request_id' => $updated->id,
+            'segment_id' => $updatedSeg->id,
             'license_plate' => 'KO999',
             'vehicle_type_id' => $vt->id,
         ]);
@@ -263,8 +280,15 @@ class AdminPanelFreeReservationTest extends TestCase
             'country' => 'ME',
             'status' => FreeReservationRequest::STATUS_SUBMITTED,
         ]);
-        FreeReservationRequestVehicle::query()->create(['request_id' => $req->id, 'license_plate' => 'KO111', 'vehicle_type_id' => $vt->id]);
-        FreeReservationRequestVehicle::query()->create(['request_id' => $req->id, 'license_plate' => 'KO222', 'vehicle_type_id' => $vt->id]);
+        $seg = FreeReservationRequestSegment::query()->create([
+            'request_id' => $req->id,
+            'reservation_date' => $d,
+            'drop_off_time_slot_id' => $slotA->id,
+            'pick_up_time_slot_id' => $slotB->id,
+            'position' => 1,
+        ]);
+        FreeReservationRequestVehicle::query()->create(['request_id' => $req->id, 'segment_id' => $seg->id, 'license_plate' => 'KO111', 'vehicle_type_id' => $vt->id]);
+        FreeReservationRequestVehicle::query()->create(['request_id' => $req->id, 'segment_id' => $seg->id, 'license_plate' => 'KO222', 'vehicle_type_id' => $vt->id]);
 
         $html = $this->get(route('panel_admin.free-reservations', [], false))->assertOk()->getContent();
         $this->assertStringContainsString('nema dovoljno slobodnih kapaciteta', $html);
@@ -309,12 +333,24 @@ class AdminPanelFreeReservationTest extends TestCase
             'country' => 'ME',
             'status' => FreeReservationRequest::STATUS_SUBMITTED,
         ]);
-        FreeReservationRequestVehicle::query()->create(['request_id' => $req->id, 'license_plate' => 'KO111', 'vehicle_type_id' => $vt->id]);
+        $seg = FreeReservationRequestSegment::query()->create([
+            'request_id' => $req->id,
+            'reservation_date' => $d1,
+            'drop_off_time_slot_id' => $slot1->id,
+            'pick_up_time_slot_id' => $slot2->id,
+            'position' => 1,
+        ]);
+        FreeReservationRequestVehicle::query()->create(['request_id' => $req->id, 'segment_id' => $seg->id, 'license_plate' => 'KO111', 'vehicle_type_id' => $vt->id]);
 
         $this->put(route('panel_admin.free-reservation-requests.update', ['freeReservationRequest' => $req->id], false), [
             'reservation_date' => $d2,
-            'drop_off_time_slot_id' => $slot3->id,
-            'pick_up_time_slot_id' => $slot4->id,
+            'segments' => [
+                [
+                    'id' => $seg->id,
+                    'drop_off_time_slot_id' => $slot3->id,
+                    'pick_up_time_slot_id' => $slot4->id,
+                ],
+            ],
         ])->assertRedirect();
 
         $req->refresh();
@@ -409,8 +445,15 @@ class AdminPanelFreeReservationTest extends TestCase
             'country' => 'ME',
             'status' => FreeReservationRequest::STATUS_SUBMITTED,
         ]);
-        FreeReservationRequestVehicle::query()->create(['request_id' => $req->id, 'license_plate' => 'KO111', 'vehicle_type_id' => $vt->id]);
-        FreeReservationRequestVehicle::query()->create(['request_id' => $req->id, 'license_plate' => 'KO222', 'vehicle_type_id' => $vt->id]);
+        $seg = FreeReservationRequestSegment::query()->create([
+            'request_id' => $req->id,
+            'reservation_date' => $d,
+            'drop_off_time_slot_id' => $slotA->id,
+            'pick_up_time_slot_id' => $slotB->id,
+            'position' => 1,
+        ]);
+        FreeReservationRequestVehicle::query()->create(['request_id' => $req->id, 'segment_id' => $seg->id, 'license_plate' => 'KO111', 'vehicle_type_id' => $vt->id]);
+        FreeReservationRequestVehicle::query()->create(['request_id' => $req->id, 'segment_id' => $seg->id, 'license_plate' => 'KO222', 'vehicle_type_id' => $vt->id]);
 
         AdminAlert::query()->create([
             'type' => 'free_reservation_request',
@@ -500,8 +543,15 @@ class AdminPanelFreeReservationTest extends TestCase
             'country' => 'ME',
             'status' => FreeReservationRequest::STATUS_SUBMITTED,
         ]);
-        FreeReservationRequestVehicle::query()->create(['request_id' => $req->id, 'license_plate' => 'KO111', 'vehicle_type_id' => $vt->id]);
-        FreeReservationRequestVehicle::query()->create(['request_id' => $req->id, 'license_plate' => 'KO222', 'vehicle_type_id' => $vt->id]);
+        $seg = FreeReservationRequestSegment::query()->create([
+            'request_id' => $req->id,
+            'reservation_date' => $d,
+            'drop_off_time_slot_id' => $slotA->id,
+            'pick_up_time_slot_id' => $slotB->id,
+            'position' => 1,
+        ]);
+        FreeReservationRequestVehicle::query()->create(['request_id' => $req->id, 'segment_id' => $seg->id, 'license_plate' => 'KO111', 'vehicle_type_id' => $vt->id]);
+        FreeReservationRequestVehicle::query()->create(['request_id' => $req->id, 'segment_id' => $seg->id, 'license_plate' => 'KO222', 'vehicle_type_id' => $vt->id]);
 
         $this->post(route('panel_admin.free-reservation-requests.fulfill', ['freeReservationRequest' => $req->id], false), [
             'confirm' => 1,
@@ -546,7 +596,14 @@ class AdminPanelFreeReservationTest extends TestCase
             'country' => 'ME',
             'status' => FreeReservationRequest::STATUS_SUBMITTED,
         ]);
-        FreeReservationRequestVehicle::query()->create(['request_id' => $req->id, 'license_plate' => 'KO111', 'vehicle_type_id' => $vt->id]);
+        $seg = FreeReservationRequestSegment::query()->create([
+            'request_id' => $req->id,
+            'reservation_date' => $d,
+            'drop_off_time_slot_id' => $slotA->id,
+            'pick_up_time_slot_id' => $slotB->id,
+            'position' => 1,
+        ]);
+        FreeReservationRequestVehicle::query()->create(['request_id' => $req->id, 'segment_id' => $seg->id, 'license_plate' => 'KO111', 'vehicle_type_id' => $vt->id]);
 
         AdminAlert::query()->create([
             'type' => 'free_reservation_request',

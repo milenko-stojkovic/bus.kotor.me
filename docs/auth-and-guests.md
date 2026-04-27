@@ -20,7 +20,7 @@
 - Javni “Učenici/humanitarci” ulaz je ukinut.
 - Agencije (ulogovani korisnici) podnose **zahtjev** kroz panel: **`/panel/fzbr`** (stavka navigacije: **FZBR**).
 - Ovo **nije** checkout i **ne kreira** `reservations` niti `temp_data` u trenutku slanja forme.
-- Forma upisuje trajni zapis u tabelu **`free_reservation_requests`** (+ vozila u **`free_reservation_request_vehicles`** kao snapshot + dokumenta u **`free_reservation_request_attachments`**), šalje admin email i kreira admin warning kao pointer.
+- Forma upisuje trajni zapis u tabelu **`free_reservation_requests`** (jedan datum po zahtjevu), zatim segmente u **`free_reservation_request_segments`** (drop/pick po segmentu), vozila u **`free_reservation_request_vehicles`** (snapshot po segmentu), i dokumenta u **`free_reservation_request_attachments`** (na nivou zahtjeva). Zatim šalje admin email i kreira admin warning kao pointer.
 
 ## Pravila u kodu
 

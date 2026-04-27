@@ -15,8 +15,10 @@ class AdminFreeReservationRequestUpdateRequest extends FormRequest
     {
         return [
             'reservation_date' => ['required', 'date', 'after_or_equal:today'],
-            'drop_off_time_slot_id' => ['required', 'integer', 'exists:list_of_time_slots,id'],
-            'pick_up_time_slot_id' => ['required', 'integer', 'exists:list_of_time_slots,id'],
+            'segments' => ['required', 'array', 'min:1', 'max:5'],
+            'segments.*.id' => ['required', 'integer'],
+            'segments.*.drop_off_time_slot_id' => ['required', 'integer', 'exists:list_of_time_slots,id'],
+            'segments.*.pick_up_time_slot_id' => ['required', 'integer', 'exists:list_of_time_slots,id'],
         ];
     }
 }

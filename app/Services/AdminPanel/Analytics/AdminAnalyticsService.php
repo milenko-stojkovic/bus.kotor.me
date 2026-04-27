@@ -152,6 +152,12 @@ final class AdminAnalyticsService
             'blocked_capacity_pct' => $blockedCapacityPct,
         ];
 
+        $advanceBalancesTotal = null;
+        $advanceBalancesByAgency = null;
+        if ((bool) config('features.advance_payments')) {
+            [$advanceBalancesTotal, $advanceBalancesByAgency] = $this->advanceBalancesByAgency();
+        }
+
         return [
             'filters' => [
                 'date_from' => $from->toDateString(),
@@ -174,7 +180,52 @@ final class AdminAnalyticsService
                 'top_days' => $blockingTopDays,
             ],
             'ops' => $ops,
+            'advance_balances_total' => $advanceBalancesTotal,
+            'advance_balances_by_agency' => $advanceBalancesByAgency,
         ];
+    }
+
+    /**
+     * Returns current advance state by agency (ledger = source of truth).
+     *
+     * @return array{0: float, 1: array<int, array<string, mixed>>}
+     */
+    private function advanceBalancesByAgency(): array
+    {
+        $rows = DB::table('agency_advance_transactions as aat')
+            ->join('users', 'users.id', '=', 'aat.agency_user_id')
+            ->select([
+                'aat.agency_user_id',
+                'users.name as agency_name',
+                'users.email as agency_email',
+                DB::raw("COALESCE(SUM(CASE WHEN aat.type = 'topup' THEN aat.amount ELSE 0 END), 0) as topup_total"),
+                // usage is negative; display/return as positive total
+                DB::raw("COALESCE(-1 * SUM(CASE WHEN aat.type = 'usage' THEN aat.amount ELSE 0 END), 0) as usage_total"),
+                DB::raw("COALESCE(SUM(CASE WHEN aat.type = 'correction' THEN aat.amount ELSE 0 END), 0) as correction_total"),
+                DB::raw('COALESCE(SUM(aat.amount), 0) as balance'),
+                DB::raw('MAX(aat.created_at) as last_activity'),
+            ])
+            ->groupBy('aat.agency_user_id', 'users.name', 'users.email')
+            ->orderByDesc(DB::raw('COALESCE(SUM(aat.amount), 0)'))
+            ->get();
+
+        $total = (float) $rows->sum(fn ($r) => (float) $r->balance);
+
+        $list = [];
+        foreach ($rows as $r) {
+            $list[] = [
+                'agency_user_id' => (int) $r->agency_user_id,
+                'agency' => (string) $r->agency_name,
+                'email' => (string) $r->agency_email,
+                'topup_total' => (float) $r->topup_total,
+                'usage_total' => (float) $r->usage_total,
+                'correction_total' => (float) $r->correction_total,
+                'balance' => (float) $r->balance,
+                'last_activity' => (string) $r->last_activity,
+            ];
+        }
+
+        return [$total, $list];
     }
 
     /**

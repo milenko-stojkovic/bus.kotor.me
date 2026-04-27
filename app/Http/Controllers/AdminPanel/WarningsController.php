@@ -5,13 +5,14 @@ namespace App\Http\Controllers\AdminPanel;
 use App\Http\Controllers\Controller;
 use App\Models\AdminAlert;
 use App\Services\AdminPanel\Blocking\BlockingService;
+use App\Services\Operations\DailyCapacityChartService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class WarningsController extends Controller
 {
-    public function index(BlockingService $blocking): View
+    public function index(BlockingService $blocking, DailyCapacityChartService $capacityCharts): View
     {
         $alerts = AdminAlert::query()
             ->whereNull('removed_at')
@@ -19,10 +20,13 @@ class WarningsController extends Controller
             ->orderByDesc('created_at')
             ->get();
 
+        $charts = $capacityCharts->todayAndTomorrow();
+
         return view('admin-panel.warnings', [
             'alerts' => $alerts,
             'blockedDays' => $blocking->blockedDaySummaries(),
             'unavailableDays' => $blocking->unavailableForPurchaseDaySummaries(),
+            'capacityCharts' => $charts,
         ]);
     }
 

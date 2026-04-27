@@ -19,6 +19,15 @@
         ? 'Prije rezervacije dodajte bar jedno vozilo u sekciji Vozila.'
         : 'Add at least one vehicle in the Vehicles tab before booking.');
     $openVehiclesLabel = $pn('open_vehicles_tab', $locale === 'cg' ? 'Otvori vozila' : 'Open Vehicles');
+
+    $advanceEnabled = (bool) config('features.advance_payments');
+    $advanceBalance = (string) ($advance_balance ?? '0.00');
+    $advanceCanPay = (bool) ($advance_can_pay ?? false);
+    $advancePrice = (string) ($paid_amount ?? '0.00');
+    $advanceInsufficientHint = $pn('advance_insufficient', $locale === 'cg'
+        ? 'Raspoloživi avans nije dovoljan za ovu rezervaciju.'
+        : 'Your advance balance is not sufficient for this reservation.');
+    $checkoutMtid = \Illuminate\Support\Str::uuid()->toString();
 @endphp
 <x-app-layout>
     <x-slot name="header">
@@ -27,6 +36,13 @@
 
     <div class="py-6">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+            @if ($advanceEnabled && !is_null($advanceBalance))
+                <div class="rounded-md border border-gray-200 bg-gray-50 p-3">
+                    <span class="text-sm text-gray-600">Ukupan iznos avansa:</span>
+                    <span class="ml-2 font-semibold text-gray-900">{{ number_format((float) $advanceBalance, 2, '.', '') }} EUR</span>
+                </div>
+            @endif
+
             @if ($errors->any())
                 <div class="rounded-md bg-red-50 p-4 text-sm text-red-800 space-y-1">
                     @foreach ($errors->all() as $err)
@@ -127,6 +143,7 @@
                         <form method="POST" action="{{ route('checkout.store', [], false) }}" class="space-y-4" data-disable-double-submit>
                             @csrf
                             <input type="hidden" name="auth_panel_booking" value="1">
+                            <input type="hidden" name="merchant_transaction_id" value="{{ $checkoutMtid }}">
                             <input type="hidden" name="reservation_date" value="{{ $selected_date ?? '' }}">
                             <input type="hidden" name="drop_off_time_slot_id" value="{{ $arrival_id ?? '' }}">
                             <input type="hidden" name="pick_up_time_slot_id" value="{{ $departure_id ?? '' }}">
@@ -175,6 +192,29 @@
                                     <span>{{ $ui('accept_privacy') }}</span>
                                 </label>
                             </div>
+
+                            @if ($advanceEnabled && !($is_free_reservation ?? false) && !empty($arrival_id) && !empty($departure_id) && !empty($vehicle_id))
+                                <div class="rounded-md bg-slate-50 border border-slate-200 p-3 text-sm space-y-2">
+                                    <div class="text-gray-800">
+                                        <strong>{{ $pn('advance_available', $locale === 'cg' ? 'Raspoloživi avans' : 'Available advance') }}:</strong>
+                                        {{ number_format((float) $advanceBalance, 2, '.', '') }} EUR
+                                    </div>
+                                    <div class="space-y-1">
+                                        <div class="font-medium text-gray-800">{{ $pn('payment_method_title', $locale === 'cg' ? 'Način plaćanja' : 'Payment method') }}</div>
+                                        <label class="flex items-center gap-2">
+                                            <input type="radio" name="payment_method" value="card" class="rounded border-gray-300" {{ old('payment_method', 'card') === 'card' ? 'checked' : '' }}>
+                                            <span>{{ $pn('pay_by_card', $locale === 'cg' ? 'Plati karticom' : 'Pay by card') }}</span>
+                                        </label>
+                                        <label class="flex items-center gap-2">
+                                            <input type="radio" name="payment_method" value="advance" class="rounded border-gray-300" {{ old('payment_method') === 'advance' ? 'checked' : '' }} {{ $advanceCanPay ? '' : 'disabled' }}>
+                                            <span class="{{ $advanceCanPay ? '' : 'text-gray-400' }}">{{ $pn('pay_from_advance', $locale === 'cg' ? 'Plati iz avansa' : 'Pay from advance') }}</span>
+                                        </label>
+                                        @if (! $advanceCanPay)
+                                            <div class="text-xs text-gray-600">{{ $advanceInsufficientHint }}</div>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endif
 
                             <div class="text-sm text-gray-700 space-y-1">
                                 <div class="font-medium">{{ $locationLabel }}</div>

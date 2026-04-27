@@ -42,6 +42,7 @@ class Reservation extends Model
         'user_id',
         'vehicle_id',
         'merchant_transaction_id',
+        'payment_method',
         'drop_off_time_slot_id',
         'pick_up_time_slot_id',
         'reservation_date',

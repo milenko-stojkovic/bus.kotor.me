@@ -3,6 +3,8 @@
 namespace Tests\Feature\AdminPanel;
 
 use App\Models\Admin;
+use App\Models\AgencyAdvanceTopup;
+use App\Models\AgencyAdvanceTransaction;
 use App\Models\DailyParkingData;
 use App\Models\ListOfTimeSlot;
 use App\Models\Reservation;
@@ -734,6 +736,103 @@ class AdminPanelAnalyticsTest extends TestCase
             '/Duplo plaćanje istog termina[\s\S]*?<td[^>]*>\s*1\s*<\/td>/i',
             $html,
         );
+    }
+
+    public function test_advance_balances_section_is_hidden_when_feature_flag_off(): void
+    {
+        config(['features.advance_payments' => false]);
+
+        $admin = $this->seedAdmin();
+        $this->actingAs($admin, 'panel_admin');
+
+        $d = Carbon::now()->addDay()->toDateString();
+
+        $this->get(route('panel_admin.analytics', [
+            'show' => 1,
+            'date_from' => $d,
+            'date_to' => $d,
+            'include_free' => 0,
+        ], false))
+            ->assertOk()
+            ->assertDontSee('Stanje avansa po agencijama', false);
+    }
+
+    public function test_advance_balances_section_shows_totals_by_agency_and_sorts_by_balance_desc_and_ignores_topups_table(): void
+    {
+        config(['features.advance_payments' => true]);
+
+        $admin = $this->seedAdmin();
+        $this->actingAs($admin, 'panel_admin');
+
+        $a1 = User::factory()->create(['name' => 'Agency A', 'email' => 'a@ex.com']);
+        $a2 = User::factory()->create(['name' => 'Agency B', 'email' => 'b@ex.com']);
+        $noLedger = User::factory()->create(['name' => 'Agency NoLedger', 'email' => 'n@ex.com']);
+
+        // A1: topup 100, usage -30, correction -5 => balance 65
+        AgencyAdvanceTransaction::query()->create([
+            'agency_user_id' => $a1->id,
+            'amount' => '100.00',
+            'type' => AgencyAdvanceTransaction::TYPE_TOPUP,
+            'created_at' => now()->subDays(2),
+        ]);
+        AgencyAdvanceTransaction::query()->create([
+            'agency_user_id' => $a1->id,
+            'amount' => '-30.00',
+            'type' => AgencyAdvanceTransaction::TYPE_USAGE,
+            'created_at' => now()->subDays(1),
+        ]);
+        AgencyAdvanceTransaction::query()->create([
+            'agency_user_id' => $a1->id,
+            'amount' => '-5.00',
+            'type' => AgencyAdvanceTransaction::TYPE_CORRECTION,
+            'created_at' => now()->subHours(3),
+        ]);
+
+        // A2: topup 50 => balance 50 (should be below A1)
+        AgencyAdvanceTransaction::query()->create([
+            'agency_user_id' => $a2->id,
+            'amount' => '50.00',
+            'type' => AgencyAdvanceTransaction::TYPE_TOPUP,
+            'created_at' => now()->subHours(1),
+        ]);
+
+        // Topup attempt without ledger must NOT affect analytics
+        AgencyAdvanceTopup::query()->create([
+            'agency_user_id' => $noLedger->id,
+            'merchant_transaction_id' => 'mtid-pending',
+            'amount' => '999.00',
+            'status' => AgencyAdvanceTopup::STATUS_PENDING,
+        ]);
+
+        $d = Carbon::now()->addDay()->toDateString();
+        $html = $this->get(route('panel_admin.analytics', [
+            'show' => 1,
+            'date_from' => $d,
+            'date_to' => $d,
+            'include_free' => 0,
+        ], false))->assertOk()->getContent();
+
+        $this->assertStringContainsString('Stanje avansa po agencijama', $html);
+        $this->assertStringContainsString('Ukupno stanje avansa:', $html);
+        $this->assertStringContainsString('115.00 EUR', $html); // 65 + 50
+
+        // A1 computed columns
+        $this->assertStringContainsString('Agency A', $html);
+        $this->assertStringContainsString('100.00 EUR', $html); // topup
+        $this->assertStringContainsString('30.00 EUR', $html); // usage displayed positive
+        $this->assertStringContainsString('-5.00 EUR', $html); // correction signed
+        $this->assertStringContainsString('65.00 EUR', $html); // balance
+
+        // A2 row exists, NoLedger does not.
+        $this->assertStringContainsString('Agency B', $html);
+        $this->assertStringNotContainsString('Agency NoLedger', $html);
+
+        // Sorting: A1 (65) should appear before A2 (50)
+        $posA1 = strpos($html, 'Agency A');
+        $posA2 = strpos($html, 'Agency B');
+        $this->assertIsInt($posA1);
+        $this->assertIsInt($posA2);
+        $this->assertTrue($posA1 < $posA2);
     }
 }
 
