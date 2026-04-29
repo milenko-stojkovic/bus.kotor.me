@@ -224,6 +224,37 @@ Sledeće komande su **nezakazane** jer frekvencija u dokumentu nije striktno def
 - `parking:update-availability` — **Reason**: “svakih 5–10 minuta” (nije striktna frekvencija)
 - `reservations:send-emails` — **Reason**: “svakih 5–10 minuta” (nije striktna frekvencija)
 
+---
+
+## Production readiness (bank/fiscal) — ne sme se zaboraviti
+
+Sledeći scheduled job-ovi su kritični za produkciju jer imaju veze sa **stvarnim plaćanjem** i/ili **stvarnom fiskalizacijom**. Lokalno su **namerno isključeni iz scheduler-a** (SAFE schedule) da bi se izbegao rizik, ali pre izlaska u produkciju moraju biti:
+
+- **implementirani i stabilni** (ako su označeni kao stub/TODO),
+- **konfigurisani** (env, kredencijali, URL),
+- **operativno provereni** (cron + queue worker + logovi/alerti),
+- i jasno verifikovani kroz `schedule:list` + end-to-end scenarije.
+
+### Komande koje zahtevaju production proveru
+
+- `payment:check-pending-inquiry`
+  - **Zašto je kritično**: radi real bank inquiry (Bankart) i može pokrenuti payment state machine (dispatch `PaymentCallbackJob`).
+  - **Pre produkcije**: potvrditi da je inquiry bezbedan (throttle, idempotency), da su env/kredencijali validni, i da se ponašanje slaže sa `docs/payment-callback-handling.md` i `docs/payment-states.md`.
+
+- `post-fiscalization:retry`
+  - **Zašto je kritično**: radi realnu fiskalizaciju (poziva fiskalni servis), menja reservation fiscal_* i šalje fiskalni PDF/email.
+  - **Pre produkcije**: potvrditi da su fiskalni env parametri validni, retry/backoff pravila i audit logovi rade, i da je email flow stabilan.
+
+- `reservations:process-pending`
+  - **Zašto je kritično**: namenjeno pipeline obradi i može uključiti fiskal tokove; u dokumentaciji je označeno da je delimično stub.
+  - **Pre produkcije**: eksplicitno definisati šta tačno radi, završiti stub delove (ako postoje), i dodati operativnu proveru (logovi, metrika, alerti).
+
+### Operativni minimum (pre produkcije)
+
+- Cron (na serveru): `* * * * * php /path/to/artisan schedule:run >> /dev/null 2>&1`
+- Queue worker: stabilno pokrenut (u produkciji se bank/fiscal tokovi ne smeju oslanjati na `sync`).
+- `storage/logs/payments-*.log` i alert email (ako je podešen) pokazuju očekivane događaje.
+
 ### Verifikacija
 
 Na Windows/Laragon:

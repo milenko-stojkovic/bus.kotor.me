@@ -37,6 +37,8 @@ Ovi taskovi su **namerno zakazani samo u produkciji** (da se lokalno izbegnu rea
 | `payment:check-pending-inquiry` | every 5 minutes | `app/Console/Commands/CheckPendingPaymentStatus.php` | Bank inquiry (Bankart) → `PaymentCallbackJob` |
 | `post-fiscalization:retry` | every 10 minutes | `app/Console/Commands/RetryPostFiscalization.php` | Retry stvarne fiskalizacije |
 
+**VAŽNO (pre produkcije):** ove komande moraju biti operativno proverene i kompletno konfigurisanih env/kredencijala. Vidi `docs/cron-commands.md` → **“Production readiness (bank/fiscal)”**.
+
 ## Ručno pokretanje komandi
 
 Možeš ih pokrenuti pojedinačno. Na **Windowsu** u Cursor terminalu često **`php` nije u PATH-u** — koristi iz korena repoa **`.\laragon-artisan.cmd <komanda>`** (v. **`docs/project-conventions.md`** §3).
