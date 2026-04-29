@@ -52,7 +52,7 @@ Možeš ih pokrenuti pojedinačno. Na **Windowsu** u Cursor terminalu često **`
 - `php artisan parking:update-availability`
 - `php artisan reservations:send-emails`
 - `php artisan temp-data:cleanup`
- - `php artisan advance:send-yearly-statements`
+- `php artisan advance:send-yearly-statements`
 
 ## Napomena za late_success
 

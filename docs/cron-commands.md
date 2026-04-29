@@ -124,8 +124,11 @@ Puna tabela rasporeda: **`docs/scheduled-tasks-overview.md`**.
 - Svaka komanda koristi Eloquent za status (pending, failed, late_success) i snapshot polja.
 - Za pokretanje scheduler-a na serveru: `* * * * * php /path/to/artisan schedule:run` (cron entry).
 - Lokalno: `php artisan schedule:work` ili `php artisan schedule:list`.
-- Komande su u `app/Console/Commands/`. Raspored je u `bootstrap/app.php` → `withSchedule()`.
-- Config: `config/reservations.php` (pending_expire_minutes, temp_data_retention_days); opciono env `RESERVATIONS_PENDING_EXPIRE_MINUTES`, `RESERVATIONS_TEMP_DATA_RETENTION_DAYS`.
+- Komande su u `app/Console/Commands/`.
+- Raspored scheduler-a je podeljen:
+  - **Local SAFE schedule**: `routes/console.php`
+  - **Production-only schedule**: `bootstrap/app.php` → `withSchedule()`
+- Config: `config/reservations.php` (pending_expire_minutes, temp_data_retention_days); env: `RESERVATIONS_PENDING_EXPIRE_MINUTES`, `TEMP_DATA_RETENTION_DAYS` (legacy: `RESERVATIONS_TEMP_DATA_RETENTION_DAYS`).
 
 ---
 
