@@ -35,15 +35,13 @@ return Application::configure(basePath: dirname(__DIR__))
         //
     })
     ->withSchedule(function (Schedule $schedule): void {
-        // Prioritet: fiskalizacija → parking → email
-        $schedule->command('reservations:process-pending')->everyFiveMinutes();
-        $schedule->command('payment:check-pending-inquiry')->everyFiveMinutes();
-        $schedule->command('post-fiscalization:retry')->everyTenMinutes();
-        $schedule->command('reservations:expire-pending')->everyTenMinutes();
-        $schedule->command('reservations:assign-late-success')->everyFifteenMinutes();
-        $schedule->command('parking:sync-days')->dailyAt('00:05');
-        $schedule->command('parking:update-availability')->everyTenMinutes();
-        $schedule->command('reservations:send-emails')->everyTenMinutes();
-        $schedule->command('temp-data:cleanup')->daily();
+        // LOCAL SAFE schedule lives in routes/console.php.
+        // Production-only / unsafe jobs (real bank/fiscal calls) are intentionally not scheduled in local/dev.
+        if (app()->environment('production')) {
+            // Prioritet: fiskalizacija → parking → email
+            $schedule->command('reservations:process-pending')->everyFiveMinutes();
+            $schedule->command('payment:check-pending-inquiry')->everyFiveMinutes();
+            $schedule->command('post-fiscalization:retry')->everyTenMinutes();
+        }
     })
     ->create();

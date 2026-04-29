@@ -4,7 +4,8 @@ Pregled svih trenutno planiranih (scheduled) taskova u projektu.
 
 ## Gde je scheduler definisan
 
-- `bootstrap/app.php` (`withSchedule(...)`)
+- **Local SAFE schedule**: `routes/console.php` (komande koje ne kontaktiraju stvarnu banku/fiskalni servis)
+- **Production-only schedule**: `bootstrap/app.php` (`withSchedule(...)`) — bank/fiscal komande su namerno pod `app()->environment('production')`
 
 ## Kako pokrenuti scheduler
 
@@ -17,17 +18,24 @@ Pregled svih trenutno planiranih (scheduled) taskova u projektu.
 
 ## Aktivni scheduled taskovi
 
+### Local SAFE (Laragon/Cronical)
+
 | Command | Schedule | Command file | Kratko |
 |---|---|---|---|
-| `reservations:process-pending` | every 5 minutes | `app/Console/Commands/ProcessPendingReservations.php` | Obrada `temp_data` pending (trenutno TODO/stub delovi postoje) |
-| `payment:check-pending-inquiry` | every 5 minutes | `app/Console/Commands/CheckPendingPaymentStatus.php` | Stale pending log + Bankart inquiry → `PaymentCallbackJob` (throttle po tx) |
-| `post-fiscalization:retry` | every 10 minutes | `app/Console/Commands/RetryPostFiscalization.php` | Retry fiskalizacije za `post_fiscalization_data` |
 | `reservations:expire-pending` | every 10 minutes | `app/Console/Commands/ExpirePendingReservations.php` | Pending -> expired, oslobađa soft lock |
-| `reservations:assign-late-success` | every 15 minutes | `app/Console/Commands/AssignLateSuccessReservations.php` | Late success obrada (**trenutno V1 stub**) |
 | `parking:sync-days` | daily at 00:05 | `app/Console/Commands/SyncDailyParkingDays.php` | Sinhronizuje redove `daily_parking_data` za današnji dan + narednih 90 dana; briše stare datume |
-| `parking:update-availability` | every 10 minutes | `app/Console/Commands/UpdateDailyParkingAvailability.php` | Ažurira `daily_parking_data` (**trenutno TODO/stub**) |
-| `reservations:send-emails` | every 10 minutes | `app/Console/Commands/SendReservationEmails.php` | Slanje potvrda rezervacije (osnovni flow, delom TODO) |
-| `temp-data:cleanup` | daily | `app/Console/Commands/CleanupOldTempData.php` | Audit mode: ne briše fizički `temp_data` |
+| `temp-data:cleanup` | daily | `app/Console/Commands/CleanupOldTempData.php` | Briše samo stare **ne-pending** redove po retention pravilu (default 180 dana) |
+| `advance:send-yearly-statements` | yearly on Jan 1 at 10:00 | `routes/console.php` | “Kartica avansa” (prethodna godina); idempotentno; feature-guard |
+
+### Production-only (bank/fiscal)
+
+Ovi taskovi su **namerno zakazani samo u produkciji** (da se lokalno izbegnu realne finansijske/fiskalne radnje):
+
+| Command | Schedule | Command file | Kratko |
+|---|---|---|---|
+| `reservations:process-pending` | every 5 minutes | `app/Console/Commands/ProcessPendingReservations.php` | Obrada `temp_data` / pipeline (može uključiti fiskal tokove) |
+| `payment:check-pending-inquiry` | every 5 minutes | `app/Console/Commands/CheckPendingPaymentStatus.php` | Bank inquiry (Bankart) → `PaymentCallbackJob` |
+| `post-fiscalization:retry` | every 10 minutes | `app/Console/Commands/RetryPostFiscalization.php` | Retry stvarne fiskalizacije |
 
 ## Ručno pokretanje komandi
 
@@ -42,6 +50,7 @@ Možeš ih pokrenuti pojedinačno. Na **Windowsu** u Cursor terminalu često **`
 - `php artisan parking:update-availability`
 - `php artisan reservations:send-emails`
 - `php artisan temp-data:cleanup`
+ - `php artisan advance:send-yearly-statements`
 
 ## Napomena za late_success
 
@@ -51,4 +60,4 @@ Možeš ih pokrenuti pojedinačno. Na **Windowsu** u Cursor terminalu često **`
 
 ## Dodatno (nije scheduled task)
 
-- `routes/console.php` sadrži samo pomoćnu komandu `inspire` i nije deo business scheduler tokova.
+- `routes/console.php` sadrži i **local safe** schedule + “advance yearly statement” komandu.

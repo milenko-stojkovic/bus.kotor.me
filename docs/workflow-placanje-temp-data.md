@@ -60,7 +60,7 @@ Logika mora ostati konzistentna: **temp_data** kao soft lock i audit, zatim upis
 | **processed** | Red u `temp_data` ostaje; rezervacija u `reservations`. |
 | **canceled** | Terminalno; kasni SUCCESS ne menja status (v. §4). |
 | **late_success** / **late_manual_review** | Samo nakon **`expired`** + kasni SUCCESS; admin ili cron stub (`reservations:assign-late-success`) — v. `AssignLateSuccessReservations`, `LateSuccessController`. |
-| **failed** / **expired** | Red ostaje za audit; cleanup komanda `temp-data:cleanup` trenutno **ne briše** fizički (v. `CleanupOldTempData`). |
+| **failed** / **expired** | Red ostaje za audit (Admin “Uvid”); `temp-data:cleanup` briše samo **stare ne-pending** redove po retention pravilu (default 180 dana). |
 
 ---
 

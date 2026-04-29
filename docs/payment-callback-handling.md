@@ -23,7 +23,7 @@ Pravila za validaciju callback-a, idempotentnost, CANCEL/ERROR, notifikacije i r
 
 - Ako je **temp_data.status** već **failed** ili **processed** → prekinuti obradu (return).
 - **Nikad ne brisati temp_data fizički** (audit trail); samo menjati status.
-- Cron CleanupOldTempData ne briše temp_data – redovi se zadržavaju.
+- Cleanup `temp-data:cleanup` briše samo **stare ne-pending** redove po retention pravilu (default 180 dana) i **nikad** ne briše `pending`.
 
 ---
 

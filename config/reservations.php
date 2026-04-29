@@ -16,7 +16,7 @@ return [
     /*
     | Cleanup temp_data rows older than this many days (CleanupOldTempData cron).
     */
-    'temp_data_retention_days' => (int) env('RESERVATIONS_TEMP_DATA_RETENTION_DAYS', 7),
+    'temp_data_retention_days' => (int) env('TEMP_DATA_RETENTION_DAYS', env('RESERVATIONS_TEMP_DATA_RETENTION_DAYS', 180)),
 
     /*
     | Retry token validity: failed payment form data is available for retry for this many minutes.
