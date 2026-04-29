@@ -61,6 +61,12 @@ Route::prefix('admin')->name('panel_admin.')->group(function () {
 
         Route::get('agencije', [AdminPanelAgencyController::class, 'index'])->name('agencies.index');
         Route::get('agencije/{user}', [AdminPanelAgencyController::class, 'show'])->name('agencies.show');
+        Route::get('agencije/{user}/vehicle-category-change-requests/{request}/document', [AdminPanelAgencyController::class, 'previewVehicleCategoryChangeDocument'])
+            ->name('agencies.vehicle_category_change_requests.document');
+        Route::post('agencije/{user}/vehicle-category-change-requests/{request}/approve', [AdminPanelAgencyController::class, 'approveVehicleCategoryChangeRequest'])
+            ->name('agencies.vehicle_category_change_requests.approve');
+        Route::post('agencije/{user}/vehicle-category-change-requests/{request}/reject', [AdminPanelAgencyController::class, 'rejectVehicleCategoryChangeRequest'])
+            ->name('agencies.vehicle_category_change_requests.reject');
         Route::post('agencije/{user}/avans/korekcija', [AdminPanelAgencyController::class, 'storeAdvanceCorrection'])->name('agencies.advance.correction.store');
         Route::post('agencije/{user}/avans/topups/{topup}/confirmation/resend', [AdminPanelAgencyController::class, 'resendAdvanceTopupConfirmation'])->name('agencies.advance.topups.confirmation.resend');
 
@@ -151,6 +157,7 @@ Route::middleware(['auth', 'verified'])->prefix('panel')->name('panel.')->group(
     Route::get('/user', [ProfileController::class, 'panel'])->name('user');
     Route::get('/vehicles', [VehicleController::class, 'index'])->name('vehicles');
     Route::post('/vehicles', [VehicleController::class, 'store'])->name('vehicles.store');
+    Route::post('/vehicles/category-change-requests', [VehicleController::class, 'storeCategoryChangeRequest'])->name('vehicles.category_change_requests.store');
     Route::patch('/vehicles/{vehicle}', [VehicleController::class, 'update'])->name('vehicles.update');
     Route::delete('/vehicles/{vehicle}', [VehicleController::class, 'destroy'])->name('vehicles.destroy');
     Route::get('/vehicles/{vehicle}/remove', [VehicleController::class, 'remove'])->name('vehicles.remove');

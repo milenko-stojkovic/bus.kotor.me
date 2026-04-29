@@ -5,6 +5,7 @@
     $balance = $balance ?? null;
     $ledger = $ledger ?? collect();
     $topups = $topups ?? collect();
+    $pendingVehicleCategoryChangeRequests = $pendingVehicleCategoryChangeRequests ?? collect();
 
     $typeLabel = fn (string $t) => match ($t) {
         \App\Models\AgencyAdvanceTransaction::TYPE_TOPUP => 'Uplata avansa',
@@ -35,6 +36,65 @@
                 Avansna funkcionalnost trenutno nije aktivna.
             </div>
         @else
+            @if ($pendingVehicleCategoryChangeRequests->isNotEmpty())
+                <section class="bg-white shadow rounded-lg p-4 sm:p-6 space-y-3">
+                    <h2 class="text-lg font-semibold text-gray-900">Zahtjevi za promjenu kategorije vozila</h2>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-left text-sm">
+                            <thead>
+                                <tr class="border-b border-gray-200 text-gray-600">
+                                    <th class="py-2 pr-4">Datum</th>
+                                    <th class="py-2 pr-4">Tablica</th>
+                                    <th class="py-2 pr-4">Stara kategorija</th>
+                                    <th class="py-2 pr-4">Tražena kategorija</th>
+                                    <th class="py-2 pr-4">Dokument</th>
+                                    <th class="py-2 pr-4">Status</th>
+                                    <th class="py-2 pr-4 text-right"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($pendingVehicleCategoryChangeRequests as $req)
+                                    <tr class="border-b border-gray-100">
+                                        <td class="py-2 pr-4 whitespace-nowrap">{{ $req->created_at?->format('d.m.Y. H:i') ?? '—' }}</td>
+                                        <td class="py-2 pr-4 font-medium whitespace-nowrap">{{ $req->license_plate }}</td>
+                                        <td class="py-2 pr-4">{{ $req->oldVehicleType?->formatLabel('cg', 'EUR') ?? ('#'.$req->old_vehicle_type_id) }}</td>
+                                        <td class="py-2 pr-4">{{ $req->requestedVehicleType?->formatLabel('cg', 'EUR') ?? ('#'.$req->requested_vehicle_type_id) }}</td>
+                                        <td class="py-2 pr-4 whitespace-nowrap">
+                                            <a class="text-indigo-700 underline font-medium"
+                                               href="{{ route('panel_admin.agencies.vehicle_category_change_requests.document', ['user' => $user->id, 'request' => $req->id], false) }}"
+                                               target="_blank" rel="noopener">
+                                                Preview
+                                            </a>
+                                        </td>
+                                        <td class="py-2 pr-4 whitespace-nowrap">{{ $req->status }}</td>
+                                        <td class="py-2 pr-0 whitespace-nowrap text-right">
+                                            <div class="flex gap-2 justify-end">
+                                                <form method="POST" action="{{ route('panel_admin.agencies.vehicle_category_change_requests.approve', ['user' => $user->id, 'request' => $req->id], false) }}">
+                                                    @csrf
+                                                    <button type="submit"
+                                                            class="inline-flex items-center rounded-md bg-green-700 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-white hover:bg-green-600"
+                                                            onclick="return confirm('Prihvatiti zahtjev i reaktivirati vozilo?');">
+                                                        Prihvati
+                                                    </button>
+                                                </form>
+                                                <form method="POST" action="{{ route('panel_admin.agencies.vehicle_category_change_requests.reject', ['user' => $user->id, 'request' => $req->id], false) }}">
+                                                    @csrf
+                                                    <button type="submit"
+                                                            class="inline-flex items-center rounded-md bg-red-700 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-white hover:bg-red-600"
+                                                            onclick="return confirm('Odbiti zahtjev?');">
+                                                        Odbij
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            @endif
+
             <section class="bg-white shadow rounded-lg p-4 sm:p-6 space-y-3">
                 <h2 class="text-lg font-semibold text-gray-900">Avans</h2>
                 <div class="text-3xl font-semibold text-gray-900">{{ number_format((float) $balance, 2, '.', '') }} EUR</div>

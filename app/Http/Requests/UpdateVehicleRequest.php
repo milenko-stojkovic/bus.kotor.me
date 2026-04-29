@@ -35,7 +35,9 @@ class UpdateVehicleRequest extends FormRequest
                 'regex:/^[A-Z0-9]+$/',
                 Rule::unique('vehicles')
                     ->ignore($vehicleId)
-                    ->where(fn ($q) => $q->where('user_id', $this->user()->id)),
+                    ->where(fn ($q) => $q
+                        ->where('user_id', $this->user()->id)
+                        ->where('status', \App\Models\Vehicle::STATUS_ACTIVE)),
             ],
             'vehicle_type_id' => ['required', 'integer', 'exists:vehicle_types,id'],
         ];

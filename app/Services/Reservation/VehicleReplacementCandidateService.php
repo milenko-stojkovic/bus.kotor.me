@@ -25,6 +25,7 @@ final class VehicleReplacementCandidateService
         $maxPrice = $opts['max_price'] ?? null;
 
         $vehicles = $user->vehicles()
+            ->where('status', Vehicle::STATUS_ACTIVE)
             ->with('vehicleType')
             ->orderBy('license_plate')
             ->get();

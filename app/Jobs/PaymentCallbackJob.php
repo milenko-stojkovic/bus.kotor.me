@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Events\PaymentFailed;
 use App\Models\Reservation;
 use App\Models\TempData;
+use App\Services\AgencyAdvance\AgencyLateSuccessAdvanceConversionService;
 use App\Services\AgencyAdvance\AdvanceTopupProcessor;
 use App\Services\AdminPanel\Blocking\BlockZoneWorklistService;
 use App\Services\AdminFiscalizationAlertService;
@@ -107,7 +108,13 @@ class PaymentCallbackJob implements ShouldQueue, ShouldBeUnique
             }
             if ($callbackStatus === 'success' && $temp->status === TempData::STATUS_EXPIRED) {
                 app(PaymentSuccessHandler::class)->applyLateSuccess($temp, $this->rawPayload, false);
+                app(AgencyLateSuccessAdvanceConversionService::class)->convertIfEligible($temp, $this->rawPayload);
 
+                return;
+            }
+            if ($callbackStatus === 'success' && $temp->status === TempData::STATUS_LATE_SUCCESS) {
+                // Conversion is safe & idempotent; also covers case where first run set late_success but conversion failed/crashed.
+                app(AgencyLateSuccessAdvanceConversionService::class)->convertIfEligible($temp, $this->rawPayload);
                 return;
             }
             if ($callbackStatus === 'success' && $temp->status === TempData::STATUS_CANCELED) {

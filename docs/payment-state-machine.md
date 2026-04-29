@@ -20,6 +20,43 @@ Ovaj dokument ima prednost nad ostalim tematskim dokumentima u slučaju razlike 
 
 ---
 
+## Payment amount (canonical source of truth)
+
+**Pravilo:** iznos koji se koristi za:
+
+- kreiranje rezervacije
+- fiskalizaciju
+- `late_success` → avans konverziju
+
+mora biti **isti iznos koji je poslat banci u trenutku checkout-a**.
+
+### Snapshot (temp_data)
+
+- Taj iznos se čuva kao snapshot u `temp_data` (npr. `invoice_amount_snapshot`).
+- Nakon kreiranja `temp_data` taj iznos se **više nikada ne računa ponovo iz cjenovnika**.
+- Promjene cijena **ne utiču** na već započete ili završene payment pokušaje.
+
+### Payment callback / payload
+
+- Payment callback **ne smije mijenjati** amount osim ako payload **eksplicitno sadrži potvrđen iznos**.
+- Ako payment provider u budućnosti vraća stvarni naplaćeni iznos: taj iznos može postati novi source-of-truth, ali **samo ako je konzistentan sa request payload-om**.
+
+### Fallback (legacy)
+
+- Ako snapshot ne postoji (legacy slučaj), može se koristiti helper za izračun cijene, ali uz log warning (`late_success_advance_amount_snapshot_missing`).
+
+**Napomena:** Ovo pravilo je kritično za finansijsku konzistentnost i mora važiti za sve payment tokove.
+
+### Downstream usage rule
+
+`invoice_amount_snapshot` je jedini dozvoljeni izvor za sve downstream procese, osim ako payment provider eksplicitno vraća potvrđen amount koji je konzistentan sa originalnim request-om.
+
+- Downstream procesi uključuju: kreiranje reservation (`invoice_amount`), fiskalizaciju, `late_success` → advance konverziju
+- Cijena se nikada ne smije ponovo računati iz `vehicle_types` ili drugih runtime izvora nakon što je `temp_data` kreiran
+- Ako provider vraća potvrđen amount, primjenjuju se pravila iz sekcije “Payment callback / payload”
+
+---
+
 ## 3. Terminalna stanja (`temp_data`)
 
 Eksplicitno kao u kodu — **`TempData::TERMINAL_STATES`**:
@@ -49,6 +86,7 @@ Glavni tok checkout-a: **`pending` → …** (prelazi ispod).
 | `pending` | `success`, ali rezervacija već postoji | *(nema promene statusa u ovom koraku)* | Job prekida ranije: log „duplicate“, nema duplog kreiranja. |
 | `processed` | bilo koji ponovni callback/inquiry | `processed` | No-op (raniji return); idempotentnost. |
 | `expired` | `success` | `late_success` | **`applyLateSuccess(..., releaseLock: false)`** (lock već pušten pri expire); **nema** automatskog kreiranja rezervacije. |
+| `late_success` (agency + advance ON) | internal | `late_success` | Konverzija u avans: kreira se **paid** `agency_advance_topups` + ledger topup; `temp_data` ostaje `late_success`, `resolution_reason=converted_to_advance`; **ne** kreira se rezervacija i **ne** dira se `daily_parking_data`. Iznos: `temp_data.invoice_amount_snapshot` (legacy fallback loguje `late_success_advance_amount_snapshot_missing`). |
 | `canceled` | `success` | `canceled` | **Bez promene**; log **`payment_success_after_canceled_ignored`**; email administratoru (**`AdminFiscalizationAlertService::notifyPaymentSuccessAfterCanceled`**, primalac `config('payment.operations_alert_email')`). |
 | `late_success`, `late_rejected`, `expired`, `canceled` (ostali događaji) | `failed` / `timeout` / … | bez promene | Terminalna grana: return (bez novog prelaza u ovoj tabeli). |
 

@@ -13,6 +13,9 @@
             @if(session('message'))
                 <div class="rounded-md bg-green-50 p-4 text-sm text-green-800">{{ session('message') }}</div>
             @endif
+            @if(session('error'))
+                <div class="rounded-md bg-red-50 p-4 text-sm text-red-800">{{ session('error') }}</div>
+            @endif
 
             @if ($errors->any())
                 <div class="rounded-md bg-red-50 p-4 text-sm text-red-800 space-y-1">
@@ -57,6 +60,44 @@
                             <x-secondary-button type="button" id="cancelAddVehicle">{{ $pn('vehicles_cancel') }}</x-secondary-button>
                         </div>
                     </form>
+
+                    @php
+                        $change = session('category_change_needed');
+                        $needsChange = is_array($change) && isset($change['old_vehicle_id'], $change['license_plate'], $change['old_vehicle_type_id'], $change['requested_vehicle_type_id']);
+                    @endphp
+
+                    @if ($needsChange)
+                        <div class="mt-6 rounded-md border border-amber-200 bg-amber-50 p-4 space-y-3">
+                            <div class="text-sm text-amber-900 font-semibold">
+                                {{ $pn('vehicle_category_change_title', 'Zahtjev za promjenu kategorije') }}
+                            </div>
+                            <div class="text-sm text-amber-900">
+                                {{ $pn('vehicle_category_change_help', 'Molimo priložite fotografiju ili PDF dokumenta.') }}
+                            </div>
+
+                            <form method="post" action="{{ route('panel.vehicles.category_change_requests.store', [], false) }}" enctype="multipart/form-data" class="space-y-3">
+                                @csrf
+                                <input type="hidden" name="old_vehicle_id" value="{{ (int) $change['old_vehicle_id'] }}">
+                                <input type="hidden" name="license_plate" value="{{ (string) $change['license_plate'] }}">
+                                <input type="hidden" name="old_vehicle_type_id" value="{{ (int) $change['old_vehicle_type_id'] }}">
+                                <input type="hidden" name="requested_vehicle_type_id" value="{{ (int) $change['requested_vehicle_type_id'] }}">
+
+                                <div>
+                                    <x-input-label for="change_document" :value="$pn('vehicle_category_change_document', 'Dokument (slika ili PDF)')" />
+                                    <input id="change_document" name="document" type="file" required accept="image/*,application/pdf"
+                                           class="mt-1 block w-full text-sm text-gray-700" />
+                                    <div class="mt-1 text-xs text-gray-700">{{ $pn('vehicle_category_change_document_hint', 'Max 10MB. Obavezno.') }}</div>
+                                </div>
+
+                                <div class="flex flex-wrap gap-3">
+                                    <x-primary-button type="submit">{{ $pn('vehicle_category_change_send', 'Pošalji zahtjev') }}</x-primary-button>
+                                    <a href="{{ route('panel.vehicles', [], false) }}" class="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-widest text-gray-800 hover:bg-gray-50">
+                                        {{ $pn('vehicle_category_change_cancel', 'Odustani') }}
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
+                    @endif
                 </div>
             </div>
 

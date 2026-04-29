@@ -14,10 +14,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Vehicle extends Model
 {
+    public const STATUS_ACTIVE = 'active';
+
+    public const STATUS_REMOVED = 'removed';
+
     protected $fillable = [
         'user_id',
         'license_plate',
         'vehicle_type_id',
+        'status',
     ];
 
     /** FK ka User (nullable za guest-vozila). */
@@ -35,5 +40,15 @@ class Vehicle extends Model
     public function reservations(): HasMany
     {
         return $this->hasMany(Reservation::class, 'vehicle_id');
+    }
+
+    public function isActive(): bool
+    {
+        return $this->status === self::STATUS_ACTIVE;
+    }
+
+    public function isRemoved(): bool
+    {
+        return $this->status === self::STATUS_REMOVED;
     }
 }

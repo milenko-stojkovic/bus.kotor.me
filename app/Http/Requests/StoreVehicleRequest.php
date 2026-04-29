@@ -31,7 +31,9 @@ class StoreVehicleRequest extends FormRequest
                 'string',
                 'max:50',
                 'regex:/^[A-Z0-9]+$/',
-                Rule::unique('vehicles')->where(fn ($q) => $q->where('user_id', $this->user()->id)),
+                Rule::unique('vehicles')->where(fn ($q) => $q
+                    ->where('user_id', $this->user()->id)
+                    ->where('status', \App\Models\Vehicle::STATUS_ACTIVE)),
             ],
             'vehicle_type_id' => ['required', 'integer', 'exists:vehicle_types,id'],
         ];

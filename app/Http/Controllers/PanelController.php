@@ -14,7 +14,11 @@ class PanelController extends Controller
     {
         $user = $request->user();
         $upcoming = $lists->upcomingFor($user);
-        $vehicles = $user->vehicles()->with('vehicleType')->orderBy('license_plate')->get();
+        $vehicles = $user->vehicles()
+            ->where('status', \App\Models\Vehicle::STATUS_ACTIVE)
+            ->with('vehicleType')
+            ->orderBy('license_plate')
+            ->get();
 
         $allowedByReservationId = [];
         foreach ($upcoming as $r) {

@@ -36,7 +36,7 @@ class VehicleRemovalReplacementWorkflowTest extends TestCase
         $user = User::factory()->create();
         $this->actingAs($user);
 
-        $v = Vehicle::query()->create(['user_id' => $user->id, 'license_plate' => 'KO111', 'vehicle_type_id' => $low->id]);
+        $v = Vehicle::query()->create(['user_id' => $user->id, 'license_plate' => 'KO111', 'vehicle_type_id' => $low->id, 'status' => Vehicle::STATUS_ACTIVE]);
 
         $this->delete(route('panel.vehicles.destroy', $v->id, false))
             ->assertRedirect(route('panel.vehicles', [], false));
@@ -54,7 +54,7 @@ class VehicleRemovalReplacementWorkflowTest extends TestCase
         $slotB = ListOfTimeSlot::query()->create(['time_slot' => '11:00 - 11:20']);
         $date = Carbon::now()->addDays(3)->toDateString();
 
-        $target = Vehicle::query()->create(['user_id' => $user->id, 'license_plate' => 'KO111', 'vehicle_type_id' => $low->id]);
+        $target = Vehicle::query()->create(['user_id' => $user->id, 'license_plate' => 'KO111', 'vehicle_type_id' => $low->id, 'status' => Vehicle::STATUS_ACTIVE]);
         // No other vehicles in fleet -> no candidates.
         Reservation::query()->create([
             'user_id' => $user->id,
@@ -88,8 +88,8 @@ class VehicleRemovalReplacementWorkflowTest extends TestCase
         $slotB = ListOfTimeSlot::query()->create(['time_slot' => '11:00 - 11:20']);
         $date = Carbon::now()->addDays(3)->toDateString();
 
-        $target = Vehicle::query()->create(['user_id' => $user->id, 'license_plate' => 'KO111', 'vehicle_type_id' => $low->id]);
-        $tooHigh = Vehicle::query()->create(['user_id' => $user->id, 'license_plate' => 'KO999', 'vehicle_type_id' => $high->id]);
+        $target = Vehicle::query()->create(['user_id' => $user->id, 'license_plate' => 'KO111', 'vehicle_type_id' => $low->id, 'status' => Vehicle::STATUS_ACTIVE]);
+        $tooHigh = Vehicle::query()->create(['user_id' => $user->id, 'license_plate' => 'KO999', 'vehicle_type_id' => $high->id, 'status' => Vehicle::STATUS_ACTIVE]);
 
         $r = Reservation::query()->create([
             'user_id' => $user->id,
@@ -127,8 +127,8 @@ class VehicleRemovalReplacementWorkflowTest extends TestCase
         $slotB = ListOfTimeSlot::query()->create(['time_slot' => '11:00 - 11:20']);
         $date = Carbon::now()->addDays(3)->toDateString();
 
-        $target = Vehicle::query()->create(['user_id' => $user->id, 'license_plate' => 'KO111', 'vehicle_type_id' => $low->id]);
-        $candidate = Vehicle::query()->create(['user_id' => $user->id, 'license_plate' => 'KO222', 'vehicle_type_id' => $low->id]);
+        $target = Vehicle::query()->create(['user_id' => $user->id, 'license_plate' => 'KO111', 'vehicle_type_id' => $low->id, 'status' => Vehicle::STATUS_ACTIVE]);
+        $candidate = Vehicle::query()->create(['user_id' => $user->id, 'license_plate' => 'KO222', 'vehicle_type_id' => $low->id, 'status' => Vehicle::STATUS_ACTIVE]);
 
         // Candidate already has a reservation on same date with swapped slots (cross-match) -> should be allowed.
         Reservation::query()->create([
@@ -182,8 +182,8 @@ class VehicleRemovalReplacementWorkflowTest extends TestCase
         $slotB = ListOfTimeSlot::query()->create(['time_slot' => '11:00 - 11:20']);
         $date = Carbon::now()->addDays(3)->toDateString();
 
-        $target = Vehicle::query()->create(['user_id' => $user->id, 'license_plate' => 'KO111', 'vehicle_type_id' => $low->id]);
-        $candidate = Vehicle::query()->create(['user_id' => $user->id, 'license_plate' => 'KO222', 'vehicle_type_id' => $low->id]);
+        $target = Vehicle::query()->create(['user_id' => $user->id, 'license_plate' => 'KO111', 'vehicle_type_id' => $low->id, 'status' => Vehicle::STATUS_ACTIVE]);
+        $candidate = Vehicle::query()->create(['user_id' => $user->id, 'license_plate' => 'KO222', 'vehicle_type_id' => $low->id, 'status' => Vehicle::STATUS_ACTIVE]);
 
         // Candidate has same-date reservation with same drop (drop=drop) -> conflict.
         Reservation::query()->create([
@@ -227,7 +227,7 @@ class VehicleRemovalReplacementWorkflowTest extends TestCase
         $this->assertStringNotContainsString($candidate->license_plate, $html);
     }
 
-    public function test_h_successful_replacements_update_reservations_and_delete_target_vehicle(): void
+    public function test_h_successful_replacements_update_reservations_and_soft_remove_target_vehicle_if_it_has_history(): void
     {
         [$low] = $this->seedTypes();
         $user = User::factory()->create();
@@ -237,8 +237,8 @@ class VehicleRemovalReplacementWorkflowTest extends TestCase
         $slotB = ListOfTimeSlot::query()->create(['time_slot' => '11:00 - 11:20']);
         $date = Carbon::now()->addDays(3)->toDateString();
 
-        $target = Vehicle::query()->create(['user_id' => $user->id, 'license_plate' => 'KO111', 'vehicle_type_id' => $low->id]);
-        $cand1 = Vehicle::query()->create(['user_id' => $user->id, 'license_plate' => 'KO222', 'vehicle_type_id' => $low->id]);
+        $target = Vehicle::query()->create(['user_id' => $user->id, 'license_plate' => 'KO111', 'vehicle_type_id' => $low->id, 'status' => Vehicle::STATUS_ACTIVE]);
+        $cand1 = Vehicle::query()->create(['user_id' => $user->id, 'license_plate' => 'KO222', 'vehicle_type_id' => $low->id, 'status' => Vehicle::STATUS_ACTIVE]);
 
         $r1 = Reservation::query()->create([
             'user_id' => $user->id,
@@ -266,7 +266,8 @@ class VehicleRemovalReplacementWorkflowTest extends TestCase
         $r1->refresh();
         $this->assertSame($cand1->id, (int) $r1->vehicle_id);
         $this->assertSame($cand1->license_plate, $r1->license_plate);
-        $this->assertSame(0, Vehicle::query()->whereKey($target->id)->count());
+        $target->refresh();
+        $this->assertSame(Vehicle::STATUS_REMOVED, (string) $target->status);
     }
 
     public function test_i_invalid_combination_does_not_change_any_reservation_and_does_not_delete_vehicle(): void
@@ -279,8 +280,8 @@ class VehicleRemovalReplacementWorkflowTest extends TestCase
         $slotB = ListOfTimeSlot::query()->create(['time_slot' => '11:00 - 11:20']);
         $date = Carbon::now()->addDays(3)->toDateString();
 
-        $target = Vehicle::query()->create(['user_id' => $user->id, 'license_plate' => 'KO111', 'vehicle_type_id' => $low->id]);
-        $cand = Vehicle::query()->create(['user_id' => $user->id, 'license_plate' => 'KO222', 'vehicle_type_id' => $low->id]);
+        $target = Vehicle::query()->create(['user_id' => $user->id, 'license_plate' => 'KO111', 'vehicle_type_id' => $low->id, 'status' => Vehicle::STATUS_ACTIVE]);
+        $cand = Vehicle::query()->create(['user_id' => $user->id, 'license_plate' => 'KO222', 'vehicle_type_id' => $low->id, 'status' => Vehicle::STATUS_ACTIVE]);
 
         // Two upcoming reservations (same date, same drop) -> assigning same candidate to both is invalid.
         $r1 = Reservation::query()->create([

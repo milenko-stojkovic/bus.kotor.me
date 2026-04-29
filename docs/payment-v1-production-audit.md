@@ -37,10 +37,10 @@ Datum provjere: prema checklisti. Cilj: potvrditi da je implementacija stabilna,
 |--------|--------|----------|
 | Callback rute isključivo u routes/api.php | ✅ | `POST /api/payment/callback` u `routes/api.php` |
 | Bez session, cookie, CSRF | ✅ | API rute ne koriste web middleware (Laravel default za api.php) |
-| Validira potpis banke | ⚠️ | **RealCallbackSignatureValidator** namjerno vraća `false` dok se ne implementira HMAC prema specifikaciji banke (v. „Namjerna odstupanja“). Za test: **FakeCallbackSignatureValidator** vraća `true`. |
+| Validira potpis banke | ✅ | **RealCallbackSignatureValidator** (Bankart HMAC) koristi `services.bankart.shared_secret` (env `BANKART_SHARED_SECRET`). Za test: **FakeCallbackSignatureValidator** vraća `true`. |
 | Čita merchant_transaction_id, mapira na payment attempt | ✅ | Validacija `merchant_transaction_id` (required, max:64); job pronalazi temp_data po njemu |
 
-**Zaključak:** Ruta i mapiranje su ispravni. **Prije produkcije s pravim gatewayom mora se implementirati provjera potpisa** u `RealCallbackSignatureValidator`.
+**Zaključak:** Ruta i mapiranje su ispravni. Prije produkcije proveriti da je `BANKART_SHARED_SECRET` ispravno podešen i da banka šalje očekivane header-e (`X-Signature`, `Date`/`X-Date`, `Content-Type`).
 
 ---
 
@@ -125,18 +125,18 @@ Datum provjere: prema checklisti. Cilj: potvrditi da je implementacija stabilna,
 | Zahtjev | Status | Napomena |
 |--------|--------|----------|
 | Callback rute whitelisted | ✅ | Samo POST /api/payment/callback; API bez web middleware |
-| Provjera potpisa banke (HMAC/cert/secret) | ⚠️ | **RealCallbackSignatureValidator**: namjerno vraća `false` dok banka ne dostavi spec za potpis (config `payment.callback_secret` / `PAYMENT_CALLBACK_SECRET` postoji). Fake validator za test vraća `true`. |
+| Provjera potpisa banke (HMAC/cert/secret) | ✅ | **RealCallbackSignatureValidator** (Bankart HMAC) koristi `services.bankart.shared_secret` (env `BANKART_SHARED_SECRET`). Fake validator za test vraća `true`. |
 | Callback ne ovisi o cookie/session | ✅ | api.php, stateless |
 | Success endpoint se ne može ručno pozvati bez validnog potpisa | ✅ | Jedini "success" je obrada u PaymentCallbackJob nakon validacije u controlleru; bez validnog potpisa controller vraća 400 i job se ne dispatch-uje |
 
-**Zaključak:** Arhitektura je ispravna. **Za produkciju s pravim gatewayom obavezna je implementacija provjere potpisa** u RealCallbackSignatureValidator.
+**Zaključak:** Arhitektura je ispravna. Za produkciju proveriti da je `BANKART_SHARED_SECRET` ispravno podešen i da gateway šalje očekivane header-e.
 
 ---
 
 ## Sažetak
 
 - **Stabilno i konzistentno za V1:** generisanje merchant_transaction_id, callback na API ruti, state machine (pending → processed/failed/late_success), oslobađanje lock-ova, snapshot u reservations, success flow (fiskalizacija, PDF, email), retry za gosta, logovanje (uključujući init), queue worker dokumentovan u `docs/payment-architecture.md`.
-- **Prije produkcije s pravim gatewayom:** implementirati **RealCallbackSignatureValidator** (HMAC prema specifikaciji banke) i postaviti `PAYMENT_CALLBACK_SECRET`.
+- **Prije produkcije s pravim gatewayom:** potvrditi da je `BANKART_SHARED_SECRET` set i da callback dolazi sa očekivanim header-ima (validator je već implementiran).
 - **Opciono:** implementirati **AssignLateSuccessReservations** (kreiranje rezervacije ili incident); dodati prijevode za late_success poruku (cg/en) ako treba.
 
 ---
@@ -151,4 +151,4 @@ Sljedeća odstupanja od „idealnog“ checklist ponašanja su **namjerna** u V1
 | **Gateway poziv nije isključivo kroz Queue Job** | Isti razlog: init flow je sync; samo **obrada callbacka** ide kroz PaymentCallbackJob. |
 | **RealCallbackSignatureValidator uvijek false** (točke 3 i 9) | Specifikacija potpisa (HMAC/header) ovisi o gatewayu (npr. Bankart). Dok nije implementirana, real provider odbija sve callbacke; za test koristi se fake provider s FakeCallbackSignatureValidator. Implementacija planirana prije uključivanja pravog gatewaya. |
 | **AssignLateSuccessReservations stub** (točka 4) | late_success redovi ostaju u temp_data; admin može pregledati. Automatsko kreiranje rezervacije ili „incident“ za manual review nije u opsegu V1; cron je placeholder za kasniju implementaciju. |
-| **temp_data redovi se ne brišu** (točka 7) | Namjerno: audit trail. „Briše se“ u smislu „završava grana“ = status prelazi u processed/canceled/expired/late_success; fizičko brisanje nije u V1. |
+| **temp_data redovi se ne brišu (na success)** (točka 7) | Namjerno: audit trail. „Briše se“ u smislu „završava grana“ = status prelazi u processed/canceled/expired/late_success. Fizičko brisanje je ograničeno na retention cleanup (brišu se samo stari ne-pending redovi). |

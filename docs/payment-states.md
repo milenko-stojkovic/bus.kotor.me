@@ -46,6 +46,15 @@ Stanja plaćanja i fiskalizacije. Rezervacija se **uvek** kreira na **success**;
 - **`canceled`** je **terminalno**: banka je već vratila neuspeh / otkaz; **`temp_data` ostaje `canceled`**. Ako banka naknadno pošalje **SUCCESS** (webhook ili inquiry → **`PaymentCallbackJob`**), sistem **ne** prelazi u **`late_success`** — log **`payment_success_after_canceled_ignored`** (`payments`), bez promene statusa, i **email administratoru** (**`AdminFiscalizationAlertService::notifyPaymentSuccessAfterCanceled`**, `payment.operations_alert_email`).
 - **`expired`**: cron je oslobodio lock (`reservations:expire-pending`). Kasni **SUCCESS** → **`applyLateSuccess`** → **`late_success`** (bez kreiranja rezervacije; audit + UX „kontaktirajte podršku“). V. **`PaymentCallbackJob`**.
 
+### Agency late_success → avans (feature-flag)
+
+Ako je `temp_data.status = late_success`, `temp_data.user_id` je set (agencija) i `config('features.advance_payments')` je ON:
+
+- uplata se automatski konvertuje u **paid** avansni topup (`agency_advance_topups`) + ledger topup (`agency_advance_transactions`)
+- `temp_data` ostaje `late_success`, uz `resolution_reason = converted_to_advance`
+- **ne** kreira se rezervacija i **ne** dira se `daily_parking_data`
+- iznos konverzije se uzima iz `temp_data.invoice_amount_snapshot` (legacy fallback loguje `late_success_advance_amount_snapshot_missing`)
+
 ---
 
 ## Pravila

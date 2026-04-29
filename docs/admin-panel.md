@@ -155,7 +155,7 @@ Rute (admin panel):
 
 ---
 
-## 4.1 Izveštaji (admin panel) — implementirano
+## 4.1 Izvještaji (admin panel) — implementirano
 
 - **Nema HTML preview-a**: stranica je samo dvokoračni izbor + PDF export u novom tabu.
 - **Datum bounds (svi pickeri)**: min/max se računaju iz `reservations.created_at` (samo datum deo).
@@ -329,6 +329,46 @@ Ruta:
 - `POST /admin/agencije/{user}/avans/topups/{topup}/confirmation/resend` → `panel_admin.agencies.advance.topups.confirmation.resend`
 
 Idempotency i evidencija slanja su u `agency_advance_topups.confirmation_sent_at` / `confirmation_email`.
+
+### 9.5 Zahtjevi za promjenu kategorije vozila
+
+Ovaj workflow postoji da bi se sprečila zloupotreba ponovnog unosa iste registarske tablice sa drugom (npr. jeftinijom) kategorijom bez provjere dokumentacije. Formulisan je kao neutralna provjera dokaza (slika/PDF).
+
+**Gdje se vidi:**
+
+- Admin vidi **pending** zahtjeve na detalju agencije: **Admin → Agencije → detalj agencije**.
+- Warning u **Upozorenja / Informacije** je samo **pointer** (operativni podsjetnik).
+
+**Source of truth:**
+
+- tabela **`vehicle_category_change_requests`**
+- dokumenti su u **private/local storage** (nisu public)
+
+**Dokument preview:**
+
+- admin-only ruta streamuje dokument inline (image/PDF) iz private storage-a.
+
+**Approve (Prihvati):**
+
+- zahtjev mora biti `pending`
+- reaktivira postojeće `removed` vozilo (ne kreira novo):
+  - `vehicle_type_id = requested_vehicle_type_id`
+  - `vehicles.status = active`
+- `vehicle_category_change_requests.status = approved`
+- upisuje se `reviewed_by_admin_id` i `reviewed_at`
+- uklanja se warning iz Upozorenja / Informacije
+
+**Reject (Odbij):**
+
+- `vehicle_category_change_requests.status = rejected`
+- upisuje se `reviewed_by_admin_id` i `reviewed_at`
+- vozilo ostaje `removed`
+- uklanja se warning iz Upozorenja / Informacije
+
+**Retention:**
+
+- zahtjevi se ne brišu (ostaju `approved/rejected`)
+- dokumenti ostaju u storage-u
 
 Guest rezervacije (`user_id` = null) nemaju “istoriju po korisniku”; mogu se pretraživati po email-u, tablici, datumu itd.
 

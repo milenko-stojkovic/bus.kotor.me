@@ -20,7 +20,7 @@ Callback (**`POST /api/payment/callback`**, API ruta; **samo machine-to-machine*
 
 1. **Validirati potpis** – pre bilo kakve obrade. Ako potpis nije validan → **HTTP 400**, job se **ne** dispatch-uje (v. `PaymentCallbackController`; opciono audit u `temp_data`).
    - Implementacija: `CallbackSignatureValidator` (Fake = uvek prolazi; Real = HMAC/secret, dok nije implementirano odbija).
-   - Config: `payment.callback_secret` (PAYMENT_CALLBACK_SECRET) za real gateway.
+   - Config: `services.bankart.shared_secret` (env `BANKART_SHARED_SECRET`) za real gateway.
 
 2. **Dispatch queue job-a sa merchant_transaction_id** – payload koji se šalje job-u sadrži `merchant_transaction_id` i `status`. Nema obrade rezultata u HTTP request-u.
 
@@ -74,7 +74,7 @@ Sistem podržava **više paralelnih plaćanja** bez konflikata:
 - [x] Svaki pokušaj plaćanja ima jedinstven merchant_transaction_id (DB unique; dupli klik → postojeći link).
 - [x] Race condition isti slot: atomic lock (SELECT FOR UPDATE) na daily_parking_data u checkout transakciji.
 - [x] merchant_transaction_id se šalje gatewayu i vraća u callback-u.
-- [x] Callback: validacija potpisa pre dispatch-a; invalid → 401, job se ne šalje.
+- [x] Callback: validacija potpisa pre dispatch-a; invalid → 400, job se ne šalje.
 - [x] Callback: dispatch job-a sa merchant_transaction_id (u payload-u).
 - [x] Callback je idempotentan (posledica idempotentnog job-a).
 - [x] Job: find temp_data by merchant_transaction_id; create reservation only once; ignore duplicate callbacks.

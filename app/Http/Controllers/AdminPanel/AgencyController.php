@@ -4,14 +4,19 @@ namespace App\Http\Controllers\AdminPanel;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AdminPanel\AdminAgencyAdvanceCorrectionRequest;
+use App\Models\AdminAlert;
 use App\Models\AgencyAdvanceTopup;
 use App\Models\AgencyAdvanceTransaction;
 use App\Models\User;
+use App\Models\Vehicle;
+use App\Models\VehicleCategoryChangeRequest;
 use App\Services\AgencyAdvance\AdvanceTopupConfirmationService;
 use App\Services\AgencyAdvance\AgencyAdvanceService;
+use Illuminate\Http\Response;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -59,13 +64,158 @@ final class AgencyController extends Controller
                 ->get();
         }
 
+        $pendingCategoryRequests = VehicleCategoryChangeRequest::query()
+            ->where('user_id', $user->id)
+            ->where('status', VehicleCategoryChangeRequest::STATUS_PENDING)
+            ->with(['oldVehicle', 'oldVehicleType.translations', 'requestedVehicleType.translations'])
+            ->orderByDesc('created_at')
+            ->get();
+
         return view('admin-panel.agencies.show', [
             'user' => $user,
             'advanceEnabled' => $advanceEnabled,
             'balance' => $balance,
             'ledger' => $ledger,
             'topups' => $topups,
+            'pendingVehicleCategoryChangeRequests' => $pendingCategoryRequests,
         ]);
+    }
+
+    public function previewVehicleCategoryChangeDocument(User $user, VehicleCategoryChangeRequest $request): Response
+    {
+        if ((int) $request->user_id !== (int) $user->id) {
+            abort(404);
+        }
+
+        $path = (string) $request->document_path;
+        if ($path === '' || ! Storage::disk('local')->exists($path)) {
+            abort(404);
+        }
+
+        $name = $request->document_original_name ?: 'document';
+        $mime = $request->document_mime_type ?: 'application/octet-stream';
+
+        return Storage::disk('local')->response($path, $name, [
+            'Content-Type' => $mime,
+            'Content-Disposition' => 'inline; filename="'.$name.'"',
+        ]);
+    }
+
+    public function approveVehicleCategoryChangeRequest(User $user, VehicleCategoryChangeRequest $request): RedirectResponse
+    {
+        if ((int) $request->user_id !== (int) $user->id) {
+            abort(404);
+        }
+
+        DB::transaction(function () use ($user, $request): void {
+            /** @var VehicleCategoryChangeRequest $locked */
+            $locked = VehicleCategoryChangeRequest::query()
+                ->whereKey($request->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($locked->status !== VehicleCategoryChangeRequest::STATUS_PENDING) {
+                throw ValidationException::withMessages(['status' => ['Zahtjev više nije pending.']]);
+            }
+
+            /** @var Vehicle $vehicle */
+            $vehicle = Vehicle::query()
+                ->where('user_id', $user->id)
+                ->whereKey((int) $locked->old_vehicle_id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($vehicle->status !== Vehicle::STATUS_REMOVED) {
+                throw ValidationException::withMessages(['vehicle' => ['Vozilo nije u statusu removed.']]);
+            }
+
+            if ((string) $vehicle->license_plate !== (string) $locked->license_plate) {
+                throw ValidationException::withMessages(['vehicle' => ['Tablica ne odgovara zahtjevu.']]);
+            }
+
+            $vehicle->update([
+                'vehicle_type_id' => (int) $locked->requested_vehicle_type_id,
+                'status' => Vehicle::STATUS_ACTIVE,
+            ]);
+
+            $locked->update([
+                'status' => VehicleCategoryChangeRequest::STATUS_APPROVED,
+                'reviewed_by_admin_id' => request()->user('panel_admin')?->id,
+                'reviewed_at' => now(),
+            ]);
+
+            AdminAlert::query()
+                ->whereNull('removed_at')
+                ->where('type', 'vehicle_category_change_request')
+                ->where('payload_json->vehicle_category_change_request_id', (int) $locked->id)
+                ->update([
+                    'removed_at' => now(),
+                ]);
+
+            Log::channel('payments')->info('vehicle_category_change_request_approved', [
+                'request_id' => (int) $locked->id,
+                'agency_user_id' => (int) $user->id,
+                'admin_id' => request()->user('panel_admin')?->id,
+            ]);
+        });
+
+        return redirect()
+            ->to(route('panel_admin.agencies.show', $user, false))
+            ->with('status', 'Zahtjev je prihvaćen i vozilo je reaktivirano.');
+    }
+
+    public function rejectVehicleCategoryChangeRequest(User $user, VehicleCategoryChangeRequest $request): RedirectResponse
+    {
+        if ((int) $request->user_id !== (int) $user->id) {
+            abort(404);
+        }
+
+        DB::transaction(function () use ($user, $request): void {
+            /** @var VehicleCategoryChangeRequest $locked */
+            $locked = VehicleCategoryChangeRequest::query()
+                ->whereKey($request->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($locked->status !== VehicleCategoryChangeRequest::STATUS_PENDING) {
+                throw ValidationException::withMessages(['status' => ['Zahtjev više nije pending.']]);
+            }
+
+            // Ensure old vehicle belongs and stays removed.
+            $vehicle = Vehicle::query()
+                ->where('user_id', $user->id)
+                ->whereKey((int) $locked->old_vehicle_id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ((string) $vehicle->license_plate !== (string) $locked->license_plate) {
+                throw ValidationException::withMessages(['vehicle' => ['Tablica ne odgovara zahtjevu.']]);
+            }
+
+            $locked->update([
+                'status' => VehicleCategoryChangeRequest::STATUS_REJECTED,
+                'reviewed_by_admin_id' => request()->user('panel_admin')?->id,
+                'reviewed_at' => now(),
+            ]);
+
+            AdminAlert::query()
+                ->whereNull('removed_at')
+                ->where('type', 'vehicle_category_change_request')
+                ->where('payload_json->vehicle_category_change_request_id', (int) $locked->id)
+                ->update([
+                    'removed_at' => now(),
+                ]);
+
+            Log::channel('payments')->info('vehicle_category_change_request_rejected', [
+                'request_id' => (int) $locked->id,
+                'agency_user_id' => (int) $user->id,
+                'admin_id' => request()->user('panel_admin')?->id,
+            ]);
+        });
+
+        return redirect()
+            ->to(route('panel_admin.agencies.show', $user, false))
+            ->with('status', 'Zahtjev je odbijen.');
     }
 
     public function storeAdvanceCorrection(User $user, AdminAgencyAdvanceCorrectionRequest $request, AgencyAdvanceService $advance): RedirectResponse

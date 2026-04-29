@@ -79,7 +79,7 @@ Puna tabela rasporeda: **`docs/scheduled-tasks-overview.md`**.
 
 **Opis:** Osigurava pokrivenost `daily_parking_data` za tekući dan i narednih ~90 dana (`upsert`); briše redove za prošle datume. Ne menja namerno postojeće `reserved` / `pending` za žive redove na način koji krši poslovna pravila — v. `SyncDailyParkingDays`.
 
-**Frekvencija:** dnevno u 00:05 (`bootstrap/app.php`).
+**Frekvencija:** dnevno u 00:05 (Local SAFE schedule: `routes/console.php`).
 
 ---
 
@@ -111,7 +111,7 @@ Puna tabela rasporeda: **`docs/scheduled-tasks-overview.md`**.
 
 **Komanda:** `temp-data:cleanup`
 
-**Opis:** Trenutna implementacija **ne briše** redove — `temp_data` se čuva za audit. Komanda je rezervisana za buduće arhiviranje ili metrike.
+**Opis:** Briše samo **stare ne-pending** redove po retention pravilu (default 180 dana). `pending` se **nikad** ne briše. Uspešno plaćanje i dalje **ne briše** red (`temp_data.status = processed`) — audit ostaje dok ne pređe cutoff.
 
 **Frekvencija:** dnevno.
 

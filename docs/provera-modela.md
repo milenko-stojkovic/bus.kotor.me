@@ -145,9 +145,9 @@ Napomena: Spatie Laravel Permission koristi model_has_roles; ako ga instaliraš,
 | Tabela | Šta ima | Namera |
 |--------|--------|--------|
 | **reservations** | INDEX (license_plate, reservation_date) – `idx_res_plate_date` | Samo pretraga po tablici i datumu. **Nije UNIQUE** – više rezervacija (različiti useri/guestovi, datumi) može imati istu tablicu. |
-| **vehicles** | **UNIQUE(user_id, license_plate)** – `uq_user_plate` | Jedan user ne sme dva vozila sa istom tablicom. Dva različita usera (npr. agencije) mogu imati istu tablicu (internacionalno). |
+| **vehicles** | **UNIQUE(user_id, license_plate, status)** – `uq_user_plate_status` | Jedan user ne sme imati dva **active** vozila sa istom tablicom. `removed` vozila čuvaju istoriju i mogu koegzistirati sa `active` za istu tablicu. |
 
-Ne menjati: reservations ne treba UNIQUE na license_plate; vehicles mora ostati UNIQUE(user_id, license_plate).
+Ne menjati: reservations ne treba UNIQUE na license_plate; vehicles mora ostati UNIQUE(user_id, license_plate, status) da `removed` istorija radi ispravno.
 
 ---
 

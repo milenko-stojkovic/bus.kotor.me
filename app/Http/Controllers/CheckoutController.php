@@ -259,6 +259,11 @@ class CheckoutController extends Controller
                     $preferredLocale = 'en';
                 }
 
+                $invoiceSnapshot = ReservationInvoiceAmount::snapshotForNewReservation(
+                    $isFree ? 'free' : 'paid',
+                    $snapshot['vehicle_type_id'] ?? null
+                );
+
                 $temp = TempData::create([
                     'merchant_transaction_id' => $merchantTransactionId,
                     'retry_token' => $retryToken,
@@ -271,6 +276,7 @@ class CheckoutController extends Controller
                     'country' => $snapshot['country'],
                     'license_plate' => $snapshot['license_plate'],
                     'vehicle_type_id' => $snapshot['vehicle_type_id'],
+                    'invoice_amount_snapshot' => $invoiceSnapshot,
                     'email' => $snapshot['email'],
                     'preferred_locale' => $preferredLocale,
                     'status' => TempData::STATUS_PENDING,

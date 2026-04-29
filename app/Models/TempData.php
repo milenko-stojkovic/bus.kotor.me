@@ -46,6 +46,7 @@ class TempData extends Model
         'country',
         'license_plate',
         'vehicle_type_id',
+        'invoice_amount_snapshot',
         'email',
         'preferred_locale',
         'status',
@@ -60,6 +61,7 @@ class TempData extends Model
         return [
             'reservation_date' => 'date',
             'raw_callback_payload' => 'array',
+            'invoice_amount_snapshot' => 'decimal:2',
         ];
     }
 

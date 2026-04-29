@@ -66,7 +66,7 @@ Napomena (PDF + email robustnost):
 - Idempotentnost po **merchant_transaction_id**; dupli callback-i ne kreiraju duple rezervacije.
 - Podrška za **guest i auth** (user_id nullable).
 - Mail se šalje sa **bus@kotor.me** (MAIL_FROM_ADDRESS).
-- **Guest:** mail na **reservation.email** (snapshot). **Auth:** mail na **users.email** (trenutni nalog).
+- **Guest i auth:** mail ide na **reservation.email** (snapshot na rezervaciji).
 
 ---
 
@@ -79,4 +79,4 @@ Napomena (PDF + email robustnost):
 | Retry fiskalizacije uspe | Cron post-fiscalization:retry: čita post_fiscalization_data (next_retry_at <= now), tryFiscalize → success → applyFiscalDataAndDelete, dispatch fiscal PDF + email. |
 | Dupli callback od banke | PaymentCallbackJob: temp terminal (processed) ili Reservation već postoji → return; nema duple rezervacije. ProcessReservationAfterPaymentJob: ako fiscal_jir već set → return (nema duplog PDF/email). |
 | Guest korisnik | SendInvoiceEmailJob: user_id null → šalje na reservation.email (snapshot). |
-| Auth korisnik | SendInvoiceEmailJob: user_id set → šalje na user.email (users.email). |
+| Auth korisnik | SendInvoiceEmailJob: šalje na reservation.email (snapshot; isto kao guest). |

@@ -164,7 +164,11 @@ final class ReservationBookingPageData
         $slotPayload = $this->buildSlotPayload($selectedDate, $arrivalId, $departureId, $locale);
         $departureId = $slotPayload['effective_departure_id'];
 
-        $vehicles = $user->vehicles()->with(['vehicleType.translations'])->orderBy('license_plate')->get();
+        $vehicles = $user->vehicles()
+            ->where('status', \App\Models\Vehicle::STATUS_ACTIVE)
+            ->with(['vehicleType.translations'])
+            ->orderBy('license_plate')
+            ->get();
 
         $vehicleId = $this->asIntOrNull($request->query('vehicle_id'));
         $selectedVehicle = null;
@@ -173,6 +177,7 @@ final class ReservationBookingPageData
             if (! $selectedVehicle) {
                 $selectedVehicle = Vehicle::query()
                     ->where('user_id', $user->id)
+                    ->where('status', \App\Models\Vehicle::STATUS_ACTIVE)
                     ->with(['vehicleType.translations'])
                     ->find($vehicleId);
                 if ($selectedVehicle) {

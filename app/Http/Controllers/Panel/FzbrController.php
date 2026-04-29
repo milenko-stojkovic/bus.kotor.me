@@ -45,7 +45,11 @@ final class FzbrController extends Controller
 
         return view('panel.fzbr', [
             'locale' => $locale,
-            'userVehicles' => $user->vehicles()->with(['vehicleType.translations'])->orderBy('license_plate')->get(),
+            'userVehicles' => $user->vehicles()
+                ->where('status', \App\Models\Vehicle::STATUS_ACTIVE)
+                ->with(['vehicleType.translations'])
+                ->orderBy('license_plate')
+                ->get(),
             'maxVehiclesPerSegment' => $this->maxVehiclesPerSegment(),
         ]);
     }

@@ -51,6 +51,13 @@ Logika mora ostati konzistentna: **temp_data** kao soft lock i audit, zatim upis
 - **`canceled`:** ostaje **`canceled`**. Naknadni bank **SUCCESS** u **`PaymentCallbackJob`** se **ignoriše** (log **`payment_success_after_canceled_ignored`**); **nema** prelaza u **`late_success`**.
 - **`expired`** (npr. posle **`reservations:expire-pending`**): naknadni **SUCCESS** → **`late_success`** preko **`applyLateSuccess`** (bez automatskog kreiranja rezervacije). Razlika: istekao pending i oslobođen slot ≠ eksplicitni bankovski otkaz.
 
+Ako je `late_success` za **ulogovanu agenciju** i avans je uključen (`config('features.advance_payments')`):
+
+- sistem automatski konvertuje uplatu u **paid** avansni topup + ledger topup
+- `temp_data` ostaje `late_success`, uz `resolution_reason = converted_to_advance` (da se vidi u Admin “Uvid”)
+- **ne** kreira se rezervacija i **ne** dira se `daily_parking_data`
+- iznos se uzima iz `temp_data.invoice_amount_snapshot` (legacy fallback loguje `late_success_advance_amount_snapshot_missing`)
+
 ---
 
 ## Cron i temp_data

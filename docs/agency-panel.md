@@ -169,3 +169,39 @@ Ako pokušate da obrišete vozilo koje je vezano za **predstojeće rezervacije**
   - radi se “hard membership” provera da je svaki izabrani `vehicle_id` zaista član ponovo izračunate candidate liste za tu rezervaciju (sprečava ručno podmetanje parametara),
   - ažuriraju rezervacije na nova vozila,
   - i tek onda briše targetirano vozilo.
+
+---
+
+## Vozila – uklanjanje i promjena kategorije
+
+Ovaj modul sprečava da se ista registarska tablica ponovo unese sa drugom kategorijom bez administrativne provjere dokumentacije.
+
+### Statusi vozila: active vs removed
+
+- **`active` vozila** se prikazuju agenciji u voznom parku i nude se u dropdown-ovima (Rezervacije, Upcoming, FZBR…).
+- **`removed` vozila** se **ne prikazuju** agenciji u voznom parku i ne koriste se u dropdown-ovima.
+
+### Uklanjanje vozila
+
+- Ako vozilo **nije imalo nijednu rezervaciju** u istoriji:
+  - može biti **fizički obrisano**.
+- Ako je vozilo imalo **makar jednu rezervaciju** u istoriji:
+  - **ne briše se fizički**,
+  - dobija status **`removed`** (zadržava se kontinuitet istorije).
+
+### Ponovni unos iste tablice
+
+Ako agencija ponovo unese **istu registarsku tablicu**:
+
+- Ako je izabrana **ista kategorija** kao ranije uklonjenom vozilu:
+  - vozilo se **reaktivira** (`status = active`).
+- Ako je izabrana **druga kategorija**:
+  - direktan unos se **blokira**,
+  - prikazuje se objašnjenje i forma za **upload dokumenta** (slika ili PDF),
+  - agencija šalje **zahtjev za promjenu kategorije** koji ide administratoru na odobrenje.
+
+Dok zahtjev ne bude odobren, vozilo se ne može koristiti sa novom kategorijom.
+
+### Napomena (anti-abuse razlog)
+
+Workflow postoji da bi se sprečilo da se ista registarska tablica ponovo unese sa drugom (npr. jeftinijom) kategorijom bez provjere dokumentacije.
