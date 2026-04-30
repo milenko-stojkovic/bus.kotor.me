@@ -646,5 +646,10 @@ class UiTranslationsSeeder extends Seeder
         Cache::forget('ui_translations:group=statistics:locale=cg');
         Cache::forget('ui_translations:group=statistics:locale=en');
         Cache::forget('ui_translations:any:group=statistics:key=pdf_title');
+
+        // user settings language labels
+        Cache::forget('ui_translations:group=user:locale=cg');
+        Cache::forget('ui_translations:group=user:locale=en');
+        Cache::forget('ui_translations:any:group=user:key=lang_cg');
     }
 }
