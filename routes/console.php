@@ -79,3 +79,14 @@ Schedule::command('advance:send-yearly-statements')
 Schedule::command('reservations:expire-pending')->everyTenMinutes();
 Schedule::command('parking:sync-days')->dailyAt('00:05');
 Schedule::command('temp-data:cleanup')->daily();
+
+// Scheduled admin PDF report emails (SAFE: reads data + sends email)
+Schedule::command('reports:send-scheduled daily')
+    ->dailyAt('07:00')
+    ->timezone('Europe/Podgorica');
+Schedule::command('reports:send-scheduled monthly')
+    ->monthlyOn(1, '07:05')
+    ->timezone('Europe/Podgorica');
+Schedule::command('reports:send-scheduled yearly')
+    ->yearlyOn(1, 1, '07:10')
+    ->timezone('Europe/Podgorica');

@@ -150,7 +150,30 @@ Validacija: **`App\Http\Requests\UpdateReservationVehicleRequest`**.
 
 ## Statistika (`/panel/statistics`)
 
-Servis **`App\Services\Reservation\PanelStatisticsService`**: koristi **`PanelReservationListService::realizedFor`** za istu definiciju „realized“. **Total paid** = suma **`vehicle_types.price`** snapshota samo za **`reservations.status = paid`**. **Broj posjeta** = broj svih realizovanih rezervacija. **Tabela vozila** = grupisano po **`license_plate` + `vehicle_type_id`**, broj realizovanih po grupi.
+Servis **`App\Services\Reservation\PanelStatisticsService`**: koristi **`PanelReservationListService::realizedFor`** za istu definiciju „realized“, ali omogućava **filter po datumu** kroz query parametre:
+
+- `date_from` i `date_to` (GET parametri) — zatvoren interval \([from,to]\) nad **`reservations.reservation_date`**
+- Validacija: `App\Http\Requests\Panel\PanelStatisticsRequest` (`date_from`/`date_to` su `date`, uz pravilo `date_from <= date_to`)
+
+### Bounds (source of truth: samo agencija)
+
+Bounds se računaju **isključivo iz rezervacija ulogovane agencije** (nikad globalno), servis: `App\Services\Reservation\PanelStatisticsDateBounds`:
+
+- **min date**: najranija *realizovana* `reservation_date` za tog korisnika (fallback: najranija `reservation_date`; fallback: danas)
+- **max date**: danas + 90 dana
+
+### Šta je obuhvaćeno filterom
+
+Sve statistike poštuju:
+
+- `WHERE user_id = auth()->id()`
+- `reservation_date` u \([date_from, date_to]\)
+
+KPI-ovi ostaju isti (samo uz filter):
+
+- **Total paid** = suma `invoice_amount` za `reservations.status = paid` unutar realizovanih u opsegu
+- **Broj posjeta** = broj realizovanih rezervacija u opsegu
+- **Tabela vozila** = grupisano po `license_plate + vehicle_type_id` nad realizovanim u opsegu
 
 ## Veza: besplatne rezervacije
 

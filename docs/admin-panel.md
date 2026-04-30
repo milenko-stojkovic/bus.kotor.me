@@ -160,6 +160,7 @@ Rute (admin panel):
 - **Nema HTML preview-a**: stranica je samo dvokoračni izbor + PDF export u novom tabu.
 - **Datum bounds (svi pickeri)**: min/max se računaju iz `reservations.created_at` (samo datum deo).
 - **PDF**: uvek na `cg`, generiše se i kad nema podataka (nule/prazni redovi).
+- **Zakazano slanje PDF izvještaja emailom (scheduler)**: komanda `reports:send-scheduled {daily|monthly|yearly}` šalje izvještaje svim primaocima iz `report_emails` (jedan email po primaocu). Idempotency preko `scheduled_report_deliveries`. U slučaju greške (generisanje PDF ili slanje) kreira se `admin_alerts` zapis koji se uklanja ručno.
 
 | Ruta | Namena |
 |------|--------|

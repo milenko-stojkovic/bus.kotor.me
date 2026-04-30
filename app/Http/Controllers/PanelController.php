@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Panel\PanelStatisticsRequest;
 use App\Services\Reservation\PanelReservationListService;
+use App\Services\Reservation\PanelStatisticsDateBounds;
 use App\Services\Reservation\PanelStatisticsService;
 use App\Services\Reservation\VehicleReplacementCandidateService;
-use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class PanelController extends Controller
@@ -42,8 +43,40 @@ class PanelController extends Controller
         ]);
     }
 
-    public function statistics(Request $request, PanelStatisticsService $statisticsService): View
+    public function statistics(PanelStatisticsRequest $request, PanelStatisticsService $statisticsService): View
     {
-        return view('panel.statistics', $statisticsService->overview($request->user()));
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        $bounds = app(PanelStatisticsDateBounds::class);
+        $min = $bounds->minDateFor($user);
+        $max = $bounds->maxDateFor($user);
+
+        $validated = $request->validated();
+
+        $from = isset($validated['date_from']) && is_string($validated['date_from']) && $validated['date_from'] !== ''
+            ? \Carbon\Carbon::parse($validated['date_from'], $min->getTimezone())->startOfDay()
+            : $min->copy();
+        $to = isset($validated['date_to']) && is_string($validated['date_to']) && $validated['date_to'] !== ''
+            ? \Carbon\Carbon::parse($validated['date_to'], $min->getTimezone())->startOfDay()
+            : $max->copy();
+
+        // Clamp to bounds (closed interval).
+        if ($from->lt($min)) {
+            $from = $min->copy();
+        }
+        if ($to->gt($max)) {
+            $to = $max->copy();
+        }
+        if ($from->gt($to)) {
+            $from = $min->copy();
+            $to = $max->copy();
+        }
+
+        return view('panel.statistics', [
+            ...$statisticsService->overview($user, $from, $to),
+            'minDate' => $min->toDateString(),
+            'maxDate' => $max->toDateString(),
+        ]);
     }
 }

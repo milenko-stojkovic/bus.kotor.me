@@ -11,6 +11,49 @@
 
     <div class="py-6">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
+                <form method="GET" class="flex flex-col sm:flex-row gap-3 sm:items-end">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700" for="date_from">{{ $s('date_from', 'Od') }}</label>
+                        <input
+                            id="date_from"
+                            name="date_from"
+                            type="date"
+                            min="{{ $minDate }}"
+                            max="{{ $maxDate }}"
+                            value="{{ request('date_from', $date_from) }}"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700" for="date_to">{{ $s('date_to', 'Do') }}</label>
+                        <input
+                            id="date_to"
+                            name="date_to"
+                            type="date"
+                            min="{{ $minDate }}"
+                            max="{{ $maxDate }}"
+                            value="{{ request('date_to', $date_to) }}"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        />
+                    </div>
+                    <div class="flex gap-2">
+                        <button
+                            type="submit"
+                            class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+                        >
+                            {{ $s('apply_filters', 'Primijeni') }}
+                        </button>
+                        <a
+                            href="{{ route('panel.statistics') }}"
+                            class="inline-flex items-center rounded-md bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-800 shadow-sm hover:bg-gray-200"
+                        >
+                            {{ $s('reset_filters', 'Reset') }}
+                        </a>
+                    </div>
+                </form>
+            </div>
+
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
                     <p class="text-sm font-medium text-gray-500">{{ $s('total_paid', 'Total paid') }}</p>

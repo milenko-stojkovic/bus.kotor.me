@@ -26,6 +26,9 @@ Pregled svih trenutno planiranih (scheduled) taskova u projektu.
 | `parking:sync-days` | daily at 00:05 | `app/Console/Commands/SyncDailyParkingDays.php` | Sinhronizuje redove `daily_parking_data` za današnji dan + narednih 90 dana; briše stare datume |
 | `temp-data:cleanup` | daily | `app/Console/Commands/CleanupOldTempData.php` | Briše samo stare **ne-pending** redove po retention pravilu (default 180 dana) |
 | `advance:send-yearly-statements` | yearly on Jan 1 at 10:00 | `routes/console.php` | “Kartica avansa” (prethodna godina); idempotentno; feature-guard |
+| `reports:send-scheduled daily` | daily at 07:00 | `app/Console/Commands/SendScheduledAdminReports.php` | Zakazani admin PDF izvještaji (po uplati, po tipu vozila, + obaveze po avansu kada je enabled) |
+| `reports:send-scheduled monthly` | monthly on day 1 at 07:05 | `app/Console/Commands/SendScheduledAdminReports.php` | Zakazani admin PDF izvještaji za prethodni mjesec |
+| `reports:send-scheduled yearly` | yearly on Jan 1 at 07:10 | `app/Console/Commands/SendScheduledAdminReports.php` | Zakazani admin PDF izvještaji za prethodnu godinu |
 
 ### Production-only (bank/fiscal)
 

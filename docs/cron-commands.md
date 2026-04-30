@@ -206,6 +206,14 @@ Ovi job-ovi su dodati u `routes/console.php` i smatraju se bezbednim za lokalni 
 
 - `advance:send-yearly-statements` — **yearlyOn(1, 1, '10:00')**
   - Guard: ne radi ništa ako je `config('features.advance_payments') === false`
+- `reports:send-scheduled daily|monthly|yearly`
+  - **daily**: `dailyAt('07:00')` — period = prethodni dan
+  - **monthly**: `monthlyOn(1, '07:05')` — period = prethodni mjesec
+  - **yearly**: `yearlyOn(1, 1, '07:10')` — period = prethodna godina
+  - Primalac(i): tabela `report_emails` (jedan email po primaocu; nema fallback primaoca ako je tabela prazna)
+  - PDF paketi: “po uplati”, “po tipu vozila” i (kada je `advance_payments` ON) “obaveze po avansu”
+  - Idempotency: tabela `scheduled_report_deliveries` (unique: period + recipient)
+  - Failure: bez parcijalnih emailova ako PDF generisanje padne; admin email `bus@kotor.me` + `admin_alerts` zapis (idempotentno po periodu)
 - `reservations:expire-pending` — **everyTenMinutes**
 - `parking:sync-days` — **dailyAt('00:05')**
 - `temp-data:cleanup` — **daily**

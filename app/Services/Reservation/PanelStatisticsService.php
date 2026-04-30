@@ -4,6 +4,7 @@ namespace App\Services\Reservation;
 
 use App\Models\Reservation;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
 /**
@@ -22,11 +23,22 @@ final class PanelStatisticsService
      *   total_paid_formatted: string,
      *   visit_count: int,
      *   vehicle_usage: Collection<int, array{license_plate: string, category_label: string, visits: int}>
+     *   date_from: string,
+     *   date_to: string,
      * }
      */
-    public function overview(User $user): array
+    public function overview(User $user, Carbon $from, Carbon $to): array
     {
-        $realized = $this->reservationLists->realizedFor($user);
+        $realized = $this->reservationLists->realizedFor($user)
+            ->filter(function (Reservation $r) use ($from, $to): bool {
+                $d = $r->reservation_date;
+                if (! $d) {
+                    return false;
+                }
+
+                return $d->greaterThanOrEqualTo($from) && $d->lessThanOrEqualTo($to);
+            })
+            ->values();
         $locale = app()->getLocale();
 
         $paidRealized = $realized->filter(fn (Reservation $r) => $r->status === 'paid');
@@ -54,6 +66,8 @@ final class PanelStatisticsService
             'total_paid_formatted' => number_format($totalPaid, 2, '.', ''),
             'visit_count' => $visitCount,
             'vehicle_usage' => $vehicleUsage,
+            'date_from' => $from->toDateString(),
+            'date_to' => $to->toDateString(),
         ];
     }
 }
