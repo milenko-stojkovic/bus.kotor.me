@@ -4,9 +4,22 @@
 @endphp
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ $s('title', $p('page_statistics_title', 'Statistics')) }}
-        </h2>
+        @php
+            $pdfParams = array_filter(request()->only(['date_from', 'date_to']), fn ($v) => is_string($v) && trim($v) !== '');
+        @endphp
+
+        <div class="flex items-center justify-between gap-4">
+            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+                {{ $s('title', $p('page_statistics_title', 'Statistics')) }}
+            </h2>
+
+            <a
+                href="{{ route('panel.statistics.pdf', $pdfParams) }}"
+                class="inline-flex items-center rounded-md bg-gray-900 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gray-800"
+            >
+                PDF
+            </a>
+        </div>
     </x-slot>
 
     <div class="py-6">

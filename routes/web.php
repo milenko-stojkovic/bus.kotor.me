@@ -171,6 +171,7 @@ Route::middleware(['auth', 'verified'])->prefix('panel')->name('panel.')->group(
     Route::get('/upcoming', [PanelController::class, 'upcoming'])->name('upcoming');
     Route::get('/realized', [PanelController::class, 'realized'])->name('realized');
     Route::get('/statistics', [PanelController::class, 'statistics'])->name('statistics');
+    Route::get('/statistics/pdf', [PanelController::class, 'statisticsPdf'])->name('statistics.pdf');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {

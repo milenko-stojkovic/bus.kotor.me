@@ -154,6 +154,7 @@ Servis **`App\Services\Reservation\PanelStatisticsService`**: koristi **`PanelRe
 
 - `date_from` i `date_to` (GET parametri) — zatvoren interval \([from,to]\) nad **`reservations.reservation_date`**
 - Validacija: `App\Http\Requests\Panel\PanelStatisticsRequest` (`date_from`/`date_to` su `date`, uz pravilo `date_from <= date_to`)
+- PDF export: `GET /panel/statistics/pdf` (`panel.statistics.pdf`) — koristi **identičan dataset** kao UI (isti request + bounds + `PanelStatisticsService::overview`), vraća PDF **inline**.
 
 ### Bounds (source of truth: samo agencija)
 
