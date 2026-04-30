@@ -155,6 +155,7 @@ Servis **`App\Services\Reservation\PanelStatisticsService`**: koristi **`PanelRe
 - `date_from` i `date_to` (GET parametri) — zatvoren interval \([from,to]\) nad **`reservations.reservation_date`**
 - Validacija: `App\Http\Requests\Panel\PanelStatisticsRequest` (`date_from`/`date_to` su `date`, uz pravilo `date_from <= date_to`)
 - PDF export: `GET /panel/statistics/pdf` (`panel.statistics.pdf`) — koristi **identičan dataset** kao UI (isti request + bounds + `PanelStatisticsService::overview`), vraća PDF **inline**.
+  - Za razliku od zvaničnih PDF dokumenata (račun/potvrde) koji su cg-only, ovaj PDF je **informativni export** i jezik prati agenciju (`users.lang`, cg/en; fallback cg).
 
 ### Bounds (source of truth: samo agencija)
 

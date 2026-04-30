@@ -481,6 +481,16 @@ class UiTranslationsSeeder extends Seeder
             ['group' => 'statistics', 'key' => 'no_data', 'locale' => 'en', 'text' => 'No data yet.'],
             ['group' => 'statistics', 'key' => 'no_data', 'locale' => 'cg', 'text' => 'Još nema podataka.'],
 
+            // statistics PDF (informational export; follows user locale)
+            ['group' => 'statistics', 'key' => 'pdf_title', 'locale' => 'en', 'text' => 'Agency statistics'],
+            ['group' => 'statistics', 'key' => 'pdf_title', 'locale' => 'cg', 'text' => 'Statistika agencije'],
+            ['group' => 'statistics', 'key' => 'period_label', 'locale' => 'en', 'text' => 'Period'],
+            ['group' => 'statistics', 'key' => 'period_label', 'locale' => 'cg', 'text' => 'Period'],
+            ['group' => 'statistics', 'key' => 'pdf_vehicle_table_title', 'locale' => 'en', 'text' => 'Vehicles table'],
+            ['group' => 'statistics', 'key' => 'pdf_vehicle_table_title', 'locale' => 'cg', 'text' => 'Tabela po vozilima'],
+            ['group' => 'statistics', 'key' => 'pdf_no_data_for_period', 'locale' => 'en', 'text' => 'No data for the selected period.'],
+            ['group' => 'statistics', 'key' => 'pdf_no_data_for_period', 'locale' => 'cg', 'text' => 'Nema podataka za izabrani period.'],
+
             ['group' => 'panel', 'key' => 'booking_section_title', 'locale' => 'en', 'text' => 'New reservation'],
             ['group' => 'panel', 'key' => 'booking_section_title', 'locale' => 'cg', 'text' => 'Nova rezervacija'],
             ['group' => 'panel', 'key' => 'history_section_title', 'locale' => 'en', 'text' => 'Your reservations'],
@@ -633,5 +643,8 @@ class UiTranslationsSeeder extends Seeder
         Cache::forget('ui_translations:group=emails:locale=cg');
         Cache::forget('ui_translations:group=emails:locale=en');
         Cache::forget('ui_translations:any:group=emails:key=free_request_fulfilled_subject');
+        Cache::forget('ui_translations:group=statistics:locale=cg');
+        Cache::forget('ui_translations:group=statistics:locale=en');
+        Cache::forget('ui_translations:any:group=statistics:key=pdf_title');
     }
 }

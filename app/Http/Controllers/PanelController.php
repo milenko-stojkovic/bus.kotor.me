@@ -108,10 +108,12 @@ class PanelController extends Controller
 
         $dataset = $statisticsService->overview($range['user'], $range['from'], $range['to']);
 
+        $userLocale = is_string($range['user']->lang ?? null) ? (string) $range['user']->lang : 'cg';
+
         $binary = $pdfGenerator->renderBinary([
             ...$dataset,
             'agency_name' => (string) ($range['user']->name ?? ''),
-        ]);
+        ], $userLocale);
 
         $filename = sprintf(
             'statistika-agencije-%s-%s.pdf',

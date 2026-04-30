@@ -1,6 +1,7 @@
 @php
     $d = $dataset ?? [];
     $fmtMoney = fn (float $v) => number_format($v, 2, '.', '').' EUR';
+    $t = fn (string $key, ?string $fallback = null) => \App\Support\UiText::t('statistics', $key, $fallback);
 
     $from = (string) ($d['date_from'] ?? '');
     $to = (string) ($d['date_to'] ?? '');
@@ -35,11 +36,11 @@
             <img class="logo" src="{{ $logoDataUri }}" alt="Logo" />
         @endif
         <div>
-            <h1>Statistika agencije</h1>
+            <h1>{{ $t('pdf_title', 'Statistika agencije') }}</h1>
             @if ($agency !== '')
                 <div class="subtitle">{{ $agency }}</div>
             @endif
-            <div class="muted">Period: {{ $period }}</div>
+            <div class="muted">{{ $t('period_label', 'Period') }}: {{ $period }}</div>
         </div>
     </div>
 
@@ -47,11 +48,11 @@
         <table>
             <tbody>
                 <tr>
-                    <td>Ukupno plaćeno</td>
+                    <td>{{ $t('total_paid', 'Ukupno plaćeno') }}</td>
                     <td class="right"><strong>{{ $fmtMoney($totalPaid) }}</strong></td>
                 </tr>
                 <tr>
-                    <td>Broj posjeta (realizovane)</td>
+                    <td>{{ $t('number_of_visits', 'Broj posjeta') }}</td>
                     <td class="right"><strong>{{ $visitCount }}</strong></td>
                 </tr>
             </tbody>
@@ -59,17 +60,17 @@
     </div>
 
     <div class="card">
-        <div style="font-weight: 600; margin-bottom: 4px;">Tabela po vozilima</div>
+        <div style="font-weight: 600; margin-bottom: 4px;">{{ $t('pdf_vehicle_table_title', 'Tabela po vozilima') }}</div>
 
         @if (empty($rows) || (is_object($rows) && method_exists($rows, 'isEmpty') && $rows->isEmpty()))
-            <div class="muted">Nema podataka za izabrani period.</div>
+            <div class="muted">{{ $t('pdf_no_data_for_period', 'Nema podataka za izabrani period.') }}</div>
         @else
             <table>
                 <thead>
                     <tr>
-                        <th>Registarske tablice</th>
-                        <th>Kategorija vozila</th>
-                        <th class="right">Posjete</th>
+                        <th>{{ $t('registration_plates', 'Registarske tablice') }}</th>
+                        <th>{{ $t('vehicle_category', 'Kategorija vozila') }}</th>
+                        <th class="right">{{ $t('visits', 'Posjete') }}</th>
                     </tr>
                 </thead>
                 <tbody>

@@ -10,10 +10,11 @@ class PanelStatisticsPdfGenerator
     /**
      * @param  array<string, mixed>  $dataset
      */
-    public function renderBinary(array $dataset): string
+    public function renderBinary(array $dataset, string $locale = 'cg'): string
     {
         $previousLocale = app()->getLocale();
-        app()->setLocale('cg');
+        $locale = $this->normalizeLocale($locale);
+        app()->setLocale($locale);
 
         try {
             $pdf = Pdf::loadView('pdf.panel-statistics-report', [
@@ -30,6 +31,16 @@ class PanelStatisticsPdfGenerator
         } finally {
             app()->setLocale($previousLocale);
         }
+    }
+
+    private function normalizeLocale(string $locale): string
+    {
+        $l = strtolower(trim($locale));
+        if ($l === 'en' || $l === 'cg') {
+            return $l;
+        }
+
+        return 'cg';
     }
 }
 

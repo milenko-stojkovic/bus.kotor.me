@@ -34,7 +34,7 @@ class PanelStatisticsPdfExportTest extends TestCase
             'email' => 'a@example.com',
             'password' => bcrypt('secret'),
             'country' => 'ME',
-            'lang' => 'cg',
+            'lang' => 'en',
             'email_verified_at' => now(),
         ]);
         $u2 = User::query()->create([
@@ -98,13 +98,15 @@ class PanelStatisticsPdfExportTest extends TestCase
         ]);
 
         $captured = null;
-        $this->app->bind(PanelStatisticsPdfGenerator::class, function () use (&$captured) {
-            return new class($captured) extends PanelStatisticsPdfGenerator {
-                public function __construct(private mixed &$captured) {}
+        $capturedLocale = null;
+        $this->app->bind(PanelStatisticsPdfGenerator::class, function () use (&$captured, &$capturedLocale) {
+            return new class($captured, $capturedLocale) extends PanelStatisticsPdfGenerator {
+                public function __construct(private mixed &$captured, private mixed &$capturedLocale) {}
 
-                public function renderBinary(array $dataset): string
+                public function renderBinary(array $dataset, string $locale = 'cg'): string
                 {
                     $this->captured = $dataset;
+                    $this->capturedLocale = $locale;
 
                     return '%PDF-stub';
                 }
@@ -129,6 +131,7 @@ class PanelStatisticsPdfExportTest extends TestCase
         $this->assertSame('application/pdf', $pdf->headers->get('Content-Type'));
 
         $this->assertIsArray($captured);
+        $this->assertSame('en', $capturedLocale);
         $this->assertSame('2026-04-15', $captured['date_from']);
         $this->assertSame('2026-04-15', $captured['date_to']);
         $this->assertSame(20.0, (float) $captured['total_paid']);
@@ -154,7 +157,7 @@ class PanelStatisticsPdfExportTest extends TestCase
             'email' => 'a@example.com',
             'password' => bcrypt('secret'),
             'country' => 'ME',
-            'lang' => 'cg',
+            'lang' => 'en',
             'email_verified_at' => now(),
         ]);
 
@@ -176,13 +179,23 @@ class PanelStatisticsPdfExportTest extends TestCase
         ]);
 
         $captured = null;
-        $this->app->bind(PanelStatisticsPdfGenerator::class, function () use (&$captured) {
-            return new class($captured) extends PanelStatisticsPdfGenerator {
-                public function __construct(private mixed &$captured) {}
+        $capturedLocale = null;
+        $this->app->bind(PanelStatisticsPdfGenerator::class, function () use (&$captured, &$capturedLocale) {
+            return new class($captured, $capturedLocale) extends PanelStatisticsPdfGenerator {
+                public function __construct(private mixed &$captured, private mixed &$capturedLocale) {}
 
-                public function renderBinary(array $dataset): string
+                public function renderBinary(array $dataset, string $locale = 'cg'): string
                 {
-                    $this->captured = $dataset;
+                    // Simulate what real generator does: temporarily change app locale during render.
+                    $prev = app()->getLocale();
+                    app()->setLocale($locale);
+
+                    try {
+                        $this->captured = $dataset;
+                        $this->capturedLocale = $locale;
+                    } finally {
+                        app()->setLocale($prev);
+                    }
 
                     return '%PDF-stub';
                 }
@@ -195,6 +208,7 @@ class PanelStatisticsPdfExportTest extends TestCase
         $this->get(route('panel.statistics.pdf', [], false))->assertOk();
 
         $this->assertIsArray($captured);
+        $this->assertSame('en', $capturedLocale);
         $this->assertSame('2026-04-10', $captured['date_from']);
         $this->assertSame('2026-07-19', $captured['date_to']); // today(2026-04-20) + 90 days
     }
