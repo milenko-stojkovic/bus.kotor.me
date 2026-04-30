@@ -136,6 +136,7 @@ Validacija: **`App\Http\Requests\UpdateReservationVehicleRequest`**.
 
 - Jedna forma: **`resources/views/panel/partials/user-settings-form.blade.php`** (PATCH `/profile`).
 - Polja: **name**, **lang** (`cg` / `en`), **email**, **password** (trenutna / nova / potvrda) sa istim eye partialima kao auth; **`country`** ostaje kao **hidden** sa trenutnom vrednošću.
+  - Napomena: locale **`cg`** predstavlja zajedničku jezičku grupu (Crnogorski / Srpski / Hrvatski / Bošnjački) i to je **jedina** šifra koja se čuva u `users.lang` za taj skup varijanti.
 - **Save** / **Cancel** aktivni samo kad ima izmena (Alpine); Cancel vraća inicijalne vrednosti.
 - **Email:** nova adresa upisuje se u **`users.email`**, **`email_verified_at`** se postavlja na **`null`**, šalje se verification mail (minimalni „Opcija A“ tok bez odvojene tabele).
 - Tekstovi: grupa **`user`** u **`UiTranslationsSeeder`** + **`UiText::t`**.
