@@ -1,8 +1,24 @@
 # Project TODO (otvoreno)
 
-**Poslednje ažuriranje:** 2026-04-11  
+**Poslednje ažuriranje:** 2026-05-01  
 
 Stavke su prioritetne grupe. Kada nešto **završiš**, premesti opis u `docs/project-done.md` i ukloni odavde.
+
+---
+
+## Limo service
+
+Inicijalna specifikacija: **[limo-service.md](./limo-service.md)**.
+
+- [ ] Implementirati **DB foundation** za Limo (tabele po specifikaciji, bez preskakanja audit/fiskal polja gdje treba).
+- [ ] **Agency panel:** QR generisanje, lista aktivnih QR za dan, PDF/print za QR (`/panel/limo`).
+- [ ] **Limo evidenter** modul (predlog prefiksa `/limo`, PWA-first, API-friendly).
+- [ ] **QR pickup:** validacija, kreiranje pickup eventa, advance usage ledger, brisanje aktivnog tokena.
+- [ ] **Fallback tablica:** OCR ili ručni unos, dokaz foto, kreiranje eventa i advance usage gdje je primjenjivo.
+- [ ] **Limo fiskalizacija:** pipeline, PDF, email agenciji (po pravilima iz `limo-service.md`).
+- [ ] **Admin analytics:** uključiti Limo prihod i pregled pickup događaja.
+- [ ] **Komunalna policija:** definisati workflow incident izvještavanja (ko šalje, format, email) — v. TODO u `limo-service.md`.
+- [ ] **Native Android:** odluka nakon PWA field testa da li je potreban poseban klijent.
 
 ---
 
