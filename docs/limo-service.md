@@ -2,7 +2,7 @@
 
 **Dokument:** izvor istine za Limo uslugu *prije* implementacije. Ovo je inicijalna specifikacija; migracije, modeli i kod još nisu obavezni.
 
-**Poslednje ažuriranje:** 2026-05-01
+**Poslednje ažuriranje:** 2026-05-04
 
 **Povezano:** v. [project-todo.md](./project-todo.md) (sekcija *Limo service*).
 
@@ -225,6 +225,8 @@ Predložena polja:
 
 - `id`
 - `agency_user_id` (nullable za incident / nepoznato)
+- `agency_name_snapshot` (nullable) — audit snapshot imena agencije u trenutku događaja; postavlja se jednom pri kreiranju kada je agencija poznata; **ne** izračunavati kasnije iz `users`
+- `agency_email_snapshot` (nullable) — audit snapshot emaila agencije u trenutku događaja; ista pravila kao za ime
 - `source`: `qr` / `plate` / `incident`
 - `qr_token_hash` (nullable)
 - `qr_valid_on` (nullable)
@@ -242,6 +244,8 @@ Predložena polja:
 - `updated_at`
 
 Polje valute za sada **nije** u planu.
+
+**Audit identiteta agencije:** `agency_user_id` može postati `null` ako se korisnik obriše (`nullOnDelete`), ali istorija događaja mora ostati čitljiva — zato se uz poznatu agenciju na kreiranju unose `agency_name_snapshot` i `agency_email_snapshot`. Za incidente bez poznate agencije snapshot polja ostaju `null`.
 
 ### `limo_pickup_photos`
 

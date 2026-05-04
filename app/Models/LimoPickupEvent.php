@@ -9,6 +9,8 @@ class LimoPickupEvent extends Model
 {
     protected $fillable = [
         'agency_user_id',
+        'agency_name_snapshot',
+        'agency_email_snapshot',
         'source',
         'qr_token_hash',
         'qr_valid_on',
