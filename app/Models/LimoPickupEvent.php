@@ -1,0 +1,47 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class LimoPickupEvent extends Model
+{
+    protected $fillable = [
+        'agency_user_id',
+        'source',
+        'qr_token_hash',
+        'qr_valid_on',
+        'vehicle_id',
+        'license_plate_snapshot',
+        'amount_snapshot',
+        'occurred_at',
+        'gps_lat',
+        'gps_lng',
+        'recorded_by_limo_admin_id',
+        'device_info',
+        'status',
+        'fiscal_jir',
+        'fiscal_ikof',
+        'fiscal_qr',
+        'fiscal_operator',
+        'fiscal_date',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'qr_valid_on' => 'date',
+            'occurred_at' => 'datetime',
+            'fiscal_date' => 'datetime',
+            'amount_snapshot' => 'decimal:2',
+            'gps_lat' => 'decimal:7',
+            'gps_lng' => 'decimal:7',
+        ];
+    }
+
+    public function photos(): HasMany
+    {
+        return $this->hasMany(LimoPickupPhoto::class, 'limo_pickup_event_id');
+    }
+}
