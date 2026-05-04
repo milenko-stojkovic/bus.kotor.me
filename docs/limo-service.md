@@ -2,7 +2,7 @@
 
 **Dokument:** izvor istine za Limo uslugu *prije* implementacije. Ovo je inicijalna specifikacija; migracije, modeli i kod još nisu obavezni.
 
-**Poslednje ažuriranje:** 2026-05-05
+**Poslednje ažuriranje:** 2026-05-06
 
 **Povezano:** v. [project-todo.md](./project-todo.md) (sekcija *Limo service*).
 
@@ -228,12 +228,14 @@ Predložena polja:
 - `agency_user_id` (nullable za incident / nepoznato)
 - `agency_name_snapshot` (nullable) — audit snapshot imena agencije u trenutku događaja; postavlja se jednom pri kreiranju kada je agencija poznata; **ne** izračunavati kasnije iz `users`
 - `agency_email_snapshot` (nullable) — audit snapshot emaila agencije u trenutku događaja; ista pravila kao za ime
+- `agency_country_snapshot` (nullable) — snapshot države agencije za fiskal/račun; potrebno za incidente / nepunu evidenciju može ostati `null`
 - `source`: `qr` / `plate` / `incident`
 - `qr_token_hash` (nullable)
 - `qr_valid_on` (nullable)
 - `vehicle_id` (nullable)
 - `license_plate_snapshot` (nullable)
-- `amount_snapshot` `decimal(10,2)`
+- `amount_snapshot` `decimal(10,2)` — izvor cijene na računu (kao i ranije)
+- `service_name_snapshot` (nullable) — naziv Limo usluge kako se iskazuje na računu; snapshot na kreiranju; **nema** `vehicle_type_*` snapshot polja jer je u Limu dozvoljena samo jedna kategorija usluge
 - `occurred_at`
 - `gps_lat` (nullable)
 - `gps_lng` (nullable)
@@ -247,6 +249,8 @@ Predložena polja:
 Polje valute za sada **nije** u planu.
 
 **Audit identiteta agencije:** `agency_user_id` može postati `null` ako se korisnik obriše (`nullOnDelete`), ali istorija događaja mora ostati čitljiva — zato se uz poznatu agenciju na kreiranju unose `agency_name_snapshot` i `agency_email_snapshot`. Za incidente bez poznate agencije snapshot polja ostaju `null`.
+
+**Snapshot za račun (Limo vs rezervacija):** Limo fiskalni račun koristi ova snapshot polja i `amount_snapshot` / `merchant_transaction_id`. Za razliku od računa za rezervaciju parkinga, na Limo dokumentu **nisu** detalji dolaska/odlaska/slotova/datum rezervacije u tom obliku — umjesto toga dominira **`occurred_at`** i opis Limo usluge (npr. preko `service_name_snapshot`). **Ne uvode se** `vehicle_type_name_snapshot`, `vehicle_type_description_snapshot` niti `vehicle_type_label_snapshot`: Limo ima jednu dozvoljenu uslugu/kategoriju, pa je dovoljan `service_name_snapshot`.
 
 ### `limo_pickup_photos`
 
