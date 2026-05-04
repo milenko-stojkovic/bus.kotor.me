@@ -1,6 +1,6 @@
 # Project DONE (urađeno)
 
-**Poslednje ažuriranje:** 2026-04-11  
+**Poslednje ažuriranje:** 2026-05-09  
 
 Hronološki najnovije na vrhu unutar svake sekcije. Pri zatvaranju zadatka dodaj red sa **datumom** (`YYYY-MM-DD`) i kratak opis; istu stavku ukloni iz `docs/project-todo.md`.
 
@@ -8,6 +8,12 @@ Hronološki najnovije na vrhu unutar svake sekcije. Pri zatvaranju zadatka dodaj
 
 ## 2026-04 — Agency panel, besplatan checkout, dokumentacija
 
+- **2026-05-04** — **Admin analitika — Limo prihod:** `AdminAnalyticsService` agregira `limo_pickup_events` po `occurred_at` (Podgorica), uključuje `pending_fiscal` / `fiscalized` / `fiscal_failed`, isključuje `incident`; KPI razdvaja **prihod od rezervacija**, **prihod od Limo servisa**, **ukupno (rezervacije + Limo)**; Limo ne utiče na rezervacije/slot/tipove/agencije; isti dataset u PDF (`pdf/admin-analytics-report`); testovi u `AdminPanelAnalyticsTest`; **`docs/admin-panel.md`**, **`docs/limo-service.md`**.
+- **2026-05-09** — **Limo cleanup scheduler:** komanda `limo:cleanup-temporary-data` (`app/Console/Commands/LimoCleanupTemporaryData.php`) — briše stare `limo_qr_tokens` (valid_on &lt; danas, Podgorica) i istekle nekonzumirane `limo_plate_uploads` (+ privremeni fajlovi); zakazano **daily 00:10** `Europe/Podgorica` u `routes/console.php`; logovi `limo_qr_tokens_cleaned`, `limo_plate_uploads_cleaned`; **ne** briše `limo_pickup_evidence/`; test `tests/Feature/Console/LimoCleanupTemporaryDataTest.php`; `cron-commands.md`, `scheduled-tasks-overview.md`, `limo-service.md`.
+- **2026-05-08** — **Limo fallback tablica:** `limo_plate_uploads`; `POST /limo/pickup/plate/ocr` + `/plate/confirm` (private storage, OCR stub, obavezna ručna potvrda tablice); `source=plate`, foto dokaz `limo_pickup_photos`; testovi `tests/Feature/Limo/LimoPlateFallbackTest.php`. Incident/Komunalna policija nisu u ovom toku (`limo-service.md`).
+- **2026-05-07** — **Limo evidencija (web):** `GET /limo` mobilni Blade (`limo.entry`) — sken QR (`BarcodeDetector` + ručni fallback), GPS i `device_info` uz `POST /limo/pickup/qr`, `GET /limo/health`; testovi `tests/Feature/Limo/LimoEntryUiTest.php`.
+- **2026-05-04** — **Admin Limo pregled (read-only):** `GET /admin/limo`, ime rute **`admin.limo.index`**, `App\Http\Controllers\Admin\LimoController`; lista **`limo_pickup_events`** sa filterom **`date_from`/`date_to`** na **`occurred_at`** (Podgorica; podrazumijevano današnji dan); bez akcija; navigacija u layoutu admin panela; testovi `tests/Feature/Admin/LimoAdminIndexTest.php`; **`docs/admin-panel.md`**.
+- **2026-05-04** — **Limo (V2):** DB foundation (`limo_qr_tokens`, `limo_pickup_events`, `limo_pickup_photos`); granica `admins.limo_access` + `limo.access`; agencijski `/panel/limo` (lista/generate/show QR); `POST /limo/pickup/qr` sa advance ledger i brisanjem tokena; pipeline `ProcessLimoAfterPaymentJob` / `LimoInvoiceAdapter` / `SendLimoInvoiceEmailJob` / `PaidInvoicePdfGenerator::renderLimoBinary`; dokumentacija u `limo-service.md`.
 - **2026-05-01** — **Panel statistika (filter po datumu):** `/panel/statistics` dobija `date_from/date_to` filtere (zatvoren interval) sa bounds-ima na nivou ulogovane agencije (`PanelStatisticsDateBounds`) i validacijom (`PanelStatisticsRequest`); statistika se računa isključivo iz rezervacija tog user-a.
 - **2026-05-01** — **Panel statistika PDF export:** `GET /panel/statistics/pdf` generiše PDF “Statistika agencije” koristeći **isti dataset** kao UI (isti tok validacije + bounds + `PanelStatisticsService::overview`).
 - **2026-04-30** — **Zakazani admin PDF izvještaji (email):** komanda `reports:send-scheduled {daily|monthly|yearly}` šalje “po uplati”, “po tipu vozila” i (kada je enabled) “obaveze po avansu” svim primaocima iz `report_emails`; idempotency tabela `scheduled_report_deliveries`; greške kreiraju `admin_alerts` + admin failure email.

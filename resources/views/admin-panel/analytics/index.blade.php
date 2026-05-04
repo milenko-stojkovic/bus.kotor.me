@@ -57,12 +57,21 @@
         @if ($dataset)
             @php
                 $k = $dataset['kpi'];
+                $lm = $dataset['limo'] ?? [];
             @endphp
             <p class="text-sm text-gray-600">{{ $st['kpi'] ?? '' }}</p>
             <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div class="bg-white shadow rounded-lg p-4 border border-gray-100">
-                    <div class="text-xs text-gray-500">Ukupan prihod</div>
-                    <div class="text-lg font-semibold text-gray-900">{{ $fmtMoney($k['revenue_total']) }}</div>
+                    <div class="text-xs text-gray-500">Prihod od rezervacija (paid)</div>
+                    <div class="text-lg font-semibold text-gray-900">{{ $fmtMoney($k['revenue_reservations']) }}</div>
+                </div>
+                <div class="bg-white shadow rounded-lg p-4 border border-gray-100">
+                    <div class="text-xs text-gray-500">Prihod od Limo servisa</div>
+                    <div class="text-lg font-semibold text-gray-900">{{ $fmtMoney((float) ($lm['revenue_total'] ?? 0)) }}</div>
+                </div>
+                <div class="bg-white shadow rounded-lg p-4 border border-gray-100 ring-1 ring-indigo-100">
+                    <div class="text-xs text-gray-500">Ukupan prihod (rezervacije + Limo)</div>
+                    <div class="text-lg font-semibold text-gray-900">{{ $fmtMoney($k['revenue_grand_total']) }}</div>
                 </div>
                 <div class="bg-white shadow rounded-lg p-4 border border-gray-100">
                     <div class="text-xs text-gray-500">Broj rezervacija</div>
@@ -91,6 +100,41 @@
                 <div class="bg-white shadow rounded-lg p-4 border border-gray-100">
                     <div class="text-xs text-gray-500">Izgubljeni kapacitet (blokiranje)</div>
                     <div class="text-lg font-semibold text-gray-900">{{ $fmtPct($k['blocked_capacity_pct']) }}</div>
+                </div>
+            </section>
+
+            <section class="bg-white shadow rounded-lg p-6 border border-gray-100">
+                <h2 class="text-base font-semibold text-gray-900">Limo servis</h2>
+                <p class="text-sm text-gray-600 mt-1">{{ $st['limo'] ?? '' }}</p>
+                <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div class="rounded-lg border border-gray-100 bg-slate-50 p-4">
+                        <div class="text-xs text-gray-500">Ukupan prihod od Limo servisa</div>
+                        <div class="text-lg font-semibold text-gray-900">{{ $fmtMoney((float) ($lm['revenue_total'] ?? 0)) }}</div>
+                    </div>
+                    <div class="rounded-lg border border-gray-100 bg-slate-50 p-4">
+                        <div class="text-xs text-gray-500">Broj evidentiranih Limo pickup-a</div>
+                        <div class="text-lg font-semibold text-gray-900">{{ (int) ($lm['pickup_count'] ?? 0) }}</div>
+                    </div>
+                    <div class="rounded-lg border border-gray-100 bg-slate-50 p-4">
+                        <div class="text-xs text-gray-500">QR pickup</div>
+                        <div class="text-lg font-semibold text-gray-900">{{ (int) ($lm['qr_count'] ?? 0) }}</div>
+                    </div>
+                    <div class="rounded-lg border border-gray-100 bg-slate-50 p-4">
+                        <div class="text-xs text-gray-500">Pickup preko tablice</div>
+                        <div class="text-lg font-semibold text-gray-900">{{ (int) ($lm['plate_count'] ?? 0) }}</div>
+                    </div>
+                    <div class="rounded-lg border border-gray-100 bg-slate-50 p-4">
+                        <div class="text-xs text-gray-500">Fiskalizovano</div>
+                        <div class="text-lg font-semibold text-gray-900">{{ (int) ($lm['fiscalized_count'] ?? 0) }}</div>
+                    </div>
+                    <div class="rounded-lg border border-gray-100 bg-slate-50 p-4">
+                        <div class="text-xs text-gray-500">U obradi</div>
+                        <div class="text-lg font-semibold text-gray-900">{{ (int) ($lm['pending_fiscal_count'] ?? 0) }}</div>
+                    </div>
+                    <div class="rounded-lg border border-gray-100 bg-slate-50 p-4">
+                        <div class="text-xs text-gray-500">Greška fiskalizacije</div>
+                        <div class="text-lg font-semibold text-gray-900">{{ (int) ($lm['fiscal_failed_count'] ?? 0) }}</div>
+                    </div>
                 </div>
             </section>
 

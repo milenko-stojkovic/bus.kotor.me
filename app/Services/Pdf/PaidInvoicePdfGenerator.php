@@ -2,7 +2,9 @@
 
 namespace App\Services\Pdf;
 
+use App\Models\LimoPickupEvent;
 use App\Models\Reservation;
+use App\Services\Limo\LimoInvoiceAdapter;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use RuntimeException;
@@ -62,6 +64,61 @@ class PaidInvoicePdfGenerator
             $out = $pdf->output();
             if (! is_string($out) || $out === '') {
                 throw new RuntimeException('Paid invoice PDF output empty.');
+            }
+
+            return $out;
+        } finally {
+            app()->setLocale($previousLocale);
+        }
+    }
+
+    /**
+     * Isti šablon kao plaćena rezervacija; blok „Detalji rezervacije” zamijenjen limo poljima kada je $isLimoService.
+     */
+    public function renderLimoBinary(LimoPickupEvent $event, bool $isFiscal): string
+    {
+        $previousLocale = app()->getLocale();
+        app()->setLocale('cg');
+
+        try {
+            $vm = LimoInvoiceAdapter::fromPickupEvent($event);
+            $vm->fiscal_jir = $event->fiscal_jir;
+            $vm->fiscal_ikof = $event->fiscal_ikof;
+            $vm->fiscal_qr = $event->fiscal_qr;
+
+            $vehicleLine = $event->service_name_snapshot ?: 'Naknada';
+            $unitPrice = (float) $event->amount_snapshot;
+
+            $fiscalDateTime = $event->fiscal_date
+                ? Carbon::parse($event->fiscal_date)
+                : ($event->occurred_at ? Carbon::parse($event->occurred_at) : now());
+
+            $occurredAtDisplay = $event->occurred_at ? Carbon::parse($event->occurred_at) : null;
+
+            $qrDataUri = $isFiscal
+                ? KotorPdfAssets::fiscalVerificationQrDataUri($event->fiscal_qr)
+                : null;
+
+            $internalNumber = KotorPdfAssets::parseInternalNumberFromFiscalQr($event->fiscal_qr);
+
+            $pdf = Pdf::loadView('pdf.paid-invoice', [
+                'reservation' => $vm,
+                'isFiscal' => $isFiscal,
+                'isLimoService' => true,
+                'occurredAtDisplay' => $occurredAtDisplay,
+                'logoDataUri' => KotorPdfAssets::logoDataUri(),
+                'qrDataUri' => $qrDataUri,
+                'countryDisplay' => KotorPdfAssets::countryDisplayCg((string) ($event->agency_country_snapshot ?? '')),
+                'vehicleLine' => $vehicleLine,
+                'unitPrice' => $unitPrice,
+                'fiscalDateTime' => $fiscalDateTime,
+                'internalNumber' => $internalNumber,
+                'nonFiscalNote' => self::NON_FISCAL_NOTE,
+            ])->setPaper('a4', 'portrait');
+
+            $out = $pdf->output();
+            if (! is_string($out) || $out === '') {
+                throw new RuntimeException('Limo paid invoice PDF output empty.');
             }
 
             return $out;

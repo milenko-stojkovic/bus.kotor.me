@@ -70,6 +70,7 @@ Preporučeni oblik (naslovi ili bold oznake moraju biti eksplicitni):
      `C:\laragon\bin\php\php-8.3.30-Win32-vs16-x64\php.exe artisan ...`
 - **Sintaksa (`php -l`):** ne pokretati gol `php -l` ako Windows nudi „Open with…“ — koristi **`.\laragon-php.ps1 -l putanja\do\fajla.php`** ili **`.\laragon-php.cmd -l putanja\do\fajla.php`**.
 - **AI / automatizacija (Cursor agent, skripte):** iz korena repoa **`.\laragon-artisan.ps1`** ili **`.\laragon-artisan.cmd`** (npr. `test`, `migrate`, `queue:work`) — **ne** `php artisan ...` osim ako je `php` u PATH-u. Isto **`.\laragon-php.ps1`** / **`.\laragon-php.cmd`** umesto `php` za `-l`. Kada korisnik ima strogu Execution Policy, u primerima predložiti **`.cmd`**.
+- **Git / GitHub:** nakon izmjena u kodu i **`docs/`**, uobičajeni tok je `git add`, `git commit` sa jasnom porukom, zatim **`git push origin`** (grana u kojoj radiš, npr. `main`). Prije push-a poželjno pokrenuti **`.\laragon-artisan.cmd test`** (ili ciljani podskup testova).
 
 ---
 

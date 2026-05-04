@@ -119,6 +119,25 @@ Puna tabela rasporeda: **`docs/scheduled-tasks-overview.md`**.
 
 ---
 
+## 6b. LimoCleanupTemporaryData
+
+**Komanda:** `limo:cleanup-temporary-data`
+
+**Opis:** Briše **istekle nekorišćene** Limo privremene podatke (bez poziva banke/fiskala):
+
+1. **`limo_qr_tokens`** — redovi gdje je **`valid_on` strogo prije današnjeg kalendarskog dana** (`Europe/Podgorica`). Već iskorišćeni QR-i su ionako obrisani pri pickup-u.
+2. **`limo_plate_uploads`** — redovi gdje je **`expires_at` &lt; sada** i **`consumed_at` je NULL**; za svaki red briše se fajl na **private** `local` disku ako postoji, zatim slog.
+
+**Ne briše:** `limo_pickup_events`, `limo_pickup_photos`, fajlove u **`limo_pickup_evidence/`** (dokazi nakon potvrde). Potrošeni (`consumed`) plate upload slogovi se ne diraju ovom komandom.
+
+**Frekvencija:** dnevno u **00:10** (`Europe/Podgorica`) — Local SAFE schedule u `routes/console.php`.
+
+**Logovi (`payments`):** `limo_qr_tokens_cleaned`, `limo_plate_uploads_cleaned`.
+
+**Tabele / disk:** `limo_qr_tokens`, `limo_plate_uploads`, privatni storage za privremene fotografije.
+
+---
+
 ## Napomene
 
 - Svaka komanda koristi Eloquent za status (pending, failed, late_success) i snapshot polja.

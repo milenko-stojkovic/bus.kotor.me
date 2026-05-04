@@ -29,6 +29,7 @@
                         <a href="{{ route('panel_admin.reports', [], false) }}" class="px-2 py-1 rounded {{ ($navActive ?? '') === 'reports' ? 'bg-indigo-100 text-indigo-900 font-medium' : 'text-gray-600 hover:text-gray-900' }}">Izvještaji</a>
                         <a href="{{ route('panel_admin.settings', [], false) }}" class="px-2 py-1 rounded {{ ($navActive ?? '') === 'settings' ? 'bg-indigo-100 text-indigo-900 font-medium' : 'text-gray-600 hover:text-gray-900' }}">Podešavanja</a>
                         <a href="{{ route('panel_admin.analytics', [], false) }}" class="px-2 py-1 rounded {{ ($navActive ?? '') === 'analytics' ? 'bg-indigo-100 text-indigo-900 font-medium' : 'text-gray-600 hover:text-gray-900' }}">Analitika</a>
+                        <a href="{{ route('admin.limo.index', [], false) }}" class="px-2 py-1 rounded {{ ($navActive ?? '') === 'limo' ? 'bg-indigo-100 text-indigo-900 font-medium' : 'text-gray-600 hover:text-gray-900' }}">Limo pickup</a>
                     </nav>
                     <form method="POST" action="{{ route('panel_admin.logout', [], false) }}" class="shrink-0">
                         @csrf

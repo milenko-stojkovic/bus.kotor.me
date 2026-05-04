@@ -31,7 +31,15 @@ class LimoPickupEvent extends Model
         'fiscal_qr',
         'fiscal_operator',
         'fiscal_date',
+        'email_sent',
+        'invoice_email_sent_at',
     ];
+
+    public const EMAIL_NOT_SENT = 0;
+
+    public const EMAIL_SENDING = 1;
+
+    public const EMAIL_SENT = 2;
 
     protected function casts(): array
     {
@@ -39,6 +47,8 @@ class LimoPickupEvent extends Model
             'qr_valid_on' => 'date',
             'occurred_at' => 'datetime',
             'fiscal_date' => 'datetime',
+            'invoice_email_sent_at' => 'datetime',
+            'email_sent' => 'integer',
             'amount_snapshot' => 'decimal:2',
             'gps_lat' => 'decimal:7',
             'gps_lng' => 'decimal:7',
@@ -48,5 +58,17 @@ class LimoPickupEvent extends Model
     public function photos(): HasMany
     {
         return $this->hasMany(LimoPickupPhoto::class, 'limo_pickup_event_id');
+    }
+
+    public function markInvoiceEmailSent(): bool
+    {
+        if ($this->invoice_email_sent_at !== null) {
+            return true;
+        }
+
+        return $this->update([
+            'email_sent' => self::EMAIL_SENT,
+            'invoice_email_sent_at' => now(),
+        ]);
     }
 }

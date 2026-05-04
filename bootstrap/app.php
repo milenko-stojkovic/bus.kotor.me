@@ -23,12 +23,17 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($request->is('control') || $request->is('control/*')) {
                 return route('control.login', absolute: false);
             }
+            if ($request->is('limo') || $request->is('limo/*')) {
+                return route('panel_admin.login', absolute: false);
+            }
 
             return route('login', absolute: false);
         });
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
             'admin.panel' => \App\Http\Middleware\EnsureAdminPanelAccess::class,
+            'limo.access' => \App\Http\Middleware\EnsureLimoAccess::class,
+            'advance.feature' => \App\Http\Middleware\EnsureAdvancePaymentsEnabled::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

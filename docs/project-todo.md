@@ -1,6 +1,6 @@
 # Project TODO (otvoreno)
 
-**Poslednje ažuriranje:** 2026-05-01  
+**Poslednje ažuriranje:** 2026-05-04
 
 Stavke su prioritetne grupe. Kada nešto **završiš**, premesti opis u `docs/project-done.md` i ukloni odavde.
 
@@ -8,16 +8,13 @@ Stavke su prioritetne grupe. Kada nešto **završiš**, premesti opis u `docs/pr
 
 ## Limo service
 
-Inicijalna specifikacija: **[limo-service.md](./limo-service.md)**.
+Trenutno stanje + šta još fali: **[limo-service.md](./limo-service.md)** (implementacija vs TODO).
 
-- [ ] Implementirati **DB foundation** za Limo (tabele po specifikaciji, bez preskakanja audit/fiskal polja gdje treba).
-- [ ] **Agency panel:** QR generisanje, lista aktivnih QR za dan, PDF/print za QR (`/panel/limo`).
-- [ ] **Limo evidenter** modul (predlog prefiksa `/limo`, PWA-first, API-friendly).
-- [ ] **QR pickup:** validacija, kreiranje pickup eventa, advance usage ledger, brisanje aktivnog tokena.
-- [ ] **Fallback tablica:** OCR ili ručni unos, dokaz foto, kreiranje eventa i advance usage gdje je primjenjivo.
-- [ ] **Limo fiskalizacija:** pipeline, PDF, email agenciji (po pravilima iz `limo-service.md`).
-- [ ] **Admin analytics:** uključiti Limo prihod i pregled pickup događaja.
-- [ ] **Komunalna policija:** definisati workflow incident izvještavanja (ko šalje, format, email) — v. TODO u `limo-service.md`.
+- [ ] **QR PDF export** za agenciju (štampa/PDF sa panela — dugme trenutno stub).
+- [ ] **Integrisan OCR** za tablicu (trenutno stub u `LimoPlateOcrService` — ručna potvrda ostaje obavezna).
+- [ ] **Incident workflow** (operativno).
+- [ ] **Komunalna policija:** workflow incident izvještavanja (ko šalje, format, kanal) — i dalje nedefinisano poslovno; v. `limo-service.md`.
+- [ ] **PWA / instalabilni** shell i napredniji terenski UX za Limo (osnovni mobilni web na `GET /limo` postoji).
 - [ ] **Native Android:** odluka nakon PWA field testa da li je potreban poseban klijent.
 
 ---

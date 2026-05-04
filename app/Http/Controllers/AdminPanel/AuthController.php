@@ -29,8 +29,11 @@ class AuthController extends Controller
 
         $admin = Admin::query()
             ->where('email', $request->validated('email'))
-            ->where('admin_access', true)
             ->where('control_access', false)
+            ->where(function ($q): void {
+                $q->where('admin_access', true)
+                    ->orWhere('limo_access', true);
+            })
             ->first();
 
         if ($admin === null || $admin->password === null || $admin->password === '' || ! Hash::check($request->validated('password'), $admin->password)) {
@@ -47,7 +50,11 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('panel_admin.dashboard', [], false));
+        if ($admin->admin_access) {
+            return redirect()->intended(route('panel_admin.dashboard', [], false));
+        }
+
+        return redirect()->intended(route('limo.entry', [], false));
     }
 
     public function destroy(Request $request): RedirectResponse

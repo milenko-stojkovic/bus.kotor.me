@@ -30,14 +30,22 @@
 
     <h2>KPI</h2>
     <div class="muted">{{ $st['kpi'] ?? '' }}</div>
+    @php($lmPdf = (array) ($dataset['limo'] ?? []))
     <table class="kpi">
         <tr>
-            <td>Ukupan prihod</td><td>{{ $fmtMoney((float)($k['revenue_total'] ?? 0)) }}</td>
-            <td>Rezervacije</td><td>{{ (int)($k['reservations_total'] ?? 0) }}</td>
+            <td>Prihod od rezervacija (paid)</td><td>{{ $fmtMoney((float)($k['revenue_reservations'] ?? 0)) }}</td>
+            <td>Prihod od Limo servisa</td><td>{{ $fmtMoney((float)($lmPdf['revenue_total'] ?? 0)) }}</td>
         </tr>
         <tr>
+            <td colspan="2"><strong>Ukupan prihod (rezervacije + Limo)</strong></td><td colspan="2"><strong>{{ $fmtMoney((float)($k['revenue_grand_total'] ?? 0)) }}</strong></td>
+        </tr>
+        <tr>
+            <td>Rezervacije</td><td>{{ (int)($k['reservations_total'] ?? 0) }}</td>
             <td>Paid / Free</td><td>{{ (int)($k['paid_reservations'] ?? 0) }} / {{ (int)($k['free_reservations'] ?? 0) }}</td>
+        </tr>
+        <tr>
             <td>Prosječno (paid)</td><td>{{ $fmtMoney((float)($k['avg_revenue_per_paid'] ?? 0)) }}</td>
+            <td></td><td></td>
         </tr>
         <tr>
             <td>Zauzeti slotovi</td><td>{{ (int)($k['occupied_slots_total'] ?? 0) }}</td>
@@ -46,6 +54,27 @@
         <tr>
             <td>Blokirani slotovi</td><td>{{ (int)($k['blocked_slot_rows'] ?? 0) }}</td>
             <td>Izgubljeni kapacitet</td><td>{{ $fmtPct((float)($k['blocked_capacity_pct'] ?? 0)) }}</td>
+        </tr>
+    </table>
+
+    <h2>Limo servis</h2>
+    <div class="muted">{{ $st['limo'] ?? '' }}</div>
+    <table class="kpi">
+        <tr>
+            <td>Prihod (Limo)</td><td>{{ $fmtMoney((float)($lmPdf['revenue_total'] ?? 0)) }}</td>
+            <td>Broj pickup-a</td><td>{{ (int)($lmPdf['pickup_count'] ?? 0) }}</td>
+        </tr>
+        <tr>
+            <td>QR pickup</td><td>{{ (int)($lmPdf['qr_count'] ?? 0) }}</td>
+            <td>Pickup preko tablice</td><td>{{ (int)($lmPdf['plate_count'] ?? 0) }}</td>
+        </tr>
+        <tr>
+            <td>Fiskalizovano</td><td>{{ (int)($lmPdf['fiscalized_count'] ?? 0) }}</td>
+            <td>U obradi</td><td>{{ (int)($lmPdf['pending_fiscal_count'] ?? 0) }}</td>
+        </tr>
+        <tr>
+            <td>Greška fiskalizacije</td><td>{{ (int)($lmPdf['fiscal_failed_count'] ?? 0) }}</td>
+            <td></td><td></td>
         </tr>
     </table>
 

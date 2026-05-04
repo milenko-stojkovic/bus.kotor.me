@@ -7,6 +7,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 /**
  * Red u tabeli `admins`: guard `control` (dolasci) i guard `panel_admin` (glavni admin panel).
  * `admin_access` i `control_access` su međusobno isključivi (v. `saving`).
+ * `limo_access` određuje pristup Limo modulu (`/limo/*`); nezavisno je od `admin_access` (v. `EnsureLimoAccess`).
  * Operativni pregled rezervacija (User + AdminMiddleware) koristi prefiks `/staff`.
  */
 class Admin extends Authenticatable
@@ -21,6 +22,7 @@ class Admin extends Authenticatable
         'password',
         'control_access',
         'admin_access',
+        'limo_access',
     ];
 
     protected $hidden = [
@@ -34,6 +36,7 @@ class Admin extends Authenticatable
             'password' => 'hashed',
             'control_access' => 'boolean',
             'admin_access' => 'boolean',
+            'limo_access' => 'boolean',
         ];
     }
 

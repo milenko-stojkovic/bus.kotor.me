@@ -1,316 +1,235 @@
-# Limo service – initial specification
+# Limo service
 
-**Dokument:** izvor istine za Limo uslugu *prije* implementacije. Ovo je inicijalna specifikacija; migracije, modeli i kod još nisu obavezni.
+**Poslednje ažuriranje:** 2026-05-09
 
-**Poslednje ažuriranje:** 2026-05-06
+**Povezano:** [project-todo.md](./project-todo.md) (preostali Limo TODO), [project-done.md](./project-done.md) (urađeno), [agency-panel.md](./agency-panel.md) (agencijski `/panel/limo`).
 
-**Povezano:** v. [project-todo.md](./project-todo.md) (sekcija *Limo service*).
-
----
-
-## Scope
-
-Limo service je dostupan **samo ulogovanim agencijama**.
-
-**Gosti ne mogu** koristiti Limo service.
-
-Limo service **zavisi od avansa**:
-
-- vidljivo/upotrebljivo samo kada `config('features.advance_payments') === true`
-- koristi postojeći **agency advance ledger**
-- **negativan saldo avansa nije dozvoljen**
-
-**Limo service nije rezervacija.** Ne koristi:
-
-- `temp_data`
-- `reservations`
-- `daily_parking_data`
-- parking slotove
-- besplatne termine
-- radno vrijeme / working-hours logiku
+Ovaj dokument opisuje **trenutno implementirano stanje** u kodu i **preostale planirane korake**. Nije više isključivo „pred-implementaciona“ specifikacija.
 
 ---
 
-## Vehicle scope
+## Implementation status (Bus Kotor V2)
 
-Za Limo se koristi samo kategorija putničkog vozila: **„Putničko vozilo (4+1 do 7+1 sjedišta)”**.
+### Implementirano
 
-- **Cijena:** trenutno **15,00 EUR po pickup-u**.
-- Ova kategorija vozila **uklanja se iz regularne Bus Kotor ponude rezervacija** i koristi se **isključivo** kroz Limo service.
-- **Cijena mora biti snapshotovana** pri svakom realizovanom Limo pickup-u (zbog budućih promjena cjenovnika).
+- **Baza:** tabele `limo_qr_tokens`, `limo_pickup_events`, `limo_pickup_photos`, `limo_plate_uploads` (privremeni upload tablice; vidi sekciju [Implemented tables](#implemented-tables)).
+- **Granica autentifikacije / autorizacije (Limo evidenter):**
+  - kolona `admins.limo_access`
+  - middleware `limo.access`
+  - rute `/limo/*` zaštićene `auth:panel_admin` + `limo.access` (ne glavni `admin.panel`)
+  - `GET /limo` — mobilni Blade UI za evidentiranje pickup-a (`limo.entry`), uključujući nakon prijave za nalog „samo Limo“
+  - `GET /limo/health` — isti guard kao ostatak `/limo/*`; JSON `{ status, scope }` za health/smoke
+- **Agencijski panel — QR:**
+  - `GET /panel/limo` — lista aktivnih QR za **današnji** dan (`Europe/Podgorica`)
+  - `POST /panel/limo/qr/generate` — generisanje tokena (raw se jednom prikaže / flash; u bazi `token_hash` + `encrypted_token`)
+  - `GET /panel/limo/qr/{limoQrToken}` — prikaz QR slike iz dekriptovanog `encrypted_token`
+  - dugme **„Preuzmi PDF”** postoji kao **stub** (onemogućeno / bez implementacije)
+  - sve `/panel/limo/*` iza `advance.feature` middleware-a — ako je `advance_payments` isključen → **404**
+- **Pickup QR (operativa):**
+  - `POST /limo/pickup/qr` — validacija tokena (hash + dan), kreiranje `limo_pickup_events`, oduzimanje avansa (`agency_advance_transactions`, tip `usage`), brisanje iskorišćenog reda iz `limo_qr_tokens`
+- **Pickup tablica (fallback, bez QR):**
+  - `POST /limo/pickup/plate/ocr` — validacija slike (do 5 MB, jpeg/png/webp), snimanje u **private** `local` disk, `LimoPlateOcrService` (trenutno **stub** — `suggested_plate` obično `null`), vraća `upload_token` + prijedlog tablice ako ikad bude integrisan OCR
+  - `POST /limo/pickup/plate/confirm` — potvrda **ručno** unesene / ispravljene tablice; normalizacija kao u ostatku projekta (`DuplicateReservationAttemptService::normalizeLicensePlate`); traži se **aktivno** vozilo (`vehicles.status=active`, `user_id` postoji) po tablici; neuspjeh: `plate_not_registered` ili `insufficient_advance`; uspjeh: `source=plate`, `limo_pickup_photos` tip `plate`, ista fiskalna staza kao QR
+  - **OCR nije odlučujući** — evidenter mora potvrditi/ispraviti tablicu prije `confirm`
+  - Nema incident zapisa, nema Komunalne policije u ovom toku
+- **Fiskal / PDF / email (poslije pickup-a):**
+  - `ProcessLimoAfterPaymentJob` — fiskalizacija preko postojećeg `FiscalizationService::tryFiscalizeInvoiceLike` + adapter
+  - `LimoInvoiceAdapter` — mapiranje `LimoPickupEvent` → oblik kompatibilan sa fiscal/PDF tokom
+  - `SendLimoInvoiceEmailJob` — email agenciji sa PDF prilogom
+  - `PaidInvoicePdfGenerator::renderLimoBinary` — isti Blade `pdf/paid-invoice`, grana sa `isLimoService` (limo detalji umesto slotova rezervacije)
+  - ponašanje PDF-a za **obične rezervacije** (`renderBinary(Reservation, …)`) ostaje nepromijenjeno
+- **Cleanup privremenih Limo podataka:** Artisan **`limo:cleanup-temporary-data`** — dnevno **00:10** (`Europe/Podgorica`, `routes/console.php`): briše **`limo_qr_tokens`** gdje je **`valid_on` &lt; danas** (Podgorica) i istekle nekonzumirane **`limo_plate_uploads`** (`expires_at` &lt; sada, `consumed_at` NULL) uz brisanje privremenih fajlova; **ne** briše `limo_pickup_events`, `limo_pickup_photos`, **`limo_pickup_evidence/`**; logovi `limo_qr_tokens_cleaned`, `limo_plate_uploads_cleaned`
+
+### Još nije / TODO
+
+- **Izvoz QR-a kao PDF** za agenciju (štampa/PDF) — stub u UI
+- **Pravi OCR** (Tesseract / vanjski API) — trenutno stub; tablica se **obavezno** potvrđuje ručno
+- **Incident workflow**, format izvještaja, **Komunalna policija** — poslovni/procesni TODO (nije definisan službeni tok)
+- ~~**Admin analitika** — uključivanje Limo prihoda~~ → **urađeno:** Admin **Analitika** (`/admin/analitika`) ima poseban blok **Limo servis** i KPI za prihod (rezervacije vs Limo vs ukupno); detaljan read-only pregled događaja ostaje **`GET /admin/limo`** (`admin.limo.index`).
+- **Offline sync**, **incident tok**
+- **PWA polish** (instalabilni shell, napredniji UX) — po potrebi nakon terenskog testa
+- **Native Android** — odluka nakon terenskog testa PWA-e
+
+---
+
+## Auth boundary (API / backend — Limo evidenter)
+
+Rute `/limo/*` **nisu** dio glavnog Admin panela (`EnsureAdminPanelAccess` / `admin_access`).
+
+- **Autentifikacija:** guard `panel_admin` (forma `/admin/login`). Nalog u `admins`, ne `control_access`-only (isti skup kao za panel login).
+- **Autorizacija:** `admins.limo_access` + middleware **`limo.access`**. Npr. `POST /limo/pickup/qr` samo uz `limo_access === true`.
+- **`admin_access`** otvara `/admin` dashboard; **ne** daje automatski Limo — potrebno je **`limo_access`**.
+- **Limo-only nalozi** (`limo_access`, bez `admin_access`): nakon prijave redirect na **`GET /limo`** (`limo.entry`), ne na `/admin`.
+- **`GET /limo`:** mobilni web UI (QR sken `BarcodeDetector` ako postoji u pregledaču, inače ručni unos tokena), slanje na **`POST /limo/pickup/qr`** sa GPS (best-effort) i `device_info`; jezik cg.
+
+---
+
+## Scope (poslovna pravila)
+
+Limo u agencijskom panelu i za pickup zavisi od **`config('features.advance_payments')`**.
+
+- **Gosti** ne koriste Limo tokove.
+- Koristi se postojeći **agency advance ledger**; **negativan saldo nije dozvoljen**.
+- Limo **nije** rezervacija: bez `temp_data`, `reservations`, `daily_parking_data`, parking slotova, besplatnih termina po istom modelu kao Bus rezervacija.
+
+---
+
+## Vehicle scope (proizvod)
+
+- Jedna usluga u implementaciji: snapshot **`service_name_snapshot`**, iznos **`LimoPickupService::AMOUNT_EUR`** (trenutno `15.00` EUR) na pickup događaju.
 
 ---
 
 ## Financial model
 
-Agencije dopunjavaju avans postojećim advance sistemom.
-
-**Isti advance saldo** može se koristiti za:
-
-- plaćanje regularne Bus Kotor rezervacije iz avansa
-- **korišćenje Limo pickup-a**
-
-Realizovan Limo pickup:
-
-- kreira **Limo pickup događaj**
-- **smanjuje** agency advance ledger za **snapshotovanu** cijenu Limo pickup-a
-- **pokreće fiskalizaciju** za taj Limo pickup
-- šalje **fiskalni PDF / email** agenciji
-
-**Advance topup sam po sebi se ne fiskalizuje.** Fiskalizacija nastupa kada se Limo pickup **stvarno iskoristi**.
+- Topup avansa se **ne** fiskalizuje kao račun prodaje u istom smislu kao pickup.
+- Pri realizovanom Limo pickup-u: događaj + **usage** na ledgeru + pipeline **`ProcessLimoAfterPaymentJob`** (fiskal kada uspije, PDF, email).
 
 ---
 
-## QR model
+## QR model (implementacija)
 
-Agencije mogu generisati **privremene QR kodove za tekući dan**.
-
-Pravila QR-a:
-
-- QR pripada **agenciji**
-- QR **nije vezan za vozilo**
-- QR važi **samo za svoj datum**
-- QR predstavlja **jedan mogući pickup**
-- QR **nema financijski efekat** dok ga Limo evidenter **ne potvrdi**
-- QR se može upotrijebiti **samo jednom**
-- nakon uspješne upotrebe QR se **uklanja** iz liste aktivnih privremenih QR-ova
-- **stari nekorišćeni** privremeni QR kodovi brišu se **na početku sljedećeg dana**
-
-**Početni dnevni limit:**
-
-- maks. **20 generisanih QR kodova po agenciji po danu**
-- limit treba da broji **i** aktivne privremene QR kodove **i** već iskorišćene QR pickup događaje za isti dan
-
-Generisanje QR-a je dozvoljeno samo ako:
-
-- advance feature je **uključen**
-- agencija ima **advance saldo ≥ trenutnoj cijeni Limo pickup-a**
-- **dnevni limit QR-a** nije prekoračen
+- Token u QR-u je **raw** vrijednost; u bazi je **`token_hash`** (npr. SHA-256) i **`encrypted_token`** (Laravel encrypt) za ponovni prikaz QR-a na agencijskoj stranici.
+- **`valid_on`** = kalendarski dan (**Europe/Podgorica**).
+- Jednokratna upotreba: red u `limo_qr_tokens` se **briše** nakon uspješnog pickup-a; istorija ostaje u **`limo_pickup_events`**.
+- **Dnevni limit generisanja:** maks. **20 „slotova”** po agenciji po danu (aktivni tokeni + već realizovani QR pickup-i za taj dan) — vidi `LimoQrService`.
+- Istekli nekorišćeni QR tokeni u bazi: brišu se **`limo:cleanup-temporary-data`** (dnevno, v. `docs/cron-commands.md`).
 
 ---
 
-## Limo evidenter
+## Pickup flow – QR (implementirano)
 
-Limo evidenter je **odvojena operativna uloga / modul**.
+Validacija: aktivni token, danas, dovoljno avansa, limit. Na uspjeh: `limo_pickup_event`, ledger usage, brisanje tokena, dispatch pipeline job-a.
 
-**Ne** koristiti postojeći Control panel „kao što jeste“ — trenutni Control panel je pasivan.
-
-**Predlog korisničkog naziva:** „Limo evidencija“
-
-**Predlog tehničkog prefiksa ruta:** `/limo`
-
-**Platformska odluka za prvu implementaciju:**
-
-- **Laravel web / PWA-first** unutar istog projekta
-- backend treba da bude **API-friendly** da se kasnije može dodati native Android ako zatreba
+**`merchant_transaction_id` (Limo):** nastaje u trenutku kreiranja `limo_pickup_event`. To je jedinstveni identifikator računa / korelacije za Limo fiskalni račun i ima istu ulogu identifikacije računa kao `merchant_transaction_id` na rezervacijama. **Ne** znači da Limo koristi `temp_data`, `reservations` niti payment state machine.
 
 ---
 
-## Pickup flow – QR
+## Pickup flow – license plate fallback (implementirano)
 
-Kada Limo evidenter skenira **važeći QR**:
-
-Sistem validira:
-
-- QR postoji u tabeli **aktivnih privremenih QR tokena**
-- datum QR-a je **danas**
-- agencija i dalje ima **dovoljno advance salda**
-- pravila dnevne upotrebe / limita su zadovoljena
-
-Na potvrdi:
-
-- kreira se **Limo pickup event**
-- **snapshot** iznosa
-- kreira se red u `agency_advance_transactions` tipa **usage** sa iznosom **−snapshot**
-- briše se aktivni QR token
-- pokreće se **Limo fiskalizacioni pipeline**
-
-**Ne** kreirati `Reservation`. **Ne** koristiti `temp_data`. **Ne** dirati `daily_parking_data`.
-
----
-
-## Pickup flow – license plate fallback
-
-Ako vozač **nema QR**:
-
-Limo evidenter fotografiše registarsku tablicu.
-
-Sistem može koristiti **OCR** ili **ručni unos** tablice.
-
-Ako tablica odgovara **aktivnom vozilu agencije** i agencija ima **dovoljno advance salda**:
-
-- kreira se Limo pickup event
-- snapshot iznosa
-- kreira se advance usage red
-- pokreće se fiskalizacija
-
-**Vozilo** je potrebno samo u ovom fallback toku. **QR tok ne veže vozilo.**
+1. Evidententer šalje fotografiju na **`POST /limo/pickup/plate/ocr`** (multipart); dobija **`upload_token`** (isti evidenter, istek ~1h, jednokratna potvrda).
+2. Opcioni **`suggested_plate`** iz OCR stub-a — informativan; korisnik na **`GET /limo`** mora unijeti/popraviti tablicu prije potvrde.
+3. **`POST /limo/pickup/plate/confirm`** sa `upload_token` + **`license_plate`**: traži se aktivno vozilo agencije; avans ≥ 15 EUR; kreira se događaj `source=plate`, foto `limo_pickup_photos` (`type=plate`), ledger usage, `ProcessLimoAfterPaymentJob`.
+4. Ako tablica nije u voznom parku agencije → **`plate_not_registered`** (bez incident zapisa). Ako avans nedovoljan → **`insufficient_advance`**.
 
 ---
 
 ## Incident flow
 
-Ako:
-
-- nema važećeg QR-a
-- **i** tablica se ne može upariti sa aktivnim vozilom agencije
-- **ili** ne postoji naplativa advance putanja
-
-onda kreirati **incident-style** Limo pickup event sa dokazima:
-
-- fotografija
-- server timestamp
-- GPS lokacija
-- Limo evidenter
-- informacije o uređaju
-- opcioni tekst tablice ako postoji
-
-**Za sada:**
-
-- **ne** slati automatski Komunalnoj policiji
-- **ne** implementirati workflow izvještavanja
-- **ne** slati email na `komunalna.policija@kotor.me`
-
-**TODO:**
-
-- ko šalje incident izvještaje
-- format izvještaja
-- da li Admin ili Limo evidenter šalje
-- workflow „prijavljeno / zatvoreno“
+**Nije implementiran** u punom workflow-u; incidenti i Komunalna policija ostaju TODO.
 
 ---
 
 ## Evidence / audit
 
-Svaki realizovan ili incident pickup treba čuvati:
-
-- agenciju kada je poznata
-- izvor: `qr` / `plate` / `incident`
-- timestamp sa servera
-- GPS lokacija kada je dostupna
-- Limo evidenter
-- informacije o uređaju
-- foto dokaz gdje je primjenjivo
-- advance saldo prije/poslije ako je praktično
-- snapshotovan iznos
-
-Događaji su u poslovnom smislu **append-only**. Izbjegavati destruktivne izmjene dokaza.
+Za plate fallback, fotografije su na **`local`** disku (privatno), putanja u `limo_pickup_photos.path`; incident workflow ostaje TODO.
 
 ---
 
-## Predložene tabele (samo dokumentacija)
-
-**Ne kreirati migracije dok se ne dogovori implementacija.**
+## Implemented tables
 
 ### `limo_qr_tokens`
 
-Privremeni aktivni QR tokeni.
+Privremena tabela **aktivnih** tokena za generisane QR-ove. Iskorišćeni redovi se **brišu**; istorija je u `limo_pickup_events`.
 
-Predložena polja:
-
-- `id`
-- `agency_user_id`
-- `token_hash`
-- `valid_on`
-- `created_at`
-- `updated_at`
-
-Bez polja statusa. Iskorišćeni tokeni se brišu iz ove tabele; podaci o korišćenju ostaju kroz `limo_pickup_events`.
+| Polje | Napomena |
+|-------|----------|
+| `id` | |
+| `agency_user_id` | |
+| `token_hash` | lookup pri skeniranju |
+| `encrypted_token` | šifrat raw vrijednosti za prikaz QR-a agenciji |
+| `valid_on` | datum važenja (dan u Podgorici) |
+| `created_at`, `updated_at` | |
 
 ### `limo_pickup_events`
 
-Izvor istine za realizovane Limo prodaje i incidente.
+Izvor istine za realizovane Limo prodaje (i buduće incidente).
 
-Predložena polja:
+| Polje | Napomena |
+|-------|----------|
+| `id` | |
+| `merchant_transaction_id` | unique, korelacija fiskal/PDF/email |
+| `agency_user_id` | nullable u teoriji (incidenti) |
+| `agency_name_snapshot`, `agency_email_snapshot`, `agency_country_snapshot` | audit snapshot |
+| `source` | `qr` / `plate` / `incident` |
+| `qr_token_hash`, `qr_valid_on` | za QR tok |
+| `vehicle_id` | opciono |
+| `license_plate_snapshot` | |
+| `amount_snapshot`, `service_name_snapshot` | |
+| `occurred_at` | |
+| `gps_lat`, `gps_lng` | |
+| `recorded_by_limo_admin_id` | |
+| `device_info` | |
+| `status` | npr. `pending_fiscal`, `fiscalized`, `fiscal_failed`, … |
+| `fiscal_jir`, `fiscal_ikof`, `fiscal_qr`, `fiscal_operator`, `fiscal_date` | |
+| `email_sent`, `invoice_email_sent_at` | idempotencija emaila računa |
+| `created_at`, `updated_at` | |
 
-- `id`
-- `merchant_transaction_id` (string, **unique**) — stabilan korelacioni / identifikator za fiskal, PDF, email, logove i admin pretragu; generiše se pri kreiranju događaja. **Nije** vezan za `temp_data` niti `reservations` i ne učestvuje u payment state machine-u rezervacija.
-- `agency_user_id` (nullable za incident / nepoznato)
-- `agency_name_snapshot` (nullable) — audit snapshot imena agencije u trenutku događaja; postavlja se jednom pri kreiranju kada je agencija poznata; **ne** izračunavati kasnije iz `users`
-- `agency_email_snapshot` (nullable) — audit snapshot emaila agencije u trenutku događaja; ista pravila kao za ime
-- `agency_country_snapshot` (nullable) — snapshot države agencije za fiskal/račun; potrebno za incidente / nepunu evidenciju može ostati `null`
-- `source`: `qr` / `plate` / `incident`
-- `qr_token_hash` (nullable)
-- `qr_valid_on` (nullable)
-- `vehicle_id` (nullable)
-- `license_plate_snapshot` (nullable)
-- `amount_snapshot` `decimal(10,2)` — izvor cijene na računu (kao i ranije)
-- `service_name_snapshot` (nullable) — naziv Limo usluge kako se iskazuje na računu; snapshot na kreiranju; **nema** `vehicle_type_*` snapshot polja jer je u Limu dozvoljena samo jedna kategorija usluge
-- `occurred_at`
-- `gps_lat` (nullable)
-- `gps_lng` (nullable)
-- `recorded_by_limo_admin_id`
-- `device_info` (nullable)
-- `status`: npr. `pending_fiscal` / `fiscalized` / `fiscal_failed` / `incident`
-- fiskalna polja slična rezervacijama gdje treba
-- `created_at`
-- `updated_at`
-
-Polje valute za sada **nije** u planu.
-
-**Audit identiteta agencije:** `agency_user_id` može postati `null` ako se korisnik obriše (`nullOnDelete`), ali istorija događaja mora ostati čitljiva — zato se uz poznatu agenciju na kreiranju unose `agency_name_snapshot` i `agency_email_snapshot`. Za incidente bez poznate agencije snapshot polja ostaju `null`.
-
-**Snapshot za račun (Limo vs rezervacija):** Limo fiskalni račun koristi ova snapshot polja i `amount_snapshot` / `merchant_transaction_id`. Za razliku od računa za rezervaciju parkinga, na Limo dokumentu **nisu** detalji dolaska/odlaska/slotova/datum rezervacije u tom obliku — umjesto toga dominira **`occurred_at`** i opis Limo usluge (npr. preko `service_name_snapshot`). **Ne uvode se** `vehicle_type_name_snapshot`, `vehicle_type_description_snapshot` niti `vehicle_type_label_snapshot`: Limo ima jednu dozvoljenu uslugu/kategoriju, pa je dovoljan `service_name_snapshot`.
+**Snapshots** se ne izračunavaju naknadno iz `users` — istorija ostaje onakva kakva je upisana pri događaju.
 
 ### `limo_pickup_photos`
 
-Foto dokazi.
+| Polje | Napomena |
+|-------|----------|
+| `id` | |
+| `limo_pickup_event_id` | |
+| `path` | relativno na private disk |
+| `type` | npr. plate / context |
+| `created_at`, `updated_at` | |
 
-Predložena polja:
+### `limo_plate_uploads`
 
-- `id`
-- `limo_pickup_event_id`
-- `path`
-- `type`: `plate` / `context`
-- `created_at`
-- `updated_at`
+Privremeni upload prije potvrde tablice.
 
-Fajlove na produkciji inicijalno držati na serveru, **privatno / ne-javno** skladište.
+| Polje | Napomena |
+|-------|----------|
+| `id` | |
+| `upload_token` | unique, string za `confirm` |
+| `path` | relativno na private disk |
+| `ocr_text` | nullable (rezervisano za OCR) |
+| `gps_lat`, `gps_lng`, `device_info` | opciono od uploada |
+| `uploaded_by_limo_admin_id` | FK `admins`; samo taj evidenter može potvrditi |
+| `expires_at` | nakon čega `confirm` vraća `invalid_upload` |
+| `consumed_at` | postavlja se nakon uspješnog `confirm` |
+| `created_at`, `updated_at` | |
 
 ---
 
-## Agency panel
+## Agency panel (`/panel/limo`) — implementirano
 
-Buduća sekcija (nakon implementacije):
+- Vidljivo kada je **`advance_payments` ON**; inače **404** na `/panel/limo*`.
+- Lista **aktivnih** QR za **tekući dan**; iskorišćeni nestaju jer se red briše iz `limo_qr_tokens`.
+- Dugme generisanja, link na stranicu QR-a; **PDF/štampa QR-a — stub**.
 
-- ruta: **`/panel/limo`**
+---
 
-Vidljivo samo kada je `advance_payments` uključen.
+## Limo evidenter (`/limo/*`)
 
-Agencija treba da vidi:
-
-- trenutnu dostupnost Limo / avansa
-- aktivne privremene QR kodove za **tekući dan**
-- dugme za generisanje novog privremenog QR-a
-- prikaz detalja QR-a
-- PDF / print za QR
-- istoriju realizovanih Limo pickup-a
-
-Ako je QR iskorišćen, nestaje iz liste aktivnih QR-ova.
+- Odvojena autorizacija: **`limo.access`**, **`limo_access`**.
+- **`GET /limo`** (`limo.entry`) — mobilni ekran: QR sken / ručni token; sekcija **„Bez QR koda”**: foto tablice (kamera ili galerija), upload na `/plate/ocr`, prikaz prijedloga + **obavezna** ručna potvrda tablice na `/plate/confirm`; **`navigator.geolocation`** je opcion; **`device_info`** kao kod QR.
+- **Pregledač / HTTPS:** `getUserMedia`, geolokacija i (gdje postoji) **`BarcodeDetector`** zahtijevaju **[secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts)** — u praksi **HTTPS** na domeni; izuzetak je tipično **`localhost` / `127.0.0.1`**. Na „čistom” HTTP bez secure context-a kamera može biti nedostupna — ručni unos tokena i dalje radi. Tok kamere se zaustavlja nakon skeniranja, pri slanju, zaustavljanja ili napuštanja stranice (`pagehide`).
+- **`POST /limo/pickup/qr`** — isti endpoint za UI (`fetch` JSON + CSRF); odgovori ostaju JSON (`status` / `code`).
+- **`POST /limo/pickup/plate/ocr`**, **`POST /limo/pickup/plate/confirm`** — JSON / multipart; greške `plate_not_registered`, `insufficient_advance`, `invalid_upload`.
+- **`GET /limo/health`** — JSON smoke pod istim middleware-om.
+- Dalje **TODO**: pravi OCR motor, incident workflow, offline sinhronizacija, native Android. (Retencija dugotrajnih foto dokaza — posebna politika ako bude potrebna.)
 
 ---
 
 ## Admin panel / analytics
 
-Limo treba da se pojavi u Admin analitici.
-
-Minimum:
-
-- Limo prihod uključen u ukupni / ostali prihod u izvještajima
-- admin može pregledati Limo pickup događaje
-- incidenti / slanje Komunalnoj policiji = **TODO** dok se ne potvrdi poslovni i pravni proces
+- Uključivanje Limo prihoda u izvještaje i pregled događaja — **TODO**.
 
 ---
 
-## Explicit non-goals (inicijalna implementacija)
+## Explicit non-goals / još uvijek out of scope
 
-**Ne implementirati još:**
+- Native Android (odluka nakon PWA)
+- Automatski workflow Komunalnoj policiji dok se proces ne definiše
+- Offline-first sync
+- Limo za goste kroz isti model kao panel agencije
 
-- native Android aplikaciju
-- automatski email Komunalnoj policiji
-- workflow incident izvještavanja
-- negativan advance saldo
-- vezivanje vozila za QR
-- Limo za goste
-- Limo preko rezervacija / `temp_data`
-- offline-first sinhronizaciju
+---
+
+## Historijska napomena
+
+Ranija verzija ovog fajla bila je „inicijalna specifikacija prije implementacije”. Od **2026-05-04** dokument prati **implementaciju + preostale TODO** kao iznad.

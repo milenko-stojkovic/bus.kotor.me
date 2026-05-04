@@ -6,14 +6,19 @@ use App\Models\Admin;
 use App\Models\AgencyAdvanceTopup;
 use App\Models\AgencyAdvanceTransaction;
 use App\Models\DailyParkingData;
+use App\Models\LimoPickupEvent;
 use App\Models\ListOfTimeSlot;
 use App\Models\Reservation;
 use App\Models\TempData;
 use App\Models\User;
 use App\Models\VehicleType;
 use App\Models\VehicleTypeTranslation;
+use App\Services\AdminPanel\Analytics\AdminAnalyticsService;
+use App\Services\Limo\LimoPickupService;
+use App\Services\Pdf\AdminAnalyticsPdfGenerator;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class AdminPanelAnalyticsTest extends TestCase
@@ -108,8 +113,10 @@ class AdminPanelAnalyticsTest extends TestCase
         ], false));
 
         $resp->assertOk()
-            ->assertSee('Ukupan prihod', false)
-            ->assertSee('50.00 EUR', false);
+            ->assertSee('Prihod od rezervacija (paid)', false)
+            ->assertSee('Ukupan prihod (rezervacije + Limo)', false)
+            ->assertSee('50.00 EUR', false)
+            ->assertSee('Limo servis', false);
 
         $pdf = $this->get(route('panel_admin.analytics.pdf', [
             'date_from' => $d,
@@ -833,6 +840,211 @@ class AdminPanelAnalyticsTest extends TestCase
         $this->assertIsInt($posA1);
         $this->assertIsInt($posA2);
         $this->assertTrue($posA1 < $posA2);
+    }
+
+    public function test_limo_fiscalized_in_period_increases_limo_revenue_and_count(): void
+    {
+        $admin = $this->seedAdmin();
+        $this->actingAs($admin, 'panel_admin');
+
+        $d = '2026-06-15';
+        Carbon::setTestNow(Carbon::parse($d.' 14:00:00', 'Europe/Podgorica'));
+
+        $this->seedMinimalLimoPickup(
+            occurredAt: Carbon::parse($d.' 11:00:00', 'Europe/Podgorica'),
+            amount: '22.50',
+            source: 'qr',
+            status: 'fiscalized',
+        );
+
+        $dataset = app(AdminAnalyticsService::class)->build($d, $d, false);
+        $this->assertSame(22.5, $dataset['limo']['revenue_total']);
+        $this->assertSame(1, $dataset['limo']['pickup_count']);
+        $this->assertSame(1, $dataset['limo']['fiscalized_count']);
+        $this->assertSame(22.5, $dataset['kpi']['limo_revenue_total']);
+        $this->assertSame(22.5, $dataset['kpi']['revenue_grand_total']);
+
+        $this->get(route('panel_admin.analytics', [
+            'show' => 1,
+            'date_from' => $d,
+            'date_to' => $d,
+            'include_free' => 0,
+        ], false))->assertOk()->assertSee('Limo servis', false);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_limo_pending_and_fiscal_failed_count_toward_revenue(): void
+    {
+        $admin = $this->seedAdmin();
+        $this->actingAs($admin, 'panel_admin');
+
+        $d = '2026-06-16';
+        $this->seedMinimalLimoPickup(
+            occurredAt: Carbon::parse($d.' 09:00:00', 'Europe/Podgorica'),
+            amount: '10.00',
+            source: 'qr',
+            status: 'pending_fiscal',
+        );
+        $this->seedMinimalLimoPickup(
+            occurredAt: Carbon::parse($d.' 10:00:00', 'Europe/Podgorica'),
+            amount: '5.50',
+            source: 'plate',
+            status: 'fiscal_failed',
+        );
+
+        $dataset = app(AdminAnalyticsService::class)->build($d, $d, false);
+        $this->assertSame(15.5, $dataset['limo']['revenue_total']);
+        $this->assertSame(2, $dataset['limo']['pickup_count']);
+        $this->assertSame(1, $dataset['limo']['qr_count']);
+        $this->assertSame(1, $dataset['limo']['plate_count']);
+    }
+
+    public function test_limo_incident_status_excluded_from_revenue_and_counts(): void
+    {
+        $admin = $this->seedAdmin();
+        $this->actingAs($admin, 'panel_admin');
+
+        $d = '2026-06-17';
+        $this->seedMinimalLimoPickup(
+            occurredAt: Carbon::parse($d.' 12:00:00', 'Europe/Podgorica'),
+            amount: '99.00',
+            source: 'qr',
+            status: 'incident',
+        );
+
+        $dataset = app(AdminAnalyticsService::class)->build($d, $d, false);
+        $this->assertSame(0.0, $dataset['limo']['revenue_total']);
+        $this->assertSame(0, $dataset['limo']['pickup_count']);
+    }
+
+    public function test_limo_outside_selected_period_excluded(): void
+    {
+        $admin = $this->seedAdmin();
+        $this->actingAs($admin, 'panel_admin');
+
+        $this->seedMinimalLimoPickup(
+            occurredAt: Carbon::parse('2026-06-20 12:00:00', 'Europe/Podgorica'),
+            amount: '40.00',
+            source: 'qr',
+            status: 'fiscalized',
+        );
+
+        $dataset = app(AdminAnalyticsService::class)->build('2026-06-21', '2026-06-22', false);
+        $this->assertSame(0.0, $dataset['limo']['revenue_total']);
+    }
+
+    public function test_limo_does_not_affect_reservation_slot_or_vehicle_type_counts(): void
+    {
+        $admin = $this->seedAdmin();
+        $this->actingAs($admin, 'panel_admin');
+
+        $slot = ListOfTimeSlot::query()->create(['time_slot' => '08:00 - 08:20']);
+        $vt = VehicleType::query()->create(['price' => 50]);
+        foreach (['cg', 'en'] as $loc) {
+            VehicleTypeTranslation::query()->create([
+                'vehicle_type_id' => $vt->id,
+                'locale' => $loc,
+                'name' => 'VT',
+                'description' => 'd',
+            ]);
+        }
+
+        $d = '2026-06-18';
+        Reservation::query()->create([
+            'merchant_transaction_id' => 'mt-limo-isolation',
+            'drop_off_time_slot_id' => $slot->id,
+            'pick_up_time_slot_id' => $slot->id,
+            'reservation_date' => $d,
+            'user_name' => 'Iso',
+            'country' => 'ME',
+            'license_plate' => 'ISO1',
+            'vehicle_type_id' => $vt->id,
+            'email' => 'iso@example.com',
+            'status' => 'paid',
+            'invoice_amount' => '50.00',
+            'email_sent' => Reservation::EMAIL_NOT_SENT,
+        ]);
+
+        $this->seedMinimalLimoPickup(
+            occurredAt: Carbon::parse($d.' 13:00:00', 'Europe/Podgorica'),
+            amount: '15.00',
+            source: 'plate',
+            status: 'fiscalized',
+        );
+
+        $dataset = app(AdminAnalyticsService::class)->build($d, $d, false);
+        $this->assertSame(1, $dataset['kpi']['reservations_total']);
+        $this->assertSame(1, $dataset['kpi']['occupied_slots_total']);
+        $this->assertSame(50.0, $dataset['kpi']['revenue_reservations']);
+        $this->assertSame(15.0, $dataset['limo']['revenue_total']);
+        $this->assertSame(65.0, $dataset['kpi']['revenue_grand_total']);
+        $this->assertSame(1, $dataset['by_vehicle_type'][0]['reservations'] ?? 0);
+    }
+
+    public function test_analytics_pdf_template_includes_limo_block_when_dataset_has_limo(): void
+    {
+        $dataset = app(AdminAnalyticsService::class)->build(
+            Carbon::today('Europe/Podgorica')->toDateString(),
+            Carbon::today('Europe/Podgorica')->toDateString(),
+            false,
+        );
+
+        $this->assertArrayHasKey('limo', $dataset);
+
+        $html = view('pdf.admin-analytics-report', [
+            'dataset' => $dataset,
+            'logoDataUri' => '',
+        ])->render();
+
+        $this->assertStringContainsString('Limo servis', $html);
+        $this->assertStringContainsString('Pickup preko tablice', $html);
+
+        $binary = app(AdminAnalyticsPdfGenerator::class)->renderBinary($dataset);
+        $this->assertNotSame('', $binary);
+        $this->assertStringStartsWith('%PDF', $binary);
+    }
+
+    /**
+     * Minimal Limo pickup row for analytics (same shape as production seeds).
+     */
+    private function seedMinimalLimoPickup(
+        Carbon $occurredAt,
+        string $amount,
+        string $source,
+        string $status,
+    ): LimoPickupEvent {
+        $recorder = Admin::query()->create([
+            'username' => 'limo_an_'.Str::random(5),
+            'email' => 'limo-an-'.Str::random(5).'@test.local',
+            'password' => bcrypt('secret'),
+            'control_access' => false,
+            'admin_access' => true,
+            'limo_access' => true,
+        ]);
+
+        $user = User::factory()->create([
+            'name' => 'Agency Analytics',
+            'email' => 'agency-an-'.Str::random(4).'@test.local',
+            'country' => 'ME',
+        ]);
+
+        return LimoPickupEvent::query()->create([
+            'merchant_transaction_id' => (string) Str::uuid(),
+            'agency_user_id' => $user->id,
+            'agency_name_snapshot' => 'Agency Analytics',
+            'agency_email_snapshot' => $user->email,
+            'agency_country_snapshot' => 'ME',
+            'source' => $source,
+            'qr_token_hash' => null,
+            'qr_valid_on' => Carbon::today('Europe/Podgorica'),
+            'license_plate_snapshot' => 'KO999XX',
+            'amount_snapshot' => $amount,
+            'service_name_snapshot' => LimoPickupService::SERVICE_NAME,
+            'occurred_at' => $occurredAt,
+            'recorded_by_limo_admin_id' => $recorder->id,
+            'status' => $status,
+        ]);
     }
 }
 

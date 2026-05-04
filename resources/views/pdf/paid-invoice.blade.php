@@ -142,21 +142,38 @@
     <div class="line"></div>
 
     <div style="margin-top:8px;">
-        <div class="bold" style="font-size:13px; margin-bottom:4px; border-bottom:1px dashed #000; padding-bottom:2px;">
-            Detalji rezervacije
-        </div>
-        <div class="small" style="margin-bottom:2px;">
-            <span class="bold">Tip vozila:</span> {{ $vehicleLine }}
-        </div>
-        <div class="small" style="margin-bottom:2px;">
-            <span class="bold">Datum rezervacije:</span> {{ ($reservation->created_at ?? now())->format('d.m.Y') }}
-        </div>
-        <div class="small" style="margin-bottom:2px;">
-            <span class="bold">Vrijeme dolaska:</span> {{ $reservation->dropOffTimeSlot->time_slot ?? 'N/A' }}
-        </div>
-        <div class="small" style="margin-bottom:4px;">
-            <span class="bold">Vrijeme odlaska:</span> {{ $reservation->pickUpTimeSlot->time_slot ?? 'N/A' }}
-        </div>
+        @if (! empty($isLimoService))
+            <div class="bold" style="font-size:13px; margin-bottom:4px; border-bottom:1px dashed #000; padding-bottom:2px;">
+                Detalji limo usluge
+            </div>
+            <div class="small" style="margin-bottom:2px;">
+                <span class="bold">Tip usluge:</span> {{ $vehicleLine }}
+            </div>
+            <div class="small" style="margin-bottom:4px;">
+                <span class="bold">Datum i vrijeme:</span>
+                @if (! empty($occurredAtDisplay))
+                    {{ $occurredAtDisplay instanceof \Carbon\CarbonInterface ? $occurredAtDisplay->format('d.m.Y H:i') : $occurredAtDisplay }}
+                @else
+                    {{ ($reservation->created_at ?? now())->format('d.m.Y H:i') }}
+                @endif
+            </div>
+        @else
+            <div class="bold" style="font-size:13px; margin-bottom:4px; border-bottom:1px dashed #000; padding-bottom:2px;">
+                Detalji rezervacije
+            </div>
+            <div class="small" style="margin-bottom:2px;">
+                <span class="bold">Tip vozila:</span> {{ $vehicleLine }}
+            </div>
+            <div class="small" style="margin-bottom:2px;">
+                <span class="bold">Datum rezervacije:</span> {{ ($reservation->created_at ?? now())->format('d.m.Y') }}
+            </div>
+            <div class="small" style="margin-bottom:2px;">
+                <span class="bold">Vrijeme dolaska:</span> {{ $reservation->dropOffTimeSlot->time_slot ?? 'N/A' }}
+            </div>
+            <div class="small" style="margin-bottom:4px;">
+                <span class="bold">Vrijeme odlaska:</span> {{ $reservation->pickUpTimeSlot->time_slot ?? 'N/A' }}
+            </div>
+        @endif
     </div>
 </body>
 </html>

@@ -27,22 +27,28 @@ class FiscalizationService
 
     /**
      * Poziv fiskalnog API-ja. Na uspeh vraća niz sa fiscal_jir (i ostalim poljima); na neuspeh ['error' => string].
+     * {@see Reservation} ili objekat iz {@see \App\Services\Limo\LimoInvoiceAdapter} (ista polja: id, merchant_transaction_id, …).
      */
     public function tryFiscalize(Reservation $reservation, ?string $forcedFakeScenario = null): array
+    {
+        return $this->tryFiscalizeInvoiceLike($reservation, $forcedFakeScenario);
+    }
+
+    public function tryFiscalizeInvoiceLike(object $invoice, ?string $forcedFakeScenario = null): array
     {
         $driver = config('services.fiscalization.driver', 'fake');
 
         if ($driver === 'fake') {
-            return $this->callFakeFiscalization($reservation, $forcedFakeScenario);
+            return $this->callFakeFiscalization($invoice, $forcedFakeScenario);
         }
 
-        return $this->callRealFiscalization($reservation);
+        return $this->callRealFiscalization($invoice);
     }
 
     /**
      * POST na naš fake endpoint (isti payload kao za real servis).
      */
-    private function callFakeFiscalization(Reservation $reservation, ?string $forcedFakeScenario = null): array
+    private function callFakeFiscalization(object $reservation, ?string $forcedFakeScenario = null): array
     {
         $documentNumber = $this->nextDocumentNumber();
 
@@ -57,7 +63,7 @@ class FiscalizationService
             // Used by fake verify URL to embed year (crtd=...).
             'CreatedAt' => ($reservation->created_at ?? now())->toIso8601String(),
             // Used by fake verify URL (prc=...); not critical for internal number parsing, but keeps URL realistic.
-            'Price' => (float) ($reservation->vehicleType?->price ?? 0),
+            'Price' => (float) ($reservation->invoice_amount ?? $reservation->vehicleType?->price ?? 0),
         ];
 
         $scenario = '';
@@ -197,7 +203,7 @@ class FiscalizationService
     /**
      * Real fiskalni servis (trenutno stub; kasnije HTTP na config URL).
      */
-    private function callRealFiscalization(Reservation $reservation): array
+    private function callRealFiscalization(object $reservation): array
     {
         $apiUrl = $this->normalizeFiscalApiBaseUrl((string) config('services.fiscal.api_url'));
         $token = (string) config('services.fiscal.api_token');
@@ -478,7 +484,7 @@ class FiscalizationService
      * @return array{error: string, resolution_reason?: string, category?: string, notify_admin?: bool, user_message_key?: string, retryable?: bool}|null null = success, array = failure
      */
     private function callRealDeposit(
-        Reservation $reservation,
+        object $reservation,
         string $endpoint,
         string $token,
         string $enuIdentifier,
@@ -595,16 +601,22 @@ class FiscalizationService
      * Osnovni JSON deo koji ide i na fake i na real receipt (proširenje u callFakeFiscalization / callRealFiscalization).
      * Fake driver MUST mirror real API contract — dodavanje polja ovde zahteva isto polje u real payload-u gde je primenljivo.
      */
-    private function buildFiscalPayload(Reservation $reservation): array
+    private function buildFiscalPayload(object $reservation): array
     {
+        $dateStr = null;
+        if (isset($reservation->reservation_date) && $reservation->reservation_date !== null) {
+            $d = $reservation->reservation_date;
+            $dateStr = $d instanceof \Carbon\CarbonInterface ? $d->format('Y-m-d') : (string) $d;
+        }
+
         return [
             'reservation_id' => $reservation->id,
             'merchant_transaction_id' => $reservation->merchant_transaction_id,
-            'reservation_date' => $reservation->reservation_date?->format('Y-m-d'),
-            'user_name' => $reservation->user_name,
-            'email' => $reservation->email,
-            'license_plate' => $reservation->license_plate,
-            'country' => $reservation->country,
+            'reservation_date' => $dateStr,
+            'user_name' => $reservation->user_name ?? null,
+            'email' => $reservation->email ?? null,
+            'license_plate' => $reservation->license_plate ?? null,
+            'country' => $reservation->country ?? null,
         ];
     }
 

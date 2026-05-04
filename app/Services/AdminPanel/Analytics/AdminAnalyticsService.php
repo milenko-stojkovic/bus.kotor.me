@@ -3,6 +3,7 @@
 namespace App\Services\AdminPanel\Analytics;
 
 use App\Models\DailyParkingData;
+use App\Models\LimoPickupEvent;
 use App\Models\ListOfTimeSlot;
 use App\Models\PostFiscalizationData;
 use App\Models\Reservation;
@@ -139,8 +140,13 @@ final class AdminAnalyticsService
         $ops['paid_reservations_fully_in_free_zone'] = $this->countPaidReservationsFullyInFreeZones($reservations, $slotById);
         $ops['double_paid_same_slot_pairs'] = $this->countDoublePaidSameSlotPairs($from, $to);
 
+        $limo = $this->limoPickupAnalytics($dateFrom, $dateTo);
+        $revenueGrandTotal = $revenueTotal + $limo['revenue_total'];
+
         $kpi = [
-            'revenue_total' => $revenueTotal,
+            'revenue_reservations' => $revenueTotal,
+            'limo_revenue_total' => $limo['revenue_total'],
+            'revenue_grand_total' => $revenueGrandTotal,
             'reservations_total' => $reservationCount,
             'paid_reservations' => $paidCount,
             'free_reservations' => $freeCount,
@@ -182,6 +188,65 @@ final class AdminAnalyticsService
             'ops' => $ops,
             'advance_balances_total' => $advanceBalancesTotal,
             'advance_balances_by_agency' => $advanceBalancesByAgency,
+            'limo' => $limo,
+        ];
+    }
+
+    /**
+     * Limo pickup metrics: not reservations; excludes status=incident from revenue/count.
+     *
+     * @return array{
+     *   revenue_total: float,
+     *   pickup_count: int,
+     *   qr_count: int,
+     *   plate_count: int,
+     *   pending_fiscal_count: int,
+     *   fiscalized_count: int,
+     *   fiscal_failed_count: int
+     * }
+     */
+    private function limoPickupAnalytics(string $dateFrom, string $dateTo): array
+    {
+        $tz = 'Europe/Podgorica';
+        $occurredFrom = Carbon::parse($dateFrom, $tz)->startOfDay();
+        $occurredTo = Carbon::parse($dateTo, $tz)->endOfDay();
+
+        $rows = LimoPickupEvent::query()
+            ->whereBetween('occurred_at', [$occurredFrom, $occurredTo])
+            ->whereIn('status', ['pending_fiscal', 'fiscalized', 'fiscal_failed'])
+            ->get(['amount_snapshot', 'source', 'status']);
+
+        $revenue = 0.0;
+        $qrCount = 0;
+        $plateCount = 0;
+        $pending = 0;
+        $fiscalized = 0;
+        $failed = 0;
+
+        foreach ($rows as $row) {
+            $revenue += (float) ($row->amount_snapshot ?? 0);
+            if ($row->source === 'qr') {
+                $qrCount++;
+            } elseif ($row->source === 'plate') {
+                $plateCount++;
+            }
+
+            match ($row->status) {
+                'pending_fiscal' => $pending++,
+                'fiscalized' => $fiscalized++,
+                'fiscal_failed' => $failed++,
+                default => null,
+            };
+        }
+
+        return [
+            'revenue_total' => $revenue,
+            'pickup_count' => $rows->count(),
+            'qr_count' => $qrCount,
+            'plate_count' => $plateCount,
+            'pending_fiscal_count' => $pending,
+            'fiscalized_count' => $fiscalized,
+            'fiscal_failed_count' => $failed,
         ];
     }
 

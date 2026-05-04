@@ -78,6 +78,9 @@ Schedule::command('advance:send-yearly-statements')
 // SAFE local scheduled jobs (no real bank/fiscal calls)
 Schedule::command('reservations:expire-pending')->everyTenMinutes();
 Schedule::command('parking:sync-days')->dailyAt('00:05');
+Schedule::command('limo:cleanup-temporary-data')
+    ->dailyAt('00:10')
+    ->timezone('Europe/Podgorica');
 Schedule::command('temp-data:cleanup')->daily();
 
 // Scheduled admin PDF report emails (SAFE: reads data + sends email)

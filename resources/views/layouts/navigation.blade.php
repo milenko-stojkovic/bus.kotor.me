@@ -20,6 +20,9 @@
                         <x-nav-link :href="route('panel.advance.index')" :active="request()->routeIs('panel.advance.*')">
                             {{ $p('nav_advance', 'Avans') }}
                         </x-nav-link>
+                        <x-nav-link :href="route('panel.limo.index')" :active="request()->routeIs('panel.limo.*')">
+                            {{ $p('nav_limo', 'Limo QR') }}
+                        </x-nav-link>
                     @else
                         <span class="px-3 py-2 text-sm text-gray-400 cursor-not-allowed" title="{{ $p('advance_disabled_hint', 'Funkcionalnost trenutno nije dostupna') }}">
                             {{ $p('nav_advance', 'Avans') }}
@@ -101,6 +104,9 @@
             @if ($advanceEnabled)
                 <x-responsive-nav-link :href="route('panel.advance.index')" :active="request()->routeIs('panel.advance.*')">
                     {{ $p('nav_advance', 'Avans') }}
+                </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('panel.limo.index')" :active="request()->routeIs('panel.limo.*')">
+                    {{ $p('nav_limo', 'Limo QR') }}
                 </x-responsive-nav-link>
             @else
                 <span class="block px-3 py-2 text-sm text-gray-400 cursor-not-allowed" title="{{ $p('advance_disabled_hint', 'Funkcionalnost trenutno nije dostupna') }}">

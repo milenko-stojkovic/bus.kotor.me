@@ -40,6 +40,16 @@ Kontroler: **`WarningsController::index`**. Stranica ima tri bloka: **Upozorenja
 
 **Testovi:** `tests/Feature/AdminPanel/AdminWarningsDashboardTest.php`, `tests/Unit/DaySlotRangeSummaryBuilderTest.php`.
 
+### Limo pickup događaji (read-only) — `GET /admin/limo` (`admin.limo.index`)
+
+- **Middleware:** `auth:panel_admin` + `admin.panel` (kao ostali moduli glavnog admin panela; **nije** `limo.access` — pristup imaju samo `admins` sa `admin_access=1`, ne i „samo Limo” nalozi).
+- **Kontroler:** `App\Http\Controllers\Admin\LimoController::index`; pogled `resources/views/admin/limo/index.blade.php`.
+- **Izvor:** isključivo **`limo_pickup_events`** (bez rezervacija iz `reservations`).
+- **Filter:** GET parametri **`date_from`** / **`date_to`** (opcioni); podrazumijevano oba = **današnji dan** u **`Europe/Podgorica`**; zatvoren interval **`[from, to]`** po koloni **`occurred_at`**; redosled **`occurred_at DESC`**.
+- **Pregled:** agencija (snapshot), tablica, iznos, izvor (QR / tablica), status fiskalizacije, JIR kad postoji.
+- **Namjerno nije uključeno:** izmjene, brisanje, retry fiskala, ponovno slanje emaila, incidenti, export.
+- **Testovi:** `tests/Feature/Admin/LimoAdminIndexTest.php`.
+
 ---
 
 **Implementirano (van opšte specifikacije ispod):** pregled i akcije za **`late_manual_review`** / povezane statuse — `App\Http\Controllers\Admin\LateSuccessController` (lista, detalj, **force create** rezervacije, **reject**). Rute su pod prefiksom **`/staff`**, middleware **`admin`** (v. `routes/web.php`).
@@ -230,9 +240,11 @@ Napomena: `system_config` ima `name` (unique) i `value` (integer). Za admin form
 - **Filteri:** `date_from`, `date_to` (zatvoren interval, `od <= do`), `include_free` (checkbox).
 - **Datum od (min):** najstariji datum **realizovane** rezervacije (fallback: najstariji `reservation_date`, pa danas ako nema rezervacija).
 - **Datum do (max):** danas + 90 dana.
-- **Source of truth:** rezervacije iz `reservations`, blokiranje iz `daily_parking_data.is_blocked`, operativni problemi iz `temp_data` i `post_fiscalization_data`.
-- **Prihod:** suma `reservations.invoice_amount` za `status = paid` u periodu.
-- **Zauzeti slotovi:** po rezervaciji 1 ako `drop_off_time_slot_id == pick_up_time_slot_id`, inače 2.
+- **Source of truth:** rezervacije iz `reservations`, blokiranje iz `daily_parking_data.is_blocked`, operativni problemi iz `temp_data` i `post_fiscalization_data`; **Limo** iz `limo_pickup_events` (posebno; nije rezervacija).
+- **Prihod (rezervacije):** suma `reservations.invoice_amount` za `status = paid` u periodu (KPI: **Prihod od rezervacija (paid)**). **Ne** uključuje Limo.
+- **Limo servis (poseban blok + KPI):** period po **`occurred_at`**, zatvoren interval, vremenska zona **Europe/Podgorica** (start dana / kraj dana). U obzir: `status IN (pending_fiscal, fiscalized, fiscal_failed)`; **`incident` isključen** (nema prihoda u analitici). Prihod = **SUM(`amount_snapshot`)**; brojevi po izvoru (**QR** / **tablica**) i po fiskalnom statusu. Limo **ne ulazi** u broj rezervacija, zauzete slotove, tipove vozila, agencijske rezervacijske statistike niti trend rezervacija — ostaje odvojeno.
+- **Ukupan prihod (rezervacije + Limo):** zbir KPI prihoda od plaćenih rezervacija i Limo prihoda za isti izabrani period (jasno označeno u UI i PDF).
+- **Zauzeti slotovi:** isključivo od rezervacija — po rezervaciji 1 ako `drop_off_time_slot_id == pick_up_time_slot_id`, inače 2.
 - **Popunjenost (slot-level):** \(occupied\_slots / (broj\_slotova \* broj\_dana)\).
 - **Delovi dana:** grupisanje po početnom vremenu *drop-off* termina (00–07, 07–20, 20–24).
 - **Analiza po agencijama:** pregled prihoda, rezervacija i zauzetosti po registrovanim korisnicima (`reservations.user_id`), sortirano po prihodu opadajuće. Prihod = suma `invoice_amount` za `paid`; free se prikazuje kao posebna kolona i procenat.
