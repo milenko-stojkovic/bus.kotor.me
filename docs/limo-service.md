@@ -2,7 +2,7 @@
 
 **Dokument:** izvor istine za Limo uslugu *prije* implementacije. Ovo je inicijalna specifikacija; migracije, modeli i kod još nisu obavezni.
 
-**Poslednje ažuriranje:** 2026-05-04
+**Poslednje ažuriranje:** 2026-05-05
 
 **Povezano:** v. [project-todo.md](./project-todo.md) (sekcija *Limo service*).
 
@@ -224,6 +224,7 @@ Izvor istine za realizovane Limo prodaje i incidente.
 Predložena polja:
 
 - `id`
+- `merchant_transaction_id` (string, **unique**) — stabilan korelacioni / identifikator za fiskal, PDF, email, logove i admin pretragu; generiše se pri kreiranju događaja. **Nije** vezan za `temp_data` niti `reservations` i ne učestvuje u payment state machine-u rezervacija.
 - `agency_user_id` (nullable za incident / nepoznato)
 - `agency_name_snapshot` (nullable) — audit snapshot imena agencije u trenutku događaja; postavlja se jednom pri kreiranju kada je agencija poznata; **ne** izračunavati kasnije iz `users`
 - `agency_email_snapshot` (nullable) — audit snapshot emaila agencije u trenutku događaja; ista pravila kao za ime

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class LimoPickupEvent extends Model
 {
     protected $fillable = [
+        'merchant_transaction_id',
         'agency_user_id',
         'agency_name_snapshot',
         'agency_email_snapshot',
