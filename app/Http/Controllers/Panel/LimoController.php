@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Panel;
 use App\Http\Controllers\Controller;
 use App\Models\LimoQrToken;
 use App\Services\Limo\LimoQrService;
+use App\Services\Pdf\LimoQrPdfGenerator;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\View\View;
 
 final class LimoController extends Controller
@@ -70,5 +72,46 @@ final class LimoController extends Controller
             'token' => $limoQrToken,
             'qrDataUri' => LimoQrService::qrImageDataUri($raw),
         ]);
+    }
+
+    public function qrPdf(
+        Request $request,
+        LimoQrToken $limoQrToken,
+        LimoQrService $limoQrService,
+        LimoQrPdfGenerator $pdfGenerator,
+    ): StreamedResponse {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        $userId = (int) $user->id;
+        if ($limoQrToken->agency_user_id !== $userId) {
+            abort(404);
+        }
+
+        $today = Carbon::today('Europe/Podgorica');
+        if (! $limoQrToken->valid_on || ! $limoQrToken->valid_on->isSameDay($today)) {
+            abort(404);
+        }
+
+        try {
+            $raw = $limoQrService->decryptRawPayload($limoQrToken);
+        } catch (\Throwable) {
+            abort(404);
+        }
+
+        $binary = $pdfGenerator->renderBinary($limoQrToken, $raw, $user);
+        abort_if($binary === '', 404);
+
+        $filename = sprintf('limo-qr-%d-%s.pdf', (int) $limoQrToken->id, $today->format('Y-m-d'));
+
+        return response()->streamDownload(
+            static function () use ($binary): void {
+                echo $binary;
+            },
+            $filename,
+            [
+                'Content-Type' => 'application/pdf',
+            ]
+        );
     }
 }

@@ -21,7 +21,8 @@ Prefiks ruta: **`/panel`**, middleware **`auth`** + **`verified`**. Gornja navig
 | `GET /panel/statistics` | `panel.statistics` | Statistika: ukupno plaćeno, broj realizovanih posjeta, tabela po tablicama |
 | `GET /panel/limo` | `panel.limo.index` | Limo QR: lista aktivnih QR za današnji dan (samo kad je advance ON) |
 | `POST /panel/limo/qr/generate` | `panel.limo.qr.generate` | Generisanje privremenog QR tokena (limit po agenciji/danu) |
-| `GET /panel/limo/qr/{limoQrToken}` | `panel.limo.qr.show` | Prikaz QR (iz dekriptovanog tokena); PDF dugme stub |
+| `GET /panel/limo/qr/{limoQrToken}` | `panel.limo.qr.show` | Prikaz QR (iz dekriptovanog tokena) |
+| `GET /panel/limo/qr/{limoQrToken}/pdf` | `panel.limo.qr.pdf` | Preuzimanje QR kao PDF (štampa) — samo za današnje tokene |
 | `GET /panel/user` | `panel.user` | Korisnik: ime, jezik, email, lozinka |
 | `PATCH /profile` | `profile.update` | Čuva profil (uključujući lozinku ako je uneta) |
 | `PATCH /panel/reservations/{id}/vehicle` | `panel.reservations.vehicle` | Zamena vozila na upcoming rezervaciji |
@@ -94,7 +95,7 @@ Rute **`/panel/limo*`** vidljive i dostupne **samo kada je** `advance_payments` 
 - QR važi **samo za tekući kalendarski dan** (timezone projekta).
 - **Maks. 20 generisanih „slotova”** po agenciji po danu (aktivni tokeni + već evidentirani Limo pickup-i tog dana).
 - U bazi se čuvaju **`token_hash`** i **`encrypted_token`**; na ekranu se QR prikazuje iz dekriptovane vrijednosti.
-- Dugme **„Preuzmi PDF”** (QR kao PDF) je trenutno **stub / onemogućeno** — nema izvoza.
+- Dugme **„Preuzmi PDF”** preuzima jednostavan PDF za štampu (QR + agencija + datum). **Nema finansijskog efekta**; važi samo za **današnje** tokene (inače 404).
 - **Finansijski efekat** (skidanje avansa, fiskal, email računa) nastupa tek kada **Limo evidenter** potvrdi pickup putem **`POST /limo/pickup/qr`** — samo generisanje QR-a ne troši avans.
 
 Detalji modela: **[limo-service.md](./limo-service.md)**.

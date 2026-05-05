@@ -10,7 +10,6 @@ Stavke su prioritetne grupe. Kada nešto **završiš**, premesti opis u `docs/pr
 
 Trenutno stanje + šta još fali: **[limo-service.md](./limo-service.md)** (implementacija vs TODO).
 
-- [ ] **QR PDF export** za agenciju (štampa/PDF sa panela — dugme trenutno stub).
 - [ ] **Integrisan OCR** za tablicu (trenutno stub u `LimoPlateOcrService` — ručna potvrda ostaje obavezna).
 - [ ] **Incident workflow** (operativno).
 - [ ] **Komunalna policija:** workflow incident izvještavanja (ko šalje, format, kanal) — i dalje nedefinisano poslovno; v. `limo-service.md`.

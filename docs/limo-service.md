@@ -23,7 +23,7 @@ Ovaj dokument opisuje **trenutno implementirano stanje** u kodu i **preostale pl
   - `GET /panel/limo` — lista aktivnih QR za **današnji** dan (`Europe/Podgorica`)
   - `POST /panel/limo/qr/generate` — generisanje tokena (raw se jednom prikaže / flash; u bazi `token_hash` + `encrypted_token`)
   - `GET /panel/limo/qr/{limoQrToken}` — prikaz QR slike iz dekriptovanog `encrypted_token`
-  - dugme **„Preuzmi PDF”** postoji kao **stub** (onemogućeno / bez implementacije)
+  - `GET /panel/limo/qr/{limoQrToken}/pdf` — **PDF export** za štampu (QR + agencija + datum); token mora biti **današnji** (Podgorica) i vlasništvo agencije, inače 404; nema finansijskog efekta
   - sve `/panel/limo/*` iza `advance.feature` middleware-a — ako je `advance_payments` isključen → **404**
 - **Pickup QR (operativa):**
   - `POST /limo/pickup/qr` — validacija tokena (hash + dan), kreiranje `limo_pickup_events`, oduzimanje avansa (`agency_advance_transactions`, tip `usage`), brisanje iskorišćenog reda iz `limo_qr_tokens`
@@ -42,7 +42,6 @@ Ovaj dokument opisuje **trenutno implementirano stanje** u kodu i **preostale pl
 
 ### Još nije / TODO
 
-- **Izvoz QR-a kao PDF** za agenciju (štampa/PDF) — stub u UI
 - **Pravi OCR** (Tesseract / vanjski API) — trenutno stub; tablica se **obavezno** potvrđuje ručno
 - **Incident workflow**, format izvještaja, **Komunalna policija** — poslovni/procesni TODO (nije definisan službeni tok)
 - ~~**Admin analitika** — uključivanje Limo prihoda~~ → **urađeno:** Admin **Analitika** (`/admin/analitika`) ima poseban blok **Limo servis** i KPI za prihod (rezervacije vs Limo vs ukupno); detaljan read-only pregled događaja ostaje **`GET /admin/limo`** (`admin.limo.index`).
@@ -199,7 +198,7 @@ Privremeni upload prije potvrde tablice.
 
 - Vidljivo kada je **`advance_payments` ON**; inače **404** na `/panel/limo*`.
 - Lista **aktivnih** QR za **tekući dan**; iskorišćeni nestaju jer se red briše iz `limo_qr_tokens`.
-- Dugme generisanja, link na stranicu QR-a; **PDF/štampa QR-a — stub**.
+- Dugme generisanja, link na stranicu QR-a i **PDF export**: `GET /panel/limo/qr/{limoQrToken}/pdf` (PDF se generiše on-demand, ne čuva se; važi samo za današnje tokene).
 
 ---
 
@@ -217,7 +216,7 @@ Privremeni upload prije potvrde tablice.
 
 ## Admin panel / analytics
 
-- Uključivanje Limo prihoda u izvještaje i pregled događaja — **TODO**.
+- Uključivanje Limo prihoda u admin izvještaje + read-only pregled događaja — **urađeno** (v. `docs/admin-panel.md`, `/admin/analitika` i `/admin/limo`).
 
 ---
 

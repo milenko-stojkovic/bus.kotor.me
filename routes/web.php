@@ -194,6 +194,7 @@ Route::middleware(['auth', 'verified'])->prefix('panel')->name('panel.')->group(
         Route::get('/', [LimoController::class, 'index'])->name('index');
         Route::post('/qr/generate', [LimoController::class, 'generateQr'])->name('qr.generate');
         Route::get('/qr/{limoQrToken}', [LimoController::class, 'showQr'])->name('qr.show');
+        Route::get('/qr/{limoQrToken}/pdf', [LimoController::class, 'qrPdf'])->name('qr.pdf');
     });
 });
 

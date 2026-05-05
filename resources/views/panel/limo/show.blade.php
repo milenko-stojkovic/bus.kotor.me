@@ -16,9 +16,9 @@
                     <img src="{{ $qrDataUri }}" alt="QR" class="max-w-xs w-full h-auto border border-gray-200 rounded" />
                 </div>
                 <div class="flex flex-wrap gap-3 justify-center">
-                    <x-secondary-button type="button" disabled class="opacity-60 cursor-not-allowed" title="{{ $p('limo_pdf_stub', 'PDF uskoro') }}">
-                        {{ $p('limo_download_pdf', 'Preuzmi PDF') }}
-                    </x-secondary-button>
+                    <a href="{{ route('panel.limo.qr.pdf', ['limoQrToken' => $token->id], false) }}">
+                        <x-secondary-button type="button">{{ $p('limo_download_pdf', 'Preuzmi PDF') }}</x-secondary-button>
+                    </a>
                     <a href="{{ route('panel.limo.index', [], false) }}">
                         <x-secondary-button type="button">{{ $p('limo_back', 'Nazad na listu') }}</x-secondary-button>
                     </a>
