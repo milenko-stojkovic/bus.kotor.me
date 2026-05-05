@@ -11,12 +11,9 @@
     $title = $t('limo_qr_pdf_title', $locale === 'en' ? 'Limo QR code' : 'Limo QR kod');
     $agencyLabel = $t('limo_qr_pdf_agency', $locale === 'en' ? 'Agency' : 'Agencija');
     $validForLabel = $t('limo_qr_pdf_valid_for', $locale === 'en' ? 'Valid for' : 'Važi za');
-    $instruction = $t(
-        'limo_qr_pdf_instruction',
-        $locale === 'en'
-            ? 'Show this QR code to the officer upon arrival.'
-            : 'Prikažite ovaj QR kod službeniku prilikom dolaska.'
-    );
+    $instruction = $t('limo_qr_pdf_instruction', $locale === 'en'
+        ? 'Show this QR code to the officer upon arrival.'
+        : 'Prikažite ovaj QR kod službeniku prilikom dolaska.');
 @endphp
 <!doctype html>
 <html lang="sr-Latn-ME">

@@ -72,6 +72,39 @@ final class LimoFiscalizationTest extends TestCase
         $this->assertSame('JIR-LIMO-2', $event->fiscal_jir);
     }
 
+    public function test_limo_invoice_email_body_is_cg_when_agency_lang_is_en(): void
+    {
+        $this->mock(FiscalizationService::class, function ($mock): void {
+            $mock->shouldReceive('tryFiscalizeInvoiceLike')
+                ->once()
+                ->andReturn([
+                    'fiscal_jir' => 'JIR-EN-AGENCY',
+                    'fiscal_ikof' => 'IKOF-EN',
+                    'fiscal_qr' => 'https://example.test/fiscal-qr-en',
+                    'fiscal_operator' => 'OpEn',
+                    'fiscal_date' => now(),
+                ]);
+        });
+
+        Mail::shouldReceive('raw')
+            ->once()
+            ->withArgs(function (string $text, $callback): bool {
+                $this->assertStringContainsString('Poštovani,', $text);
+                $this->assertStringContainsString('U prilogu je PDF račun za Limo uslugu', $text);
+                $this->assertStringContainsString('Hvala.', $text);
+
+                return is_callable($callback);
+            });
+
+        app()->setLocale('en');
+
+        $event = $this->makeLimoPickupEvent(['lang' => 'en', 'email' => 'en-agency-invoice@test.local']);
+
+        (new ProcessLimoAfterPaymentJob($event->id))->handle();
+
+        $this->assertNotNull($event->fresh()->invoice_email_sent_at);
+    }
+
     public function test_email_sent_after_success(): void
     {
         Mail::fake();
@@ -116,7 +149,10 @@ final class LimoFiscalizationTest extends TestCase
         $this->assertSame(LimoPickupService::SERVICE_NAME, $o->vehicleLine);
     }
 
-    private function makeLimoPickupEvent(): LimoPickupEvent
+    /**
+     * @param  array{lang?: string, email?: string, name?: string}  $userOverrides
+     */
+    private function makeLimoPickupEvent(array $userOverrides = []): LimoPickupEvent
     {
         Carbon::setTestNow(Carbon::parse('2026-05-12 14:00:00', 'Europe/Podgorica'));
 
@@ -129,17 +165,19 @@ final class LimoFiscalizationTest extends TestCase
             'limo_access' => true,
         ]);
 
+        $email = $userOverrides['email'] ?? 'agency-invoice@test.local';
         $user = User::factory()->create([
-            'name' => 'Agency Co',
-            'email' => 'agency-invoice@test.local',
+            'name' => $userOverrides['name'] ?? 'Agency Co',
+            'email' => $email,
             'country' => 'ME',
+            'lang' => $userOverrides['lang'] ?? 'cg',
         ]);
 
         return LimoPickupEvent::query()->create([
             'merchant_transaction_id' => (string) Str::uuid(),
             'agency_user_id' => $user->id,
-            'agency_name_snapshot' => 'Agency Co',
-            'agency_email_snapshot' => 'agency-invoice@test.local',
+            'agency_name_snapshot' => $userOverrides['name'] ?? 'Agency Co',
+            'agency_email_snapshot' => $email,
             'agency_country_snapshot' => 'ME',
             'source' => 'qr',
             'qr_token_hash' => null,

@@ -30,6 +30,7 @@ use App\Http\Controllers\ReservationStatusController;
 use App\Http\Controllers\UserReservationController;
 use App\Http\Controllers\Panel\LimoController;
 use App\Http\Controllers\Limo\LimoEntryController;
+use App\Http\Controllers\Limo\LimoIncidentController;
 use App\Http\Controllers\Limo\LimoPickupController;
 use App\Http\Controllers\Limo\LimoPlatePickupController;
 use App\Http\Controllers\VehicleController;
@@ -101,6 +102,7 @@ Route::middleware(['auth:panel_admin', 'limo.access'])->prefix('limo')->group(fu
     Route::post('pickup/qr', [LimoPickupController::class, 'pickupByQr'])->name('limo.pickup.qr');
     Route::post('pickup/plate/ocr', [LimoPlatePickupController::class, 'plateOcr'])->name('limo.pickup.plate.ocr');
     Route::post('pickup/plate/confirm', [LimoPlatePickupController::class, 'plateConfirm'])->name('limo.pickup.plate.confirm');
+    Route::post('incident', [LimoIncidentController::class, 'store'])->name('limo.incident.store');
 });
 
 Route::prefix('control')->name('control.')->group(function () {

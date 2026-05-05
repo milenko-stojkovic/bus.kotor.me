@@ -1,6 +1,6 @@
 # Project TODO (otvoreno)
 
-**Poslednje ažuriranje:** 2026-05-04
+**Poslednje ažuriranje:** 2026-05-05
 
 Stavke su prioritetne grupe. Kada nešto **završiš**, premesti opis u `docs/project-done.md` i ukloni odavde.
 
@@ -11,8 +11,7 @@ Stavke su prioritetne grupe. Kada nešto **završiš**, premesti opis u `docs/pr
 Trenutno stanje + šta još fali: **[limo-service.md](./limo-service.md)** (implementacija vs TODO).
 
 - [ ] **Integrisan OCR** za tablicu (trenutno stub u `LimoPlateOcrService` — ručna potvrda ostaje obavezna).
-- [ ] **Incident workflow** (operativno).
-- [ ] **Komunalna policija:** workflow incident izvještavanja (ko šalje, format, kanal) — i dalje nedefinisano poslovno; v. `limo-service.md`.
+- [ ] **Incident workflow — šire:** statusi (reported/closed), administrativna rešenja, eventualno deduplikacija šire od `incident_uuid`; minimalni tok (evidencija + email KP + `admin_alerts`) je **urađen** — v. `limo-service.md`.
 - [ ] **PWA / instalabilni** shell i napredniji terenski UX za Limo (osnovni mobilni web na `GET /limo` postoji).
 - [ ] **Native Android:** odluka nakon PWA field testa da li je potreban poseban klijent.
 

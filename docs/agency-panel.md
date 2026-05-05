@@ -1,6 +1,6 @@
 # Agency panel (ulogovani korisnik, `/panel`)
 
-**Poslednje ažuriranje:** 2026-05-04
+**Poslednje ažuriranje:** 2026-05-05
 
 Prefiks ruta: **`/panel`**, middleware **`auth`** + **`verified`**. Gornja navigacija: `resources/views/layouts/navigation.blade.php`.
 
@@ -97,6 +97,7 @@ Rute **`/panel/limo*`** vidljive i dostupne **samo kada je** `advance_payments` 
 - U bazi se čuvaju **`token_hash`** i **`encrypted_token`**; na ekranu se QR prikazuje iz dekriptovane vrijednosti.
 - Dugme **„Preuzmi PDF”** preuzima jednostavan PDF za štampu (QR + agencija + datum). **Nema finansijskog efekta**; važi samo za **današnje** tokene (inače 404).
 - **Finansijski efekat** (skidanje avansa, fiskal, email računa) nastupa tek kada **Limo evidenter** potvrdi pickup putem **`POST /limo/pickup/qr`** — samo generisanje QR-a ne troši avans.
+- **Jezik (cg/en):** tekstovi u navigaciji, na stranicama Limo QR-a i u **ne-fiskalnom** PDF-u za štampu koriste grupu **`panel`** u `ui_translations` (ključevi `nav_limo`, `limo_*`, `limo_qr_pdf_*`, `limo_generate_error_*`), prema `users.lang` / `SetLocale`. **Fiskalni Limo račun** (`PaidInvoicePdfGenerator::renderLimoBinary`, šablon `pdf/paid-invoice`) i prateći email (**`SendLimoInvoiceEmailJob`**, `UiText` grupa `emails`) **uvijek su na `cg`**, nezavisno od `users.lang` (v. `limo-service.md`, test `LimoFiscalizationTest::test_limo_invoice_email_body_is_cg_when_agency_lang_is_en`).
 
 Detalji modela: **[limo-service.md](./limo-service.md)**.
 

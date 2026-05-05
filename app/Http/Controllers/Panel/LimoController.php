@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Panel;
 
 use App\Http\Controllers\Controller;
 use App\Models\LimoQrToken;
+use App\Services\Limo\LimoPickupService;
 use App\Services\Limo\LimoQrService;
 use App\Services\Pdf\LimoQrPdfGenerator;
+use App\Support\UiText;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -34,12 +36,36 @@ final class LimoController extends Controller
         } catch (\RuntimeException $e) {
             $toIndex = fn () => redirect()->route('panel.limo.index');
 
+            $locale = app()->getLocale();
+
             return match ($e->getMessage()) {
                 'limit' => $toIndex()->withErrors([
-                    'generate' => __('Dostignut je dnevni limit od :max QR kodova za ovaj datum.', ['max' => LimoQrService::MAX_ACTIVE_GENERATIONS_PER_DAY]),
+                    'generate' => str_replace(
+                        ':max',
+                        (string) LimoQrService::MAX_ACTIVE_GENERATIONS_PER_DAY,
+                        UiText::t(
+                            'panel',
+                            'limo_generate_error_limit',
+                            $locale === 'en'
+                                ? 'The daily limit of :max QR codes for this date has been reached.'
+                                : 'Dostignut je dnevni limit od :max QR kodova za ovaj datum.',
+                            $locale,
+                        ),
+                    ),
                 ]),
                 'insufficient_advance' => $toIndex()->withErrors([
-                    'generate' => __('Stanje avansa nije dovoljno za generisanje QR koda (minimalno :amount EUR).', ['amount' => \App\Services\Limo\LimoPickupService::AMOUNT_EUR]),
+                    'generate' => str_replace(
+                        ':amount',
+                        (string) LimoPickupService::AMOUNT_EUR,
+                        UiText::t(
+                            'panel',
+                            'limo_generate_error_insufficient_advance',
+                            $locale === 'en'
+                                ? 'Your advance balance is not enough to generate a QR code (minimum :amount EUR).'
+                                : 'Stanje avansa nije dovoljno za generisanje QR koda (minimalno :amount EUR).',
+                            $locale,
+                        ),
+                    ),
                 ]),
                 default => throw $e,
             };

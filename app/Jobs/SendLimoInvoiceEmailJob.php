@@ -3,7 +3,6 @@
 namespace App\Jobs;
 
 use App\Models\LimoPickupEvent;
-use App\Models\User;
 use App\Services\Pdf\PaidInvoicePdfGenerator;
 use App\Support\UiText;
 use Illuminate\Bus\Queueable;
@@ -95,17 +94,11 @@ class SendLimoInvoiceEmailJob implements ShouldQueue
             return;
         }
 
-        $emailLocale = 'cg';
-        if ($event->agency_user_id !== null) {
-            $user = User::query()->find($event->agency_user_id);
-            $lang = $user?->lang;
-            if (is_string($lang) && in_array($lang, ['en', 'cg'], true)) {
-                $emailLocale = $lang;
-            }
-        }
+        // Fiskalni Limo račun i prateći email su isključivo na crnogorskom (cg), nezavisno od users.lang.
+        $invoiceEmailLocale = 'cg';
 
         $previousLocale = app()->getLocale();
-        app()->setLocale($emailLocale);
+        app()->setLocale($invoiceEmailLocale);
 
         $fromAddress = config('mail.from.address');
         $fromName = config('mail.from.name');
@@ -114,11 +107,11 @@ class SendLimoInvoiceEmailJob implements ShouldQueue
             'emails',
             'limo_invoice_email_subject',
             'Limo račun %1$s',
-            $emailLocale
+            $invoiceEmailLocale
         );
         $subject = sprintf($subjectTemplate, $event->merchant_transaction_id);
 
-        $body = $this->buildBody($event, $emailLocale);
+        $body = $this->buildBody($event, $invoiceEmailLocale);
 
         $tmpPath = null;
         try {

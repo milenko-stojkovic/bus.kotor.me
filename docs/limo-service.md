@@ -1,6 +1,6 @@
 # Limo service
 
-**Poslednje ažuriranje:** 2026-05-09
+**Poslednje ažuriranje:** 2026-05-05
 
 **Povezano:** [project-todo.md](./project-todo.md) (preostali Limo TODO), [project-done.md](./project-done.md) (urađeno), [agency-panel.md](./agency-panel.md) (agencijski `/panel/limo`).
 
@@ -12,7 +12,7 @@ Ovaj dokument opisuje **trenutno implementirano stanje** u kodu i **preostale pl
 
 ### Implementirano
 
-- **Baza:** tabele `limo_qr_tokens`, `limo_pickup_events`, `limo_pickup_photos`, `limo_plate_uploads` (privremeni upload tablice; vidi sekciju [Implemented tables](#implemented-tables)).
+- **Baza:** tabele `limo_qr_tokens`, `limo_pickup_events`, `limo_pickup_photos`, `limo_plate_uploads` (privremeni upload tablice; vidi sekciju [Implemented tables](#implemented-tables)), **`limo_incidents`** (incidenti — evidencija bez finansijskog efekta; vidi [Incident flow (implementirano)](#incident-flow-implementirano)).
 - **Granica autentifikacije / autorizacije (Limo evidenter):**
   - kolona `admins.limo_access`
   - middleware `limo.access`
@@ -21,9 +21,10 @@ Ovaj dokument opisuje **trenutno implementirano stanje** u kodu i **preostale pl
   - `GET /limo/health` — isti guard kao ostatak `/limo/*`; JSON `{ status, scope }` za health/smoke
 - **Agencijski panel — QR:**
   - `GET /panel/limo` — lista aktivnih QR za **današnji** dan (`Europe/Podgorica`)
-  - `POST /panel/limo/qr/generate` — generisanje tokena (raw se jednom prikaže / flash; u bazi `token_hash` + `encrypted_token`)
+  - `POST /panel/limo/qr/generate` — generisanje tokena (raw se jednom prikaže / flash; u bazi `token_hash` + `encrypted_token`); poruke grešaka (limit, nedovoljan avans) preko **`UiText`** grupe `panel` (`limo_generate_error_*`), prema **`users.lang`**
   - `GET /panel/limo/qr/{limoQrToken}` — prikaz QR slike iz dekriptovanog `encrypted_token`
-  - `GET /panel/limo/qr/{limoQrToken}/pdf` — **PDF export** za štampu (QR + agencija + datum); token mora biti **današnji** (Podgorica) i vlasništvo agencije, inače 404; nema finansijskog efekta
+  - `GET /panel/limo/qr/{limoQrToken}/pdf` — **PDF export** za štampu (QR + agencija + datum); token mora biti **današnji** (Podgorica) i vlasništvo agencije, inače 404; nema finansijskog efekta; tekst u PDF-u iz **`ui_translations`** (`panel`, `limo_qr_pdf_*`) prema jeziku korisnika (`LimoQrPdfGenerator` / `users.lang`)
+  - navigacija i ostali stringovi Limo QR stranica: **`ui_translations`**, grupa `panel`, ključevi `nav_limo`, `limo_*` (seed u `UiTranslationsSeeder`)
   - sve `/panel/limo/*` iza `advance.feature` middleware-a — ako je `advance_payments` isključen → **404**
 - **Pickup QR (operativa):**
   - `POST /limo/pickup/qr` — validacija tokena (hash + dan), kreiranje `limo_pickup_events`, oduzimanje avansa (`agency_advance_transactions`, tip `usage`), brisanje iskorišćenog reda iz `limo_qr_tokens`
@@ -31,21 +32,22 @@ Ovaj dokument opisuje **trenutno implementirano stanje** u kodu i **preostale pl
   - `POST /limo/pickup/plate/ocr` — validacija slike (do 5 MB, jpeg/png/webp), snimanje u **private** `local` disk, `LimoPlateOcrService` (trenutno **stub** — `suggested_plate` obično `null`), vraća `upload_token` + prijedlog tablice ako ikad bude integrisan OCR
   - `POST /limo/pickup/plate/confirm` — potvrda **ručno** unesene / ispravljene tablice; normalizacija kao u ostatku projekta (`DuplicateReservationAttemptService::normalizeLicensePlate`); traži se **aktivno** vozilo (`vehicles.status=active`, `user_id` postoji) po tablici; neuspjeh: `plate_not_registered` ili `insufficient_advance`; uspjeh: `source=plate`, `limo_pickup_photos` tip `plate`, ista fiskalna staza kao QR
   - **OCR nije odlučujući** — evidenter mora potvrditi/ispraviti tablicu prije `confirm`
-  - Nema incident zapisa, nema Komunalne policije u ovom toku
+  - Nema incident zapisa u ovom toku (incidenti su odvojeni — vidi [Incident flow](#incident-flow-implementirano))
 - **Fiskal / PDF / email (poslije pickup-a):**
   - `ProcessLimoAfterPaymentJob` — fiskalizacija preko postojećeg `FiscalizationService::tryFiscalizeInvoiceLike` + adapter
   - `LimoInvoiceAdapter` — mapiranje `LimoPickupEvent` → oblik kompatibilan sa fiscal/PDF tokom
-  - `SendLimoInvoiceEmailJob` — email agenciji sa PDF prilogom
-  - `PaidInvoicePdfGenerator::renderLimoBinary` — isti Blade `pdf/paid-invoice`, grana sa `isLimoService` (limo detalji umesto slotova rezervacije)
+  - `SendLimoInvoiceEmailJob` — email agenciji sa PDF prilogom; **predmet i tijelo uvijek na crnogorskom (`cg`)** u `UiText` grupi `emails` (`limo_invoice_email_subject`, `limo_invoice_email_body`, linija JIR preko `paid_invoice_email_jir_line`) — **ne prati `users.lang`** (agencijski panel i štampani QR PDF i dalje mogu biti en/cg; fiskalni račun i ovaj email nisu).
+  - `PaidInvoicePdfGenerator::renderLimoBinary` — isti Blade `pdf/paid-invoice`, grana sa `isLimoService` (limo detalji umesto slotova rezervacije); generisanje uz **`app()->setLocale('cg')`** (zvanični izlaz računa).
   - ponašanje PDF-a za **obične rezervacije** (`renderBinary(Reservation, …)`) ostaje nepromijenjeno
-- **Cleanup privremenih Limo podataka:** Artisan **`limo:cleanup-temporary-data`** — dnevno **00:10** (`Europe/Podgorica`, `routes/console.php`): briše **`limo_qr_tokens`** gdje je **`valid_on` &lt; danas** (Podgorica) i istekle nekonzumirane **`limo_plate_uploads`** (`expires_at` &lt; sada, `consumed_at` NULL) uz brisanje privremenih fajlova; **ne** briše `limo_pickup_events`, `limo_pickup_photos`, **`limo_pickup_evidence/`**; logovi `limo_qr_tokens_cleaned`, `limo_plate_uploads_cleaned`
+- **Cleanup privremenih Limo podataka:** Artisan **`limo:cleanup-temporary-data`** — dnevno **00:10** (`Europe/Podgorica`, `routes/console.php`): briše **`limo_qr_tokens`** gdje je **`valid_on` &lt; danas** (Podgorica) i istekle nekonzumirane **`limo_plate_uploads`** (`expires_at` &lt; sada, `consumed_at` NULL) uz brisanje privremenih fajlova; **ne** briše `limo_pickup_events`, `limo_pickup_photos`, **`limo_pickup_evidence/`**, **`limo_incidents`** (dugotrajna evidencija); logovi `limo_qr_tokens_cleaned`, `limo_plate_uploads_cleaned`
+- **Incident flow (minimalno):** `POST /limo/incident` (`limo.incident.store`) — samo **`limo_access`** evidententeri; **obavezna fotografija tablice** (bez nje nema incidenta); opciona fotografija brendinga; tipovi u bazi (`qr_insufficient_funds`, `plate_insufficient_funds`, `unregistered_vehicle_with_branding`, `invalid_qr_token`, `driver_non_cooperative`); snimanje na **private `local`** (`limo_incidents/{uuid}/…`); email sa servera na **`komunalna.policija@kotor.me`** (prilog: tablica ± brending); **`admin_alerts`** tip `limo_incident`; log kanal **`payments`**: `limo_incident_created`, `limo_incident_communal_email_sent` / `_failed`, `limo_incident_admin_alert_created`. **Sistem ne izriče sankcije**, ne dira avans, fiskal, rezervacije niti kreira `limo_pickup_events`. Ako email ne pošalje, red u `limo_incidents` ostaje, `communal_email_sent_at` ostaje `NULL`, alert i dalje nastaje. UI na **`GET /limo`**: sekcija „Prijavi incident”. **Ne prijavljivati** incident za neregistrovano vozilo bez vidljivog brendinga agencije (uputstvo u UI). Nakon obavještenja, odluka je **ručna** (admin / Komunalna policija). Testovi: `tests/Feature/Limo/LimoIncidentFlowTest.php`.
 
 ### Još nije / TODO
 
 - **Pravi OCR** (Tesseract / vanjski API) — trenutno stub; tablica se **obavezno** potvrđuje ručno
-- **Incident workflow**, format izvještaja, **Komunalna policija** — poslovni/procesni TODO (nije definisan službeni tok)
+- **Incident workflow** — šire od minimalnog: statusi (reported/closed), administrativno rešavanje, integracije; trenutno je samo evidencija + obavještenje
 - ~~**Admin analitika** — uključivanje Limo prihoda~~ → **urađeno:** Admin **Analitika** (`/admin/analitika`) ima poseban blok **Limo servis** i KPI za prihod (rezervacije vs Limo vs ukupno); detaljan read-only pregled događaja ostaje **`GET /admin/limo`** (`admin.limo.index`).
-- **Offline sync**, **incident tok**
+- **Offline sync**
 - **PWA polish** (instalabilni shell, napredniji UX) — po potrebi nakon terenskog testa
 - **Native Android** — odluka nakon terenskog testa PWA-e
 
@@ -113,15 +115,24 @@ Validacija: aktivni token, danas, dovoljno avansa, limit. Na uspjeh: `limo_picku
 
 ---
 
-## Incident flow
+## Incident flow (implementirano)
 
-**Nije implementiran** u punom workflow-u; incidenti i Komunalna policija ostaju TODO.
+Operativni incidenti (sumnja na Limo pickup bez plaćanja) evidentiraju se **odvojeno** od uspješnog pickup-a:
+
+- Endpoint: **`POST /limo/incident`** (`limo.incident.store`), isti guard kao ostatak `/limo/*` (`auth:panel_admin` + **`limo.access`**).
+- **Obavezna** je fotografija tablice (`plate_photo`); opciono `branding_photo`.
+- Tipovi: `qr_insufficient_funds`, `plate_insufficient_funds`, `unregistered_vehicle_with_branding`, `invalid_qr_token`, `driver_non_cooperative`.
+- **Nema** `limo_pickup_event`, **nema** `agency_advance_transactions` usage, **nema** fiskalnog računa za incident.
+- Email na **`komunalna.policija@kotor.me`** (HTML + tekst, prilozi sa diska); **`admin_alerts`** sa kontekstom (tip, tablica, UUID, vrijeme, agencija ako je poznata).
+- Poslovno: **ne kreirati** incident ako nema jasnog Limo konteksta (npr. neregistrovano vozilo **bez** vidljivog imena agencije na vozilu) — vodič u UI.
+
+Širi workflow (rezolucija, statusi, kazne) **nije** u kodu — odluka ostaje kod admina / Komunalne policije.
 
 ---
 
 ## Evidence / audit
 
-Za plate fallback, fotografije su na **`local`** disku (privatno), putanja u `limo_pickup_photos.path`; incident workflow ostaje TODO.
+Za plate fallback, fotografije su na **`local`** disku (privatno), putanja u `limo_pickup_photos.path`. Za incidente, fotografije su u **`limo_incidents/{incident_uuid}/`** na istom disku (`plate_photo_path`, opciono `branding_photo_path`).
 
 ---
 
@@ -192,6 +203,30 @@ Privremeni upload prije potvrde tablice.
 | `consumed_at` | postavlja se nakon uspješnog `confirm` |
 | `created_at`, `updated_at` | |
 
+### `limo_incidents`
+
+Evidencija incidenta (bez finansijskog efekta, bez pickup događaja).
+
+| Polje | Napomena |
+|-------|----------|
+| `id` | |
+| `incident_uuid` | unique |
+| `type` | enum tipova incidenta (vidi [Incident flow](#incident-flow-implementirano)) |
+| `license_plate_snapshot` | nullable, normalizovano ako je uneseno |
+| `agency_user_id` | nullable → `users` |
+| `agency_name_snapshot`, `agency_email_snapshot` | snapshot ako je agencija poznata |
+| `visible_agency_name` | nullable, unos evidentra |
+| `plate_photo_path` | obavezno, private disk |
+| `branding_photo_path` | nullable |
+| `note` | nullable |
+| `occurred_at` | indeksirano |
+| `gps_lat`, `gps_lng` | nullable |
+| `recorded_by_limo_admin_id` | FK `admins` |
+| `device_info` | nullable |
+| `communal_email_sent_at` | nullable — postavlja se samo ako je email uspio |
+| `admin_alert_id` | nullable → `admin_alerts` |
+| `created_at`, `updated_at` | |
+
 ---
 
 ## Agency panel (`/panel/limo`) — implementirano
@@ -209,8 +244,9 @@ Privremeni upload prije potvrde tablice.
 - **Pregledač / HTTPS:** `getUserMedia`, geolokacija i (gdje postoji) **`BarcodeDetector`** zahtijevaju **[secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts)** — u praksi **HTTPS** na domeni; izuzetak je tipično **`localhost` / `127.0.0.1`**. Na „čistom” HTTP bez secure context-a kamera može biti nedostupna — ručni unos tokena i dalje radi. Tok kamere se zaustavlja nakon skeniranja, pri slanju, zaustavljanja ili napuštanja stranice (`pagehide`).
 - **`POST /limo/pickup/qr`** — isti endpoint za UI (`fetch` JSON + CSRF); odgovori ostaju JSON (`status` / `code`).
 - **`POST /limo/pickup/plate/ocr`**, **`POST /limo/pickup/plate/confirm`** — JSON / multipart; greške `plate_not_registered`, `insufficient_advance`, `invalid_upload`.
+- **`POST /limo/incident`** — multipart; JSON uspjeh `{ status: ok, incident_uuid, communal_email_sent }`; greška validacije `422` sa `code: validation_error`.
 - **`GET /limo/health`** — JSON smoke pod istim middleware-om.
-- Dalje **TODO**: pravi OCR motor, incident workflow, offline sinhronizacija, native Android. (Retencija dugotrajnih foto dokaza — posebna politika ako bude potrebna.)
+- Dalje **TODO**: pravi OCR motor, širi incident/admin workflow, offline sinhronizacija, native Android. (Retencija dugotrajnih foto dokaza — posebna politika ako bude potrebna.)
 
 ---
 
@@ -223,7 +259,7 @@ Privremeni upload prije potvrde tablice.
 ## Explicit non-goals / još uvijek out of scope
 
 - Native Android (odluka nakon PWA)
-- Automatski workflow Komunalnoj policiji dok se proces ne definiše
+- Automatske **sankcije** ili blokiranje agencija na osnovu incidenta (samo evidencija + obavještenje)
 - Offline-first sync
 - Limo za goste kroz isti model kao panel agencije
 
