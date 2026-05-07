@@ -1,6 +1,6 @@
 # Limo service
 
-**Poslednje ažuriranje:** 2026-05-05
+**Poslednje ažuriranje:** 2026-05-07
 
 **Povezano:** [project-todo.md](./project-todo.md) (preostali Limo TODO), [project-done.md](./project-done.md) (urađeno), [agency-panel.md](./agency-panel.md) (agencijski `/panel/limo`).
 
@@ -25,7 +25,7 @@ Ovaj dokument opisuje **trenutno implementirano stanje** u kodu i **preostale pl
   - `GET /panel/limo/qr/{limoQrToken}` — prikaz QR slike iz dekriptovanog `encrypted_token`
   - `GET /panel/limo/qr/{limoQrToken}/pdf` — **PDF export** za štampu (QR + agencija + datum); token mora biti **današnji** (Podgorica) i vlasništvo agencije, inače 404; nema finansijskog efekta; tekst u PDF-u iz **`ui_translations`** (`panel`, `limo_qr_pdf_*`) prema jeziku korisnika (`LimoQrPdfGenerator` / `users.lang`)
   - navigacija i ostali stringovi Limo QR stranica: **`ui_translations`**, grupa `panel`, ključevi `nav_limo`, `limo_*` (seed u `UiTranslationsSeeder`)
-  - sve `/panel/limo/*` iza `advance.feature` middleware-a — ako je `advance_payments` isključen → **404**
+  - feature gate: **`limo.feature`** (kombinacija flagova — vidi niže); ako je Limo nedostupan → **404** na `/panel/limo*` (UI stavka može biti vidljiva, ali disabled)
 - **Pickup QR (operativa):**
   - `POST /limo/pickup/qr` — validacija tokena (hash + dan), kreiranje `limo_pickup_events`, oduzimanje avansa (`agency_advance_transactions`, tip `usage`), brisanje iskorišćenog reda iz `limo_qr_tokens`
 - **Pickup tablica (fallback, bez QR):**
@@ -56,6 +56,7 @@ Ovaj dokument opisuje **trenutno implementirano stanje** u kodu i **preostale pl
 ## Auth boundary (API / backend — Limo evidenter)
 
 Rute `/limo/*` **nisu** dio glavnog Admin panela (`EnsureAdminPanelAccess` / `admin_access`).
+Takođe su iza feature gate-a **`limo.feature`** (404 kada je Limo servis isključen).
 
 - **Autentifikacija:** guard `panel_admin` (forma `/admin/login`). Nalog u `admins`, ne `control_access`-only (isti skup kao za panel login).
 - **Autorizacija:** `admins.limo_access` + middleware **`limo.access`**. Npr. `POST /limo/pickup/qr` samo uz `limo_access === true`.
@@ -67,7 +68,11 @@ Rute `/limo/*` **nisu** dio glavnog Admin panela (`EnsureAdminPanelAccess` / `ad
 
 ## Scope (poslovna pravila)
 
-Limo u agencijskom panelu i za pickup zavisi od **`config('features.advance_payments')`**.
+Limo zavisi od avansnog modela, ali avans **ne zavisi** od Limo:
+
+- **Feature flags:** `config('features.advance_payments')` (ENV `ADVANCE_PAYMENTS_ENABLED`) i `config('features.limo_service')` (ENV `LIMO_SERVICE_ENABLED`)
+- **Effective rule:** Limo je dostupan samo ako je **advance_payments ON** **i** **limo_service ON**
+- Kada je Limo nedostupan: `/panel/limo*` i `/limo*` vraćaju **404**; u agencijskom UI stavka “Limo” može ostati vidljiva ali disabled.
 
 - **Gosti** ne koriste Limo tokove.
 - Koristi se postojeći **agency advance ledger**; **negativan saldo nije dozvoljen**.

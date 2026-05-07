@@ -34,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin.panel' => \App\Http\Middleware\EnsureAdminPanelAccess::class,
             'limo.access' => \App\Http\Middleware\EnsureLimoAccess::class,
             'advance.feature' => \App\Http\Middleware\EnsureAdvancePaymentsEnabled::class,
+            'limo.feature' => \App\Http\Middleware\EnsureLimoServiceEnabled::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

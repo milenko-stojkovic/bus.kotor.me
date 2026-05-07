@@ -1,6 +1,6 @@
 # Project DONE (urađeno)
 
-**Poslednje ažuriranje:** 2026-05-05  
+**Poslednje ažuriranje:** 2026-05-07  
 
 Hronološki najnovije na vrhu unutar svake sekcije. Pri zatvaranju zadatka dodaj red sa **datumom** (`YYYY-MM-DD`) i kratak opis; istu stavku ukloni iz `docs/project-todo.md`.
 
@@ -8,6 +8,7 @@ Hronološki najnovije na vrhu unutar svake sekcije. Pri zatvaranju zadatka dodaj
 
 ## 2026-04 — Agency panel, besplatan checkout, dokumentacija
 
+- **2026-05-07** — **Limo feature flag:** `LIMO_SERVICE_ENABLED` (`config('features.limo_service')`) + existing `ADVANCE_PAYMENTS_ENABLED` (`config('features.advance_payments')`) — Limo je dostupan samo ako su oba ON; kada je off → `/panel/limo*` i `/limo*` vraćaju 404; u agencijskoj navigaciji “Limo” je vidljiv ali disabled uz tooltip. Testovi: `LimoQrGenerationTest` (nav + 404) i `LimoEntryUiTest` (404).
 - **2026-05-07** — **Limo OCR suggestion (Tesseract, advisory):** `LimoPlateOcrService` koristi server-side Tesseract kada je `LIMO_OCR_ENABLED=true` (opcion `LIMO_OCR_TESSERACT_BINARY`, `LIMO_OCR_TIMEOUT_SECONDS`); rezultat se konzervativno parsira i normalizuje, ali je samo sugestija — evidenter i dalje obavezno ručno potvrđuje/ispravlja tablicu prije `confirm`; ako OCR nije dostupan ili padne → `suggested_plate=null` i tok se nastavlja ručno; logovi `limo_plate_ocr_*`; testovi: `LimoPlateFallbackTest` (mock runner).
 - **2026-05-05** — **Limo incident flow (minimalno):** tabela `limo_incidents`; `POST /limo/incident` (`limo.incident.store`) pod `limo.access`; obavezna foto tablice; email **`komunalna.policija@kotor.me`** + prilozi; `admin_alerts` (`limo_incident`); logovi na kanalu `payments`; UI na `GET /limo` (upozorenje kada ne treba prijavljivati incident); bez avansa/fiskala/`limo_pickup_events`; `LimoIncidentService`, `LimoIncidentController`, `LimoCommunalPoliceIncidentMail`; testovi `tests/Feature/Limo/LimoIncidentFlowTest.php`; docs: `limo-service.md`, `project-todo.md`.
 - **2026-05-05** — **Limo agencijski panel i18n + fiskalni email isključivo cg:** `UiTranslationsSeeder` — `panel` ključevi `nav_limo`, `limo_*`, `limo_qr_pdf_*`, `limo_generate_error_*` (cg/en); `LimoController` greške generisanja QR preko `UiText`; **`SendLimoInvoiceEmailJob`** više ne koristi `users.lang` — predmet/tijelo emaila uvijek **`cg`**; `PaidInvoicePdfGenerator::renderLimoBinary` i ranije forsira `cg`; test `tests/Feature/Limo/LimoFiscalizationTest.php` (`test_limo_invoice_email_body_is_cg_when_agency_lang_is_en`); docs: `agency-panel.md`, `limo-service.md`.

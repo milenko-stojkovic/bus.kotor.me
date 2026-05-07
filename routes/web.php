@@ -96,7 +96,7 @@ Route::middleware(['auth:panel_admin', 'admin.panel'])
     ->get('admin/limo', [AdminLimoOverviewController::class, 'index'])
     ->name('admin.limo.index');
 
-Route::middleware(['auth:panel_admin', 'limo.access'])->prefix('limo')->group(function () {
+Route::middleware(['auth:panel_admin', 'limo.feature', 'limo.access'])->prefix('limo')->group(function () {
     Route::get('/', [LimoEntryController::class, 'entry'])->name('limo.entry');
     Route::get('health', [LimoEntryController::class, 'health'])->name('limo.health');
     Route::post('pickup/qr', [LimoPickupController::class, 'pickupByQr'])->name('limo.pickup.qr');
@@ -192,7 +192,7 @@ Route::middleware(['auth', 'verified'])->prefix('panel')->name('panel.')->group(
     Route::get('/statistics', [PanelController::class, 'statistics'])->name('statistics');
     Route::get('/statistics/pdf', [PanelController::class, 'statisticsPdf'])->name('statistics.pdf');
 
-    Route::middleware('advance.feature')->prefix('limo')->name('limo.')->group(function () {
+    Route::middleware('limo.feature')->prefix('limo')->name('limo.')->group(function () {
         Route::get('/', [LimoController::class, 'index'])->name('index');
         Route::post('/qr/generate', [LimoController::class, 'generateQr'])->name('qr.generate');
         Route::get('/qr/{limoQrToken}', [LimoController::class, 'showQr'])->name('qr.show');

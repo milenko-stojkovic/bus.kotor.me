@@ -24,6 +24,7 @@ final class LimoQrGenerationTest extends TestCase
         parent::setUp();
         Carbon::setTestNow(Carbon::parse('2026-05-10 12:00:00', 'Europe/Podgorica'));
         config(['features.advance_payments' => true]);
+        config(['features.limo_service' => true]);
     }
 
     protected function tearDown(): void
@@ -201,11 +202,27 @@ final class LimoQrGenerationTest extends TestCase
     public function test_advance_feature_off_returns_404(): void
     {
         config(['features.advance_payments' => false]);
+        config(['features.limo_service' => true]);
 
         $user = User::factory()->create();
 
         $this->actingAs($user)
             ->get(route('panel.limo.index'))
             ->assertNotFound();
+    }
+
+    public function test_advance_on_limo_off_returns_404_and_nav_shows_disabled_item(): void
+    {
+        config(['features.advance_payments' => true]);
+        config(['features.limo_service' => false]);
+
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $this->actingAs($user);
+
+        $html = $this->get(route('panel.reservations', [], false))->assertOk()->getContent();
+        $this->assertStringContainsString('Limo', $html);
+        $this->assertStringNotContainsString('/panel/limo', $html);
+
+        $this->get(route('panel.limo.index', [], false))->assertNotFound();
     }
 }

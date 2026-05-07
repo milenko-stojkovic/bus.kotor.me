@@ -21,6 +21,8 @@ class LimoEntryUiTest extends TestCase
     {
         parent::setUp();
         Carbon::setTestNow(Carbon::parse('2026-05-04 12:00:00', 'Europe/Podgorica'));
+        config(['features.advance_payments' => true]);
+        config(['features.limo_service' => true]);
     }
 
     protected function tearDown(): void
@@ -33,6 +35,48 @@ class LimoEntryUiTest extends TestCase
     {
         $this->get('/limo')
             ->assertRedirect(route('panel_admin.login'));
+    }
+
+    public function test_limo_routes_return_404_when_limo_service_off_even_for_limo_access_user(): void
+    {
+        config(['features.advance_payments' => true]);
+        config(['features.limo_service' => false]);
+
+        $admin = Admin::query()->create([
+            'username' => 'limo_off_admin',
+            'email' => 'limo-off@example.com',
+            'password' => bcrypt('secret'),
+            'control_access' => false,
+            'admin_access' => false,
+            'limo_access' => true,
+        ]);
+
+        $this->actingAs($admin, 'panel_admin')
+            ->get('/limo')
+            ->assertNotFound();
+
+        $this->actingAs($admin, 'panel_admin')
+            ->get('/limo/health')
+            ->assertNotFound();
+    }
+
+    public function test_limo_routes_return_404_when_advance_off_even_if_limo_service_on(): void
+    {
+        config(['features.advance_payments' => false]);
+        config(['features.limo_service' => true]);
+
+        $admin = Admin::query()->create([
+            'username' => 'limo_adv_off_admin',
+            'email' => 'limo-adv-off@example.com',
+            'password' => bcrypt('secret'),
+            'control_access' => false,
+            'admin_access' => false,
+            'limo_access' => true,
+        ]);
+
+        $this->actingAs($admin, 'panel_admin')
+            ->get('/limo')
+            ->assertNotFound();
     }
 
     public function test_panel_admin_without_limo_access_gets_403(): void

@@ -1,6 +1,6 @@
 # Agency panel (ulogovani korisnik, `/panel`)
 
-**Poslednje ažuriranje:** 2026-05-05
+**Poslednje ažuriranje:** 2026-05-07
 
 Prefiks ruta: **`/panel`**, middleware **`auth`** + **`verified`**. Gornja navigacija: `resources/views/layouts/navigation.blade.php`.
 
@@ -89,7 +89,12 @@ Backend tok `payment_method=advance`:
 
 ### Limo QR (pick-up taksa)
 
-Rute **`/panel/limo*`** vidljive i dostupne **samo kada je** `advance_payments` **ON** (inače **404**).
+Rute **`/panel/limo*`** vidljive i dostupne samo kada su ispunjena **oba** uslova:
+
+- `ADVANCE_PAYMENTS_ENABLED=true` (config `features.advance_payments`)
+- `LIMO_SERVICE_ENABLED=true` (config `features.limo_service`)
+
+Ako je bilo koji uslov false, `/panel/limo*` vraća **404**, a navigaciona stavka “Limo” može biti vidljiva ali **disabled** (bez linka) uz tooltip.
 
 - **Lista i generisanje:** `GET /panel/limo`, `POST /panel/limo/qr/generate`, **detalj QR:** `GET /panel/limo/qr/{limoQrToken}`.
 - QR važi **samo za tekući kalendarski dan** (timezone projekta).

@@ -74,6 +74,14 @@ Preporučeni oblik (naslovi ili bold oznake moraju biti eksplicitni):
 
 ---
 
+## 2.1 Feature flags (konvencija)
+
+- Feature flags su u `config/features.php` i u `.env` kao `*_ENABLED`.
+- Pravilo: feature koji je isključen treba da bude “nevidljiv kao surface” (tipično **404** na rute), ali UI može prikazati disabled stavku ako UX to traži.
+- **Limo servis:** `features.limo_service` (ENV `LIMO_SERVICE_ENABLED`) i **mora** imati i `features.advance_payments` ON. Effective rule: \(advance\_payments \land limo\_service\).
+
+---
+
 ## 3.1 Blade napomena (parse error)
 
 - U ovom projektu **izbegavati** Blade shorthand `@php($x = ...)` — u praksi je na Windows okruženju više puta izazvao kompajlirani view sa **ParseError** (`unexpected token "endif"`). Umesto toga koristi blok:

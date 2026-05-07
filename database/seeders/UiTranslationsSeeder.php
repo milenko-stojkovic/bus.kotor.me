@@ -381,6 +381,8 @@ class UiTranslationsSeeder extends Seeder
             // Limo (agency panel + printable QR PDF — not fiscal invoices)
             ['group' => 'panel', 'key' => 'nav_limo', 'locale' => 'en', 'text' => 'Limo QR'],
             ['group' => 'panel', 'key' => 'nav_limo', 'locale' => 'cg', 'text' => 'Limo QR'],
+            ['group' => 'panel', 'key' => 'limo_disabled_hint', 'locale' => 'en', 'text' => 'Limo service is currently unavailable.'],
+            ['group' => 'panel', 'key' => 'limo_disabled_hint', 'locale' => 'cg', 'text' => 'Limo servis trenutno nije dostupan.'],
             ['group' => 'panel', 'key' => 'limo_new_qr_once', 'locale' => 'en', 'text' => 'New QR — show it only once; save the payload for printing.'],
             ['group' => 'panel', 'key' => 'limo_new_qr_once', 'locale' => 'cg', 'text' => 'Novi QR – prikažite ga samo jednom; sačuvajte payload za štampu.'],
             ['group' => 'panel', 'key' => 'limo_slots_hint', 'locale' => 'en', 'text' => 'Daily limit and QR codes are valid only for today’s date (Europe/Podgorica).'],
