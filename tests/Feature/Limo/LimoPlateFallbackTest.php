@@ -18,6 +18,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
+use App\Services\Limo\LimoOcrRunner;
 
 class LimoPlateFallbackTest extends TestCase
 {
@@ -27,6 +28,7 @@ class LimoPlateFallbackTest extends TestCase
     {
         parent::setUp();
         Carbon::setTestNow(Carbon::parse('2026-05-04 12:00:00', 'Europe/Podgorica'));
+        config(['limo.ocr.enabled' => false]);
     }
 
     protected function tearDown(): void
@@ -58,6 +60,71 @@ class LimoPlateFallbackTest extends TestCase
         $this->assertNull($data['suggested_plate']);
 
         $this->assertSame(1, LimoPlateUpload::query()->count());
+    }
+
+    public function test_ocr_disabled_upload_still_ok_and_suggestion_null(): void
+    {
+        config(['limo.ocr.enabled' => false]);
+        Storage::fake('local');
+
+        $admin = $this->makeLimoAdmin('plate_ocr_off');
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $this->actingAs($admin, 'panel_admin')
+            ->post('/limo/pickup/plate/ocr', [
+                'image' => UploadedFile::fake()->image('plate.jpg', 640, 480),
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'ok')
+            ->assertJsonPath('suggested_plate', null);
+    }
+
+    public function test_ocr_noisy_text_suggests_normalized_plate(): void
+    {
+        config(['limo.ocr.enabled' => true]);
+
+        $this->app->bind(LimoOcrRunner::class, fn () => new class implements LimoOcrRunner {
+            public function run(string $absoluteImagePath, int $timeoutSeconds): string
+            {
+                return "xx\\nPG 123-AB\\nnoise";
+            }
+        });
+
+        Storage::fake('local');
+        $admin = $this->makeLimoAdmin('plate_ocr_ok');
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $this->actingAs($admin, 'panel_admin')
+            ->post('/limo/pickup/plate/ocr', [
+                'image' => UploadedFile::fake()->image('plate.jpg', 640, 480),
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'ok')
+            ->assertJsonPath('suggested_plate', 'PG123AB');
+    }
+
+    public function test_ocr_failure_does_not_break_upload_flow(): void
+    {
+        config(['limo.ocr.enabled' => true]);
+
+        $this->app->bind(LimoOcrRunner::class, fn () => new class implements LimoOcrRunner {
+            public function run(string $absoluteImagePath, int $timeoutSeconds): string
+            {
+                throw new \RuntimeException('tesseract timeout');
+            }
+        });
+
+        Storage::fake('local');
+        $admin = $this->makeLimoAdmin('plate_ocr_fail');
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $this->actingAs($admin, 'panel_admin')
+            ->post('/limo/pickup/plate/ocr', [
+                'image' => UploadedFile::fake()->image('plate.jpg', 640, 480),
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'ok')
+            ->assertJsonPath('suggested_plate', null);
     }
 
     public function test_confirm_registered_plate_with_advance_creates_event_attaches_photo_and_dispatches_job(): void

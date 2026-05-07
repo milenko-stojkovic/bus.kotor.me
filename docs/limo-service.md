@@ -29,7 +29,7 @@ Ovaj dokument opisuje **trenutno implementirano stanje** u kodu i **preostale pl
 - **Pickup QR (operativa):**
   - `POST /limo/pickup/qr` — validacija tokena (hash + dan), kreiranje `limo_pickup_events`, oduzimanje avansa (`agency_advance_transactions`, tip `usage`), brisanje iskorišćenog reda iz `limo_qr_tokens`
 - **Pickup tablica (fallback, bez QR):**
-  - `POST /limo/pickup/plate/ocr` — validacija slike (do 5 MB, jpeg/png/webp), snimanje u **private** `local` disk, `LimoPlateOcrService` (trenutno **stub** — `suggested_plate` obično `null`), vraća `upload_token` + prijedlog tablice ako ikad bude integrisan OCR
+  - `POST /limo/pickup/plate/ocr` — validacija slike (do 5 MB, jpeg/png/webp), snimanje u **private** `local` disk; server-side **Tesseract OCR** daje **advisory** `suggested_plate` kada je dostupan (konfiguracija `LIMO_OCR_*`); vraća `upload_token` + opcioni prijedlog tablice
   - `POST /limo/pickup/plate/confirm` — potvrda **ručno** unesene / ispravljene tablice; normalizacija kao u ostatku projekta (`DuplicateReservationAttemptService::normalizeLicensePlate`); traži se **aktivno** vozilo (`vehicles.status=active`, `user_id` postoji) po tablici; neuspjeh: `plate_not_registered` ili `insufficient_advance`; uspjeh: `source=plate`, `limo_pickup_photos` tip `plate`, ista fiskalna staza kao QR
   - **OCR nije odlučujući** — evidenter mora potvrditi/ispraviti tablicu prije `confirm`
   - Nema incident zapisa u ovom toku (incidenti su odvojeni — vidi [Incident flow](#incident-flow-implementirano))
@@ -44,7 +44,7 @@ Ovaj dokument opisuje **trenutno implementirano stanje** u kodu i **preostale pl
 
 ### Još nije / TODO
 
-- **Pravi OCR** (Tesseract / vanjski API) — trenutno stub; tablica se **obavezno** potvrđuje ručno
+- (OCR je implementiran kao **advisory** prijedlog preko Tesseract-a; manualna potvrda ostaje obavezna. Dalje TODO: poboljšanje parsiranja, dodatni jezici/psm, eventualno pre-processing slike.)
 - **Incident workflow** — šire od minimalnog: statusi (reported/closed), administrativno rešavanje, integracije; trenutno je samo evidencija + obavještenje
 - ~~**Admin analitika** — uključivanje Limo prihoda~~ → **urađeno:** Admin **Analitika** (`/admin/analitika`) ima poseban blok **Limo servis** i KPI za prihod (rezervacije vs Limo vs ukupno); detaljan read-only pregled događaja ostaje **`GET /admin/limo`** (`admin.limo.index`).
 - **Offline sync**
@@ -109,7 +109,7 @@ Validacija: aktivni token, danas, dovoljno avansa, limit. Na uspjeh: `limo_picku
 ## Pickup flow – license plate fallback (implementirano)
 
 1. Evidententer šalje fotografiju na **`POST /limo/pickup/plate/ocr`** (multipart); dobija **`upload_token`** (isti evidenter, istek ~1h, jednokratna potvrda).
-2. Opcioni **`suggested_plate`** iz OCR stub-a — informativan; korisnik na **`GET /limo`** mora unijeti/popraviti tablicu prije potvrde.
+2. Opcioni **`suggested_plate`** iz server-side OCR-a (Tesseract) — informativan; korisnik na **`GET /limo`** mora unijeti/popraviti tablicu prije potvrde.
 3. **`POST /limo/pickup/plate/confirm`** sa `upload_token` + **`license_plate`**: traži se aktivno vozilo agencije; avans ≥ 15 EUR; kreira se događaj `source=plate`, foto `limo_pickup_photos` (`type=plate`), ledger usage, `ProcessLimoAfterPaymentJob`.
 4. Ako tablica nije u voznom parku agencije → **`plate_not_registered`** (bez incident zapisa). Ako avans nedovoljan → **`insufficient_advance`**.
 
@@ -246,7 +246,7 @@ Evidencija incidenta (bez finansijskog efekta, bez pickup događaja).
 - **`POST /limo/pickup/plate/ocr`**, **`POST /limo/pickup/plate/confirm`** — JSON / multipart; greške `plate_not_registered`, `insufficient_advance`, `invalid_upload`.
 - **`POST /limo/incident`** — multipart; JSON uspjeh `{ status: ok, incident_uuid, communal_email_sent }`; greška validacije `422` sa `code: validation_error`.
 - **`GET /limo/health`** — JSON smoke pod istim middleware-om.
-- Dalje **TODO**: pravi OCR motor, širi incident/admin workflow, offline sinhronizacija, native Android. (Retencija dugotrajnih foto dokaza — posebna politika ako bude potrebna.)
+- Dalje **TODO**: poboljšanje OCR parsiranja/pre-processinga, širi incident/admin workflow, offline sinhronizacija, native Android. (Retencija dugotrajnih foto dokaza — posebna politika ako bude potrebna.)
 
 ---
 

@@ -43,8 +43,25 @@ final class LimoPlatePickupService
         $path = $file->storeAs('limo_plate_uploads', $storedName, 'local');
 
         $absolute = Storage::disk('local')->path($path);
-        $ocrRaw = $this->ocrService->suggestPlate($absolute);
-        $ocrText = $ocrRaw !== null && $ocrRaw !== '' ? $ocrRaw : null;
+        $ocrText = null;
+        try {
+            Log::channel('payments')->info('limo_plate_ocr_attempted', [
+                'upload_token_suffix' => substr($uploadToken, -8),
+                'path_suffix' => basename($absolute),
+            ]);
+            $ocrRaw = $this->ocrService->suggestPlate($absolute);
+            $ocrText = $ocrRaw !== null && $ocrRaw !== '' ? $ocrRaw : null;
+            Log::channel('payments')->info('limo_plate_ocr_succeeded', [
+                'upload_token_suffix' => substr($uploadToken, -8),
+                'suggestion_returned' => $ocrText !== null,
+            ]);
+        } catch (Throwable $e) {
+            Log::channel('payments')->warning('limo_plate_ocr_failed', [
+                'upload_token_suffix' => substr($uploadToken, -8),
+                'message' => $e->getMessage(),
+                'exception' => $e::class,
+            ]);
+        }
 
         $suggestedPlate = null;
         if ($ocrText !== null) {

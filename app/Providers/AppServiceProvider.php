@@ -8,6 +8,8 @@ use App\Contracts\PaymentStatusInquiryService;
 use App\Events\PaymentFailed;
 use App\Listeners\LogPaymentFailed;
 use App\Listeners\NotifyUserPaymentFailed;
+use App\Services\Limo\LimoOcrRunner;
+use App\Services\Limo\TesseractOcrRunner;
 use App\Services\Payment\FakeCallbackSignatureValidator;
 use App\Services\Payment\FakePaymentProvider;
 use App\Services\Payment\FakePaymentStatusInquiryService;
@@ -50,6 +52,9 @@ class AppServiceProvider extends ServiceProvider
                 default => $this->app->make(FakePaymentStatusInquiryService::class),
             };
         });
+
+        // Limo OCR runner (advisory suggestion only; may be disabled/unavailable).
+        $this->app->bind(LimoOcrRunner::class, fn () => $this->app->make(TesseractOcrRunner::class));
     }
 
     /**
