@@ -1,6 +1,6 @@
 # Project DONE (urađeno)
 
-**Poslednje ažuriranje:** 2026-05-12  
+**Poslednje ažuriranje:** 2026-05-13  
 
 Hronološki najnovije na vrhu unutar svake sekcije. Pri zatvaranju zadatka dodaj red sa **datumom** (`YYYY-MM-DD`) i kratak opis; istu stavku ukloni iz `docs/project-todo.md`.
 
@@ -8,6 +8,7 @@ Hronološki najnovije na vrhu unutar svake sekcije. Pri zatvaranju zadatka dodaj
 
 ## 2026-04 — Agency panel, besplatan checkout, dokumentacija
 
+- **2026-05-13** — **FZBR (agencijski panel) — informativni tekst:** ažurirani stringovi u **`UiTranslationsSeeder`** (`free_request.fzbr_description`, `fzbr_instruction`, `documents_hint`) i Blade fallback u **`resources/views/panel/fzbr.blade.php`**: proces preko **prihodi@kotor.me** (Sekretarijat za lokalne prihode, budžet i finansije), proslijeđivanje odobrenja agenciji/prevozniku, dozvoljeno djelimično priloženje dokumentacije uz napomenu da **admin ne odobrava dok dokumentacija nije kompletna**; nova instrukcija (kapacitet + kompletnost + ranije podnošenje); pomoć za upload. **Bez** izmjene validacije, ruta, kontrolera ili zahtjeva za broj fajlova u kodu. **`docs/agency-panel.md`**.
 - **2026-05-12** — **Limo tablica — ručni izrez (crop) prije OCR-a:** nakon „Nema QR? Slikaj tablicu” na **`GET /limo`** evidenter vidi pregled slike i može označiti pravougaonik oko tablice (ili poslati cijelu sliku); **`POST /limo/pickup/plate/ocr`** prihvata opciona polja **`plate_crop_left|top|width|height`** (0–10000 BP); **`LimoPlateCropExtractor`** privremeni PNG izreza; **`LimoPlateOcrService`** prvo OCR na **`uc_*`** varijantama, zatim na punoj slici; bonus skor za kandidat sa izreza; PSM **11/13** na **`original`** varijanti pune slike samo ako je isti kandidat potkrijepljen drugim prolazom/izrezom; migracija **`limo_plate_uploads.plate_crop_*_bp`**; debug (`APP_DEBUG`): **`ocr_used_user_crop`**, **`ocr_crop_width_px`**, **`ocr_crop_height_px`**; testovi u **`LimoPlateFallbackTest`**; **`docs/limo-service.md`**.
 
 - **2026-05-08** — **Limo tablica / OCR (UI + pretprocesiranje + dijagnostika):** **`GET /limo`** — polja tablice auto-uppercase **A–Z0–9**; **`POST /limo/pickup/plate/ocr`** — GD varijante (original, kontrast/oštrina, prag, centralni band), Tesseract **`eng`**, **`--psm` 7/8**, **whitelist** A–Z0–9, bodovanje kandidata + čišćenje šuma; privremeni fajlovi `storage/framework/cache/limo_ocr/*`; logovi `limo_plate_ocr_variant_*` i postojeći agregati; **`APP_DEBUG`** proširuje JSON `debug` (uključujući `variants_tried` / `variant_attempts`); testovi `LimoPlateFallbackTest` + `LimoEntryUiTest`; **`docs/limo-service.md`**, `.env.example` (`LIMO_OCR_MAX_TOTAL_SECONDS`).

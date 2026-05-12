@@ -112,6 +112,10 @@ Detalji modela: **[limo-service.md](./limo-service.md)**.
 
 Stranica: **`GET /panel/fzbr`** (`panel.fzbr.create`).
 
+Tekstovi na vrhu forme (pravni uvod, info-blok, pomoć za upload) dolaze iz **`ui_translations`** grupe **`free_request`** (`fzbr_description`, `fzbr_instruction`, `documents_hint`, `documents_limit`, …), seedovano u **`UiTranslationsSeeder`**. Poslije izmjene teksta na produkciji ažurirati redove u bazi (npr. ponovnim seedovanjem ili ručnim SQL-om) — **nema promjene validacije, ruta, kontrolera niti zahtjeva za broj priloga u kodu**.
+
+**Operativni proces (škole i slične ustanove):** škola ili ustanova prvo kontaktira **Sekretarijat za lokalne prihode, budžet i finansije** Opštine Kotor na **prihodi@kotor.me**; nakon odobrenja Sekretarijata, odobrenje se proslijedi agenciji/prevozniku koji podnosi FZBR. Uz formular se prilaže raspoloživa dokumentacija (npr. angažovanje prevoznika, odobrenje Sekretarijata); **nepotpuna dokumentacija se može poslati u prvim koracima**, a ostatak naknadno — **administrator ne odobrava besplatnu rezervaciju dok sva neophodna dokumentacija ne bude dostavljena i pregledana** (poslovno pravilo; implementacija odobrenja ostaje u admin toku).
+
 Forma je podijeljena u dvije cjeline:
 
 - **Cjelina 1 (datum + segmenti + vozila):**
@@ -125,8 +129,9 @@ Forma je podijeljena u dvije cjeline:
   - Dugme “Podnesi zahtjev”
 
 Na vrhu stranice prikazuje se:
-- **pravno objašnjenje** (ključ `free_request.fzbr_description`)
+- **pravno / procesno objašnjenje** (ključ `free_request.fzbr_description`)
 - **instrukcija korisniku** u odvojenom info-bloku (ključ `free_request.fzbr_instruction`)
+- **pomoć za priloge** (`free_request.documents_hint` + `documents_limit`)
 
 ---
 
