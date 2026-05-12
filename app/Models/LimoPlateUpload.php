@@ -10,6 +10,10 @@ class LimoPlateUpload extends Model
     protected $fillable = [
         'upload_token',
         'path',
+        'plate_crop_left_bp',
+        'plate_crop_top_bp',
+        'plate_crop_width_bp',
+        'plate_crop_height_bp',
         'ocr_text',
         'gps_lat',
         'gps_lng',

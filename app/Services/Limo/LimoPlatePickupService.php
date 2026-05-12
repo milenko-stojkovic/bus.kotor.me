@@ -25,7 +25,8 @@ final class LimoPlatePickupService
     ) {}
 
     /**
-     * @return array{status: 'ok', upload_token: string, suggested_plate: ?string}
+     * @param  array{left:int,top:int,width:int,height:int}|null  $plateCropBasisPoints  0–10000 basis points relative to stored image size
+     * @return array{status: 'ok', upload_token: string, suggested_plate: ?string, debug?: array<string, mixed>}
      */
     public function processUpload(
         UploadedFile $file,
@@ -33,6 +34,8 @@ final class LimoPlatePickupService
         ?string $gpsLng,
         ?string $deviceInfo,
         int $uploadedByLimoAdminId,
+        bool $includeDebugInResponse = false,
+        ?array $plateCropBasisPoints = null,
     ): array {
         $uploadToken = Str::random(48);
         $ext = strtolower($file->guessExtension() ?: 'jpg');
@@ -43,54 +46,127 @@ final class LimoPlatePickupService
         $path = $file->storeAs('limo_plate_uploads', $storedName, 'local');
 
         $absolute = Storage::disk('local')->path($path);
-        $ocrText = null;
-        try {
+        $suffix = substr($uploadToken, -8);
+        $pathSuffix = basename($absolute);
+
+        if ($this->ocrService->isRunnable()) {
             Log::channel('payments')->info('limo_plate_ocr_attempted', [
-                'upload_token_suffix' => substr($uploadToken, -8),
-                'path_suffix' => basename($absolute),
-            ]);
-            $ocrRaw = $this->ocrService->suggestPlate($absolute);
-            $ocrText = $ocrRaw !== null && $ocrRaw !== '' ? $ocrRaw : null;
-            Log::channel('payments')->info('limo_plate_ocr_succeeded', [
-                'upload_token_suffix' => substr($uploadToken, -8),
-                'suggestion_returned' => $ocrText !== null,
-            ]);
-        } catch (Throwable $e) {
-            Log::channel('payments')->warning('limo_plate_ocr_failed', [
-                'upload_token_suffix' => substr($uploadToken, -8),
-                'message' => $e->getMessage(),
-                'exception' => $e::class,
+                'upload_token_suffix' => $suffix,
+                'path_suffix' => $pathSuffix,
+                'plate_crop' => $plateCropBasisPoints !== null,
             ]);
         }
 
-        $suggestedPlate = null;
-        if ($ocrText !== null) {
-            $normalized = DuplicateReservationAttemptService::normalizeLicensePlate($ocrText);
-            $suggestedPlate = $normalized !== '' ? $normalized : null;
+        $cropTempPath = null;
+        if ($plateCropBasisPoints !== null && LimoPlateCropExtractor::validateBasisPoints($plateCropBasisPoints)) {
+            $cropTempPath = LimoPlateCropExtractor::extractToTempPng($absolute, $plateCropBasisPoints);
         }
+
+        try {
+            $analysis = $this->ocrService->analyze($absolute, $suffix, $cropTempPath !== null && is_file($cropTempPath) ? $cropTempPath : null);
+        } finally {
+            if ($cropTempPath !== null && is_file($cropTempPath)) {
+                @unlink($cropTempPath);
+            }
+        }
+        $suggestedPlate = $analysis['suggested_plate'];
+        $ocrRawForDb = $analysis['raw_text'] !== null ? Str::limit($analysis['raw_text'], 2000, '') : null;
+
+        $normalizedLen = strlen($analysis['normalized_compact']);
+        $logCtx = [
+            'upload_token_suffix' => $suffix,
+            'path_suffix' => $pathSuffix,
+            'suggested_plate' => $suggestedPlate,
+            'normalized_compact_length' => $normalizedLen,
+            'ocr_reason' => $analysis['reason'],
+        ];
+
+        match ($analysis['reason']) {
+            'disabled', 'unavailable' => Log::channel('payments')->info('limo_plate_ocr_unavailable', $logCtx + [
+                'unavailable_detail' => $analysis['reason'] === 'disabled' ? 'ocr_disabled' : ($analysis['failure_message'] ?? 'runner_unavailable'),
+            ]),
+            'failed' => Log::channel('payments')->warning('limo_plate_ocr_failed', $logCtx + [
+                'failure_reason' => $analysis['failure_message'],
+            ]),
+            'no_candidate' => Log::channel('payments')->info('limo_plate_ocr_no_candidate', $logCtx + [
+                'raw_preview' => $analysis['raw_text'] !== null ? Str::limit($analysis['raw_text'], 120, '…') : null,
+                'variant_passes' => count($analysis['debug_variant_attempts'] ?? []),
+            ]),
+            'ok' => Log::channel('payments')->info('limo_plate_ocr_succeeded', $logCtx + [
+                'raw_preview' => $analysis['raw_text'] !== null ? Str::limit($analysis['raw_text'], 120, '…') : null,
+            ]),
+        };
 
         LimoPlateUpload::query()->create([
             'upload_token' => $uploadToken,
             'path' => $path,
-            'ocr_text' => $ocrText,
+            'ocr_text' => $ocrRawForDb,
             'gps_lat' => $gpsLat,
             'gps_lng' => $gpsLng,
             'device_info' => $deviceInfo,
             'uploaded_by_limo_admin_id' => $uploadedByLimoAdminId,
             'expires_at' => now()->addHour(),
+            'plate_crop_left_bp' => $plateCropBasisPoints !== null ? $plateCropBasisPoints['left'] : null,
+            'plate_crop_top_bp' => $plateCropBasisPoints !== null ? $plateCropBasisPoints['top'] : null,
+            'plate_crop_width_bp' => $plateCropBasisPoints !== null ? $plateCropBasisPoints['width'] : null,
+            'plate_crop_height_bp' => $plateCropBasisPoints !== null ? $plateCropBasisPoints['height'] : null,
         ]);
 
         Log::channel('payments')->info('limo_plate_photo_uploaded', [
-            'upload_token_suffix' => substr($uploadToken, -8),
+            'upload_token_suffix' => $suffix,
             'path_dir' => 'limo_plate_uploads',
             'uploaded_by_limo_admin_id' => $uploadedByLimoAdminId,
         ]);
 
-        return [
+        $payload = [
             'status' => 'ok',
             'upload_token' => $uploadToken,
             'suggested_plate' => $suggestedPlate,
         ];
+
+        if ($includeDebugInResponse) {
+            $attempts = $analysis['debug_variant_attempts'] ?? [];
+            $variantsTried = [];
+            foreach ($attempts as $row) {
+                if (! isset($row['variant'])) {
+                    continue;
+                }
+                $psm = array_key_exists('psm', $row) ? $row['psm'] : null;
+                $wl = array_key_exists('whitelist_enabled', $row) ? $row['whitelist_enabled'] : null;
+                $wlStr = $wl === null ? 'null' : ($wl ? '1' : '0');
+                $variantsTried[] = (string) $row['variant'].'@psm='.($psm === null ? 'null' : (string) $psm).'@wl='.$wlStr;
+            }
+            $payload['debug'] = [
+                'ocr_enabled' => $analysis['ocr_enabled'],
+                'ocr_available' => $analysis['ocr_runner_available'],
+                'raw_preview' => $analysis['raw_text'] !== null ? Str::limit($analysis['raw_text'], 200, '…') : '',
+                'normalized_preview' => Str::limit($analysis['normalized_compact'], 200, '…'),
+                'reason' => $analysis['reason'] === 'unavailable' ? 'failed' : $analysis['reason'],
+                'variants_tried' => $variantsTried,
+                'variant_attempts' => $attempts,
+                'variants_count' => (int) ($analysis['variants_count'] ?? 0),
+                'attempts_count' => count($attempts),
+                'preprocessing_gd_available' => (bool) ($analysis['preprocessing_gd_loaded'] ?? extension_loaded('gd')),
+                'preprocessing_available' => ($analysis['preprocessing_ran'] ?? false) && ! ($analysis['preprocessing_used_fallback'] ?? false),
+                'preprocessing_failed' => (bool) ($analysis['preprocessing_used_fallback'] ?? false),
+                'selected_variant' => $analysis['selected_variant'],
+                'selected_psm' => $analysis['selected_psm'],
+                'selected_candidate' => $analysis['suggested_plate'],
+                'early_exit' => (bool) ($analysis['early_exit'] ?? false),
+                'ocr_used_user_crop' => (bool) ($analysis['ocr_used_user_crop'] ?? false),
+                'ocr_crop_width_px' => $analysis['ocr_crop_width_px'] ?? null,
+                'ocr_crop_height_px' => $analysis['ocr_crop_height_px'] ?? null,
+            ];
+            if ($analysis['reason'] === 'unavailable') {
+                $payload['debug']['failure_detail'] = $analysis['failure_message'] ?? 'unavailable';
+            } elseif ($analysis['reason'] === 'failed' && $analysis['failure_message'] !== null) {
+                $payload['debug']['failure_detail'] = Str::limit($analysis['failure_message'], 200, '…');
+            } elseif ($attempts !== [] && ($attempts[0]['variant'] ?? '') === 'none' && ($attempts[0]['error'] ?? '') !== '') {
+                $payload['debug']['failure_detail'] = (string) $attempts[0]['error'];
+            }
+        }
+
+        return $payload;
     }
 
     /**

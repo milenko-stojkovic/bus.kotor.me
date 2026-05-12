@@ -1,6 +1,6 @@
 # Project DONE (urađeno)
 
-**Poslednje ažuriranje:** 2026-05-07  
+**Poslednje ažuriranje:** 2026-05-12  
 
 Hronološki najnovije na vrhu unutar svake sekcije. Pri zatvaranju zadatka dodaj red sa **datumom** (`YYYY-MM-DD`) i kratak opis; istu stavku ukloni iz `docs/project-todo.md`.
 
@@ -8,6 +8,9 @@ Hronološki najnovije na vrhu unutar svake sekcije. Pri zatvaranju zadatka dodaj
 
 ## 2026-04 — Agency panel, besplatan checkout, dokumentacija
 
+- **2026-05-12** — **Limo tablica — ručni izrez (crop) prije OCR-a:** nakon „Nema QR? Slikaj tablicu” na **`GET /limo`** evidenter vidi pregled slike i može označiti pravougaonik oko tablice (ili poslati cijelu sliku); **`POST /limo/pickup/plate/ocr`** prihvata opciona polja **`plate_crop_left|top|width|height`** (0–10000 BP); **`LimoPlateCropExtractor`** privremeni PNG izreza; **`LimoPlateOcrService`** prvo OCR na **`uc_*`** varijantama, zatim na punoj slici; bonus skor za kandidat sa izreza; PSM **11/13** na **`original`** varijanti pune slike samo ako je isti kandidat potkrijepljen drugim prolazom/izrezom; migracija **`limo_plate_uploads.plate_crop_*_bp`**; debug (`APP_DEBUG`): **`ocr_used_user_crop`**, **`ocr_crop_width_px`**, **`ocr_crop_height_px`**; testovi u **`LimoPlateFallbackTest`**; **`docs/limo-service.md`**.
+
+- **2026-05-08** — **Limo tablica / OCR (UI + pretprocesiranje + dijagnostika):** **`GET /limo`** — polja tablice auto-uppercase **A–Z0–9**; **`POST /limo/pickup/plate/ocr`** — GD varijante (original, kontrast/oštrina, prag, centralni band), Tesseract **`eng`**, **`--psm` 7/8**, **whitelist** A–Z0–9, bodovanje kandidata + čišćenje šuma; privremeni fajlovi `storage/framework/cache/limo_ocr/*`; logovi `limo_plate_ocr_variant_*` i postojeći agregati; **`APP_DEBUG`** proširuje JSON `debug` (uključujući `variants_tried` / `variant_attempts`); testovi `LimoPlateFallbackTest` + `LimoEntryUiTest`; **`docs/limo-service.md`**, `.env.example` (`LIMO_OCR_MAX_TOTAL_SECONDS`).
 - **2026-05-07** — **Limo feature flag:** `LIMO_SERVICE_ENABLED` (`config('features.limo_service')`) + existing `ADVANCE_PAYMENTS_ENABLED` (`config('features.advance_payments')`) — Limo je dostupan samo ako su oba ON; kada je off → `/panel/limo*` i `/limo*` vraćaju 404; u agencijskoj navigaciji “Limo” je vidljiv ali disabled uz tooltip. Testovi: `LimoQrGenerationTest` (nav + 404) i `LimoEntryUiTest` (404).
 - **2026-05-07** — **Limo OCR suggestion (Tesseract, advisory):** `LimoPlateOcrService` koristi server-side Tesseract kada je `LIMO_OCR_ENABLED=true` (opcion `LIMO_OCR_TESSERACT_BINARY`, `LIMO_OCR_TIMEOUT_SECONDS`); rezultat se konzervativno parsira i normalizuje, ali je samo sugestija — evidenter i dalje obavezno ručno potvrđuje/ispravlja tablicu prije `confirm`; ako OCR nije dostupan ili padne → `suggested_plate=null` i tok se nastavlja ručno; logovi `limo_plate_ocr_*`; testovi: `LimoPlateFallbackTest` (mock runner).
 - **2026-05-05** — **Limo incident flow (minimalno):** tabela `limo_incidents`; `POST /limo/incident` (`limo.incident.store`) pod `limo.access`; obavezna foto tablice; email **`komunalna.policija@kotor.me`** + prilozi; `admin_alerts` (`limo_incident`); logovi na kanalu `payments`; UI na `GET /limo` (upozorenje kada ne treba prijavljivati incident); bez avansa/fiskala/`limo_pickup_events`; `LimoIncidentService`, `LimoIncidentController`, `LimoCommunalPoliceIncidentMail`; testovi `tests/Feature/Limo/LimoIncidentFlowTest.php`; docs: `limo-service.md`, `project-todo.md`.

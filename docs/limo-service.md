@@ -1,6 +1,6 @@
 # Limo service
 
-**Poslednje ažuriranje:** 2026-05-07
+**Poslednje ažuriranje:** 2026-05-12
 
 **Povezano:** [project-todo.md](./project-todo.md) (preostali Limo TODO), [project-done.md](./project-done.md) (urađeno), [agency-panel.md](./agency-panel.md) (agencijski `/panel/limo`).
 
@@ -17,7 +17,7 @@ Ovaj dokument opisuje **trenutno implementirano stanje** u kodu i **preostale pl
   - kolona `admins.limo_access`
   - middleware `limo.access`
   - rute `/limo/*` zaštićene `auth:panel_admin` + `limo.access` (ne glavni `admin.panel`)
-  - `GET /limo` — mobilni Blade UI za evidentiranje pickup-a (`limo.entry`), uključujući nakon prijave za nalog „samo Limo“
+  - `GET /limo` — mobilni Blade UI za evidentiranje pickup-a (`limo.entry`), uključujući nakon prijave za nalog „samo Limo“; QR: **`getUserMedia`** stream na vidljiv `<video>` (isti obrazac kao DEBUG test kamere) + dekodiranje kadra; na **mobilnom** **jsQR** (Vite bundle `limo-jsqr.js`); na **desktopu** opciono **`BarcodeDetector`** na istom canvas kadru ako je API dostupan, inače **jsQR**; ručni token uvijek dostupan
   - `GET /limo/health` — isti guard kao ostatak `/limo/*`; JSON `{ status, scope }` za health/smoke
 - **Agencijski panel — QR:**
   - `GET /panel/limo` — lista aktivnih QR za **današnji** dan (`Europe/Podgorica`)
@@ -29,7 +29,10 @@ Ovaj dokument opisuje **trenutno implementirano stanje** u kodu i **preostale pl
 - **Pickup QR (operativa):**
   - `POST /limo/pickup/qr` — validacija tokena (hash + dan), kreiranje `limo_pickup_events`, oduzimanje avansa (`agency_advance_transactions`, tip `usage`), brisanje iskorišćenog reda iz `limo_qr_tokens`
 - **Pickup tablica (fallback, bez QR):**
-  - `POST /limo/pickup/plate/ocr` — validacija slike (do 5 MB, jpeg/png/webp), snimanje u **private** `local` disk; server-side **Tesseract OCR** daje **advisory** `suggested_plate` kada je dostupan (konfiguracija `LIMO_OCR_*`); vraća `upload_token` + opcioni prijedlog tablice
+  - `POST /limo/pickup/plate/ocr` — validacija slike (do 5 MB, jpeg/png/webp), snimanje **cijele** fotografije u **private** `local` disk (dokaz ostaje original); opciono multipart polja **`plate_crop_left`**, **`plate_crop_top`**, **`plate_crop_width`**, **`plate_crop_height`** — **bazisne tačke 0–10000** u odnosu na širinu/visinu učitane slike (isti koordinatni sistem kao na klijentu); validan pravougaonik se čuva u **`limo_plate_uploads.plate_crop_*_bp`**; nevalidan izrez → **422** `validation_error`.
+  - **UI (`GET /limo`):** nakon „Nema QR? Slikaj tablicu” korisnik vidi **pregled** slike i može povući **pravougaonik oko tablice** (ili poslati **cijelu sliku** bez izreza); OCR koristi izrez **samo kao pomoć** — original se ne mijenja.
+  - **OCR pipeline:** ako postoji valjan korisnički izrez, prvo se na privremenom PNG izreza (`LimoPlateCropExtractor`) grade GD varijante sa prefiksom **`uc_*`**, zatim na **punoj** slici varijante bez prefiksa; na svakoj varijanti Tesseract **`eng`**, u produkciji tipično **`--psm` 7 i 8** + **whitelist** A–Z0–9; kada je **`APP_DEBUG=true`** i `LIMO_OCR_DEBUG_EXTENDED_ATTEMPTS=true`, širi se matrica PSM (npr. 6, 7, 8, 11, 13) i opciono whitelist off — za QA; **rani izlaz** kada je kandidat visokog povjerenja (strogi format tablice ili skor ≥ `LIMO_OCR_EARLY_EXIT_MIN_SCORE`); **prioritet kandidata sa izreza:** dodatak na skor za varijante `uc_*` da se smanje lažni pozitivi sa cijele slike; **konzervativno pravilo:** kandidat dobijen samo sa **`original`** varijante pune slike uz **PSM 11 ili 13** ne prihvata se dok isti kandidat nije „potkrijepljen” iz drugog izvora (druga GD varijanta, drugi PSM na `original`, ili korisnički izrez / `uc_*`).
+  - **Ograničenje vremena:** `LIMO_OCR_MAX_TOTAL_SECONDS` (podrazumijevano **15**), po prolazu `LIMO_OCR_PER_PASS_TIMEOUT` (podrazumijevano **3** s); privremeni fajlovi u `storage/framework/cache/limo_ocr/*` i privremeni izrez brišu se poslije pokušaja; vraća `upload_token` + opcioni `suggested_plate` (`LIMO_OCR_*`).
   - `POST /limo/pickup/plate/confirm` — potvrda **ručno** unesene / ispravljene tablice; normalizacija kao u ostatku projekta (`DuplicateReservationAttemptService::normalizeLicensePlate`); traži se **aktivno** vozilo (`vehicles.status=active`, `user_id` postoji) po tablici; neuspjeh: `plate_not_registered` ili `insufficient_advance`; uspjeh: `source=plate`, `limo_pickup_photos` tip `plate`, ista fiskalna staza kao QR
   - **OCR nije odlučujući** — evidenter mora potvrditi/ispraviti tablicu prije `confirm`
   - Nema incident zapisa u ovom toku (incidenti su odvojeni — vidi [Incident flow](#incident-flow-implementirano))
@@ -44,7 +47,7 @@ Ovaj dokument opisuje **trenutno implementirano stanje** u kodu i **preostale pl
 
 ### Još nije / TODO
 
-- (OCR je implementiran kao **advisory** prijedlog preko Tesseract-a; manualna potvrda ostaje obavezna. Dalje TODO: poboljšanje parsiranja, dodatni jezici/psm, eventualno pre-processing slike.)
+- (OCR je **advisory** prijedlog; manualna potvrda ostaje obavezna. Dalje TODO: dodatni jezici, eventualno OpenCV pretprocesiranje ako bude potrebno.)
 - **Incident workflow** — šire od minimalnog: statusi (reported/closed), administrativno rešavanje, integracije; trenutno je samo evidencija + obavještenje
 - ~~**Admin analitika** — uključivanje Limo prihoda~~ → **urađeno:** Admin **Analitika** (`/admin/analitika`) ima poseban blok **Limo servis** i KPI za prihod (rezervacije vs Limo vs ukupno); detaljan read-only pregled događaja ostaje **`GET /admin/limo`** (`admin.limo.index`).
 - **Offline sync**
@@ -62,7 +65,7 @@ Takođe su iza feature gate-a **`limo.feature`** (404 kada je Limo servis isklju
 - **Autorizacija:** `admins.limo_access` + middleware **`limo.access`**. Npr. `POST /limo/pickup/qr` samo uz `limo_access === true`.
 - **`admin_access`** otvara `/admin` dashboard; **ne** daje automatski Limo — potrebno je **`limo_access`**.
 - **Limo-only nalozi** (`limo_access`, bez `admin_access`): nakon prijave redirect na **`GET /limo`** (`limo.entry`), ne na `/admin`.
-- **`GET /limo`:** mobilni web UI (QR sken `BarcodeDetector` ako postoji u pregledaču, inače ručni unos tokena), slanje na **`POST /limo/pickup/qr`** sa GPS (best-effort) i `device_info`; jezik cg.
+- **`GET /limo`:** mobilni web UI (QR sken: vidi prioritet iznad — sirovi video preview + **jsQR** na mobilnom; na desktopu **`BarcodeDetector`** kada postoji, inače jsQR; status poruke za kameru bez logovanja tokena; ako dekoder nije učitan — **ručni unos tokena**), slanje na **`POST /limo/pickup/qr`** sa GPS (best-effort) i `device_info`; jezik cg.
 
 ---
 
@@ -113,10 +116,15 @@ Validacija: aktivni token, danas, dovoljno avansa, limit. Na uspjeh: `limo_picku
 
 ## Pickup flow – license plate fallback (implementirano)
 
-1. Evidententer šalje fotografiju na **`POST /limo/pickup/plate/ocr`** (multipart); dobija **`upload_token`** (isti evidenter, istek ~1h, jednokratna potvrda).
-2. Opcioni **`suggested_plate`** iz server-side OCR-a (Tesseract) — informativan; korisnik na **`GET /limo`** mora unijeti/popraviti tablicu prije potvrde.
-3. **`POST /limo/pickup/plate/confirm`** sa `upload_token` + **`license_plate`**: traži se aktivno vozilo agencije; avans ≥ 15 EUR; kreira se događaj `source=plate`, foto `limo_pickup_photos` (`type=plate`), ledger usage, `ProcessLimoAfterPaymentJob`.
-4. Ako tablica nije u voznom parku agencije → **`plate_not_registered`** (bez incident zapisa). Ako avans nedovoljan → **`insufficient_advance`**.
+1. Evidententer šalje fotografiju na **`POST /limo/pickup/plate/ocr`** (multipart); u tijelu mogu biti opciona polja **`plate_crop_*`** (bazisne tačke izreza); dobija **`upload_token`** (isti evidenter, istek ~1h, jednokratna potvrda).
+2. Opcioni **`suggested_plate`** iz server-side OCR-a (Tesseract nakon **GD pretprocesiranja**; prvo **korisnički izrez** ako postoji, zatim cijela slika; više PSM prolaza ovisno o konfiguraciji; **whitelist** samo A–Z0–9 u uobičajenom režimu) — **samo savjet**; OCR tekst se za parsiranje svodi na **velika slova i samo A–Z / 0–9**, zatim se traže „plate-like” kandidati i **boduje** najbolji (uz konzervativno pravilo za PSM 11/13 na varijanti `original` pune slike); ručna potvrda ostaje obavezna. U **`limo_plate_uploads.ocr_text`** čuva se **samo tekstualni OCR isječak** (ograničena dužina), ne binarna slika.
+3. **`GET /limo` (UI):** polja za tablicu (fallback + opciona tablica u incidentu) imaju **`inputmode="text"`**, **`autocapitalize="characters"`**, **`autocomplete="off"`**, **`spellcheck="false"`** i klijentski **auto-uppercase / samo A–Z0–9** radi lakšeg unosa na telefonu; **izvor istine za potvrdu i dalje je backend** (`DuplicateReservationAttemptService::normalizeLicensePlate` na `confirm` / incidentu).
+4. Kada je **`APP_DEBUG=true`**, JSON odgovor na **`POST /limo/pickup/plate/ocr`** može uključivati opcioni objekat **`debug`**: `ocr_enabled`, `ocr_available`, `raw_preview`, `normalized_preview`, `reason`, **`variants_tried`**, **`variant_attempts`** (svaki red: `variant`, `psm`, **`raw_preview`** / **`normalized_preview`** kao prazan string ako nema teksta, **`candidate`**, **`error`**), **`selected_variant`**, **`selected_psm`**, **`selected_candidate`**, **`early_exit`**, te **`ocr_used_user_crop`** (boolean — da li je OCR koristio korisnički izrez), **`ocr_crop_width_px`** / **`ocr_crop_height_px`** (dimenzije izreza u pikselima kada je izrez korišćen) — bez binarne slike. Na **`GET /limo`** u bloku „DEBUG — tablica (OCR upload)” isti podaci se ispisuju čitljivo liniju po liniju (uključujući liniju o izrezu). Kada je **`APP_DEBUG=false`**, odgovor sadrži samo `status`, `upload_token`, `suggested_plate`.
+5. **`POST /limo/pickup/plate/confirm`** sa `upload_token` + **`license_plate`**: traži se aktivno vozilo agencije; avans ≥ 15 EUR; kreira se događaj `source=plate`, foto `limo_pickup_photos` (`type=plate`), ledger usage, `ProcessLimoAfterPaymentJob`.
+6. Ako tablica nije u voznom parku agencije → **`plate_not_registered`** (bez incident zapisa). Ako avans nedovoljan → **`insufficient_advance`**.
+7. **JSON odgovor (contract) na confirm:** uspjeh `{ "status": "ok", "merchant_transaction_id": "…", "remaining_balance": "…" }` (`remaining_balance` opciono). Greška (npr. 422) `{ "status": "error", "code": "…", "message": "…" }` (`code`: `plate_not_registered`, `insufficient_advance`, `invalid_upload`, `validation_error`, …).
+
+**Logovi (kanal `payments`, OCR):** `limo_plate_ocr_attempted` (prije varijanti), `limo_plate_ocr_variant_attempted` / `limo_plate_ocr_variant_succeeded` (po varijanti i `psm`, uključujući `normalized_length`, opciono `candidate`), `limo_plate_ocr_succeeded` (ukupno kad je izabran kandidat), `limo_plate_ocr_no_candidate` (nema prihvatljivog kandidata; `variant_passes`), `limo_plate_ocr_failed` (izuzetak), `limo_plate_ocr_unavailable` (OCR isključen ili runner nedostupan). **Ne** loguje se binarna slika.
 
 ---
 
@@ -201,7 +209,8 @@ Privremeni upload prije potvrde tablice.
 | `id` | |
 | `upload_token` | unique, string za `confirm` |
 | `path` | relativno na private disk |
-| `ocr_text` | nullable (rezervisano za OCR) |
+| `ocr_text` | nullable; skraćeni **sirovi OCR tekst** (nije binarna slika) |
+| `plate_crop_left_bp`, `plate_crop_top_bp`, `plate_crop_width_bp`, `plate_crop_height_bp` | nullable; **bazisne tačke (0–10000)** pravougaonika tablice na originalnoj slici ako je evidenter označio izrez; inače `NULL` |
 | `gps_lat`, `gps_lng`, `device_info` | opciono od uploada |
 | `uploaded_by_limo_admin_id` | FK `admins`; samo taj evidenter može potvrditi |
 | `expires_at` | nakon čega `confirm` vraća `invalid_upload` |
@@ -245,10 +254,12 @@ Evidencija incidenta (bez finansijskog efekta, bez pickup događaja).
 ## Limo evidenter (`/limo/*`)
 
 - Odvojena autorizacija: **`limo.access`**, **`limo_access`**.
-- **`GET /limo`** (`limo.entry`) — mobilni ekran: QR sken / ručni token; sekcija **„Bez QR koda”**: foto tablice (kamera ili galerija), upload na `/plate/ocr`, prikaz prijedloga + **obavezna** ručna potvrda tablice na `/plate/confirm`; **`navigator.geolocation`** je opcion; **`device_info`** kao kod QR.
-- **Pregledač / HTTPS:** `getUserMedia`, geolokacija i (gdje postoji) **`BarcodeDetector`** zahtijevaju **[secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts)** — u praksi **HTTPS** na domeni; izuzetak je tipično **`localhost` / `127.0.0.1`**. Na „čistom” HTTP bez secure context-a kamera može biti nedostupna — ručni unos tokena i dalje radi. Tok kamere se zaustavlja nakon skeniranja, pri slanju, zaustavljanja ili napuštanja stranice (`pagehide`).
-- **`POST /limo/pickup/qr`** — isti endpoint za UI (`fetch` JSON + CSRF); odgovori ostaju JSON (`status` / `code`).
-- **`POST /limo/pickup/plate/ocr`**, **`POST /limo/pickup/plate/confirm`** — JSON / multipart; greške `plate_not_registered`, `insufficient_advance`, `invalid_upload`.
+- **`GET /limo`** (`limo.entry`) — mobilni ekran: QR sken / ručni token (**preview:** `getUserMedia` → `#scanVideo` autoplay/playsinline/muted; **dekodiranje:** `requestAnimationFrame` petlja, `canvas` sa smanjenom rezolucijom (performanse), na mobilnom **jsQR**; na desktopu **`BarcodeDetector.detect`** kada postoji u pregledaču, inače jsQR); sekcija **„Bez QR koda”**: foto tablice (kamera ili galerija) → **pregled + opcioni pravougaonik oko tablice** → upload na `/plate/ocr` (original + opcione BP koordinate izreza), prikaz prijedloga + **obavezna** ručna potvrda tablice na `/plate/confirm`; **`navigator.geolocation`** je opcion; **`device_info`** kao kod QR.
+- **Privremeno (samo `APP_DEBUG=true`):** na vrhu stranice blok **„DEBUG — test kamere”** — čist `getUserMedia` + `<video>` (bez QR biblioteka), isključivo za dijagnostiku da li se sirovi preview prikazuje u pregledaču; ne šalje podatke na backend. U istom bloku **„DEBUG — Potvrdi dolazak (fetch)”** — tekstualni trag koraka submit-a (bez tokena).
+- **„Potvrdi dolazak”:** `fetch` ide na **relativni** URL **`/limo/pickup/qr`** (isti origin); CSRF iz `<meta name="csrf-token">` (čitanje pri slanju); GPS korak ima spoljašnji limit da UI ne ostane zaglavljen ako `getCurrentPosition` ne odgovori.
+- **Pregledač / HTTPS:** `getUserMedia`, geolokacija i (na desktopu opciono) **`BarcodeDetector`** / **jsQR** zahtijevaju **[secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts)** — u praksi **HTTPS** na domeni; izuzetak je tipično **`localhost` / `127.0.0.1`**. Na „čistom” HTTP bez secure context-a kamera može biti nedostupna — ručni unos tokena i dalje radi. Tok kamere se zaustavlja nakon skeniranja, pri **„Potvrdi dolazak”**, zaustavljanja ili napuštanja stranice (`pagehide` / `beforeunload`).
+- **`POST /limo/pickup/qr`** — isti endpoint za UI (`fetch` JSON + CSRF, rel. putanja `/limo/pickup/qr`); odgovori ostaju JSON (`status` / `code`).
+- **`POST /limo/pickup/plate/ocr`**, **`POST /limo/pickup/plate/confirm`** — na `/limo` UI: **multipart** (`FormData`) na relativni **`/limo/pickup/plate/ocr`** (polja slike + opciono `plate_crop_left|top|width|height` u BP), JSON na **`/limo/pickup/plate/confirm`**; faze statusa (izbor → opcioni izrez na previewu → GPS best-effort → slanje); greške `plate_not_registered`, `insufficient_advance`, `invalid_upload` + HTTP 401/403/404/419/5xx poruke.
 - **`POST /limo/incident`** — multipart; JSON uspjeh `{ status: ok, incident_uuid, communal_email_sent }`; greška validacije `422` sa `code: validation_error`.
 - **`GET /limo/health`** — JSON smoke pod istim middleware-om.
 - Dalje **TODO**: poboljšanje OCR parsiranja/pre-processinga, širi incident/admin workflow, offline sinhronizacija, native Android. (Retencija dugotrajnih foto dokaza — posebna politika ako bude potrebna.)

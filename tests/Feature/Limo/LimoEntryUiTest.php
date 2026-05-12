@@ -23,6 +23,7 @@ class LimoEntryUiTest extends TestCase
         Carbon::setTestNow(Carbon::parse('2026-05-04 12:00:00', 'Europe/Podgorica'));
         config(['features.advance_payments' => true]);
         config(['features.limo_service' => true]);
+        config(['app.debug' => false]);
     }
 
     protected function tearDown(): void
@@ -109,7 +110,65 @@ class LimoEntryUiTest extends TestCase
         $this->actingAs($admin, 'panel_admin')
             ->get('/limo')
             ->assertOk()
-            ->assertSee('Limo evidencija');
+            ->assertSee('Limo evidencija')
+            ->assertSee('scanVideo')
+            ->assertSee('limo-jsqr')
+            ->assertSee('limoJsQrReady')
+            ->assertSee('/limo/pickup/qr')
+            ->assertSee('/limo/pickup/plate/ocr')
+            ->assertSee('FormData')
+            ->assertSee('csrf-token')
+            ->assertSee('Limo pickup je evidentiran.')
+            ->assertSee('Tablica nije pronađena u voznom parku nijedne agencije.')
+            ->assertSee('Agencija nema dovoljno avansa.')
+            ->assertSee('Fotografija više nije važeća. Pokušajte ponovo.')
+            ->assertSee('data-limo-plate-input="1"', false)
+            ->assertSee('autocapitalize="characters"', false)
+            ->assertSee('normalizePlateInputValue', false)
+            ->assertSee('attachLimoPlateInputBehavior', false)
+            ->assertSee('appendPlateOcrDebugSummary', false);
+    }
+
+    public function test_debug_raw_camera_section_hidden_when_app_debug_false(): void
+    {
+        config(['app.debug' => false]);
+
+        $admin = Admin::query()->create([
+            'username' => 'limo_no_debug_cam',
+            'email' => 'limo-no-debug-cam@example.com',
+            'password' => bcrypt('secret'),
+            'control_access' => false,
+            'admin_access' => false,
+            'limo_access' => true,
+        ]);
+
+        $this->actingAs($admin, 'panel_admin')
+            ->get('/limo')
+            ->assertOk()
+            ->assertDontSee('limoDebugCameraSection')
+            ->assertDontSee('limoDebugBtnStartCamera');
+    }
+
+    public function test_debug_raw_camera_section_visible_when_app_debug_true(): void
+    {
+        config(['app.debug' => true]);
+
+        $admin = Admin::query()->create([
+            'username' => 'limo_debug_cam',
+            'email' => 'limo-debug-cam@example.com',
+            'password' => bcrypt('secret'),
+            'control_access' => false,
+            'admin_access' => false,
+            'limo_access' => true,
+        ]);
+
+        $this->actingAs($admin, 'panel_admin')
+            ->get('/limo')
+            ->assertOk()
+            ->assertSee('limoDebugCameraSection')
+            ->assertSee('Test kamera')
+            ->assertSee('limoDebugCameraVideo')
+            ->assertSee('Zaustavi test kameru');
     }
 
     public function test_limo_health_requires_limo_access(): void
