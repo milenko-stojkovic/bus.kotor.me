@@ -9,6 +9,15 @@ class DuplicateReservationAttemptService
     public static function normalizeLicensePlate(?string $licensePlate): string
     {
         $v = strtoupper(trim((string) $licensePlate));
+        // Tolerate common Montenegrin/Serbian Latin diacritics in manual input.
+        // OCR normalization is also ASCII-only; keep backend tolerant so that manual input isn't rejected.
+        $v = strtr($v, [
+            'Ž' => 'Z',
+            'Š' => 'S',
+            'Č' => 'C',
+            'Ć' => 'C',
+            'Đ' => 'D',
+        ]);
         $v = preg_replace('/\s+/', '', $v) ?? $v;
         $v = preg_replace('/[^A-Z0-9]/', '', $v) ?? $v;
 

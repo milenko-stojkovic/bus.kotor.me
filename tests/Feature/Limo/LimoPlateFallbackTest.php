@@ -269,6 +269,198 @@ class LimoPlateFallbackTest extends TestCase
             ->assertJsonPath('suggested_plate', 'PG123AB');
     }
 
+    public function test_montenegro_prefix_bonus_prefers_nkbp505_over_szsn257(): void
+    {
+        config(['limo.ocr.enabled' => true, 'app.debug' => true, 'limo.ocr.debug_extended_attempts' => false]);
+
+        $this->app->bind(LimoOcrRunner::class, fn () => new class implements LimoOcrRunner {
+            public function run(string $absoluteImagePath, int $timeoutSeconds, array $options = []): string
+            {
+                // Return both candidates; CG prefix (NK...) should win.
+                return "SZSN257\nNKBP505\n";
+            }
+        });
+
+        Storage::fake('local');
+        $admin = $this->makeLimoAdmin('plate_cg_bonus');
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $json = $this->actingAs($admin, 'panel_admin')
+            ->post('/limo/pickup/plate/ocr', [
+                'image' => UploadedFile::fake()->image('p.jpg', 320, 240),
+            ])
+            ->assertOk()
+            ->json();
+
+        $this->assertSame('NKBP505', $json['suggested_plate']);
+        $this->assertTrue((bool) ($json['debug']['cg_prefix_detected'] ?? false));
+        $this->assertSame('NK', $json['debug']['normalized_prefix'] ?? null);
+        $this->assertNotNull($json['debug']['candidate_score'] ?? null);
+    }
+
+    public function test_cg_prefix_zb_is_accepted_when_ocr_returns_diacritic_zb(): void
+    {
+        config(['limo.ocr.enabled' => true]);
+
+        $this->app->bind(LimoOcrRunner::class, fn () => new class implements LimoOcrRunner {
+            public function run(string $absoluteImagePath, int $timeoutSeconds, array $options = []): string
+            {
+                return 'ŽB 123 AB';
+            }
+        });
+
+        Storage::fake('local');
+        $admin = $this->makeLimoAdmin('plate_zb');
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $this->actingAs($admin, 'panel_admin')
+            ->post('/limo/pickup/plate/ocr', ['image' => UploadedFile::fake()->image('p.jpg', 320, 240)])
+            ->assertOk()
+            ->assertJsonPath('suggested_plate', 'ZB123AB');
+    }
+
+    public function test_cg_prefix_sn_is_accepted_when_ocr_returns_diacritic_sn(): void
+    {
+        config(['limo.ocr.enabled' => true]);
+
+        $this->app->bind(LimoOcrRunner::class, fn () => new class implements LimoOcrRunner {
+            public function run(string $absoluteImagePath, int $timeoutSeconds, array $options = []): string
+            {
+                return 'ŠN AB 123';
+            }
+        });
+
+        Storage::fake('local');
+        $admin = $this->makeLimoAdmin('plate_sn');
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $this->actingAs($admin, 'panel_admin')
+            ->post('/limo/pickup/plate/ocr', ['image' => UploadedFile::fake()->image('p.jpg', 320, 240)])
+            ->assertOk()
+            ->assertJsonPath('suggested_plate', 'SNAB123');
+    }
+
+    public function test_cg_custom_plate_pgabcde_is_accepted_even_without_digits(): void
+    {
+        config(['limo.ocr.enabled' => true]);
+
+        $this->app->bind(LimoOcrRunner::class, fn () => new class implements LimoOcrRunner {
+            public function run(string $absoluteImagePath, int $timeoutSeconds, array $options = []): string
+            {
+                return 'PGABCDE';
+            }
+        });
+
+        Storage::fake('local');
+        $admin = $this->makeLimoAdmin('plate_pg_custom');
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $this->actingAs($admin, 'panel_admin')
+            ->post('/limo/pickup/plate/ocr', ['image' => UploadedFile::fake()->image('p.jpg', 320, 240)])
+            ->assertOk()
+            ->assertJsonPath('suggested_plate', 'PGABCDE');
+    }
+
+    public function test_non_cg_candidate_from_original_psm11_only_is_rejected(): void
+    {
+        config(['limo.ocr.enabled' => true, 'app.debug' => true, 'limo.ocr.debug_extended_attempts' => true]);
+
+        $this->app->bind(LimoOcrRunner::class, fn () => new class implements LimoOcrRunner {
+            public function run(string $absoluteImagePath, int $timeoutSeconds, array $options = []): string
+            {
+                if (! str_contains($absoluteImagePath, 'a_original.png')) {
+                    return '';
+                }
+                if ((int) ($options['psm'] ?? 0) !== 11) {
+                    return '';
+                }
+
+                return 'LEFS111';
+            }
+        });
+
+        Storage::fake('local');
+        $admin = $this->makeLimoAdmin('plate_non_cg_psm11');
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $this->actingAs($admin, 'panel_admin')
+            ->post('/limo/pickup/plate/ocr', ['image' => UploadedFile::fake()->image('p.jpg', 320, 240)])
+            ->assertOk()
+            ->assertJsonPath('suggested_plate', null);
+    }
+
+    public function test_non_cg_candidate_from_user_crop_requires_corroboration(): void
+    {
+        config(['limo.ocr.enabled' => true, 'app.debug' => true, 'limo.ocr.debug_extended_attempts' => false]);
+
+        $this->app->bind(LimoOcrRunner::class, fn () => new class implements LimoOcrRunner {
+            public function run(string $absoluteImagePath, int $timeoutSeconds, array $options = []): string
+            {
+                // One crop attempt returns a non-CG string; other attempts return nothing => should be rejected.
+                $g = @getimagesize($absoluteImagePath);
+                $w = is_array($g) ? (int) $g[0] : 9999;
+                if ($w <= 180 && (int) ($options['psm'] ?? 0) === 7 && str_contains($absoluteImagePath, 'a_original.png')) {
+                    return 'SZSN257';
+                }
+
+                return '';
+            }
+        });
+
+        Storage::fake('local');
+        $admin = $this->makeLimoAdmin('plate_non_cg_crop_one');
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $json = $this->actingAs($admin, 'panel_admin')
+            ->post('/limo/pickup/plate/ocr', [
+                'image' => UploadedFile::fake()->image('p.jpg', 640, 480),
+                'plate_crop_left' => 4000,
+                'plate_crop_top' => 3750,
+                'plate_crop_width' => 2000,
+                'plate_crop_height' => 2500,
+            ])
+            ->assertOk()
+            ->json();
+
+        $this->assertNull($json['suggested_plate']);
+    }
+
+    public function test_non_cg_candidate_from_user_crop_is_allowed_when_repeated_in_two_attempts(): void
+    {
+        config(['limo.ocr.enabled' => true, 'app.debug' => true, 'limo.ocr.debug_extended_attempts' => false]);
+
+        $this->app->bind(LimoOcrRunner::class, fn () => new class implements LimoOcrRunner {
+            public function run(string $absoluteImagePath, int $timeoutSeconds, array $options = []): string
+            {
+                $g = @getimagesize($absoluteImagePath);
+                $w = is_array($g) ? (int) $g[0] : 9999;
+                if ($w <= 180 && in_array((int) ($options['psm'] ?? 0), [7, 8], true)) {
+                    return 'SZSN257';
+                }
+
+                return '';
+            }
+        });
+
+        Storage::fake('local');
+        $admin = $this->makeLimoAdmin('plate_non_cg_crop_two');
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $json = $this->actingAs($admin, 'panel_admin')
+            ->post('/limo/pickup/plate/ocr', [
+                'image' => UploadedFile::fake()->image('p.jpg', 640, 480),
+                'plate_crop_left' => 4000,
+                'plate_crop_top' => 3750,
+                'plate_crop_width' => 2000,
+                'plate_crop_height' => 2500,
+            ])
+            ->assertOk()
+            ->json();
+
+        $this->assertSame('SZSN257', $json['suggested_plate']);
+        $this->assertSame(false, (bool) ($json['debug']['cg_prefix_detected'] ?? true));
+    }
+
     public function test_ocr_all_empty_outputs_yields_null_suggestion(): void
     {
         config(['limo.ocr.enabled' => true]);

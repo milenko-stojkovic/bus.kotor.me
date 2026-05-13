@@ -3,6 +3,7 @@
 namespace App\Services\Limo;
 
 use App\Services\Reservation\DuplicateReservationAttemptService;
+use App\Support\MontenegroLicensePlate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Throwable;
@@ -135,6 +136,7 @@ final class LimoPlateOcrService
         $selectedVariant = null;
         $selectedPsm = null;
         $selectedRaw = null;
+        $selectedMeta = null;
         $anyProcessOk = false;
         $lastThrowable = null;
         $allRaws = [];
@@ -142,6 +144,10 @@ final class LimoPlateOcrService
         $stopOcr = false;
         /** @var array<string, true> $corroborated */
         $corroborated = [];
+        /** @var array<string, int> $seenCounts */
+        $seenCounts = [];
+        /** @var array<string, true> $seenFromCrop */
+        $seenFromCrop = [];
 
         try {
             foreach ($variantTasks as $v) {
@@ -191,6 +197,10 @@ final class LimoPlateOcrService
 
                         $candsFromRaw = $this->collectNormalizedCandidatesFromOcrText($raw);
                         foreach ($candsFromRaw as $c) {
+                            $seenCounts[$c] = ($seenCounts[$c] ?? 0) + 1;
+                            if (str_starts_with($variantName, 'uc_')) {
+                                $seenFromCrop[$c] = true;
+                            }
                             if ($this->isCorroboratingOcrSource($variantName, $psm)) {
                                 $corroborated[$c] = true;
                             }
@@ -217,11 +227,12 @@ final class LimoPlateOcrService
                         ]);
 
                         foreach ($candsFromRaw as $cand) {
-                            $baseScore = $this->scoreNormalizedCandidate($cand);
+                            $meta = $this->scoreNormalizedCandidateWithReason($cand);
+                            $baseScore = $meta['score'];
                             if ($baseScore < 0) {
                                 continue;
                             }
-                            if (! $this->mayUseOcrCandidate($variantName, $psm, $cand, $corroborated)) {
+                            if (! $this->mayUseOcrCandidate($variantName, $psm, $cand, $corroborated, $seenCounts, $seenFromCrop)) {
                                 continue;
                             }
                             $bonus = str_starts_with($variantName, 'uc_') ? 650 : 0;
@@ -232,6 +243,7 @@ final class LimoPlateOcrService
                                 $selectedVariant = $variantName;
                                 $selectedPsm = $psm;
                                 $selectedRaw = $raw;
+                                $selectedMeta = $meta;
                             }
                         }
 
@@ -288,6 +300,10 @@ final class LimoPlateOcrService
                 'failure_message' => null,
                 'selected_variant' => $selectedVariant,
                 'selected_psm' => $selectedPsm,
+                'candidate_score' => $selectedMeta['score'] ?? null,
+                'cg_prefix_detected' => (bool) ($selectedMeta['is_cg'] ?? false),
+                'normalized_prefix' => $selectedMeta['prefix'] ?? null,
+                'candidate_reason' => $selectedMeta['reason'] ?? null,
                 'debug_variant_attempts' => $attemptRows,
                 'early_exit' => $earlyStopped,
             ], $variantsBuilt, $preprocessFallback), $ocrCropMeta);
@@ -366,14 +382,38 @@ final class LimoPlateOcrService
 
     /**
      * @param  array<string, true>  $corroborated
+     * @param  array<string, int>  $seenCounts
+     * @param  array<string, true>  $seenFromCrop
      */
-    private function mayUseOcrCandidate(string $variantName, int $psm, string $cand, array $corroborated): bool
+    private function mayUseOcrCandidate(
+        string $variantName,
+        int $psm,
+        string $cand,
+        array $corroborated,
+        array $seenCounts,
+        array $seenFromCrop
+    ): bool
     {
         if ($this->isCorroboratingOcrSource($variantName, $psm)) {
+            if (MontenegroLicensePlate::isCgPrefixedCandidate($cand) && str_starts_with($variantName, 'uc_')) {
+                return true;
+            }
+            if (MontenegroLicensePlate::isCgPrefixedCandidate($cand)) {
+                return true;
+            }
+            // Non-CG candidates must be corroborated (repeated in >=2 attempts).
+            return ($seenCounts[$cand] ?? 0) >= 2;
+        }
+
+        if (! (bool) ($corroborated[$cand] ?? false)) {
+            return false;
+        }
+
+        if (MontenegroLicensePlate::isCgPrefixedCandidate($cand)) {
             return true;
         }
 
-        return (bool) ($corroborated[$cand] ?? false);
+        return ($seenCounts[$cand] ?? 0) >= 2;
     }
 
     /**
@@ -401,6 +441,10 @@ final class LimoPlateOcrService
             'failure_message' => $failure,
             'selected_variant' => null,
             'selected_psm' => null,
+            'candidate_score' => null,
+            'cg_prefix_detected' => false,
+            'normalized_prefix' => null,
+            'candidate_reason' => null,
             'debug_variant_attempts' => [$this->debugSyntheticAttemptRow($msg)],
             'early_exit' => false,
             'variants_count' => 0,
@@ -563,9 +607,8 @@ final class LimoPlateOcrService
 
     public static function compactAlnum(string $text): string
     {
-        $upper = strtoupper($text);
-
-        return preg_replace('/[^A-Z0-9]+/u', '', $upper) ?? '';
+        // Keep OCR compaction ASCII-only (diacritics are transliterated).
+        return MontenegroLicensePlate::normalizeAscii($text);
     }
 
     /**
@@ -635,7 +678,14 @@ final class LimoPlateOcrService
                 if (! str_contains($c, $inner)) {
                     continue;
                 }
-                if (! preg_match('/^[A-Z]{2}\d{3,4}[A-Z]{2}$/', $inner)) {
+                $innerIsStrong = preg_match('/^[A-Z]{2}\d{3,4}[A-Z]{2}$/', $inner)
+                    || MontenegroLicensePlate::isCgPrefixedCandidate($inner);
+                if (! $innerIsStrong) {
+                    continue;
+                }
+                // Don't drop a clean CG candidate just because it contains a shorter CG-like substring
+                // (e.g. NKBP505 contains BP505).
+                if (MontenegroLicensePlate::isCgPrefixedCandidate($c) && ! $this->hasEmbeddedCgPrefix($c)) {
                     continue;
                 }
                 $noise = true;
@@ -647,6 +697,27 @@ final class LimoPlateOcrService
         }
 
         return $out;
+    }
+
+    private function hasEmbeddedCgPrefix(string $candidate): bool
+    {
+        $len = strlen($candidate);
+        if ($len < 4) {
+            return false;
+        }
+        $set = MontenegroLicensePlate::prefixSet();
+        for ($i = 2; $i <= $len - 2; $i++) {
+            $hasDigitBefore = preg_match('/\d/', substr($candidate, 2, $i - 2)) === 1;
+            if (! $hasDigitBefore) {
+                continue;
+            }
+            $p2 = substr($candidate, $i, 2);
+            if (isset($set[$p2])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -678,6 +749,9 @@ final class LimoPlateOcrService
     private function passesMinimumPlateShape(string $normalized): bool
     {
         $len = strlen($normalized);
+        if (MontenegroLicensePlate::isCgPrefixedCandidate($normalized)) {
+            return true;
+        }
         if ($len < 5 || $len > 10) {
             return false;
         }
@@ -691,25 +765,34 @@ final class LimoPlateOcrService
         return true;
     }
 
-    private function scoreNormalizedCandidate(string $p): int
+    /**
+     * @return array{score:int, is_cg:bool, prefix:?string, reason:string}
+     */
+    private function scoreNormalizedCandidateWithReason(string $p): array
     {
         if (! $this->passesMinimumPlateShape($p)) {
-            return -1;
+            return ['score' => -1, 'is_cg' => false, 'prefix' => null, 'reason' => 'shape_rejected'];
         }
 
         $len = strlen($p);
         $letters = (int) preg_match_all('/[A-Z]/', $p);
         $digits = (int) preg_match_all('/\d/', $p);
+        $prefix = MontenegroLicensePlate::detectPrefix($p);
+        $isCg = $prefix !== null && MontenegroLicensePlate::isCgPrefixedCandidate($p);
 
         $score = 0;
+        $reasonParts = [];
         if (preg_match('/^[A-Z]{2}\d{3,4}[A-Z]{1,2}$/', $p)) {
             $score += 520;
+            $reasonParts[] = 'strict_like';
         }
         if (preg_match('/^[A-Z]{2,4}\d{3,5}[A-Z]{0,2}$/', $p)) {
             $score += 340;
+            $reasonParts[] = 'alnum_block';
         }
         if (preg_match('/^[A-Z]{1,3}\d{2,4}[A-Z]{1,3}$/', $p)) {
             $score += 210;
+            $reasonParts[] = 'mixed';
         }
         if ($len >= 5 && $len <= 8) {
             $score += (9 - $len) * 14;
@@ -720,6 +803,42 @@ final class LimoPlateOcrService
         // Prefer longer plausible plates when regex tiers tie (e.g. NKBP505 vs KBP505).
         $score += $len * 12;
 
-        return $score;
+        if ($isCg) {
+            $score += 900;
+            $reasonParts[] = 'cg_prefix';
+
+            // Heuristic: OCR garbage sometimes concatenates two plates/prefixes into one token.
+            // If we see another valid CG prefix inside the string (after the first 2 chars),
+            // down-rank it so that a clean CG candidate wins.
+            $prefixSet = MontenegroLicensePlate::prefixSet();
+            for ($i = 2; $i <= $len - 2; $i++) {
+                $hasDigitBefore = preg_match('/\d/', substr($p, 2, $i - 2)) === 1;
+                if (! $hasDigitBefore) {
+                    continue;
+                }
+                $p2 = substr($p, $i, 2);
+                if (isset($prefixSet[$p2])) {
+                    $score -= 1100;
+                    $reasonParts[] = 'embedded_prefix_penalty';
+                    break;
+                }
+            }
+        } else {
+            // Mild penalty to push obvious non-CG strings down when a CG candidate exists.
+            $score -= 120;
+            $reasonParts[] = 'non_cg_penalty';
+        }
+
+        return [
+            'score' => $score,
+            'is_cg' => $isCg,
+            'prefix' => $prefix,
+            'reason' => $reasonParts === [] ? 'base' : implode(',', $reasonParts),
+        ];
+    }
+
+    private function scoreNormalizedCandidate(string $p): int
+    {
+        return $this->scoreNormalizedCandidateWithReason($p)['score'];
     }
 }
