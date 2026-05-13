@@ -319,6 +319,73 @@ class LimoPlateFallbackTest extends TestCase
             ->assertJsonPath('suggested_plate', 'ZB123AB');
     }
 
+    public function test_hr_candidate_with_known_prefix_is_accepted(): void
+    {
+        config(['limo.ocr.enabled' => true]);
+
+        $this->app->bind(LimoOcrRunner::class, fn () => new class implements LimoOcrRunner {
+            public function run(string $absoluteImagePath, int $timeoutSeconds, array $options = []): string
+            {
+                return 'ZG 1234 AB';
+            }
+        });
+
+        Storage::fake('local');
+        $admin = $this->makeLimoAdmin('plate_hr_zg');
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $this->actingAs($admin, 'panel_admin')
+            ->post('/limo/pickup/plate/ocr', ['image' => UploadedFile::fake()->image('p.jpg', 320, 240)])
+            ->assertOk()
+            ->assertJsonPath('suggested_plate', 'ZG1234AB');
+    }
+
+    public function test_rs_candidate_with_known_prefix_is_accepted(): void
+    {
+        config(['limo.ocr.enabled' => true]);
+
+        $this->app->bind(LimoOcrRunner::class, fn () => new class implements LimoOcrRunner {
+            public function run(string $absoluteImagePath, int $timeoutSeconds, array $options = []): string
+            {
+                return 'BG 123 AB';
+            }
+        });
+
+        Storage::fake('local');
+        $admin = $this->makeLimoAdmin('plate_rs_bg');
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $this->actingAs($admin, 'panel_admin')
+            ->post('/limo/pickup/plate/ocr', ['image' => UploadedFile::fake()->image('p.jpg', 320, 240)])
+            ->assertOk()
+            ->assertJsonPath('suggested_plate', 'BG123AB');
+    }
+
+    public function test_diacritic_prefixes_normalize_correctly_ck_and_dj(): void
+    {
+        config(['limo.ocr.enabled' => true]);
+
+        $this->app->bind(LimoOcrRunner::class, fn () => new class implements LimoOcrRunner {
+            public function run(string $absoluteImagePath, int $timeoutSeconds, array $options = []): string
+            {
+                // ČK -> CK, ĐJ -> DJ (ASCII normalization)
+                return "ČK 123 AB\nĐJ 999 ZZ";
+            }
+        });
+
+        Storage::fake('local');
+        $admin = $this->makeLimoAdmin('plate_diac_ck_dj');
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $json = $this->actingAs($admin, 'panel_admin')
+            ->post('/limo/pickup/plate/ocr', ['image' => UploadedFile::fake()->image('p.jpg', 320, 240)])
+            ->assertOk()
+            ->json();
+
+        // At least one should be selected; both should be parseable as candidates.
+        $this->assertContains($json['suggested_plate'], ['CK123AB', 'DJ999ZZ']);
+    }
+
     public function test_cg_prefix_sn_is_accepted_when_ocr_returns_diacritic_sn(): void
     {
         config(['limo.ocr.enabled' => true]);

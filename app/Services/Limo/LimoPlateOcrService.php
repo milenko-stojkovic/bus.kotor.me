@@ -3,7 +3,7 @@
 namespace App\Services\Limo;
 
 use App\Services\Reservation\DuplicateReservationAttemptService;
-use App\Support\MontenegroLicensePlate;
+use App\Support\RegionalLicensePlatePrefix;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Throwable;
@@ -303,6 +303,9 @@ final class LimoPlateOcrService
                 'candidate_score' => $selectedMeta['score'] ?? null,
                 'cg_prefix_detected' => (bool) ($selectedMeta['is_cg'] ?? false),
                 'normalized_prefix' => $selectedMeta['prefix'] ?? null,
+                'detected_prefix' => $selectedMeta['prefix'] ?? null,
+                'detected_prefix_country' => $selectedMeta['prefix_groups'] ?? [],
+                'prefix_score_group' => $selectedMeta['prefix_score_group'] ?? 'none',
                 'candidate_reason' => $selectedMeta['reason'] ?? null,
                 'debug_variant_attempts' => $attemptRows,
                 'early_exit' => $earlyStopped,
@@ -395,10 +398,10 @@ final class LimoPlateOcrService
     ): bool
     {
         if ($this->isCorroboratingOcrSource($variantName, $psm)) {
-            if (MontenegroLicensePlate::isCgPrefixedCandidate($cand) && str_starts_with($variantName, 'uc_')) {
+            if (RegionalLicensePlatePrefix::isRegionalPrefixedCandidate($cand) && str_starts_with($variantName, 'uc_')) {
                 return true;
             }
-            if (MontenegroLicensePlate::isCgPrefixedCandidate($cand)) {
+            if (RegionalLicensePlatePrefix::isRegionalPrefixedCandidate($cand)) {
                 return true;
             }
             // Non-CG candidates must be corroborated (repeated in >=2 attempts).
@@ -409,7 +412,7 @@ final class LimoPlateOcrService
             return false;
         }
 
-        if (MontenegroLicensePlate::isCgPrefixedCandidate($cand)) {
+        if (RegionalLicensePlatePrefix::isRegionalPrefixedCandidate($cand)) {
             return true;
         }
 
@@ -444,6 +447,9 @@ final class LimoPlateOcrService
             'candidate_score' => null,
             'cg_prefix_detected' => false,
             'normalized_prefix' => null,
+            'detected_prefix' => null,
+            'detected_prefix_country' => [],
+            'prefix_score_group' => 'none',
             'candidate_reason' => null,
             'debug_variant_attempts' => [$this->debugSyntheticAttemptRow($msg)],
             'early_exit' => false,
@@ -608,7 +614,7 @@ final class LimoPlateOcrService
     public static function compactAlnum(string $text): string
     {
         // Keep OCR compaction ASCII-only (diacritics are transliterated).
-        return MontenegroLicensePlate::normalizeAscii($text);
+        return RegionalLicensePlatePrefix::normalizeAscii($text);
     }
 
     /**
@@ -678,14 +684,13 @@ final class LimoPlateOcrService
                 if (! str_contains($c, $inner)) {
                     continue;
                 }
-                $innerIsStrong = preg_match('/^[A-Z]{2}\d{3,4}[A-Z]{2}$/', $inner)
-                    || MontenegroLicensePlate::isCgPrefixedCandidate($inner);
+                $innerIsStrong = preg_match('/^[A-Z]{2}\d{3,4}[A-Z]{2}$/', $inner);
                 if (! $innerIsStrong) {
                     continue;
                 }
                 // Don't drop a clean CG candidate just because it contains a shorter CG-like substring
                 // (e.g. NKBP505 contains BP505).
-                if (MontenegroLicensePlate::isCgPrefixedCandidate($c) && ! $this->hasEmbeddedCgPrefix($c)) {
+                if (RegionalLicensePlatePrefix::isRegionalPrefixedCandidate($c) && ! $this->hasEmbeddedCgPrefix($c)) {
                     continue;
                 }
                 $noise = true;
@@ -705,7 +710,7 @@ final class LimoPlateOcrService
         if ($len < 4) {
             return false;
         }
-        $set = MontenegroLicensePlate::prefixSet();
+        $set = RegionalLicensePlatePrefix::allPrefixSet();
         for ($i = 2; $i <= $len - 2; $i++) {
             $hasDigitBefore = preg_match('/\d/', substr($candidate, 2, $i - 2)) === 1;
             if (! $hasDigitBefore) {
@@ -749,7 +754,7 @@ final class LimoPlateOcrService
     private function passesMinimumPlateShape(string $normalized): bool
     {
         $len = strlen($normalized);
-        if (MontenegroLicensePlate::isCgPrefixedCandidate($normalized)) {
+        if (RegionalLicensePlatePrefix::isRegionalPrefixedCandidate($normalized)) {
             return true;
         }
         if ($len < 5 || $len > 10) {
@@ -765,20 +770,28 @@ final class LimoPlateOcrService
         return true;
     }
 
-    /**
-     * @return array{score:int, is_cg:bool, prefix:?string, reason:string}
-     */
     private function scoreNormalizedCandidateWithReason(string $p): array
     {
         if (! $this->passesMinimumPlateShape($p)) {
-            return ['score' => -1, 'is_cg' => false, 'prefix' => null, 'reason' => 'shape_rejected'];
+            return [
+                'score' => -1,
+                'is_cg' => false,
+                'prefix' => null,
+                'prefix_groups' => [],
+                'prefix_score_group' => RegionalLicensePlatePrefix::GROUP_NONE,
+                'reason' => 'shape_rejected',
+            ];
         }
 
         $len = strlen($p);
         $letters = (int) preg_match_all('/[A-Z]/', $p);
         $digits = (int) preg_match_all('/\d/', $p);
-        $prefix = MontenegroLicensePlate::detectPrefix($p);
-        $isCg = $prefix !== null && MontenegroLicensePlate::isCgPrefixedCandidate($p);
+        $cls = RegionalLicensePlatePrefix::classify($p);
+        $prefix = $cls['prefix'] !== '' ? $cls['prefix'] : null;
+        $prefixGroups = $cls['groups'];
+        $prefixScoreGroup = $cls['score_group'];
+        $isCg = $prefixScoreGroup === RegionalLicensePlatePrefix::GROUP_ME && RegionalLicensePlatePrefix::isMontenegroPrefixedCandidate($p);
+        $isRegional = $prefixScoreGroup !== RegionalLicensePlatePrefix::GROUP_NONE && RegionalLicensePlatePrefix::isRegionalPrefixedCandidate($p);
 
         $score = 0;
         $reasonParts = [];
@@ -805,12 +818,21 @@ final class LimoPlateOcrService
 
         if ($isCg) {
             $score += 900;
-            $reasonParts[] = 'cg_prefix';
+            $reasonParts[] = 'me_prefix';
+        } elseif ($isRegional) {
+            $score += 450;
+            $reasonParts[] = strtolower($prefixScoreGroup).'_prefix';
+        } else {
+            // Mild penalty to push obvious non-CG strings down when a CG candidate exists.
+            $score -= 120;
+            $reasonParts[] = 'non_cg_penalty';
+        }
 
-            // Heuristic: OCR garbage sometimes concatenates two plates/prefixes into one token.
-            // If we see another valid CG prefix inside the string (after the first 2 chars),
-            // down-rank it so that a clean CG candidate wins.
-            $prefixSet = MontenegroLicensePlate::prefixSet();
+        // Heuristic: OCR garbage sometimes concatenates two plates/prefixes into one token (e.g. SN257NK).
+        // If we see another known regional prefix inside the string (after the first 2 chars, and after a digit),
+        // down-rank it so that a clean candidate wins.
+        if ($isCg || $isRegional) {
+            $prefixSet = RegionalLicensePlatePrefix::allPrefixSet();
             for ($i = 2; $i <= $len - 2; $i++) {
                 $hasDigitBefore = preg_match('/\d/', substr($p, 2, $i - 2)) === 1;
                 if (! $hasDigitBefore) {
@@ -823,16 +845,14 @@ final class LimoPlateOcrService
                     break;
                 }
             }
-        } else {
-            // Mild penalty to push obvious non-CG strings down when a CG candidate exists.
-            $score -= 120;
-            $reasonParts[] = 'non_cg_penalty';
         }
 
         return [
             'score' => $score,
             'is_cg' => $isCg,
             'prefix' => $prefix,
+            'prefix_groups' => $prefixGroups,
+            'prefix_score_group' => $prefixScoreGroup,
             'reason' => $reasonParts === [] ? 'base' : implode(',', $reasonParts),
         ];
     }
