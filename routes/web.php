@@ -103,6 +103,7 @@ Route::middleware(['auth:panel_admin', 'limo.feature', 'limo.access'])->prefix('
     Route::post('pickup/plate/ocr', [LimoPlatePickupController::class, 'plateOcr'])->name('limo.pickup.plate.ocr');
     Route::post('pickup/plate/confirm', [LimoPlatePickupController::class, 'plateConfirm'])->name('limo.pickup.plate.confirm');
     Route::post('incident', [LimoIncidentController::class, 'store'])->name('limo.incident.store');
+    Route::post('incident/from-plate-upload', [LimoIncidentController::class, 'storeFromPlateUpload'])->name('limo.incident.from_plate_upload');
 });
 
 Route::prefix('control')->name('control.')->group(function () {

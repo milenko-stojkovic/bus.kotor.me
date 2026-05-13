@@ -133,6 +133,7 @@ Validacija: aktivni token, danas, dovoljno avansa, limit. Na uspjeh: `limo_picku
 Operativni incidenti (sumnja na Limo pickup bez plaćanja) evidentiraju se **odvojeno** od uspješnog pickup-a:
 
 - Endpoint: **`POST /limo/incident`** (`limo.incident.store`), isti guard kao ostatak `/limo/*` (`auth:panel_admin` + **`limo.access`**).
+- Endpoint (iz postojeće OCR fotografije tablice): **`POST /limo/incident/from-plate-upload`** (`limo.incident.from_plate_upload`) — koristi već postojeći `limo_plate_uploads` red i njegovu fotografiju tablice kao obavezni dokaz (ne šalje se novi `plate_photo`).
 - **Obavezna** je fotografija tablice (`plate_photo`); opciono `branding_photo`.
 - Tipovi: `qr_insufficient_funds`, `plate_insufficient_funds`, `unregistered_vehicle_with_branding`, `invalid_qr_token`, `driver_non_cooperative`.
 - **Nema** `limo_pickup_event`, **nema** `agency_advance_transactions` usage, **nema** fiskalnog računa za incident.
@@ -140,6 +141,16 @@ Operativni incidenti (sumnja na Limo pickup bez plaćanja) evidentiraju se **odv
 - Poslovno: **ne kreirati** incident ako nema jasnog Limo konteksta (npr. neregistrovano vozilo **bez** vidljivog imena agencije na vozilu) — vodič u UI.
 
 Širi workflow (rezolucija, statusi, kazne) **nije** u kodu — odluka ostaje kod admina / Komunalne policije.
+
+### Incident iz postojećeg plate OCR uploada (implementirano)
+
+Kada vozač nema QR, evidenter već fotografiše tablicu kroz tok **`POST /limo/pickup/plate/ocr`** i dobija `upload_token`. Ako plaćanje ne može biti završeno (npr. vozač odlazi), incident se može prijaviti **bez ponovnog fotografisanja**:
+
+- UI na **`GET /limo`** nakon uspješnog plate OCR uploada prikazuje opciju **„Prijavi incident za ovu tablicu”**.
+- Backend: **`POST /limo/incident/from-plate-upload`** prima `upload_token` + incident polja i koristi već sačuvanu fotografiju tablice iz `limo_plate_uploads.path`.
+- Za incident se koristi i **GPS / device_info** zabilježeni u trenutku fotografisanja tablice (iz `limo_plate_uploads.gps_lat`, `gps_lng`, `device_info`).
+- Upload se **ne** konzumira (`consumed_at` se ne postavlja) — incident je odvojen od uspješnog pickup-a.
+- Direktni tok **`POST /limo/incident`** sa novom fotografijom tablice ostaje dostupan kada je potrebno.
 
 ---
 

@@ -116,6 +116,8 @@ class LimoEntryUiTest extends TestCase
             ->assertSee('limoJsQrReady')
             ->assertSee('/limo/pickup/qr')
             ->assertSee('/limo/pickup/plate/ocr')
+            ->assertSee('from-plate-upload')
+            ->assertSee('Prijavi incident za ovu tablicu')
             ->assertSee('FormData')
             ->assertSee('csrf-token')
             ->assertSee('Limo pickup je evidentiran.')

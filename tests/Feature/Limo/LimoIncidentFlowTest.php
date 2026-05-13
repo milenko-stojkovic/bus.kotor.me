@@ -7,6 +7,7 @@ use App\Models\Admin;
 use App\Models\AdminAlert;
 use App\Models\AgencyAdvanceTransaction;
 use App\Models\LimoIncident;
+use App\Models\LimoPlateUpload;
 use App\Models\LimoPickupEvent;
 use App\Models\User;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
@@ -21,6 +22,23 @@ use Tests\TestCase;
 class LimoIncidentFlowTest extends TestCase
 {
     use RefreshDatabase;
+
+    private function makePlateUpload(Admin $admin, array $attrs = []): LimoPlateUpload
+    {
+        Storage::disk('local')->put('limo_plate_uploads/upl.jpg', 'plate-bytes');
+
+        return LimoPlateUpload::query()->create(array_merge([
+            'upload_token' => $attrs['upload_token'] ?? 'tok_'.str_repeat('A', 40),
+            'path' => $attrs['path'] ?? 'limo_plate_uploads/upl.jpg',
+            'ocr_text' => $attrs['ocr_text'] ?? null,
+            'gps_lat' => $attrs['gps_lat'] ?? '42.1234567',
+            'gps_lng' => $attrs['gps_lng'] ?? '18.7654321',
+            'device_info' => $attrs['device_info'] ?? '{"t":1}',
+            'uploaded_by_limo_admin_id' => $admin->id,
+            'expires_at' => $attrs['expires_at'] ?? now()->addHour(),
+            'consumed_at' => $attrs['consumed_at'] ?? null,
+        ], $attrs));
+    }
 
     private function makeLimoAdmin(string $username): Admin
     {
@@ -256,5 +274,127 @@ class LimoIncidentFlowTest extends TestCase
             ->assertOk();
 
         $this->assertSame($before, AgencyAdvanceTransaction::query()->count());
+    }
+
+    public function test_creates_incident_from_existing_limo_plate_upload_without_new_plate_photo(): void
+    {
+        Storage::fake('local');
+        Mail::fake();
+
+        $admin = $this->makeLimoAdmin('limo_inc_from_upl_a');
+        $upload = $this->makePlateUpload($admin, [
+            'upload_token' => 'upltok_'.str_repeat('B', 40),
+            'gps_lat' => '42.1111111',
+            'gps_lng' => '18.2222222',
+            'device_info' => '{"device":"x"}',
+        ]);
+
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $beforeEvents = LimoPickupEvent::query()->count();
+        $beforeAdv = AgencyAdvanceTransaction::query()->count();
+
+        $res = $this->actingAs($admin, 'panel_admin')
+            ->post('/limo/incident/from-plate-upload', [
+                'upload_token' => $upload->upload_token,
+                'type' => LimoIncident::TYPE_PLATE_INSUFFICIENT_FUNDS,
+                'license_plate' => 'PG-TEST-2',
+                'note' => 'note',
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'ok');
+
+        $uuid = (string) $res->json('incident_uuid');
+        $this->assertNotSame('', $uuid);
+
+        $incident = LimoIncident::query()->where('incident_uuid', $uuid)->first();
+        $this->assertNotNull($incident);
+        $this->assertSame('PGTEST2', $incident->license_plate_snapshot);
+        $this->assertSame((string) $upload->gps_lat, (string) $incident->gps_lat);
+        $this->assertSame((string) $upload->gps_lng, (string) $incident->gps_lng);
+        $this->assertSame($upload->device_info, $incident->device_info);
+
+        Storage::disk('local')->assertExists($incident->plate_photo_path);
+        Storage::disk('local')->assertExists($upload->path);
+        $this->assertNotSame($upload->path, $incident->plate_photo_path);
+        $this->assertSame(Storage::disk('local')->get($upload->path), Storage::disk('local')->get($incident->plate_photo_path));
+
+        $this->assertSame($beforeEvents, LimoPickupEvent::query()->count());
+        $this->assertSame($beforeAdv, AgencyAdvanceTransaction::query()->count());
+
+        $uploadFresh = LimoPlateUpload::query()->where('id', $upload->id)->first();
+        $this->assertNotNull($uploadFresh);
+        $this->assertNull($uploadFresh->consumed_at);
+    }
+
+    public function test_upload_token_owned_by_another_evidenter_is_rejected_for_incident_from_upload(): void
+    {
+        Storage::fake('local');
+        Mail::fake();
+
+        $adminA = $this->makeLimoAdmin('limo_inc_from_upl_owner_a');
+        $adminB = $this->makeLimoAdmin('limo_inc_from_upl_owner_b');
+        $upload = $this->makePlateUpload($adminA, ['upload_token' => 'upltok_'.str_repeat('C', 40)]);
+
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $this->actingAs($adminB, 'panel_admin')
+            ->post('/limo/incident/from-plate-upload', [
+                'upload_token' => $upload->upload_token,
+                'type' => LimoIncident::TYPE_QR_INSUFFICIENT_FUNDS,
+            ])
+            ->assertStatus(422)
+            ->assertJsonPath('code', 'invalid_upload');
+    }
+
+    public function test_expired_upload_is_rejected_for_incident_from_upload(): void
+    {
+        Storage::fake('local');
+        Mail::fake();
+
+        $admin = $this->makeLimoAdmin('limo_inc_from_upl_exp');
+        $upload = $this->makePlateUpload($admin, [
+            'upload_token' => 'upltok_'.str_repeat('D', 40),
+            'expires_at' => now()->subMinute(),
+        ]);
+
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $this->actingAs($admin, 'panel_admin')
+            ->post('/limo/incident/from-plate-upload', [
+                'upload_token' => $upload->upload_token,
+                'type' => LimoIncident::TYPE_QR_INSUFFICIENT_FUNDS,
+            ])
+            ->assertStatus(422)
+            ->assertJsonPath('code', 'invalid_upload');
+    }
+
+    public function test_missing_upload_file_is_rejected_for_incident_from_upload(): void
+    {
+        Storage::fake('local');
+        Mail::fake();
+
+        $admin = $this->makeLimoAdmin('limo_inc_from_upl_missing');
+        $upload = LimoPlateUpload::query()->create([
+            'upload_token' => 'upltok_'.str_repeat('E', 40),
+            'path' => 'limo_plate_uploads/missing.jpg',
+            'ocr_text' => null,
+            'gps_lat' => '42.0000000',
+            'gps_lng' => '18.0000000',
+            'device_info' => '{}',
+            'uploaded_by_limo_admin_id' => $admin->id,
+            'expires_at' => now()->addHour(),
+            'consumed_at' => null,
+        ]);
+
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $this->actingAs($admin, 'panel_admin')
+            ->post('/limo/incident/from-plate-upload', [
+                'upload_token' => $upload->upload_token,
+                'type' => LimoIncident::TYPE_QR_INSUFFICIENT_FUNDS,
+            ])
+            ->assertStatus(422)
+            ->assertJsonPath('code', 'invalid_upload');
     }
 }

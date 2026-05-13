@@ -237,6 +237,10 @@
                 <label for="plateConfirmInput">Potvrđena registarska tablica</label>
                 <input type="text" id="plateConfirmInput" data-limo-plate-input="1" inputmode="text" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="npr. PG1234AB">
                 <p class="hint">OCR prijedlog je samo prijedlog — uvijek provjerite i ispravite ručno prije potvrde.</p>
+                <div style="margin-top:0.5rem;">
+                    <button type="button" class="btn btn-secondary" id="btnIncidentFromPlateUpload">Prijavi incident za ovu tablicu</button>
+                    <p class="hint" id="incidentFromUploadHint" style="display:none;margin-top:0.35rem;">Za incident se koristi već napravljena fotografija tablice i podaci zabilježeni u trenutku fotografisanja.</p>
+                </div>
                 <button type="button" class="btn btn-primary" id="btnPlateConfirm" disabled>Potvrdi tablicu</button>
                 <button type="button" class="btn btn-secondary" id="btnPlateReset">Počni ponovo</button>
             </div>
@@ -256,6 +260,11 @@
                 <option value="invalid_qr_token">QR nevažeći / istekao / ponovo korišćen</option>
                 <option value="driver_non_cooperative">Vozač ne saradjuje</option>
             </select>
+
+            <div id="incidentPlateFromUploadBox" style="display:none;margin-top:0.5rem;">
+                <p class="hint">Za incident se koristi već napravljena fotografija tablice i podaci zabilježeni u trenutku fotografisanja.</p>
+                <img id="incidentPlateFromUploadPreview" alt="Fotografija tablice (iz uploada)" width="600" height="400">
+            </div>
 
             <label>Fotografija tablice (obavezno)</label>
             <input type="file" id="incidentPlateFile" accept="image/jpeg,image/png,image/webp" capture="environment" style="display:none;">
@@ -294,6 +303,7 @@
     var plateOcrUrl = '/limo/pickup/plate/ocr';
     var plateConfirmUrl = '/limo/pickup/plate/confirm';
     const incidentUrl = @json(route('limo.incident.store'));
+    const incidentFromPlateUploadUrl = @json(route('limo.incident.from_plate_upload'));
 
     const btnScan = document.getElementById('btnScan');
     const btnStopScan = document.getElementById('btnStopScan');
@@ -321,9 +331,13 @@
     const plateConfirmInput = document.getElementById('plateConfirmInput');
     const btnPlateConfirm = document.getElementById('btnPlateConfirm');
     const btnPlateReset = document.getElementById('btnPlateReset');
+    const btnIncidentFromPlateUpload = document.getElementById('btnIncidentFromPlateUpload');
+    const incidentFromUploadHint = document.getElementById('incidentFromUploadHint');
 
     const incidentType = document.getElementById('incidentType');
     const incidentUnregisteredWarn = document.getElementById('incidentUnregisteredWarn');
+    const incidentPlateFromUploadBox = document.getElementById('incidentPlateFromUploadBox');
+    const incidentPlateFromUploadPreview = document.getElementById('incidentPlateFromUploadPreview');
     const incidentPlateFile = document.getElementById('incidentPlateFile');
     const incidentPlateGallery = document.getElementById('incidentPlateGallery');
     const btnIncidentPlateCam = document.getElementById('btnIncidentPlateCam');
@@ -342,6 +356,7 @@
     let incidentPlateBlob = null;
     let incidentBrandingBlob = null;
     let incidentSubmitting = false;
+    let incidentUsesPlateUpload = false;
 
     let mediaStream = null;
     let scanRaf = null;
@@ -596,6 +611,9 @@
         plateGalleryInput.value = '';
         platePreviewImg.removeAttribute('src');
         btnPlateConfirm.disabled = true;
+        incidentUsesPlateUpload = false;
+        if (incidentFromUploadHint) incidentFromUploadHint.style.display = 'none';
+        if (incidentPlateFromUploadBox) incidentPlateFromUploadBox.style.display = 'none';
     }
 
     function setPlateInputsBlocked(disabled) {
@@ -975,6 +993,47 @@
         resetPlateFlow();
         setStatus('', '');
     });
+
+    function setIncidentModeFromPlateUpload(enabled) {
+        incidentUsesPlateUpload = !!enabled;
+        if (incidentFromUploadHint) {
+            incidentFromUploadHint.style.display = incidentUsesPlateUpload ? 'block' : 'none';
+        }
+        if (incidentPlateFromUploadBox && incidentPlateFromUploadPreview) {
+            if (incidentUsesPlateUpload && platePreviewImg && platePreviewImg.src) {
+                incidentPlateFromUploadPreview.src = platePreviewImg.src;
+                incidentPlateFromUploadBox.style.display = 'block';
+            } else {
+                incidentPlateFromUploadPreview.removeAttribute('src');
+                incidentPlateFromUploadBox.style.display = 'none';
+            }
+        }
+        var showPickers = !incidentUsesPlateUpload;
+        if (btnIncidentPlateCam) btnIncidentPlateCam.style.display = showPickers ? 'inline-flex' : 'none';
+        if (btnIncidentPlateGallery) btnIncidentPlateGallery.style.display = showPickers ? 'inline-flex' : 'none';
+        if (incidentPlatePicked) incidentPlatePicked.style.display = 'none';
+        if (incidentUsesPlateUpload) {
+            setIncidentPlateFile(null);
+        }
+    }
+
+    if (btnIncidentFromPlateUpload) {
+        btnIncidentFromPlateUpload.addEventListener('click', function () {
+            if (!plateUploadToken || !platePreviewImg || !platePreviewImg.src) {
+                setStatus('Prvo učitajte fotografiju tablice.', 'err');
+                return;
+            }
+            setIncidentModeFromPlateUpload(true);
+            var pv = (plateConfirmInput && (plateConfirmInput.value || '').trim()) ? (plateConfirmInput.value || '').trim() : '';
+            if (pv && incidentPlateText) {
+                incidentPlateText.value = pv;
+            }
+            var sec = document.getElementById('incidentSection');
+            if (sec && sec.scrollIntoView) {
+                sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+    }
 
     function clampPlate(n, lo, hi) {
         return Math.max(lo, Math.min(hi, n));
@@ -1421,18 +1480,26 @@
     if (btnIncidentSubmit) {
         btnIncidentSubmit.addEventListener('click', async function () {
             if (incidentSubmitting || submitting || plateUploading || plateConfirming) return;
-            if (!incidentPlateBlob) {
+            if (!incidentUsesPlateUpload && !incidentPlateBlob) {
                 setStatus('Za prijavu incidenta potrebna je fotografija tablice.', 'err');
+                return;
+            }
+            if (incidentUsesPlateUpload && !plateUploadToken) {
+                setStatus('Fotografija više nije važeća. Pokušajte ponovo.', 'err');
                 return;
             }
             incidentSubmitting = true;
             btnIncidentSubmit.disabled = true;
             setStatus('Slanje prijave incidenta…', 'info');
-            var coords = await getPositionBestEffort();
+            var coords = incidentUsesPlateUpload ? { lat: null, lng: null } : await getPositionBestEffort();
             try {
                 var fd = new FormData();
                 fd.append('type', incidentType.value);
-                fd.append('plate_photo', incidentPlateBlob, incidentPlateBlob.name || 'plate.jpg');
+                if (incidentUsesPlateUpload) {
+                    fd.append('upload_token', plateUploadToken);
+                } else {
+                    fd.append('plate_photo', incidentPlateBlob, incidentPlateBlob.name || 'plate.jpg');
+                }
                 if (incidentBrandingBlob) {
                     fd.append('branding_photo', incidentBrandingBlob, incidentBrandingBlob.name || 'branding.jpg');
                 }
@@ -1442,10 +1509,12 @@
                 if (va) fd.append('visible_agency_name', va);
                 var nt = (incidentNote.value || '').trim();
                 if (nt) fd.append('note', nt);
-                if (coords.lat != null) fd.append('gps_lat', String(coords.lat));
-                if (coords.lng != null) fd.append('gps_lng', String(coords.lng));
-                fd.append('device_info', buildDeviceInfo());
-                var res = await fetch(incidentUrl, {
+                if (!incidentUsesPlateUpload) {
+                    if (coords.lat != null) fd.append('gps_lat', String(coords.lat));
+                    if (coords.lng != null) fd.append('gps_lng', String(coords.lng));
+                    fd.append('device_info', buildDeviceInfo());
+                }
+                var res = await fetch(incidentUsesPlateUpload ? incidentFromPlateUploadUrl : incidentUrl, {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': readCsrfToken(),
@@ -1468,6 +1537,7 @@
                     incidentPlateText.value = '';
                     incidentVisibleAgency.value = '';
                     incidentNote.value = '';
+                    setIncidentModeFromPlateUpload(false);
                 } else {
                     var ic = data.code;
                     setStatus((ic === 'validation_error' ? (data.message || 'Provjerite unos i fotografiju tablice.') : (data.message || genericErr)), 'err');
