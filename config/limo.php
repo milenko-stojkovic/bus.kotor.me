@@ -21,7 +21,8 @@ return [
         // Stop trying more variants/PSMs when best candidate score reaches this (or strict ME pattern).
         'early_exit_min_score' => (int) env('LIMO_OCR_EARLY_EXIT_MIN_SCORE', 500),
 
-        // When APP_DEBUG is true: keep copies of variant images under storage/app/private/limo_ocr_debug/{suffix}/ for local inspection (no public URLs).
+        // When APP_DEBUG is true AND this is true: keep copies of variant images under storage/app/private/limo_ocr_debug/{suffix}/ for local inspection (no public URLs).
+        // When false (or APP_DEBUG false): OCR does not persist debug copies; per-run folder is removed after analyze; TTL purge still runs.
         'debug_save_images' => filter_var(env('LIMO_OCR_DEBUG_SAVE_IMAGES', false), FILTER_VALIDATE_BOOL),
         'debug_image_ttl_minutes' => (int) env('LIMO_OCR_DEBUG_IMAGE_TTL_MINUTES', 60),
 

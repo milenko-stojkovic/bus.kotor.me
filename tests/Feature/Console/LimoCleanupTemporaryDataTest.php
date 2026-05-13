@@ -165,4 +165,25 @@ class LimoCleanupTemporaryDataTest extends TestCase
         $this->assertSame(0, LimoPlateUpload::query()->count());
         Storage::disk('local')->assertMissing($path);
     }
+
+    public function test_purges_expired_limo_ocr_debug_subfolders_by_ttl(): void
+    {
+        Storage::fake('local');
+        config(['limo.ocr.debug_image_ttl_minutes' => 60]);
+
+        $disk = Storage::disk('local');
+        $disk->makeDirectory('limo_ocr_debug/oldrun');
+        $disk->put('limo_ocr_debug/oldrun/k.png', 'x');
+        $oldDir = $disk->path('limo_ocr_debug/oldrun');
+        touch($oldDir, time() - 7200);
+
+        $disk->makeDirectory('limo_ocr_debug/freshrun');
+        $disk->put('limo_ocr_debug/freshrun/k.png', 'y');
+        touch($disk->path('limo_ocr_debug/freshrun'), time() - 120);
+
+        $this->artisan('limo:cleanup-temporary-data')->assertSuccessful();
+
+        Storage::disk('local')->assertMissing('limo_ocr_debug/oldrun/k.png');
+        Storage::disk('local')->assertExists('limo_ocr_debug/freshrun/k.png');
+    }
 }

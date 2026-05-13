@@ -35,11 +35,15 @@ class LimoIncidentController extends Controller
                 'gps_lng' => ['sometimes', 'nullable', 'numeric'],
                 'device_info' => ['sometimes', 'nullable', 'string', 'max:2000'],
             ]);
-        } catch (ValidationException) {
+        } catch (ValidationException $e) {
+            $errors = $e->errors();
+            $first = collect($errors)->flatten()->first();
+
             return response()->json([
                 'status' => 'error',
                 'code' => 'validation_error',
-                'message' => 'Došlo je do greške. Pokušajte ponovo.',
+                'message' => is_string($first) ? $first : 'Provjerite unos.',
+                'errors' => $errors,
             ], 422);
         }
 
@@ -68,11 +72,15 @@ class LimoIncidentController extends Controller
                 'branding_photo' => ['sometimes', 'nullable', 'file', 'image', 'max:5120', 'mimes:jpeg,jpg,png,webp'],
                 'note' => ['sometimes', 'nullable', 'string', 'max:10000'],
             ]);
-        } catch (ValidationException) {
+        } catch (ValidationException $e) {
+            $errors = $e->errors();
+            $first = collect($errors)->flatten()->first();
+
             return response()->json([
                 'status' => 'error',
                 'code' => 'validation_error',
-                'message' => 'Došlo je do greške. Pokušajte ponovo.',
+                'message' => is_string($first) ? $first : 'Provjerite unos.',
+                'errors' => $errors,
             ], 422);
         }
 

@@ -1392,6 +1392,74 @@ class LimoPlateFallbackTest extends TestCase
             ->assertJsonPath('suggested_plate', null);
     }
 
+    public function test_ocr_with_app_debug_false_leaves_no_limo_ocr_debug_files_and_keeps_plate_upload(): void
+    {
+        config([
+            'limo.ocr.enabled' => true,
+            'app.debug' => false,
+            'limo.ocr.debug_save_images' => false,
+        ]);
+
+        $this->app->bind(LimoOcrRunner::class, fn () => new class implements LimoOcrRunner {
+            public function run(string $absoluteImagePath, int $timeoutSeconds, array $options = []): string
+            {
+                return 'PG 111-AA';
+            }
+        });
+
+        Storage::fake('local');
+        $admin = $this->makeLimoAdmin('plate_ocr_no_dbg_files');
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $this->actingAs($admin, 'panel_admin')
+            ->post('/limo/pickup/plate/ocr', [
+                'image' => UploadedFile::fake()->image('p.jpg', 320, 240),
+            ])
+            ->assertOk()
+            ->assertJsonPath('suggested_plate', 'PG111AA');
+
+        $disk = Storage::disk('local');
+        if ($disk->exists('limo_ocr_debug')) {
+            $this->assertSame([], $disk->allFiles('limo_ocr_debug'));
+        }
+
+        $upload = LimoPlateUpload::query()->first();
+        $this->assertNotNull($upload);
+        $disk->assertExists($upload->path);
+    }
+
+    public function test_ocr_with_app_debug_true_and_debug_save_false_leaves_no_limo_ocr_debug_files(): void
+    {
+        config([
+            'limo.ocr.enabled' => true,
+            'app.debug' => true,
+            'limo.ocr.debug_save_images' => false,
+        ]);
+
+        $this->app->bind(LimoOcrRunner::class, fn () => new class implements LimoOcrRunner {
+            public function run(string $absoluteImagePath, int $timeoutSeconds, array $options = []): string
+            {
+                return 'PG 222-BB';
+            }
+        });
+
+        Storage::fake('local');
+        $admin = $this->makeLimoAdmin('plate_ocr_dbg_no_save');
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $this->actingAs($admin, 'panel_admin')
+            ->post('/limo/pickup/plate/ocr', [
+                'image' => UploadedFile::fake()->image('p.jpg', 320, 240),
+            ])
+            ->assertOk()
+            ->assertJsonPath('suggested_plate', 'PG222BB');
+
+        $disk = Storage::disk('local');
+        if ($disk->exists('limo_ocr_debug')) {
+            $this->assertSame([], $disk->allFiles('limo_ocr_debug'));
+        }
+    }
+
     private function makeLimoAdmin(string $username): Admin
     {
         return Admin::query()->create([

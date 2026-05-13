@@ -116,7 +116,8 @@ class LimoEntryUiTest extends TestCase
             ->assertSee('limoJsQrReady')
             ->assertSee('/limo/pickup/qr')
             ->assertSee('/limo/pickup/plate/ocr')
-            ->assertSee('from-plate-upload')
+            ->assertSee('/limo/incident/from-plate-upload')
+            ->assertSee('/limo/incident')
             ->assertSee('Prijavi incident za ovu tablicu')
             ->assertSee('FormData')
             ->assertSee('csrf-token')
@@ -170,7 +171,9 @@ class LimoEntryUiTest extends TestCase
             ->assertSee('limoDebugCameraSection')
             ->assertSee('Test kamera')
             ->assertSee('limoDebugCameraVideo')
-            ->assertSee('Zaustavi test kameru');
+            ->assertSee('Zaustavi test kameru')
+            ->assertSee('limoDebugIncidentTrace')
+            ->assertSee('incident: submit clicked');
     }
 
     public function test_limo_health_requires_limo_access(): void

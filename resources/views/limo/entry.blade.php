@@ -182,6 +182,9 @@
             <h3 class="section-title" style="color:#92400e;margin-top:1rem;">DEBUG — tablica (OCR upload)</h3>
             <p class="hint">Linije pri izboru/slanju fotografije tablice; nema binarnog sadržaja slike.</p>
             <pre id="limoDebugPlateTrace" class="limo-debug-trace-pre" aria-live="polite"></pre>
+            <h3 class="section-title" style="color:#92400e;margin-top:1rem;">DEBUG — incident prijava</h3>
+            <p class="hint">Linije na „Pošalji prijavu”; nema tokena ni binarnog sadržaja slike.</p>
+            <pre id="limoDebugIncidentTrace" class="limo-debug-trace-pre" aria-live="polite"></pre>
         </div>
         @endif
 
@@ -302,8 +305,9 @@
     var pickupQrUrl = '/limo/pickup/qr';
     var plateOcrUrl = '/limo/pickup/plate/ocr';
     var plateConfirmUrl = '/limo/pickup/plate/confirm';
-    const incidentUrl = @json(route('limo.incident.store'));
-    const incidentFromPlateUploadUrl = @json(route('limo.incident.from_plate_upload'));
+    /** Relativne putanje (isti origin kao stranica) — izbjegava APP_URL / mobilni proxy. */
+    var incidentUrl = '/limo/incident';
+    var incidentFromPlateUploadUrl = '/limo/incident/from-plate-upload';
 
     const btnScan = document.getElementById('btnScan');
     const btnStopScan = document.getElementById('btnStopScan');
@@ -435,6 +439,11 @@
         debugTraceAppend('limoDebugPlateTrace', msg);
     }
 
+    function debugIncidentLine(msg) {
+        if (!APP_DEBUG) return;
+        debugTraceAppend('limoDebugIncidentTrace', msg);
+    }
+
     /** Čitljiv sažetak OCR odgovora (samo APP_DEBUG; podaci sa servera, bez slike). */
     function appendPlateOcrDebugSummary(data) {
         if (!APP_DEBUG || !data || !data.debug) {
@@ -509,6 +518,39 @@
         } catch (e) {
             return {};
         }
+    }
+
+    function formatIncidentValidationErrorsHtml(errors) {
+        if (!errors || typeof errors !== 'object') return '';
+        var parts = [];
+        for (var k in errors) {
+            if (!Object.prototype.hasOwnProperty.call(errors, k)) continue;
+            var arr = errors[k];
+            if (!Array.isArray(arr)) continue;
+            var label = String(k).replace(/_/g, ' ');
+            parts.push('<strong>' + escapeHtml(label) + '</strong>: ' + escapeHtml(arr.join(' ')));
+        }
+        return parts.length ? parts.join('<br>') : '';
+    }
+
+    function buildIncidentSubmitErrorHtml(data, httpStatus) {
+        var fromErrors = formatIncidentValidationErrorsHtml(data && data.errors);
+        if (fromErrors) {
+            return appendDebugHttpStatus(fromErrors, httpStatus);
+        }
+        var msg = data && data.message != null ? String(data.message) : '';
+        if (msg !== '') {
+            return appendDebugHttpStatus(escapeHtml(msg), httpStatus);
+        }
+        var code = data && data.code;
+        if (code && errMessages[code]) {
+            return appendDebugHttpStatus(escapeHtml(errMessages[code]), httpStatus);
+        }
+        var httpOnly = httpStatusUserMessage(httpStatus);
+        if (httpOnly) {
+            return appendDebugHttpStatus(escapeHtml(httpOnly), httpStatus);
+        }
+        return appendDebugHttpStatus(escapeHtml(genericErr), httpStatus);
     }
 
     function appendDebugHttpStatus(msg, httpStatus) {
@@ -1488,6 +1530,14 @@
                 setStatus('Fotografija više nije važeća. Pokušajte ponovo.', 'err');
                 return;
             }
+            var submitEndpoint = incidentUsesPlateUpload ? incidentFromPlateUploadUrl : incidentUrl;
+            debugIncidentLine('incident: submit clicked');
+            debugIncidentLine('incident: endpoint ' + submitEndpoint);
+            debugIncidentLine('incident: upload_token present ' + (incidentUsesPlateUpload && plateUploadToken ? 'yes' : 'no'));
+            debugIncidentLine(
+                'incident: branding file ' +
+                    (incidentBrandingBlob ? 'yes bytes=' + String(incidentBrandingBlob.size) : 'no')
+            );
             incidentSubmitting = true;
             btnIncidentSubmit.disabled = true;
             setStatus('Slanje prijave incidenta…', 'info');
@@ -1514,16 +1564,31 @@
                     if (coords.lng != null) fd.append('gps_lng', String(coords.lng));
                     fd.append('device_info', buildDeviceInfo());
                 }
-                var res = await fetch(incidentUsesPlateUpload ? incidentFromPlateUploadUrl : incidentUrl, {
+                var csrfHdr = readCsrfToken();
+                if (!csrfHdr) {
+                    setStatus('Nedostaje CSRF token. Osvježite stranicu (F5).', 'err');
+                    debugIncidentLine('incident: abort no csrf');
+                    return;
+                }
+                var res = await fetch(submitEndpoint, {
                     method: 'POST',
                     headers: {
-                        'X-CSRF-TOKEN': readCsrfToken(),
+                        'X-CSRF-TOKEN': csrfHdr,
                         'Accept': 'application/json',
                         'X-Requested-With': 'XMLHttpRequest',
                     },
                     body: fd,
                 });
-                var data = await res.json().catch(function () { return {}; });
+                debugIncidentLine('incident: HTTP status ' + String(res.status));
+                var data = await parseResponseJson(res);
+                debugIncidentLine(
+                    'incident: parsed status=' +
+                        String((data && data.status) || '') +
+                        ' code=' +
+                        String((data && data.code) || '') +
+                        ' message=' +
+                        String((data && data.message) || '').slice(0, 220)
+                );
                 if (res.ok && data.status === 'ok') {
                     var mailOk = data.communal_email_sent === true;
                     setStatus(
@@ -1539,11 +1604,11 @@
                     incidentNote.value = '';
                     setIncidentModeFromPlateUpload(false);
                 } else {
-                    var ic = data.code;
-                    setStatus((ic === 'validation_error' ? (data.message || 'Provjerite unos i fotografiju tablice.') : (data.message || genericErr)), 'err');
+                    setStatus(buildIncidentSubmitErrorHtml(data, res.status), 'err');
                 }
             } catch (e) {
-                setStatus(genericErr, 'err');
+                debugIncidentLine('incident: thrown ' + (e && e.name ? String(e.name) : 'unknown'));
+                setStatus(appendDebugHttpStatus(escapeHtml(genericErr + ' (' + (e && e.name ? e.name : 'mreža') + ')'), null), 'err');
             } finally {
                 incidentSubmitting = false;
                 btnIncidentSubmit.disabled = false;

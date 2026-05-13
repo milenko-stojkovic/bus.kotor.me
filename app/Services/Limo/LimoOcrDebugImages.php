@@ -7,15 +7,39 @@ use Illuminate\Support\Facades\Storage;
 /**
  * Persists copies of images passed to Tesseract when local diagnostics are enabled.
  * Files live under the app private disk: limo_ocr_debug/{upload_token_suffix}/…
+ *
+ * Cleanup: {@see purgeExpired} (TTL) and {@see deleteRunFolder} (per OCR run when debug save is off).
+ * Uses the configured private `local` disk (same root as {@see saveVariantCopy}) so tests with Storage::fake stay consistent.
  */
 final class LimoOcrDebugImages
 {
+    /**
+     * Remove the debug folder for one OCR run (last token suffix segment). Safe no-op if missing.
+     */
+    public static function deleteRunFolder(string $uploadTokenSuffix): void
+    {
+        $suffix = preg_replace('/[^a-zA-Z0-9_-]+/', '', $uploadTokenSuffix);
+        if ($suffix === '') {
+            return;
+        }
+        $rel = 'limo_ocr_debug/'.$suffix;
+        $disk = Storage::disk('local');
+        if ($disk->exists($rel)) {
+            $disk->deleteDirectory($rel);
+        }
+    }
+
+    /**
+     * Delete immediate subfolders of limo_ocr_debug/ older than TTL (directory mtime).
+     */
     public static function purgeExpired(int $ttlMinutes): void
     {
         if ($ttlMinutes <= 0) {
             return;
         }
-        $root = storage_path('app/private/limo_ocr_debug');
+        $disk = Storage::disk('local');
+        $base = 'limo_ocr_debug';
+        $root = $disk->path($base);
         if (! is_dir($root)) {
             return;
         }
@@ -30,7 +54,7 @@ final class LimoOcrDebugImages
                 continue;
             }
             if ($now - (int) @filemtime($full) > $maxAge) {
-                LimoPlateImagePreprocessor::rrmdir($full);
+                $disk->deleteDirectory($base.'/'.$name);
             }
         }
     }

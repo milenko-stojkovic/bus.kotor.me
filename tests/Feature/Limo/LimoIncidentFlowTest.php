@@ -70,6 +70,26 @@ class LimoIncidentFlowTest extends TestCase
         $this->assertSame(0, LimoIncident::query()->count());
     }
 
+    public function test_from_plate_upload_validation_returns_errors_key(): void
+    {
+        Storage::fake('local');
+        $admin = $this->makeLimoAdmin('limo_inc_val_json');
+        $upload = $this->makePlateUpload($admin, [
+            'upload_token' => 'upltok_val'.str_repeat('F', 35),
+        ]);
+
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $this->actingAs($admin, 'panel_admin')
+            ->postJson('/limo/incident/from-plate-upload', [
+                'upload_token' => $upload->upload_token,
+                'type' => 'invalid_type_value',
+            ])
+            ->assertStatus(422)
+            ->assertJsonPath('code', 'validation_error')
+            ->assertJsonStructure(['errors' => ['type']]);
+    }
+
     public function test_limo_access_user_can_create_qr_insufficient_funds_incident(): void
     {
         Storage::fake('local');

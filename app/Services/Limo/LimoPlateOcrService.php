@@ -61,9 +61,6 @@ final class LimoPlateOcrService
         $suffix = $uploadTokenSuffix ?? '';
         $appDebug = (bool) config('app.debug', false);
         $saveDebugImages = $appDebug && (bool) config('limo.ocr.debug_save_images', false);
-        if ($saveDebugImages) {
-            LimoOcrDebugImages::purgeExpired((int) config('limo.ocr.debug_image_ttl_minutes', 60));
-        }
 
         $ocrCropMeta = [
             'ocr_used_user_crop' => $absoluteUserCropPath !== null && is_file($absoluteUserCropPath),
@@ -284,6 +281,13 @@ final class LimoPlateOcrService
                 if ($dir !== null && is_dir($dir)) {
                     LimoPlateImagePreprocessor::rrmdir($dir);
                 }
+            }
+            if (! $saveDebugImages && $suffix !== '') {
+                LimoOcrDebugImages::deleteRunFolder($suffix);
+            }
+            $ttl = (int) config('limo.ocr.debug_image_ttl_minutes', 60);
+            if ($ttl > 0) {
+                LimoOcrDebugImages::purgeExpired($ttl);
             }
         }
 
