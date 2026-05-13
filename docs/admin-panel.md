@@ -159,7 +159,7 @@ Rute (admin panel):
 
 | Funkcionalnost | Opis | Modeli / tabele |
 |----------------|------|------------------|
-| **Ažuriranje e-mailova za izveštaje** | CRUD za adrese na koje se šalju obaveštenja/izveštaji. | `ReportEmail` (tabela `report_emails`) |
+| **Ažuriranje e-mailova za izveštaje** | CRUD za adrese na koje se šalju obaveštenja/izveštaji. | `ReportEmail` (tabela `report_emails`, kolona **`purpose`** ENUM: **`report`** za zakazane PDF izvještaje, **`limo_incidents`** za Limo incidente) |
 
 **Račun / potvrda rezervacije (korisnik):** primalac = **`reservations.email`** (v. §1.2 — snapshot; admin može menjati).
 
@@ -170,7 +170,7 @@ Rute (admin panel):
 - **Nema HTML preview-a**: stranica je samo dvokoračni izbor + PDF export u novom tabu.
 - **Datum bounds (svi pickeri)**: min/max se računaju iz `reservations.created_at` (samo datum deo).
 - **PDF**: uvek na `cg`, generiše se i kad nema podataka (nule/prazni redovi).
-- **Zakazano slanje PDF izvještaja emailom (scheduler)**: komanda `reports:send-scheduled {daily|monthly|yearly}` šalje izvještaje svim primaocima iz `report_emails` (jedan email po primaocu). Idempotency preko `scheduled_report_deliveries`. U slučaju greške (generisanje PDF ili slanje) kreira se `admin_alerts` zapis koji se uklanja ručno.
+- **Zakazano slanje PDF izvještaja emailom (scheduler)**: komanda `reports:send-scheduled {daily|monthly|yearly}` šalje izvještaje svim primaocima iz `report_emails` gdje je **`purpose = report`** (jedan email po primaocu). Idempotency preko `scheduled_report_deliveries`. U slučaju greške (generisanje PDF ili slanje) kreira se `admin_alerts` zapis koji se uklanja ručno.
 
 | Ruta | Namena |
 |------|--------|
@@ -217,14 +217,17 @@ Napomena: `system_config` ima `name` (unique) i `value` (integer). Za admin form
 
 | Ruta | Namena |
 |------|--------|
-| `GET /admin/podesavanja` | `panel_admin.settings` — jedna stranica sa sekcijama Kapacitet i Izvještaji (email adrese). |
+| `GET /admin/podesavanja` | `panel_admin.settings` — stranica sa sekcijama: Kapacitet, **Izvještaji – email adrese** (`purpose=report`), **Incident – email adrese** (`purpose=limo_incidents`). |
 | `PUT /admin/podesavanja/capacity` | `panel_admin.settings.capacity.update` — validacija `1..99`, upis u `system_config.available_parking_slots`. Promena **ne važi retroaktivno** i primenjuje se za nove dane od **danas + 91 dan** (bez retroaktivnog update `daily_parking_data`). |
-| `POST /admin/podesavanja/report-emails` | `panel_admin.settings.report-emails.store` — trim + lowercase + email sintaksa + duplicate zaštita, upis u `report_emails`. |
-| `DELETE /admin/podesavanja/report-emails/{reportEmail}` | `panel_admin.settings.report-emails.destroy` — hard delete uz confirm UI. |
+| `POST /admin/podesavanja/report-emails` | `panel_admin.settings.report-emails.store` — trim + lowercase + email sintaksa + duplicate unutar **`purpose=report`**, upis u `report_emails`. |
+| `DELETE /admin/podesavanja/report-emails/{reportEmail}` | `panel_admin.settings.report-emails.destroy` — hard delete samo ako je red **`purpose=report`** (inače 404); confirm UI. |
+| `POST /admin/podesavanja/limo-incident-emails` | `panel_admin.settings.limo-incident-emails.store` — polje **`limo_incident_email`**, ista validacija kao izvještaji; duplicate unutar **`purpose=limo_incidents`**. |
+| `DELETE /admin/podesavanja/limo-incident-emails/{reportEmail}` | `panel_admin.settings.limo-incident-emails.destroy` — hard delete samo ako je red **`purpose=limo_incidents`** (inače 404); confirm UI. |
 
 - **Kontroler:** `App\Http\Controllers\AdminPanel\SettingsController`.
 - **Kapacitet (UX):** input je inicijalno read-only; `Promjeni` → editable + `Primjeni`/`Odkaži`. Success poruka sadrži konkretan datum važenja (danas + 91 dan).
-- **Report emails (UX):** lista sortirana abecedno po emailu; `Dodaj email adresu` otvara formu; `Obriši` ima confirm modal.
+- **Report emails (UX):** lista sortirana abecedno po emailu; `Dodaj email adresu` otvara formu; `Obriši` ima confirm modal (isti modal za obje liste, različiti `DELETE` URL-i).
+- **Incident emails (UX):** analogno izvještajima; prazna lista u podešavanjima je dozvoljena. **Backend:** kada nema redova sa `purpose=limo_incidents`, `LimoIncidentService` i dalje šalje incident na podrazumijevanu adresu **`komunalna.policija@kotor.me`** i loguje fallback na kanalu **`payments`** (ovo se **ne** prikazuje u UI liste). **`ReportEmailsSeeder`** osigurava red **`komunalna.policija@kotor.me`** sa `purpose=limo_incidents` (idempotentno), tako da se ta adresa obično vodi u listi incident primalaca.
 
 **Testovi:** `tests/Feature/AdminPanel/AdminPanelSettingsTest.php`.
 

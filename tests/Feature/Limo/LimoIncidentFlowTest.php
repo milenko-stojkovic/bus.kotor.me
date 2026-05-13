@@ -9,6 +9,7 @@ use App\Models\AgencyAdvanceTransaction;
 use App\Models\LimoIncident;
 use App\Models\LimoPlateUpload;
 use App\Models\LimoPickupEvent;
+use App\Models\ReportEmail;
 use App\Models\User;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -114,7 +115,8 @@ class LimoIncidentFlowTest extends TestCase
         $this->assertSame($uuid, $alert->payload_json['incident_uuid'] ?? null);
 
         Mail::assertSent(LimoCommunalPoliceIncidentMail::class, function (LimoCommunalPoliceIncidentMail $mail) use ($uuid) {
-            return $mail->incident->incident_uuid === $uuid;
+            return $mail->incident->incident_uuid === $uuid
+                && $mail->hasTo('komunalna.policija@kotor.me');
         });
     }
 
@@ -396,5 +398,112 @@ class LimoIncidentFlowTest extends TestCase
             ])
             ->assertStatus(422)
             ->assertJsonPath('code', 'invalid_upload');
+    }
+
+    public function test_incident_email_targets_fallback_komunalna_when_no_limo_settings(): void
+    {
+        Storage::fake('local');
+        Mail::fake();
+
+        $admin = $this->makeLimoAdmin('limo_inc_fb');
+
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $this->actingAs($admin, 'panel_admin')
+            ->post('/limo/incident', [
+                'type' => LimoIncident::TYPE_INVALID_QR_TOKEN,
+                'plate_photo' => UploadedFile::fake()->image('pf.jpg', 200, 200),
+            ])
+            ->assertOk()
+            ->assertJsonPath('communal_email_sent', true);
+
+        Mail::assertSent(LimoCommunalPoliceIncidentMail::class, function (LimoCommunalPoliceIncidentMail $mail) {
+            return $mail->hasTo('komunalna.policija@kotor.me');
+        });
+    }
+
+    public function test_incident_email_targets_configured_limo_recipients(): void
+    {
+        Storage::fake('local');
+        Mail::fake();
+
+        ReportEmail::query()->create([
+            'email' => 'incident-recipient@example.com',
+            'purpose' => ReportEmail::PURPOSE_LIMO_INCIDENTS,
+        ]);
+
+        $admin = $this->makeLimoAdmin('limo_inc_cfg');
+
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $this->actingAs($admin, 'panel_admin')
+            ->post('/limo/incident', [
+                'type' => LimoIncident::TYPE_INVALID_QR_TOKEN,
+                'plate_photo' => UploadedFile::fake()->image('pc.jpg', 200, 200),
+            ])
+            ->assertOk()
+            ->assertJsonPath('communal_email_sent', true);
+
+        Mail::assertSent(LimoCommunalPoliceIncidentMail::class, function (LimoCommunalPoliceIncidentMail $mail) {
+            return $mail->hasTo('incident-recipient@example.com')
+                && ! $mail->hasTo('komunalna.policija@kotor.me');
+        });
+    }
+
+    public function test_incident_email_targets_all_configured_limo_recipients(): void
+    {
+        Storage::fake('local');
+        Mail::fake();
+
+        ReportEmail::query()->create([
+            'email' => 'inc-a@example.com',
+            'purpose' => ReportEmail::PURPOSE_LIMO_INCIDENTS,
+        ]);
+        ReportEmail::query()->create([
+            'email' => 'inc-b@example.com',
+            'purpose' => ReportEmail::PURPOSE_LIMO_INCIDENTS,
+        ]);
+
+        $admin = $this->makeLimoAdmin('limo_inc_many');
+
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $this->actingAs($admin, 'panel_admin')
+            ->post('/limo/incident', [
+                'type' => LimoIncident::TYPE_INVALID_QR_TOKEN,
+                'plate_photo' => UploadedFile::fake()->image('pm.jpg', 200, 200),
+            ])
+            ->assertOk();
+
+        Mail::assertSent(LimoCommunalPoliceIncidentMail::class, function (LimoCommunalPoliceIncidentMail $mail) {
+            return $mail->hasTo('inc-a@example.com') && $mail->hasTo('inc-b@example.com');
+        });
+    }
+
+    public function test_incident_email_does_not_target_scheduled_report_recipients(): void
+    {
+        Storage::fake('local');
+        Mail::fake();
+
+        ReportEmail::query()->create([
+            'email' => 'scheduled-report-only@example.com',
+            'purpose' => ReportEmail::PURPOSE_REPORT,
+        ]);
+
+        $admin = $this->makeLimoAdmin('limo_inc_rep');
+
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $this->actingAs($admin, 'panel_admin')
+            ->post('/limo/incident', [
+                'type' => LimoIncident::TYPE_INVALID_QR_TOKEN,
+                'plate_photo' => UploadedFile::fake()->image('pr.jpg', 200, 200),
+            ])
+            ->assertOk();
+
+        Mail::assertSent(LimoCommunalPoliceIncidentMail::class, function (LimoCommunalPoliceIncidentMail $mail) {
+            return $mail->hasTo('komunalna.policija@kotor.me')
+                && ! $mail->hasTo('scheduled-report-only@example.com');
+        });
     }
 }

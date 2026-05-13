@@ -12,7 +12,7 @@ Za AI i ljude: držati se ovoga pri novim izmenama da ostane konzistentno.
 - **Hijerarhija:** za tačan tehnički detalj (ruta, status u bazi, redosled jobova) **kod u repou je presudan**. Tematski fajlovi u `docs/` su „izvor istine“ za ljude i AI **samo ako redovno prate taj kod**. Kad promeniš kod — u istom PR-u ili odmah posle ažuriraj pogođeni `.md` (ili eksplicitno napiši u `project-todo.md` da doc kasni, ako mora).
 - **Kontradikcija doc ↔ kod:** ne ostavljati oba stanja; **ili** ispravi dokumentaciju **ili** vrati/popravi kod. Izbegavati **nejasno mešanje** starog i novog u istoj rečenici bez oznake šta još važi.
 - **Sumnja:** ako nisi siguran šta važi, proveri kod (`routes/`, kontroler, model). Ne nagađaj u doc-u. Ako nešto nije implementirano, u doc-u jasno napiši **„nije implementirano / stub“** i na šta se odnosi (npr. ime klase).
-- **Meta-dokumenti** (`handoff-new-chat.md`, `project-todo.md`, `project-done.md`, ovaj fajl, `project-status-next-steps.md`) opisuju proces i konvencije; **ne dupliraju** dugačke tehničke specifikacije — za to služe tematski fajlovi iz indeksa u `project-status-next-steps.md`.
+- **Meta-dokumenti** (`README.md`, `handoff-new-chat.md`, `project-todo.md`, `project-done.md`, ovaj fajl, `project-status-next-steps.md`) opisuju proces i konvencije; **ne dupliraju** dugačke tehničke specifikacije — za to služe tematski fajlovi iz indeksa u `project-status-next-steps.md`.
 
 ### 0.1 Evolucija u dokumentu („bilo → sada“) — dozvoljena notacija
 
@@ -184,7 +184,7 @@ Posle izmene `.env`: `.\laragon-artisan.ps1 config:clear` (ili ista PHP putanja 
 
 - Otvoreno: **`docs/project-todo.md`**
 - Završeno: **`docs/project-done.md`**
-- Nova sesija u Cursoru: **`docs/handoff-new-chat.md`**
+- Nova sesija u Cursoru: **`docs/README.md`** (ulaz u folder), zatim **`docs/handoff-new-chat.md`**
 
 ---
 

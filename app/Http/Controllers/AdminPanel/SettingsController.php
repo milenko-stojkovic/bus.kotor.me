@@ -4,6 +4,7 @@ namespace App\Http\Controllers\AdminPanel;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AdminPanel\AdminPanelCapacityUpdateRequest;
+use App\Http\Requests\AdminPanel\AdminPanelLimoIncidentEmailStoreRequest;
 use App\Http\Requests\AdminPanel\AdminPanelReportEmailStoreRequest;
 use App\Models\ReportEmail;
 use App\Models\SystemConfig;
@@ -29,7 +30,8 @@ class SettingsController extends Controller
             'pageTitle' => 'Podešavanja',
             'capacity' => $capacity,
             'capacityEffectiveFrom' => $effectiveFrom,
-            'reportEmails' => ReportEmail::query()->orderBy('email')->get(),
+            'reportEmails' => ReportEmail::query()->forReport()->orderBy('email')->get(),
+            'limoIncidentEmails' => ReportEmail::query()->forLimoIncidents()->orderBy('email')->get(),
         ]);
     }
 
@@ -49,25 +51,64 @@ class SettingsController extends Controller
         $email = (string) $request->validated('email');
 
         // Duplicate safety (case-insensitive, but we store lowercase).
-        if (ReportEmail::query()->where('email', $email)->exists()) {
+        if (ReportEmail::query()->forReport()->where('email', $email)->exists()) {
             return redirect()->to(route('panel_admin.settings', [], false))
                 ->withErrors(['email' => 'Adresa se već nalazi na spisku.'])
                 ->withInput();
         }
 
-        ReportEmail::query()->create(['email' => $email]);
+        ReportEmail::query()->create([
+            'email' => $email,
+            'purpose' => ReportEmail::PURPOSE_REPORT,
+        ]);
 
         return redirect()->to(route('panel_admin.settings', [], false))
             ->with('status', 'Email adresa je dodata.');
     }
 
+    public function storeLimoIncidentEmail(AdminPanelLimoIncidentEmailStoreRequest $request): RedirectResponse
+    {
+        $email = (string) $request->validated('limo_incident_email');
+
+        if (ReportEmail::query()->forLimoIncidents()->where('email', $email)->exists()) {
+            return redirect()->to(route('panel_admin.settings', [], false))
+                ->withErrors(['limo_incident_email' => 'Adresa se već nalazi na spisku.'])
+                ->withInput();
+        }
+
+        ReportEmail::query()->create([
+            'email' => $email,
+            'purpose' => ReportEmail::PURPOSE_LIMO_INCIDENTS,
+        ]);
+
+        return redirect()->to(route('panel_admin.settings', [], false))
+            ->with('status', 'Email adresa za incidente je dodata.');
+    }
+
     public function destroyReportEmail(ReportEmail $reportEmail): RedirectResponse
     {
+        if ($reportEmail->purpose !== ReportEmail::PURPOSE_REPORT) {
+            abort(404);
+        }
+
         $email = $reportEmail->email;
         $reportEmail->delete();
 
         return redirect()->to(route('panel_admin.settings', [], false))
             ->with('status', "Email adresa {$email} je obrisana.");
+    }
+
+    public function destroyLimoIncidentEmail(ReportEmail $reportEmail): RedirectResponse
+    {
+        if ($reportEmail->purpose !== ReportEmail::PURPOSE_LIMO_INCIDENTS) {
+            abort(404);
+        }
+
+        $email = $reportEmail->email;
+        $reportEmail->delete();
+
+        return redirect()->to(route('panel_admin.settings', [], false))
+            ->with('status', "Email adresa za incidente {$email} je obrisana.");
     }
 }
 

@@ -7,6 +7,7 @@ use App\Models\Admin;
 use App\Models\AdminAlert;
 use App\Models\LimoIncident;
 use App\Models\LimoPlateUpload;
+use App\Models\ReportEmail;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Services\Reservation\DuplicateReservationAttemptService;
@@ -234,9 +235,11 @@ final class LimoIncidentService
         $occurredAtFormatted = $occurredAt->clone()->timezone('Europe/Podgorica')->format('d.m.Y. H:i');
         $evidenterLabel = $evidenter->username.' ('.$evidenter->email.')';
 
+        $recipientEmails = $this->resolveLimoIncidentRecipientEmails();
+
         $emailSent = false;
         try {
-            Mail::to(self::COMMUNAL_POLICE_EMAIL)->send(
+            Mail::to($recipientEmails)->send(
                 new LimoCommunalPoliceIncidentMail(
                     incident: $incident,
                     evidenterLabel: $evidenterLabel,
@@ -252,6 +255,7 @@ final class LimoIncidentService
                 'license_plate' => $plateSnapshot,
                 'agency_user_id' => $agencyUserId,
                 'recorded_by_limo_admin_id' => (int) $evidenter->id,
+                'recipient_emails' => $recipientEmails,
             ]);
         } catch (Throwable $e) {
             Log::channel('payments')->error('limo_incident_communal_email_failed', [
@@ -260,6 +264,7 @@ final class LimoIncidentService
                 'license_plate' => $plateSnapshot,
                 'agency_user_id' => $agencyUserId,
                 'recorded_by_limo_admin_id' => (int) $evidenter->id,
+                'recipient_emails' => $recipientEmails,
                 'message' => $e->getMessage(),
             ]);
         }
@@ -310,6 +315,27 @@ final class LimoIncidentService
         }
 
         return $incident->fresh();
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function resolveLimoIncidentRecipientEmails(): array
+    {
+        $configured = ReportEmail::limoIncidentRecipientEmailsOrdered();
+        if ($configured !== []) {
+            Log::channel('payments')->info('limo_incident_communal_email_recipients_from_settings', [
+                'recipient_emails' => $configured,
+            ]);
+
+            return $configured;
+        }
+
+        Log::channel('payments')->warning('limo_incident_communal_email_using_fallback_recipient', [
+            'fallback_email' => self::COMMUNAL_POLICE_EMAIL,
+        ]);
+
+        return [self::COMMUNAL_POLICE_EMAIL];
     }
 
     private function storeImage(UploadedFile $file, string $directory, string $prefix): string

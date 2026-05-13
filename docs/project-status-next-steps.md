@@ -1,8 +1,8 @@
 # Project status — indeks
 
-**Poslednje ažuriranje:** 2026-05-01
+**Poslednje ažuriranje:** 2026-05-14
 
-Ovaj fajl je **kratak smerač**. Detalji su podeljeni da bi novi chat mogao da učita samo ono što treba.
+Ovaj fajl je **kratak smerač**. Detalji su podeljeni da bi novi chat mogao da učita samo ono što treba. Ako prilažeš samo folder **`docs/`**, počni od **[README.md](./README.md)** pa ovde.
 
 **Canonical payment state machine (prelazi, terminalna stanja, invarijante):** [payment-state-machine.md](./payment-state-machine.md) — pročitaj **pre** izmene u `PaymentCallbackJob`, `TempData`, checkout/callback/inquiry toku.
 
@@ -10,7 +10,8 @@ Ovaj fajl je **kratak smerač**. Detalji su podeljeni da bi novi chat mogao da u
 
 | Dokument | Svrha |
 |----------|--------|
-| **[handoff-new-chat.md](./handoff-new-chat.md)** | Tekst za **kopiranje u prvu poruku** novog Cursor chata + kako održavati liste |
+| **[README.md](./README.md)** | **Ulaz u `docs/`** za novi chat (`@docs`) — redosled čitanja + linkovi |
+| **[handoff-new-chat.md](./handoff-new-chat.md)** | Tekst za **kopiranje u prvu poruku** novog Cursor chata + kako održavati liste + napomena o dugim sesijama |
 | **[project-todo.md](./project-todo.md)** | Šta je **otvoreno** (čekiraj / briši kad završiš) |
 | **[project-done.md](./project-done.md)** | Šta je **urađeno** (dodaj datum kad premestiš iz TODO) |
 | **[project-conventions.md](./project-conventions.md)** | Pravila: prevodi, mail, queue, rute, parking |
@@ -52,7 +53,7 @@ Ovi fajlovi treba da prate trenutni kod; v. `project-conventions.md` § 8.
 | Jezik, PDF, callback | [language-and-invoice-rules.md](./language-and-invoice-rules.md) |
 | Auth vs guest | [auth-and-guests.md](./auth-and-guests.md) |
 | Agency panel (rezervacije, upcoming/realized, user) | [agency-panel.md](./agency-panel.md) |
-| Limo service (inicijalna spec — prije implementacije) | [limo-service.md](./limo-service.md) |
+| Limo service (**stanje u kodu** + plan) | [limo-service.md](./limo-service.md) |
 | Control panel (dolasci, pretraga, guard `control`) | [control-panel.md](./control-panel.md) |
 | Admin (spec + šta je urađeno) | [admin-panel.md](./admin-panel.md) |
 | Cron detalji | [cron-commands.md](./cron-commands.md) |

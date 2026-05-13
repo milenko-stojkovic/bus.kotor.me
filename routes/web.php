@@ -86,6 +86,8 @@ Route::prefix('admin')->name('panel_admin.')->group(function () {
         Route::put('podesavanja/capacity', [AdminPanelSettingsController::class, 'updateCapacity'])->name('settings.capacity.update');
         Route::post('podesavanja/report-emails', [AdminPanelSettingsController::class, 'storeReportEmail'])->name('settings.report-emails.store');
         Route::delete('podesavanja/report-emails/{reportEmail}', [AdminPanelSettingsController::class, 'destroyReportEmail'])->name('settings.report-emails.destroy');
+        Route::post('podesavanja/limo-incident-emails', [AdminPanelSettingsController::class, 'storeLimoIncidentEmail'])->name('settings.limo-incident-emails.store');
+        Route::delete('podesavanja/limo-incident-emails/{reportEmail}', [AdminPanelSettingsController::class, 'destroyLimoIncidentEmail'])->name('settings.limo-incident-emails.destroy');
 
         Route::get('analitika', [AdminPanelAnalyticsController::class, 'index'])->name('analytics');
         Route::get('analitika/pdf', [AdminPanelAnalyticsController::class, 'pdf'])->name('analytics.pdf');

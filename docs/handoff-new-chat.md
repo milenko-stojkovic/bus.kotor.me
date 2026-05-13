@@ -2,6 +2,8 @@
 
 **Svrha:** U novom tabu nema istorije ovog četa. Ovaj fajl daje **tekst koji možeš zalepiti** kao prvu poruku, plus uputstvo kako držati **TODO / DONE** u dokumentaciji.
 
+**Ulazna tačka foldera:** ako u novom chatu samo priložiš dokumentaciju, koristi **`docs/README.md`** (kratak indeks) ili ceo folder **`docs/`** (`@docs` u Cursoru).
+
 ---
 
 ## 1) Tekst za prvu poruku u novom chatu (kopiraj–nalepi)
@@ -10,6 +12,8 @@ Prilagodi putanju ako radni folder nije isti.
 
 ```
 Radiš na Laravel 12 (PHP 8.3) projektu bus.kotor.me (rezervacije autobusa, plaćanje, fiskalizacija).
+
+Možeš priložiti folder docs/ (@docs) ili fajlove pojedinačno. Kratak indeks: docs/README.md
 
 Obavezno prvo pročitaj (redosled):
 - docs/handoff-new-chat.md (ovaj fajl — kontekst)
@@ -68,4 +72,14 @@ Tematski fajlovi (payment-states, callback, concurrency, cron, auth/guest, admin
 
 ---
 
-Poslednje ažuriranje ovog fajla: 2026-04-04 (`payment-state-machine.md` kao canonical referenca za payment state machine)
+## 5) Cursor — sporiji odgovori posle dugog četa (opciono)
+
+Duga jedna sesija (mnogo alata, terminal, kontekst) često **poveća potrošnju RAM-a** i odgovori mogu delovati **sporiji**. To **nije kvar**; često se posle **novog chata** ili restarta Cursora oseća **svježije** — normalno za Electron + veliki kontekst.
+
+**Šta ne gubiš:** kod i git istorija su u repou; **šta radiš kao zadatak** treba da stoji u **`docs/project-todo.md`** / **`docs/project-done.md`**, ne u četu.
+
+**Pre prelaska u novi chat:** sačuvaj izmene (commit ili bar jasno stanje na disku), eventualno dopuni TODO jednom rečenicom šta sledi.
+
+---
+
+Poslednje ažuriranje ovog fajla: 2026-05-14 (README u `docs/`, napomena o dugim Cursor sesijama)

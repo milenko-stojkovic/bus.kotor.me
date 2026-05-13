@@ -6,14 +6,15 @@
     <div class="space-y-8" x-data="{
         capEditing: false,
         capOriginal: @js((string) $capacity),
-        emailAddOpen: false,
+        emailAddOpen: @json($errors->has('email')),
+        incidentEmailAddOpen: @json($errors->has('limo_incident_email')),
         deleteOpen: false,
         deleteEmail: '',
         deleteUrl: '',
     }">
         <div>
             <h1 class="text-lg font-semibold text-gray-900">Podešavanja</h1>
-            <p class="text-sm text-gray-600 mt-1">Kapacitet i lista email adresa za izveštaje.</p>
+            <p class="text-sm text-gray-600 mt-1">Kapacitet i liste email adresa za zakazane izvještaje i za obavještenja o Limo incidentima.</p>
         </div>
 
         @if (session('status'))
@@ -94,6 +95,7 @@
                     <p class="text-sm text-gray-600 mt-1">Lista adresa na koje se šalju izveštaji. Dozvoljeno je da lista bude prazna.</p>
                 </div>
                 <button type="button"
+                        id="settings-report-email-add"
                         class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700"
                         @click="emailAddOpen = true">
                     Dodaj email adresu
@@ -119,8 +121,8 @@
                 @endforelse
             </div>
 
-            <div x-show="emailAddOpen" x-cloak class="mt-6 p-4 rounded border border-gray-200 bg-gray-50">
-                <form method="POST" action="{{ route('panel_admin.settings.report-emails.store', [], false) }}" class="flex flex-wrap gap-3 items-end">
+            <div id="settings-report-email-form-panel" class="mt-6 p-4 rounded border border-gray-200 bg-gray-50 @unless($errors->has('email')) hidden @endunless" :class="{ 'hidden': ! emailAddOpen }">
+                <form id="settings-report-email-form" method="POST" action="{{ route('panel_admin.settings.report-emails.store', [], false) }}" class="flex flex-wrap gap-3 items-end">
                     @csrf
                     <div class="min-w-[260px] grow">
                         <x-input-label for="email" value="Nova email adresa" />
@@ -140,8 +142,65 @@
                     </div>
                 </form>
             </div>
+        </section>
 
-            <div x-show="deleteOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none;">
+        <section class="bg-white shadow rounded-lg p-6 border border-gray-100">
+            <div class="flex items-start justify-between gap-4 flex-wrap">
+                <div>
+                    <h2 class="text-base font-semibold text-gray-900">Incident - email adrese</h2>
+                    <p class="text-sm text-gray-600 mt-1">Lista adresa na koje se šalju obavještenja o Limo incidentima. Dozvoljeno je da lista bude prazna.</p>
+                </div>
+                <button type="button"
+                        id="settings-incident-email-add"
+                        class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700"
+                        x-on:click="incidentEmailAddOpen = true">
+                    Dodaj email adresu
+                </button>
+            </div>
+
+            <div class="mt-4 space-y-2">
+                @forelse ($limoIncidentEmails as $re)
+                    <div class="flex items-center justify-between gap-3 p-3 rounded border border-gray-200">
+                        <div class="text-sm text-gray-900">{{ $re->email }}</div>
+                        <button type="button"
+                            class="inline-flex items-center px-3 py-2 border border-red-300 rounded-md text-xs font-semibold text-red-800 uppercase tracking-widest hover:bg-red-50"
+                            @click="
+                                deleteOpen = true;
+                                deleteEmail = @js($re->email);
+                                deleteUrl = @js(route('panel_admin.settings.limo-incident-emails.destroy', $re, false));
+                            ">
+                            Obriši
+                        </button>
+                    </div>
+                @empty
+                    <p class="text-sm text-gray-600">Nema adresa za Limo incidente.</p>
+                @endforelse
+            </div>
+
+            <div id="settings-incident-email-form-panel" class="mt-6 p-4 rounded border border-gray-200 bg-gray-50 @unless($errors->has('limo_incident_email')) hidden @endunless" :class="{ 'hidden': ! incidentEmailAddOpen }">
+                <form id="settings-incident-email-form" method="POST" action="{{ route('panel_admin.settings.limo-incident-emails.store', [], false) }}" class="flex flex-wrap gap-3 items-end">
+                    @csrf
+                    <div class="min-w-[260px] grow">
+                        <x-input-label for="limo_incident_email" value="Nova email adresa" />
+                        <x-text-input id="limo_incident_email" name="limo_incident_email" type="email" class="mt-1 block w-full" :value="old('limo_incident_email')" />
+                        <x-input-error class="mt-2" :messages="$errors->get('limo_incident_email')" />
+                    </div>
+                    <div class="flex gap-2">
+                        <button type="submit"
+                            class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700">
+                            Dodaj
+                        </button>
+                        <button type="button"
+                            class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50"
+                            x-on:click="incidentEmailAddOpen = false;">
+                            Odkaži
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <div x-show="deleteOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
                 <div class="absolute inset-0 bg-black/50" @click="deleteOpen = false"></div>
                 <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6 space-y-4" @click.stop>
                     <h3 class="text-base font-semibold text-gray-900">Potvrda brisanja</h3>
@@ -160,8 +219,7 @@
                         </button>
                     </form>
                 </div>
-            </div>
-        </section>
+        </div>
     </div>
 </x-admin-panel-layout>
 

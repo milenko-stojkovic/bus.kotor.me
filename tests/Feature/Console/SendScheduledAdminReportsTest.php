@@ -270,5 +270,23 @@ class SendScheduledAdminReportsTest extends TestCase
         $this->assertSame(1, $data['transactions']);
         $this->assertSame(20.0, $data['revenue_eur']);
     }
+
+    public function test_k_scheduled_reports_ignore_limo_incident_recipient_rows(): void
+    {
+        $this->setNow('2026-05-02 08:00:00');
+        Config::set('features.advance_payments', true);
+
+        ReportEmail::query()->create(['email' => 'reports-only@example.com', 'purpose' => ReportEmail::PURPOSE_REPORT]);
+        ReportEmail::query()->create(['email' => 'limo-only@example.com', 'purpose' => ReportEmail::PURPOSE_LIMO_INCIDENTS]);
+
+        Mail::fake();
+
+        $this->artisan('reports:send-scheduled daily')->assertExitCode(0);
+
+        Mail::assertSent(ScheduledAdminReportsMail::class, function (ScheduledAdminReportsMail $m): bool {
+            return $m->hasTo('reports-only@example.com');
+        });
+        Mail::assertSent(ScheduledAdminReportsMail::class, 1);
+    }
 }
 
