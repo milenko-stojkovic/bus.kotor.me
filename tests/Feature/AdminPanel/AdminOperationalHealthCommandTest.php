@@ -10,6 +10,7 @@ use App\Models\Reservation;
 use App\Models\VehicleType;
 use App\Models\VehicleTypeTranslation;
 use App\Services\ExternalArchive\MegaDiagnoseService;
+use App\Support\OperationalHeartbeatCache;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -306,5 +307,40 @@ class AdminOperationalHealthCommandTest extends TestCase
         $row = AdminAlert::query()->where('type', 'system_health_daily')->first();
         $this->assertNotNull($row);
         $this->assertStringContainsString('post_fiscalization', $row->message);
+    }
+
+    public function test_operational_heartbeat_cache_after_successful_run(): void
+    {
+        $this->bindMegaDiagnoseRun($this->megaSkip());
+
+        $this->artisan('alerts:system-health')->assertSuccessful();
+
+        $this->assertNotNull(Cache::get(OperationalHeartbeatCache::SYSTEM_HEALTH_LAST_RUN_AT));
+        $this->assertNotNull(Cache::get(OperationalHeartbeatCache::SYSTEM_HEALTH_LAST_OK_AT));
+        $this->assertNotNull(Cache::get(OperationalHeartbeatCache::MEGA_LAST_DIAGNOSE_AT));
+        $this->assertTrue(Cache::get(OperationalHeartbeatCache::MEGA_LAST_DIAGNOSE_OK));
+        $this->assertFalse(Cache::has(OperationalHeartbeatCache::MEGA_LAST_DIAGNOSE_ERROR));
+    }
+
+    public function test_operational_heartbeat_stores_mega_error_when_diagnose_reports_error(): void
+    {
+        $this->bindMegaDiagnoseRun([
+            'ok' => false,
+            'email_present' => true,
+            'password_present' => true,
+            'base_folder' => 'bus.kotor',
+            'login_ok' => false,
+            'folder_found' => false,
+            'node_version' => null,
+            'root_children_sample' => [],
+            'error' => 'MEGA login failed',
+            'node_binary' => 'node',
+            'user_agent' => 'x',
+        ]);
+
+        $this->artisan('alerts:system-health')->assertSuccessful();
+
+        $this->assertFalse(Cache::get(OperationalHeartbeatCache::MEGA_LAST_DIAGNOSE_OK));
+        $this->assertSame('MEGA login failed', Cache::get(OperationalHeartbeatCache::MEGA_LAST_DIAGNOSE_ERROR));
     }
 }

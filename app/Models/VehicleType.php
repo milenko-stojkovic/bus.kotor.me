@@ -8,13 +8,11 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Tip vozila. Polja: id, price (decimal 10,2), created_at, updated_at (ako postoje u tabeli).
+ * Tip vozila. Polja: id, price (decimal 10,2), created_at, updated_at.
  * Relacije: hasMany(Vehicle), hasMany(VehicleTypeTranslation). Price za cenu.
  */
 class VehicleType extends Model
 {
-    public $timestamps = false;
-
     protected $fillable = [
         'price',
     ];

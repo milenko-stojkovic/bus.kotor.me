@@ -7,12 +7,14 @@ use App\Models\ExternalFileArchive;
 use App\Models\PostFiscalizationData;
 use App\Services\AdminPanel\AdminAlertService;
 use App\Services\ExternalArchive\MegaDiagnoseService;
+use App\Support\OperationalHeartbeatCache;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 /**
  * Operational health: production fake config, queue backlog, daily rollup (jobs, archives, MEGA, fiscal retry).
@@ -28,6 +30,12 @@ class AlertsSystemHealthCommand extends Command
 
     public function handle(AdminAlertService $alerts): int
     {
+        Cache::put(
+            OperationalHeartbeatCache::SYSTEM_HEALTH_LAST_RUN_AT,
+            now()->toIso8601String(),
+            OperationalHeartbeatCache::ttl(),
+        );
+
         $assumeProd = (bool) $this->option('assume-production');
         $runProdOnly = app()->environment('production') || $assumeProd;
 
@@ -53,6 +61,28 @@ class AlertsSystemHealthCommand extends Command
         /** @var MegaDiagnoseService $megaDiagnose */
         $megaDiagnose = app(MegaDiagnoseService::class);
         $megaResult = $megaDiagnose->run();
+
+        Cache::put(
+            OperationalHeartbeatCache::MEGA_LAST_DIAGNOSE_AT,
+            now()->toIso8601String(),
+            OperationalHeartbeatCache::ttl(),
+        );
+        Cache::put(
+            OperationalHeartbeatCache::MEGA_LAST_DIAGNOSE_OK,
+            (bool) ($megaResult['ok'] ?? false),
+            OperationalHeartbeatCache::ttl(),
+        );
+        $megaErr = trim((string) ($megaResult['error'] ?? ''));
+        if ($megaErr !== '') {
+            Cache::put(
+                OperationalHeartbeatCache::MEGA_LAST_DIAGNOSE_ERROR,
+                Str::limit($megaErr, 500),
+                OperationalHeartbeatCache::ttl(),
+            );
+        } else {
+            Cache::forget(OperationalHeartbeatCache::MEGA_LAST_DIAGNOSE_ERROR);
+        }
+
         $megaConfigured = ($megaResult['email_present'] ?? false) && ($megaResult['password_present'] ?? false);
         $megaBad = $megaConfigured
             && (! ($megaResult['login_ok'] ?? false)
@@ -105,6 +135,12 @@ class AlertsSystemHealthCommand extends Command
                 ],
             );
         }
+
+        Cache::put(
+            OperationalHeartbeatCache::SYSTEM_HEALTH_LAST_OK_AT,
+            now()->toIso8601String(),
+            OperationalHeartbeatCache::ttl(),
+        );
 
         return self::SUCCESS;
     }

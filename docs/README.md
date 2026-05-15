@@ -25,6 +25,7 @@
 | Agencijski panel | [agency-panel.md](./agency-panel.md) |
 | Šalter / dolasci | [control-panel.md](./control-panel.md) |
 | Zakazani zadaci | [scheduled-tasks-overview.md](./scheduled-tasks-overview.md) |
+| Operativna spremnost, backup, DR | [production-readiness-and-disaster-recovery.md](./production-readiness-and-disaster-recovery.md) |
 | Testovi uz MySQL (opciono) | [testing-mysql.md](./testing-mysql.md) |
 
 ---
@@ -33,4 +34,4 @@
 
 Duga sesija u Cursoru često poveća memoriju i može usporiti odgovore. **Novi chat** je normalan korak; kontekst za zadatak preuzmi iz ovog foldera (`handoff` + TODO/DONE), ne iz starog četa.
 
-**Poslednje ažuriranje:** 2026-05-15
+**Poslednje ažuriranje:** 2026-05-16

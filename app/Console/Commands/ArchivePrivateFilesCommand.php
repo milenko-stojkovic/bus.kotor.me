@@ -11,7 +11,9 @@ use App\Services\ExternalArchive\ArchiveDerivativeUpload;
 use App\Services\ExternalArchive\ExternalFileArchiveService;
 use App\Services\ExternalArchive\MegaDiagnoseService;
 use App\Services\Limo\LimoPlateArchiveDerivativeBuilder;
+use App\Support\OperationalHeartbeatCache;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
@@ -42,6 +44,12 @@ class ArchivePrivateFilesCommand extends Command
             return self::INVALID;
         }
 
+        Cache::put(
+            OperationalHeartbeatCache::ARCHIVE_PRIVATE_LAST_RUN_AT,
+            now()->toIso8601String(),
+            OperationalHeartbeatCache::ttl(),
+        );
+
         $dryRun = (bool) $this->option('dry-run');
         $limit = max(1, (int) $this->option('limit'));
         $requireMegaHealth = (bool) $this->option('require-mega-health');
@@ -59,6 +67,17 @@ class ArchivePrivateFilesCommand extends Command
                     'mega_ok' => $gate['mega']['ok'] ?? null,
                     'mega_configured' => $gate['mega_configured'] ?? null,
                 ]);
+                $this->rememberArchivePrivateHeartbeatOk(
+                    $source,
+                    $limit,
+                    $dryRun,
+                    $requireMegaHealth,
+                    0,
+                    0,
+                    0,
+                    0,
+                    $gate['reason'],
+                );
 
                 return self::SUCCESS;
             }
@@ -249,7 +268,63 @@ class ArchivePrivateFilesCommand extends Command
             'skipped' => $skipped,
         ]);
 
+        $this->rememberArchivePrivateHeartbeatOk(
+            $source,
+            $limit,
+            $dryRun,
+            $requireMegaHealth,
+            $scanned,
+            $archived,
+            $failed,
+            $skipped,
+            null,
+        );
+
         return self::SUCCESS;
+    }
+
+    /**
+     * Cache heartbeat for future operational dashboard (see OperationalHeartbeatCache).
+     *
+     * @param  string|null  $abortedReason  e.g. mega gate reason when no archiving ran
+     */
+    private function rememberArchivePrivateHeartbeatOk(
+        string $source,
+        int $limit,
+        bool $dryRun,
+        bool $requireMegaHealth,
+        int $scanned,
+        int $archived,
+        int $failed,
+        int $skipped,
+        ?string $abortedReason,
+    ): void {
+        Cache::put(
+            OperationalHeartbeatCache::ARCHIVE_PRIVATE_LAST_OK_AT,
+            now()->toIso8601String(),
+            OperationalHeartbeatCache::ttl(),
+        );
+
+        $payload = [
+            'scanned' => $scanned,
+            'archived' => $archived,
+            'failed' => $failed,
+            'skipped' => $skipped,
+            'timestamp' => now()->toIso8601String(),
+            'source' => $source,
+            'limit' => $limit,
+            'dry_run' => $dryRun,
+            'require_mega_health' => $requireMegaHealth,
+        ];
+        if ($abortedReason !== null && $abortedReason !== '') {
+            $payload['aborted'] = $abortedReason;
+        }
+
+        Cache::put(
+            OperationalHeartbeatCache::ARCHIVE_PRIVATE_LAST_SUMMARY,
+            json_encode($payload, JSON_UNESCAPED_UNICODE),
+            OperationalHeartbeatCache::ttl(),
+        );
     }
 
     /**

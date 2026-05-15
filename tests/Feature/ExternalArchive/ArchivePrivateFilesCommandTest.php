@@ -15,10 +15,12 @@ use App\Models\User;
 use App\Models\VehicleType;
 use App\Models\VehicleTypeTranslation;
 use App\Services\ExternalArchive\MegaDiagnoseService;
+use App\Support\OperationalHeartbeatCache;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -59,6 +61,35 @@ class ArchivePrivateFilesCommandTest extends TestCase
         $this->assertSame(0, $fake->uploadCalls);
         $this->assertTrue(Storage::disk('local')->exists($relPath));
         $this->assertSame(0, ExternalFileArchive::query()->count());
+    }
+
+    public function test_operational_heartbeat_cache_after_successful_dry_run(): void
+    {
+        Cache::flush();
+        Storage::fake('local');
+        $fake = new MegaArchiveFakeClient;
+        $this->app->instance(MegaArchiveClient::class, $fake);
+
+        $this->makeFulfilledFzbrWithAttachmentFile();
+
+        Artisan::call('files:archive-private', [
+            '--source' => 'fzbr',
+            '--dry-run' => true,
+            '--limit' => 10,
+        ]);
+
+        $this->assertNotNull(Cache::get(OperationalHeartbeatCache::ARCHIVE_PRIVATE_LAST_RUN_AT));
+        $this->assertNotNull(Cache::get(OperationalHeartbeatCache::ARCHIVE_PRIVATE_LAST_OK_AT));
+        $raw = Cache::get(OperationalHeartbeatCache::ARCHIVE_PRIVATE_LAST_SUMMARY);
+        $this->assertIsString($raw);
+        $summary = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('fzbr', $summary['source']);
+        $this->assertTrue($summary['dry_run']);
+        $this->assertArrayHasKey('scanned', $summary);
+        $this->assertArrayHasKey('archived', $summary);
+        $this->assertArrayHasKey('failed', $summary);
+        $this->assertArrayHasKey('skipped', $summary);
+        $this->assertArrayHasKey('timestamp', $summary);
     }
 
     public function test_command_archives_fzbr_attachment(): void

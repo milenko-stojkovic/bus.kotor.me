@@ -240,12 +240,14 @@ Ovi job-ovi su dodati u `routes/console.php` i smatraju se bezbednim za lokalni 
   - **`queue_worker_down`:** samo za **`database`** queue; prvi „stale“ `jobs` signal **nije** alarm — keš + log; alarm nakon potvrde (v. **`config/queue.php`** `system_health` i **`docs/admin-panel.md`**). **Bez** auto-restarta workera u kodu.
   - Ostalo: u **production** — fake payment/fiscal / `FAKE_PAYMENT_E2E_SYNC`; dnevni rollup (neuspeli poslovi 24h, `external_file_archives.status=failed`, MEGA dijagnostika ako su kredencijali podešeni, nerešeni `post_fiscalization_data` stariji od 2h).
   - Deduplikacija: **`AdminAlertService::createOnce`** (v. **`docs/admin-panel.md`**).
+  - **Heartbeat (cache):** na početku run-a **`system_health:last_run_at`**; nakon normalnog završetka komande **`system_health:last_ok_at`**; nakon `MegaDiagnoseService::run()` — **`mega:last_diagnose_at`**, **`mega:last_diagnose_ok`**, opciono **`mega:last_diagnose_error`** (skraćeno). Klasa **`App\Support\OperationalHeartbeatCache`**, TTL ~30 dana (priprema za budući read-only „Sistem status“).
 - `reservations:expire-pending` — **everyTenMinutes**
 - `parking:sync-days` — **dailyAt('00:05')**
 - `files:archive-private --source=all --limit=50 --require-mega-health` — **everySixHours** (`Europe/Podgorica`), **withoutOverlapping(360)** (mutex do 360 minuta ako se run „zaglavio“)
   - Mala serija: najviše **50** kandidata po kategoriji (FZBR prilozi / Limo plate / Limo pickup foto — v. komanda).
   - **MEGA gate:** ako je `--require-mega-health` i MEGA dijagnostika nije uspješna (`MegaDiagnoseService`, ista `login_ok` / `folder_found` / `ok` ideja kao u `alerts:system-health`), komanda **ne arhivira**; log na `payments`: **`files_archive_private_skipped_mega_unhealthy`**. Ručni ili dry-run pozivi **bez** ovog flag-a ostaju kao prije.
   - Na kraju rada (kad se kandidati obrade): log **`files_archive_private_summary`** na `payments` (ukupno `scanned` / `archived` / `failed` / `skipped`, itd.).
+  - **Heartbeat (cache):** na početku (valjanog `source`) **`archive_private:last_run_at`**; nakon normalnog završetka **`archive_private:last_ok_at`** i JSON string **`archive_private:last_summary`** (`scanned`, `archived`, `failed`, `skipped`, `timestamp`, `source`, `limit`, `dry_run`, `require_mega_health`; ako je run prekinut MEGA gate-om, polje **`aborted`** sa razlogom, brojači 0). Klasa **`App\Support\OperationalHeartbeatCache`**, TTL ~30 dana.
   - **`limo_incidents`** i dalje nisu u obimu `files:archive-private` (TODO u kodu).
 - `temp-data:cleanup` — **daily**
 

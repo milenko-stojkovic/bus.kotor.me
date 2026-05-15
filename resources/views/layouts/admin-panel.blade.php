@@ -21,6 +21,7 @@
                     <span class="text-sm font-semibold text-gray-800">Admin panel</span>
                     <nav class="flex flex-wrap gap-x-2 gap-y-1 text-xs sm:text-sm">
                         <a href="{{ route('panel_admin.dashboard', [], false) }}" class="px-2 py-1 rounded {{ ($navActive ?? '') === 'dashboard' ? 'bg-indigo-100 text-indigo-900 font-medium' : 'text-gray-600 hover:text-gray-900' }}">Upozorenja / Informacije</a>
+                        <a href="{{ route('panel_admin.system-status', [], false) }}" class="px-2 py-1 rounded {{ ($navActive ?? '') === 'system-status' ? 'bg-indigo-100 text-indigo-900 font-medium' : 'text-gray-600 hover:text-gray-900' }}">Sistem status</a>
                         <a href="{{ route('panel_admin.blocking', [], false) }}" class="px-2 py-1 rounded {{ ($navActive ?? '') === 'blocking' ? 'bg-indigo-100 text-indigo-900 font-medium' : 'text-gray-600 hover:text-gray-900' }}">Blokiranje</a>
                         <a href="{{ route('panel_admin.free-reservations', [], false) }}" class="px-2 py-1 rounded {{ ($navActive ?? '') === 'free-reservations' ? 'bg-indigo-100 text-indigo-900 font-medium' : 'text-gray-600 hover:text-gray-900' }}">Besplatne rezervacije</a>
                         <a href="{{ route('panel_admin.reservations', [], false) }}" class="px-2 py-1 rounded {{ ($navActive ?? '') === 'reservations' ? 'bg-indigo-100 text-indigo-900 font-medium' : 'text-gray-600 hover:text-gray-900' }}">Rezervacije</a>

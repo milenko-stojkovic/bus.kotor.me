@@ -368,7 +368,6 @@
             $fzbrDateFrom = $fzbrDateFrom ?? now()->timezone('Europe/Podgorica')->toDateString();
             $fzbrDateTo = $fzbrDateTo ?? now()->timezone('Europe/Podgorica')->toDateString();
             $fzbrReviewRequests = $fzbrReviewRequests ?? collect();
-            $fmtFzbrTs = static fn ($d) => $d ? \Carbon\Carbon::parse($d)->timezone('Europe/Podgorica')->format('d.m.Y H:i') : '—';
             $fzbrStatusLabel = static fn (string $s) => match ($s) {
                 \App\Models\FreeReservationRequest::STATUS_FULFILLED => 'fulfilled',
                 \App\Models\FreeReservationRequest::STATUS_REJECTED => 'rejected',
@@ -432,11 +431,9 @@
                     <thead class="bg-gray-50">
                         <tr>
                             <th class="px-3 py-2 text-left font-semibold text-gray-700">id</th>
-                            <th class="px-3 py-2 text-left font-semibold text-gray-700">created_at</th>
-                            <th class="px-3 py-2 text-left font-semibold text-gray-700">updated_at</th>
                             <th class="px-3 py-2 text-left font-semibold text-gray-700">status</th>
-                            <th class="px-3 py-2 text-left font-semibold text-gray-700">Agencija / ustanova</th>
-                            <th class="px-3 py-2 text-left font-semibold text-gray-700">Email</th>
+                            <th class="px-3 py-2 text-left font-semibold text-gray-700 min-w-[14rem] sm:min-w-[18rem] w-[22%]">Agencija / ustanova</th>
+                            <th class="px-3 py-2 text-left font-semibold text-gray-700 min-w-[14rem] sm:min-w-[20rem] w-[24%]">Email</th>
                             <th class="px-3 py-2 text-left font-semibold text-gray-700">reservation_date</th>
                             <th class="px-3 py-2 text-left font-semibold text-gray-700">Dolazak (slot)</th>
                             <th class="px-3 py-2 text-left font-semibold text-gray-700">Odlazak (slot)</th>
@@ -456,11 +453,11 @@
                             @endphp
                             <tr class="hover:bg-gray-50">
                                 <td class="px-3 py-2 whitespace-nowrap text-gray-900">{{ $r->id }}</td>
-                                <td class="px-3 py-2 whitespace-nowrap text-gray-700">{{ $fmtFzbrTs($r->created_at) }}</td>
-                                <td class="px-3 py-2 whitespace-nowrap text-gray-700">{{ $fmtFzbrTs($r->updated_at) }}</td>
                                 <td class="px-3 py-2 whitespace-nowrap text-gray-900">{{ $fzbrStatusLabel($r->status) }}</td>
-                                <td class="px-3 py-2 text-gray-900">{{ $agencyLine }}</td>
-                                <td class="px-3 py-2 text-gray-700 break-all">{{ $emailLine }}</td>
+                                <td class="px-3 py-2 text-gray-900 min-w-[14rem] sm:min-w-[18rem] align-top">{{ $agencyLine }}</td>
+                                <td class="px-3 py-2 text-gray-700 align-top min-w-[14rem] sm:min-w-[20rem] break-words">
+                                    {{ $emailLine }}
+                                </td>
                                 <td class="px-3 py-2 whitespace-nowrap text-gray-900">{{ $r->reservation_date?->format('Y-m-d') ?? '—' }}</td>
                                 <td class="px-3 py-2 text-gray-800">{{ $dropLabel }}</td>
                                 <td class="px-3 py-2 text-gray-800">{{ $pickLabel }}</td>
@@ -483,7 +480,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="11" class="px-3 py-6 text-center text-gray-500">Nema zahtjeva u izabranom periodu i vrsti pregleda.</td>
+                                <td colspan="9" class="px-3 py-6 text-center text-gray-500">Nema zahtjeva u izabranom periodu i vrsti pregleda.</td>
                             </tr>
                         @endforelse
                     </tbody>

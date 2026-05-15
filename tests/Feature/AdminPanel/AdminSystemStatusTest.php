@@ -1,0 +1,201 @@
+<?php
+
+namespace Tests\Feature\AdminPanel;
+
+use App\Models\Admin;
+use App\Models\ExternalFileArchive;
+use App\Models\User;
+use App\Support\OperationalHeartbeatCache;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Tests\TestCase;
+
+class AdminSystemStatusTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private function makeAdmin(): Admin
+    {
+        return Admin::query()->create([
+            'username' => 'status-admin',
+            'email' => 'status-admin@test.local',
+            'password' => bcrypt('x'),
+            'control_access' => false,
+            'admin_access' => true,
+        ]);
+    }
+
+    public function test_admin_can_open_sistem_status_page(): void
+    {
+        $admin = $this->makeAdmin();
+
+        $this->actingAs($admin, 'panel_admin')
+            ->get(route('panel_admin.system-status', [], false))
+            ->assertOk()
+            ->assertSee('Sistem status', false);
+    }
+
+    public function test_guest_cannot_access_sistem_status(): void
+    {
+        $this->get(route('panel_admin.system-status', [], false))
+            ->assertRedirect(route('panel_admin.login', [], false));
+    }
+
+    public function test_non_panel_admin_user_cannot_access_sistem_status(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('panel_admin.system-status', [], false))
+            ->assertRedirect(route('panel_admin.login', [], false));
+    }
+
+    public function test_page_shows_queue_database_metrics(): void
+    {
+        config(['queue.default' => 'database']);
+
+        $old = now()->subMinutes(10)->timestamp;
+        DB::table('jobs')->insert([
+            'queue' => 'default',
+            'payload' => '{"t":1}',
+            'attempts' => 0,
+            'reserved_at' => null,
+            'available_at' => $old,
+            'created_at' => $old,
+        ]);
+
+        $admin = $this->makeAdmin();
+        $html = $this->actingAs($admin, 'panel_admin')
+            ->get(route('panel_admin.system-status', [], false))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('database', $html);
+        $this->assertStringContainsString('Pending', $html);
+        $this->assertStringContainsString('Stale', $html);
+        $this->assertStringContainsString('1', $html);
+    }
+
+    public function test_page_shows_heartbeat_cache_values(): void
+    {
+        Cache::put(OperationalHeartbeatCache::SYSTEM_HEALTH_LAST_RUN_AT, '2026-05-15T08:00:00+00:00', 600);
+        Cache::put(OperationalHeartbeatCache::SYSTEM_HEALTH_LAST_OK_AT, '2026-05-15T08:01:00+00:00', 600);
+        Cache::put(OperationalHeartbeatCache::MEGA_LAST_DIAGNOSE_AT, '2026-05-15T07:00:00+00:00', 600);
+        Cache::put(OperationalHeartbeatCache::MEGA_LAST_DIAGNOSE_OK, true, 600);
+        Cache::put(OperationalHeartbeatCache::ARCHIVE_PRIVATE_LAST_RUN_AT, '2026-05-15T06:00:00+00:00', 600);
+        Cache::put(OperationalHeartbeatCache::ARCHIVE_PRIVATE_LAST_OK_AT, '2026-05-15T06:05:00+00:00', 600);
+        Cache::put(
+            OperationalHeartbeatCache::ARCHIVE_PRIVATE_LAST_SUMMARY,
+            json_encode([
+                'scanned' => 2,
+                'archived' => 1,
+                'failed' => 0,
+                'skipped' => 1,
+                'source' => 'all',
+                'limit' => 5,
+                'dry_run' => false,
+                'require_mega_health' => false,
+                'timestamp' => '2026-05-15T06:05:00+00:00',
+            ], JSON_UNESCAPED_UNICODE),
+            600,
+        );
+
+        $admin = $this->makeAdmin();
+        $html = $this->actingAs($admin, 'panel_admin')
+            ->get(route('panel_admin.system-status', [], false))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('15.05.2026', $html);
+        $this->assertStringContainsString('Scanned:', $html);
+        $this->assertStringContainsString('Archived:', $html);
+        $this->assertStringContainsString('Dry run:', $html);
+        $this->assertStringContainsString('Require MEGA health:', $html);
+        $this->assertStringContainsString('MEGA', $html);
+    }
+
+    public function test_page_shows_failed_archives_count_and_link(): void
+    {
+        ExternalFileArchive::query()->create([
+            'source_table' => 'free_reservation_request_attachments',
+            'source_id' => 10,
+            'source_column' => 'stored_path',
+            'context_type' => 'fzbr_attachment',
+            'archive_provider' => ExternalFileArchive::PROVIDER_MEGA,
+            'generated_file_name' => 'g1.pdf',
+            'mega_node_id' => null,
+            'mega_path' => null,
+            'original_local_path' => 'a/f1.pdf',
+            'archived_derivative' => false,
+            'derivative_source_path' => null,
+            'derivative_options' => null,
+            'local_deleted_at' => null,
+            'archived_at' => null,
+            'status' => ExternalFileArchive::STATUS_FAILED,
+            'error_message' => 'e1',
+        ]);
+
+        $admin = $this->makeAdmin();
+        $failedUrl = route('panel_admin.archive.failed', [], false);
+
+        $this->actingAs($admin, 'panel_admin')
+            ->get(route('panel_admin.system-status', [], false))
+            ->assertOk()
+            ->assertSee('Neuspjelih u bazi', false)
+            ->assertSee($failedUrl, false);
+    }
+
+    public function test_page_shows_failed_jobs_24h_count(): void
+    {
+        DB::table('failed_jobs')->insert([
+            'uuid' => (string) Str::uuid(),
+            'connection' => 'database',
+            'queue' => 'default',
+            'payload' => '{}',
+            'exception' => 'test',
+            'failed_at' => now()->subHours(3),
+        ]);
+
+        $admin = $this->makeAdmin();
+        $this->actingAs($admin, 'panel_admin')
+            ->get(route('panel_admin.system-status', [], false))
+            ->assertOk()
+            ->assertSee('failed_jobs', false)
+            ->assertSee('1', false);
+    }
+
+    public function test_page_handles_missing_cache_values_gracefully(): void
+    {
+        Cache::flush();
+
+        $admin = $this->makeAdmin();
+        $html = $this->actingAs($admin, 'panel_admin')
+            ->get(route('panel_admin.system-status', [], false))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('nije još provjereno', $html);
+        $this->assertStringContainsString('Nema sačuvanog sažetka u kešu', $html);
+        $this->assertStringContainsString('—', $html);
+    }
+
+    public function test_page_shows_critical_alerts_summary(): void
+    {
+        \App\Models\AdminAlert::query()->create([
+            'type' => 'queue_worker_down',
+            'status' => \App\Models\AdminAlert::STATUS_UNREAD,
+            'title' => 'Kritičan test alert',
+            'message' => 'Opis',
+            'payload_json' => ['dedupe_key' => 'queue_worker_down', 'severity' => 'critical'],
+        ]);
+
+        $admin = $this->makeAdmin();
+        $this->actingAs($admin, 'panel_admin')
+            ->get(route('panel_admin.system-status', [], false))
+            ->assertOk()
+            ->assertSee('Kritičan test alert', false)
+            ->assertSee('Upozorenja / Informacije', false);
+    }
+}

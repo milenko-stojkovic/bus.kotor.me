@@ -1,42 +1,42 @@
 <?php
 
+use App\Http\Controllers\Admin\LateSuccessController;
 use App\Http\Controllers\Admin\LimoController as AdminLimoOverviewController;
 use App\Http\Controllers\Admin\LimoIncidentPhotoPreviewController;
 use App\Http\Controllers\Admin\LimoPickupPlatePhotoPreviewController;
-use App\Http\Controllers\Admin\LateSuccessController;
 use App\Http\Controllers\Admin\ReservationActionController;
 use App\Http\Controllers\Admin\ReservationListController;
+use App\Http\Controllers\AdminPanel\AgencyController as AdminPanelAgencyController;
+use App\Http\Controllers\AdminPanel\AnalyticsController as AdminPanelAnalyticsController;
 use App\Http\Controllers\AdminPanel\AuthController as AdminPanelAuthController;
 use App\Http\Controllers\AdminPanel\BlockingController as AdminPanelBlockingController;
-use App\Http\Controllers\AdminPanel\FzbrAttachmentPreviewController;
+use App\Http\Controllers\AdminPanel\FailedExternalArchiveController;
 use App\Http\Controllers\AdminPanel\FreeReservationController as AdminPanelFreeReservationController;
-use App\Http\Controllers\AdminPanel\AnalyticsController as AdminPanelAnalyticsController;
+use App\Http\Controllers\AdminPanel\FzbrAttachmentPreviewController;
 use App\Http\Controllers\AdminPanel\InsightController as AdminPanelInsightController;
 use App\Http\Controllers\AdminPanel\ReportsController as AdminPanelReportsController;
 use App\Http\Controllers\AdminPanel\ReservationController as AdminPanelReservationController;
 use App\Http\Controllers\AdminPanel\SettingsController as AdminPanelSettingsController;
+use App\Http\Controllers\AdminPanel\SystemStatusController;
 use App\Http\Controllers\AdminPanel\WarningsController as AdminPanelWarningsController;
-use App\Http\Controllers\AdminPanel\AgencyController as AdminPanelAgencyController;
-use App\Http\Controllers\AdminPanel\FailedExternalArchiveController;
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\Control\ControlAuthController;
 use App\Http\Controllers\Control\ControlDashboardController;
-use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\FakeBankCompleteController;
-use App\Http\Controllers\FreeReservationRequestController;
 use App\Http\Controllers\GuestReservationController;
 use App\Http\Controllers\LandingController;
+use App\Http\Controllers\Limo\LimoEntryController;
+use App\Http\Controllers\Limo\LimoIncidentController;
+use App\Http\Controllers\Limo\LimoPickupController;
+use App\Http\Controllers\Limo\LimoPlatePickupController;
 use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\Panel\LimoController;
 use App\Http\Controllers\PanelController;
 use App\Http\Controllers\PaymentResultController;
 use App\Http\Controllers\PaymentReturnController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReservationStatusController;
 use App\Http\Controllers\UserReservationController;
-use App\Http\Controllers\Panel\LimoController;
-use App\Http\Controllers\Limo\LimoEntryController;
-use App\Http\Controllers\Limo\LimoIncidentController;
-use App\Http\Controllers\Limo\LimoPickupController;
-use App\Http\Controllers\Limo\LimoPlatePickupController;
 use App\Http\Controllers\VehicleController;
 use Illuminate\Support\Facades\Route;
 
@@ -48,6 +48,7 @@ Route::prefix('admin')->name('panel_admin.')->group(function () {
     Route::middleware(['auth:panel_admin', 'admin.panel'])->group(function () {
         Route::post('logout', [AdminPanelAuthController::class, 'destroy'])->name('logout');
         Route::get('/', [AdminPanelWarningsController::class, 'index'])->name('dashboard');
+        Route::get('sistem-status', SystemStatusController::class)->name('system-status');
         Route::post('alerts/{alert}/transition', [AdminPanelWarningsController::class, 'transition'])->name('alerts.transition');
 
         Route::get('blokiranje', [AdminPanelBlockingController::class, 'index'])->name('blocking');

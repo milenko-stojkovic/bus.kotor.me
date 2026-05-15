@@ -6,7 +6,7 @@ Specifikacija admin funkcionalnosti. Modeli: Reservation, TempData, DailyParking
 
 | Šta | URL prefiks | Auth | Namena |
 |-----|-------------|------|--------|
-| **Glavni admin panel** | `/admin` | Guard **`panel_admin`**, tabela **`admins`**, kolona **`admin_access=1`** (i **`control_access=0`**) | Dashboard **Upozorenja / Informacije** (`admin_alerts`, pregled nedostupnosti i blokada), navigacija (Blokiranje, Besplatne rezervacije, …). Login: **`GET /admin/login`**. |
+| **Glavni admin panel** | `/admin` | Guard **`panel_admin`**, tabela **`admins`**, kolona **`admin_access=1`** (i **`control_access=0`**) | Dashboard **Upozorenja / Informacije** (`admin_alerts`, pregled nedostupnosti i blokada), navigacija (**Sistem status**, Blokiranje, Besplatne rezervacije, …). Login: **`GET /admin/login`**. |
 | **Staff operativa** (rezervacije, late-success) | `/staff` | **`User`** + **`AdminMiddleware`** (uloga admin ili email u `admins`) | `ReservationListController`, `LateSuccessController` — v. `routes/web.php` imena **`staff.*`**. |
 
 **Control panel** (šalter / dolasci): guard **`control`**, **`/control`** — v. **[control-panel.md](./control-panel.md)**. **`admin_access`** i **`control_access`** su međusobno isključivi; isti red u `admins` nikad ne drži oba = 1 (v. migracija + `Admin::booted`).
@@ -25,6 +25,16 @@ Specifikacija admin funkcionalnosti. Modeli: Reservation, TempData, DailyParking
 - **`queue_worker_down`** — kritično: samo kad **`QUEUE_CONNECTION=database`**, postoji **`jobs`** tabela, te **pending** poslovi (nerezervovani) čije je **`available_at`** starije od praga (default **5 min**). **Ne** na prvu provjeru: prvi put se samo upiše cache marker (`system_health:queue_stale:first_seen`) i log `payments` **`system_health_queue_stale_first_seen`**; `admin_alert` nastaje tek ako je isti „stale“ i dalje prisutan nakon prozora potvrde (default **2 min**) i nema otvorenog istog alerta (**`createOnce`**). Poruka navodi queue connection, broj/ starost, vrijeme prvog zapažanja, napomenu o **dvostrukoj** detekciji i da se **worker ne restartuje automatski** (v1). Podešavanja: **`config/queue.php`** → **`system_health`** (`SYSTEM_HEALTH_QUEUE_STALE_*`; default **TTL markera ~25 h** da preživi do sljedećeg dnevnog `alerts:system-health`). Za **`sync`** / ostale drivere — provjera se preskače (marker se briše).
 - **`system_config_fake_production`** — samo u **`production`** (ili ručno `--assume-production` u testu): fake bank/fiskal ili `payment.fake_e2e_sync`.
 - **`system_health_daily`** — najviše **jedan** zapis dnevno (dedupe `system_health_daily:YYYY-MM-DD`, datum **`Europe/Podgorica`**): skraćen pregled neuspelih jobova (24h), neuspelih MEGA arhiva, MEGA dijagnostike (ako su kredencijali podešeni), i „zaglaveljene“ **`post_fiscalization_data`** (>2h, ako tabela postoji). Komanda: **`alerts:system-health`**, scheduler **07:30** Podgorica — v. **`cron-commands.md`** / **`scheduled-tasks-overview.md`**. **MEGA privremene mrežne greške** pri uploadu / admin preview restore **ne** prave `admin_alerts` same po sebi (v. **`external-file-archive.md`** — retry u servisu); rollup i dalje može brojati redove u **`failed`** kad konačno ostanu neuspješni.
+
+- **Operativni heartbeat (cache):** **`alerts:system-health`** i **`files:archive-private`** upisuju u **Laravel Cache** metapodatke za budući read-only „Sistem status“ (bez nove DB šeme). Ključevi i TTL (~30 dana): **`App\Support\OperationalHeartbeatCache`** i **`docs/cron-commands.md`**.
+
+### Sistem status — `GET /admin/sistem-status` (`panel_admin.system-status`)
+
+- **Namjena:** jednostavan **read-only** pregled operativnog stanja (metrike iz baze + heartbeat keš). **Bez** akcija, restarta workera, retry-a ili novih tabela.
+- **Middleware / kontroler:** `auth:panel_admin` + `admin.panel`; **`App\Http\Controllers\AdminPanel\SystemStatusController`**, servis **`App\Services\AdminPanel\AdminSystemStatusService`**.
+- **Podaci:** queue (driver; za `database` — pending, stale po istim pragovima kao `alerts:system-health`, starost najstarijeg, marker `system_health:queue_stale:first_seen` ako postoji); MEGA (`mega:last_diagnose_*` iz keša, ili tekst *nije još provjereno*); privatna arhiva (heartbeat + broj `failed` u `external_file_archives`, link na neuspjele); fiskalizacija (nerešeni `post_fiscalization_data` stariji od 2h); `failed_jobs` (24h); otvoreni kritični `admin_alerts` (naslov, vrijeme, link na Upozorenja); `system_health:last_*` heartbeat.
+- **Navigacija:** stavka **Sistem status** u layoutu admin panela.
+- **Testovi:** `tests/Feature/AdminPanel/AdminSystemStatusTest.php`.
 
 ### Dashboard `GET /admin` (`panel_admin.dashboard`)
 
