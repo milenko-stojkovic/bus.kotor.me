@@ -6,7 +6,7 @@
         $ui = fn (string $key) => \App\Support\UiText::t('reservation', $key);
     @endphp
 
-    <div class="space-y-6 max-w-3xl">
+    <div class="space-y-6 max-w-7xl">
         <div class="space-y-1">
             <h1 class="text-lg font-semibold text-gray-900">Besplatna rezervacija</h1>
             <p class="text-sm text-gray-600">Kreiranje besplatne rezervacije za gosta (bez plaćanja). Sva polja i pravila termina kao na javnoj formi; jezik interfejsa i potvrde: crnogorski.</p>
@@ -361,6 +361,134 @@
                     Trenutno nema aktivnih zahtjeva.
                 </div>
             @endforelse
+        </div>
+
+        @php
+            $fzbrReview = $fzbrReview ?? 'approved';
+            $fzbrDateFrom = $fzbrDateFrom ?? now()->timezone('Europe/Podgorica')->toDateString();
+            $fzbrDateTo = $fzbrDateTo ?? now()->timezone('Europe/Podgorica')->toDateString();
+            $fzbrReviewRequests = $fzbrReviewRequests ?? collect();
+            $fmtFzbrTs = static fn ($d) => $d ? \Carbon\Carbon::parse($d)->timezone('Europe/Podgorica')->format('d.m.Y H:i') : '—';
+            $fzbrStatusLabel = static fn (string $s) => match ($s) {
+                \App\Models\FreeReservationRequest::STATUS_FULFILLED => 'fulfilled',
+                \App\Models\FreeReservationRequest::STATUS_REJECTED => 'rejected',
+                default => $s,
+            };
+        @endphp
+
+        <div class="border-t border-gray-200 pt-8 mt-8 space-y-4">
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900">Pregled besplatnih rezervacija po FZBR</h2>
+                <p class="text-sm text-gray-600 mt-1">Zahtjevi u terminalnom statusu; filtar po <code class="text-xs bg-gray-100 px-1 rounded">updated_at</code> (Europe/Podgorica). Dokumenti: lokalno ili privremeni restore sa MEGA (bez javnog linka).</p>
+            </div>
+
+            @if ($errors->has('fzbr_date_from') || $errors->has('fzbr_date_to'))
+                <div class="rounded-md bg-red-50 p-4 text-sm text-red-800 space-y-1">
+                    @foreach (['fzbr_date_from', 'fzbr_date_to'] as $f)
+                        @foreach ($errors->get($f) as $err)
+                            <div>{{ $err }}</div>
+                        @endforeach
+                    @endforeach
+                </div>
+            @endif
+
+            <form method="get" action="{{ route('panel_admin.free-reservations', [], false) }}" class="bg-white shadow rounded-lg p-5 border border-gray-100 space-y-4">
+                <fieldset class="space-y-2">
+                    <legend class="text-sm font-medium text-gray-700">Vrsta pregleda</legend>
+                    <div class="flex flex-wrap gap-4 text-sm">
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="fzbr_review" value="approved" @checked(old('fzbr_review', $fzbrReview) === 'approved') class="rounded-full border-gray-300 text-indigo-600 shadow-sm" />
+                            <span>Odobreni</span>
+                        </label>
+                        <label class="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="fzbr_review" value="rejected" @checked(old('fzbr_review', $fzbrReview) === 'rejected') class="rounded-full border-gray-300 text-indigo-600 shadow-sm" />
+                            <span>Odbijeni</span>
+                        </label>
+                    </div>
+                </fieldset>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                    <div>
+                        <x-input-label for="fzbr_date_from" value="Datum od" />
+                        <input type="date" id="fzbr_date_from" name="fzbr_date_from"
+                               value="{{ old('fzbr_date_from', $fzbrDateFrom) }}"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" />
+                    </div>
+                    <div>
+                        <x-input-label for="fzbr_date_to" value="Datum do" />
+                        <input type="date" id="fzbr_date_to" name="fzbr_date_to"
+                               value="{{ old('fzbr_date_to', $fzbrDateTo) }}"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" />
+                    </div>
+                    <div class="flex gap-2 justify-start md:justify-end">
+                        <button type="submit" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700">
+                            FILTRIRAJ
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <div class="bg-white shadow rounded-lg border border-gray-100 overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-3 py-2 text-left font-semibold text-gray-700">id</th>
+                            <th class="px-3 py-2 text-left font-semibold text-gray-700">created_at</th>
+                            <th class="px-3 py-2 text-left font-semibold text-gray-700">updated_at</th>
+                            <th class="px-3 py-2 text-left font-semibold text-gray-700">status</th>
+                            <th class="px-3 py-2 text-left font-semibold text-gray-700">Agencija / ustanova</th>
+                            <th class="px-3 py-2 text-left font-semibold text-gray-700">Email</th>
+                            <th class="px-3 py-2 text-left font-semibold text-gray-700">reservation_date</th>
+                            <th class="px-3 py-2 text-left font-semibold text-gray-700">Dolazak (slot)</th>
+                            <th class="px-3 py-2 text-left font-semibold text-gray-700">Odlazak (slot)</th>
+                            <th class="px-3 py-2 text-left font-semibold text-gray-700">Tablice (vozila)</th>
+                            <th class="px-3 py-2 text-left font-semibold text-gray-700">Prilozi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        @forelse ($fzbrReviewRequests as $r)
+                            @php
+                                $firstSeg = $r->segments->first();
+                                $dropLabel = $firstSeg?->dropOffTimeSlot?->time_slot ?? $r->dropOffTimeSlot?->time_slot ?? '—';
+                                $pickLabel = $firstSeg?->pickUpTimeSlot?->time_slot ?? $r->pickUpTimeSlot?->time_slot ?? '—';
+                                $plates = $r->segments->flatMap(fn ($s) => $s->vehicles->pluck('license_plate'))->filter()->unique()->implode(', ');
+                                $agencyLine = $r->user?->name ? ($r->user->name.' / '.$r->institution_name) : $r->institution_name;
+                                $emailLine = $r->user?->email ? ($r->user->email.' / '.$r->institution_email) : $r->institution_email;
+                            @endphp
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-3 py-2 whitespace-nowrap text-gray-900">{{ $r->id }}</td>
+                                <td class="px-3 py-2 whitespace-nowrap text-gray-700">{{ $fmtFzbrTs($r->created_at) }}</td>
+                                <td class="px-3 py-2 whitespace-nowrap text-gray-700">{{ $fmtFzbrTs($r->updated_at) }}</td>
+                                <td class="px-3 py-2 whitespace-nowrap text-gray-900">{{ $fzbrStatusLabel($r->status) }}</td>
+                                <td class="px-3 py-2 text-gray-900">{{ $agencyLine }}</td>
+                                <td class="px-3 py-2 text-gray-700 break-all">{{ $emailLine }}</td>
+                                <td class="px-3 py-2 whitespace-nowrap text-gray-900">{{ $r->reservation_date?->format('Y-m-d') ?? '—' }}</td>
+                                <td class="px-3 py-2 text-gray-800">{{ $dropLabel }}</td>
+                                <td class="px-3 py-2 text-gray-800">{{ $pickLabel }}</td>
+                                <td class="px-3 py-2 text-gray-800">{{ $plates !== '' ? $plates : '—' }}</td>
+                                <td class="px-3 py-2 whitespace-nowrap">
+                                    @forelse ($r->attachments as $att)
+                                        <div class="mb-1">
+                                            <a href="{{ route('panel_admin.fzbr-attachments.preview', ['freeReservationRequestAttachment' => $att->id], false) }}"
+                                               target="_blank" rel="noopener noreferrer"
+                                               class="text-indigo-600 hover:text-indigo-800 underline text-xs"
+                                               title="{{ $att->original_name }}">
+                                                Dokument
+                                                <span class="text-gray-500">({{ $att->mime_type ?: 'fajl' }})</span>
+                                            </a>
+                                        </div>
+                                    @empty
+                                        <span class="text-gray-400">—</span>
+                                    @endforelse
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="11" class="px-3 py-6 text-center text-gray-500">Nema zahtjeva u izabranom periodu i vrsti pregleda.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 

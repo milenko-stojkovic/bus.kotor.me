@@ -17,9 +17,14 @@ final class ArchiveFilenameGenerator
         int|string $sourceId,
         ?string $sourceColumn,
         string $relativeLocalPath,
+        ?string $extensionOverride = null,
     ): string {
-        $ext = strtolower((string) pathinfo($relativeLocalPath, PATHINFO_EXTENSION));
-        $ext = preg_replace('/[^a-z0-9]+/', '', $ext) ?: 'bin';
+        if ($extensionOverride !== null && $extensionOverride !== '') {
+            $ext = preg_replace('/[^a-z0-9]+/', '', strtolower($extensionOverride)) ?: 'bin';
+        } else {
+            $ext = strtolower((string) pathinfo($relativeLocalPath, PATHINFO_EXTENSION));
+            $ext = preg_replace('/[^a-z0-9]+/', '', $ext) ?: 'bin';
+        }
 
         $ctx = self::safeSegment($contextType ?? 'file', 80);
         $tbl = self::safeSegment($sourceTable, 80);

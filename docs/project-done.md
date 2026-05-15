@@ -1,12 +1,20 @@
 # Project DONE (urađeno)
 
-**Poslednje ažuriranje:** 2026-05-14  
+**Poslednje ažuriranje:** 2026-05-15  
 
 Hronološki najnovije na vrhu unutar svake sekcije. Pri zatvaranju zadatka dodaj red sa **datumom** (`YYYY-MM-DD`) i kratak opis; istu stavku ukloni iz `docs/project-todo.md`.
 
 ---
 
 ## 2026-04 — Agency panel, besplatan checkout, dokumentacija
+
+- **2026-05-15** — **MEGA arhiva — derivat Limo tablice, dijagnostika, User-Agent:** `LimoPlateArchiveDerivativeBuilder` + kolone `archived_derivative` / `derivative_*` na `external_file_archives`; `files:archive-private` za `limo_plate_uploads` uploaduje JPEG derivat (OCR/upload netaknuti); `MEGA_USER_AGENT` u `config/services.php` i `scripts/mega-archive.js`; komanda **`files:mega-diagnose`**; logovi `original_bytes` / `archive_bytes` / `reduction_percent`. Testovi: `LimoPlateArchiveDerivativeTest`, `MegaDiagnoseCommandTest`, `LimoPlateArchiveDerivativeBuilderTest`. Dokumentacija: **`external-file-archive.md`**, **`limo-service.md`**, **`project-conventions.md`**.
+
+- **2026-05-13** — **Admin FZBR pregled + preview priloga (MEGA):** na dnu **`GET /admin/besplatne-rezervacije`** sekcija **„Pregled besplatnih rezervacija po FZBR”** (`fzbr_review=approved|rejected`, datumi `fzbr_date_from`/`fzbr_date_to` na `updated_at`); ruta **`GET /admin/besplatne-rezervacije/fzbr/attachments/{attachment}/preview`**; `FzbrAttachmentPreviewPath`, `ServeFzbrAttachmentFile`, postojeći nested preview koristi isti servis. Testovi: `FzbrAdminReviewAndAttachmentPreviewTest`. Dokumentacija: **`admin-panel.md`**, **`agency-panel.md`**, **`external-file-archive.md`**.
+
+- **2026-05-13** — **Admin Limo — segment „Limo događaji” + incident lista i preview slika:** navigacija i naslov **`GET /admin/limo`**; GET **`type=pickup|incident`** (radio); incidenti iz **`limo_incidents`** u istom datumu po **`occurred_at`**; rute **`GET /admin/limo/incidents/{limoIncident}/plate-photo-preview`** i **`…/branding-photo-preview`** (`LimoIncidentPhotoPreviewController`, **`LimoIncidentEvidencePreviewPath`**); MEGA privremeni restore isti kao pickup; **`files:cleanup-preview-cache`** važi i za incident putanje kad su redovi arhive u preview stanju. Testovi: `LimoAdminIndexTest`, `LimoIncidentPhotoPreviewTest`, `CleanupPreviewArchiveCacheTest`. Dokumentacija: **`admin-panel.md`**, **`limo-service.md`**, **`external-file-archive.md`**.
+
+- **2026-05-15** — **Admin Limo — pregled slike tablice (MEGA preview):** migracija `preview_restored_at` / `preview_expires_at` na `external_file_archives`, `config/external_archive.php`, `ExternalFileArchiveService::restoreFromMegaForPreview` + `ensureLocalPreviewForSource`, ruta **`GET /admin/limo/pickups/{event}/plate-photo-preview`**, `LimoPickupPlatePhotoPreviewController`, UI kolona na **`GET /admin/limo`**, komanda **`files:cleanup-preview-cache`** (scheduler **00:15** Podgorica). Testovi: `LimoPlatePhotoPreviewTest`, `CleanupPreviewArchiveCacheTest`. Dokumentacija: **`external-file-archive.md`**, **`limo-service.md`**, **`admin-panel.md`**.
 
 - **2026-05-14** — **MEGA restore (megajs download):** `scripts/mega-archive.js` — download koristi **Readable** iz `file.download({})` i `pipe` u lokalni fajl (raniji callback je dobijao **Buffer**, ne stream). Fallback pretrage po **`generated_file_name`** u baznom folderu; PHP (`MegaArchiveService` / `restoreFromMega`) šalje to polje u JSON payload. Test: `ExternalFileArchiveTest::test_restore_passes_generated_file_name_to_client`. **`docs/external-file-archive.md`**.
 - **2026-05-14** — **MEGA eksterna arhiva privatnih fajlova:** migracija `external_file_archives`, model `ExternalFileArchive`, `MegaArchiveService` + `ExternalFileArchiveService`, Node `scripts/mega-archive.js` (`megajs`), Artisan `files:archive-private` / `files:restore-private`, testovi u `tests/Feature/ExternalArchive/`, fake `Tests\Support\MegaArchiveFakeClient`. Dokumentacija: **`docs/external-file-archive.md`**, ažurirani **`project-conventions.md`** (§2.2), **`limo-service.md`**, **`agency-panel.md`**.

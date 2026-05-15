@@ -37,4 +37,21 @@ class LimoPlateUpload extends Model
     {
         return $this->belongsTo(Admin::class, 'uploaded_by_limo_admin_id');
     }
+
+    /**
+     * @return array{left:int,top:int,width:int,height:int}|null
+     */
+    public function plateCropBasisPoints(): ?array
+    {
+        if ($this->plate_crop_width_bp === null || $this->plate_crop_height_bp === null) {
+            return null;
+        }
+
+        return [
+            'left' => (int) $this->plate_crop_left_bp,
+            'top' => (int) $this->plate_crop_top_bp,
+            'width' => (int) $this->plate_crop_width_bp,
+            'height' => (int) $this->plate_crop_height_bp,
+        ];
+    }
 }

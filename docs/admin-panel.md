@@ -40,15 +40,17 @@ Kontroler: **`WarningsController::index`**. Stranica ima tri bloka: **Upozorenja
 
 **Testovi:** `tests/Feature/AdminPanel/AdminWarningsDashboardTest.php`, `tests/Unit/DaySlotRangeSummaryBuilderTest.php`.
 
-### Limo pickup događaji (read-only) — `GET /admin/limo` (`admin.limo.index`)
+### Limo događaji (read-only) — `GET /admin/limo` (`admin.limo.index`)
 
 - **Middleware:** `auth:panel_admin` + `admin.panel` (kao ostali moduli glavnog admin panela; **nije** `limo.access` — pristup imaju samo `admins` sa `admin_access=1`, ne i „samo Limo” nalozi).
 - **Kontroler:** `App\Http\Controllers\Admin\LimoController::index`; pogled `resources/views/admin/limo/index.blade.php`.
-- **Izvor:** isključivo **`limo_pickup_events`** (bez rezervacija iz `reservations`).
-- **Filter:** GET parametri **`date_from`** / **`date_to`** (opcioni); podrazumijevano oba = **današnji dan** u **`Europe/Podgorica`**; zatvoren interval **`[from, to]`** po koloni **`occurred_at`**; redosled **`occurred_at DESC`**.
-- **Pregled:** agencija (snapshot), tablica, iznos, izvor (QR / tablica), status fiskalizacije, JIR kad postoji.
-- **Namjerno nije uključeno:** izmjene, brisanje, retry fiskala, ponovno slanje emaila, incidenti, export.
-- **Testovi:** `tests/Feature/Admin/LimoAdminIndexTest.php`.
+- **Vrsta pregleda (GET `type`):** **`pickup`** (podrazumijevano) ili **`incident`**. Radio dugmad u filter formi; ostaju **`date_from`** / **`date_to`** (zatvoren interval **`[from, to]`** po **`occurred_at`**, **`Europe/Podgorica`**).
+- **Pickup (`type=pickup`):** isključivo **`limo_pickup_events`** (bez rezervacija iz `reservations`); redosled **`occurred_at DESC`**; agencija (snapshot), tablica, iznos, izvor (QR / tablica), status fiskalizacije, JIR kad postoji.
+- **Incident (`type=incident`):** lista **`limo_incidents`** u istom datumu po **`occurred_at`**; kolone u tabeli prate polja modela (npr. `license_plate_snapshot`, `visible_agency_name`, `agency_name_snapshot`, `note`, `recorded_by_limo_admin_id`, GPS, linkovi na slike).
+- **Slika tablice (pickup, samo izvor „tablica”):** link **„Slika tablice”** otvara **`GET /admin/limo/pickups/{limoPickupEvent}/plate-photo-preview`** (`admin.limo.pickups.plate-photo-preview`) — `LimoPickupPlatePhotoPreviewController`; servira fajl sa privatnog diska samo ako putanja počinje sa **`limo_pickup_evidence/`** (potvrda tablice) ili **`limo_pickup_photos/`** (legacy); ako je fajl arhiviran na MEGA i obrisan lokalno, **privremeno** se ponovo preuzima (bez trajnog `local_deleted_at = null`); detalji u **[external-file-archive.md](./external-file-archive.md)**.
+- **Slike incidenta:** **`GET /admin/limo/incidents/{limoIncident}/plate-photo-preview`** i **`GET /admin/limo/incidents/{limoIncident}/branding-photo-preview`** (`LimoIncidentPhotoPreviewController`) — dozvoljene su samo relativne putanje ispod **`limo_incidents/`**; isti princip MEGA privremenog restore-a i **`files:cleanup-preview-cache`** kao za pickup (vidi **`external_file_archives`**: `source_table=limo_incidents`, `source_column` = `plate_photo_path` / `branding_photo_path`).
+- **Namjerno nije uključeno:** izmjene, brisanje, retry fiskala, ponovno slanje emaila, export.
+- **Testovi:** `tests/Feature/Admin/LimoAdminIndexTest.php`, `tests/Feature/Admin/LimoPlatePhotoPreviewTest.php`, `tests/Feature/Admin/LimoIncidentPhotoPreviewTest.php`.
 
 ---
 
@@ -73,6 +75,7 @@ Kontroler: **`WarningsController::index`**. Stranica ima tri bloka: **Upozorenja
 |------|--------|
 | `GET /admin/besplatne-rezervacije` | `panel_admin.free-reservations` — forma (korak kao gost + polja za snapshot). |
 | `POST /admin/besplatne-rezervacije` | `panel_admin.free-reservations.store` — kreiranje. |
+| `GET /admin/besplatne-rezervacije/fzbr/attachments/{attachment}/preview` | `panel_admin.fzbr-attachments.preview` — pregled priloga za **fulfilled/rejected** FZBR (lokalno ili MEGA preview). |
 
 - **Kontroler:** `App\Http\Controllers\AdminPanel\FreeReservationController`; **validacija:** `AdminFreeReservationRequest`.
 - **Pristigli FZBR zahtjevi:** na dnu iste strane prikazuje se lista aktivnih zahtjeva iz **agency panela** (`/panel/fzbr`):
@@ -80,8 +83,9 @@ Kontroler: **`WarningsController::index`**. Stranica ima tri bloka: **Upozorenja
   - prikazuju se samo statusi: **`submitted`**, **`updated`** (ne prikazuje `fulfilled`/`rejected`)
   - sortiranje: `created_at DESC`
   - eager loading (bez N+1): `with(['segments.dropOffTimeSlot','segments.pickUpTimeSlot','segments.vehicles.vehicleType.translations','attachments'])`
-  - **Dokumenta (private/local storage):** prilozi su u `free_reservation_request_attachments` i prikazuju se kao lista sa linkom za **preview** (admin-only ruta streamuje fajl inline).
-  - **Retention:** posle **fulfill** / **reject** zahtjev se **ne briše**. Samo se setuje status (`fulfilled`/`rejected`) i uklanja se upozorenje (pointer).
+  - **Dokumenta (private/local storage):** prilozi su u `free_reservation_request_attachments` i prikazuju se kao lista sa linkom za **preview** (admin-only ruta streamuje fajl inline); ista logika **`ExternalFileArchiveService::ensureLocalPreviewForSource`** kao ispod kad je fajl arhiviran na MEGA (`stored_path` ispod **`free-reservation-requests/`**, vidi `FzbrAttachmentPreviewPath`).
+- **Pregled besplatnih rezervacija po FZBR (terminalni statusi):** ispod aktivne liste; GET parametri **`fzbr_review`**: **`approved`** (mapira na `status=fulfilled`, podrazumijevano) ili **`rejected`** (`status=rejected`); **`fzbr_date_from`** / **`fzbr_date_to`** — zatvoren interval po **`updated_at`** (Europe/Podgorica). Tabela: `id`, `created_at`, `updated_at`, `status`, agencija/ustanova (`user` + `institution_*`), email, `reservation_date`, slotovi (iz prvog segmenta ili legacy kolona), tablice vozila, linkovi **„Dokument”** na **`GET /admin/besplatne-rezervacije/fzbr/attachments/{freeReservationRequestAttachment}/preview`** (`panel_admin.fzbr-attachments.preview`) — samo za zahtjeve **`fulfilled`/`rejected`**; privremeni MEGA restore + TTL čišćenje kao u **[external-file-archive.md](./external-file-archive.md)**.
+- **Retention:** posle **fulfill** / **reject** zahtjev se **ne briše**. Samo se setuje status (`fulfilled`/`rejected`) i uklanja se upozorenje (pointer).
 - **Podaci stranice / slotovi:** `ReservationBookingPageData::forAdminPanel()` — isti `buildSlotPayload` / `FreeReservationRules` kao gost; UI jezik fiksno **cg** (`App::setLocale('cg')` u kontroleru).
 - **Bez `temp_data`:** `App\Services\AdminPanel\FreeReservation\AdminDirectFreeReservationService` u transakciji zaključava `daily_parking_data` po `whereDate` + `time_slot_id`, proverava `!is_blocked` i `availableCapacity() >= 1`, kreira `Reservation` (`status=free`, `created_by_admin=true`, `user_id=null`, `preferred_locale=cg`, `invoice_amount` preko `ReservationInvoiceAmount`), **increment `reserved`** po jedinstvenom slotu (isti ID jednom), zatim `SendFreeReservationConfirmationJob`.
 - **Worklist:** `BlockZoneWorklistService::onReservationCreated($reservation, null)` ako postoji red po istom `merchant_transaction_id` (retko za novi UUID).

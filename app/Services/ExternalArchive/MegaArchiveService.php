@@ -43,6 +43,10 @@ final class MegaArchiveService implements MegaArchiveClient
 
         $nodeBinary = trim((string) config('services.mega.node_binary', ''));
         $binary = $nodeBinary !== '' ? $nodeBinary : 'node';
+        $userAgent = trim((string) config('services.mega.user_agent', 'BusKotorArchive/1.0'));
+        if ($userAgent === '') {
+            $userAgent = 'BusKotorArchive/1.0';
+        }
 
         $script = base_path('scripts/mega-archive.js');
         if (! is_file($script)) {
@@ -56,6 +60,7 @@ final class MegaArchiveService implements MegaArchiveClient
                     'MEGA_EMAIL' => $email,
                     'MEGA_PASSWORD' => $password,
                     'MEGA_BASE_FOLDER' => (string) config('services.mega.base_folder', 'bus.kotor'),
+                    'MEGA_USER_AGENT' => $userAgent,
                 ])
                 ->input(json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES))
                 ->run([$binary, $script, $action]);

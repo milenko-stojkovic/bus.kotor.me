@@ -57,5 +57,10 @@ class FreeReservationRequest extends Model
     {
         return $this->belongsTo(ListOfTimeSlot::class, 'pick_up_time_slot_id');
     }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
 }
 

@@ -81,8 +81,8 @@ Preporučeni oblik (naslovi ili bold oznake moraju biti eksplicitni):
 
 ### 2.2 MEGA arhiva privatnih fajlova
 
-- Konfiguracija: `config/services.php` (`services.mega`), tajne samo u **`.env`** (`MEGA_EMAIL`, `MEGA_PASSWORD`, opciono `MEGA_BASE_FOLDER`, `MEGA_NODE_BINARY`). **Ne** slati kredencijale u frontend ili logove sa sadržajem fajla.
-- Operativni opis: **[external-file-archive.md](./external-file-archive.md)** (tabela `external_file_archives`, komande `files:archive-private`, `files:restore-private`, Node `scripts/mega-archive.js`).
+- Konfiguracija: `config/services.php` (`services.mega`), tajne samo u **`.env`** (`MEGA_EMAIL`, `MEGA_PASSWORD`, opciono `MEGA_BASE_FOLDER`, `MEGA_NODE_BINARY`, `MEGA_USER_AGENT` default `BusKotorArchive/1.0`, `EXTERNAL_ARCHIVE_PREVIEW_TTL_MINUTES`). **Ne** slati kredencijale u frontend ili logove sa sadržajem fajla.
+- Operativni opis: **[external-file-archive.md](./external-file-archive.md)** (tabela `external_file_archives`, komande `files:archive-private`, `files:restore-private`, **`files:mega-diagnose`**, **`files:cleanup-preview-cache`**, Node `scripts/mega-archive.js`). Limo **plate upload** arhiva koristi JPEG derivat (`LimoPlateArchiveDerivativeBuilder`, GD).
 
 - **Limo servis:** `features.limo_service` (ENV `LIMO_SERVICE_ENABLED`) i **mora** imati i `features.advance_payments` ON. Effective rule: \(advance\_payments \land limo\_service\).
 

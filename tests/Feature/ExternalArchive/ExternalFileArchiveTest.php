@@ -9,6 +9,7 @@ use App\Services\ExternalArchive\ExternalFileArchiveService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Tests\Support\MegaArchiveFakeClient;
 use Tests\TestCase;
 
@@ -157,5 +158,35 @@ class ExternalFileArchiveTest extends TestCase
         $row->refresh();
         $this->assertSame($row->generated_file_name, $fake->lastDownloadGeneratedFileName);
         $this->assertTrue(Storage::disk('local')->exists($path));
+    }
+
+    public function test_ensure_local_preview_returns_null_when_mega_download_fails(): void
+    {
+        Storage::fake('local');
+        $fake = new MegaArchiveFakeClient;
+        $fake->downloadShouldFail = true;
+        $this->app->instance(MegaArchiveClient::class, $fake);
+
+        $path = 'limo_pickup_evidence/99/preview-fail.jpg';
+        ExternalFileArchive::query()->create([
+            'source_table' => 'limo_pickup_photos',
+            'source_id' => 99,
+            'source_column' => 'path',
+            'context_type' => 'limo_pickup_photo',
+            'archive_provider' => ExternalFileArchive::PROVIDER_MEGA,
+            'generated_file_name' => 'g__limo_99__path__'.Str::uuid()->toString().'.jpg',
+            'mega_node_id' => 'n',
+            'mega_path' => 'bus.kotor/x.jpg',
+            'original_local_path' => $path,
+            'local_deleted_at' => now()->subDay(),
+            'archived_at' => now()->subDay(),
+            'status' => ExternalFileArchive::STATUS_UPLOADED,
+            'error_message' => null,
+        ]);
+
+        $svc = $this->app->make(ExternalFileArchiveService::class);
+        $this->assertNull($svc->ensureLocalPreviewForSource('limo_pickup_photos', 99, 'path', $path));
+        $this->assertFalse(Storage::disk('local')->exists($path));
+        $this->assertSame(1, $fake->downloadCalls);
     }
 }

@@ -1,6 +1,6 @@
 # Limo service
 
-**Poslednje ažuriranje:** 2026-05-14
+**Poslednje ažuriranje:** 2026-05-13
 
 **Povezano:** [project-todo.md](./project-todo.md) (preostali Limo TODO), [project-done.md](./project-done.md) (urađeno), [agency-panel.md](./agency-panel.md) (agencijski `/panel/limo`).
 
@@ -49,14 +49,15 @@ Ovaj dokument opisuje **trenutno implementirano stanje** u kodu i **preostale pl
   - `PaidInvoicePdfGenerator::renderLimoBinary` — isti Blade `pdf/paid-invoice`, grana sa `isLimoService` (limo detalji umesto slotova rezervacije); generisanje uz **`app()->setLocale('cg')`** (zvanični izlaz računa).
   - ponašanje PDF-a za **obične rezervacije** (`renderBinary(Reservation, …)`) ostaje nepromijenjeno
 - **Cleanup privremenih Limo podataka:** Artisan **`limo:cleanup-temporary-data`** — dnevno **00:10** (`Europe/Podgorica`, `routes/console.php`): briše **`limo_qr_tokens`** gdje je **`valid_on` &lt; danas** (Podgorica) i istekle nekonzumirane **`limo_plate_uploads`** (`expires_at` &lt; sada, `consumed_at` NULL) uz brisanje privremenih fajlova; **TTL** podfoldere ispod **`limo_ocr_debug/`** (konfiguracija `LIMO_OCR_DEBUG_IMAGE_TTL_MINUTES`); **ne** briše `limo_pickup_events`, `limo_pickup_photos`, **`limo_pickup_evidence/`**, **`limo_incidents`** (dugotrajna evidencija); logovi `limo_qr_tokens_cleaned`, `limo_plate_uploads_cleaned`, `limo_ocr_debug_ttl_purge_ran`
-- **MEGA arhiva privatnih fajlova (server-side):** nakon što su tablice u stabilnom stanju (npr. `limo_plate_uploads` sa `consumed_at`, `limo_pickup_photos` kad je na događaju poslat račun emailom), mogu se arhivirati na MEGA i obrisati lokalno — vidi **[external-file-archive.md](./external-file-archive.md)** i komandu **`files:archive-private --source=limo`**. **`limo_incidents`** u prvoj iteraciji komande nisu obuhvaćeni.
+- **MEGA arhiva privatnih fajlova (server-side):** nakon što su tablice u stabilnom stanju (npr. `limo_plate_uploads` sa `consumed_at`, `limo_pickup_photos` kad je na događaju poslat račun emailom), mogu se arhivirati na MEGA i obrisati lokalno — vidi **[external-file-archive.md](./external-file-archive.md)** i komandu **`files:archive-private --source=limo`**. Za **`limo_plate_uploads`** na MEGA ide **optimizovani JPEG derivat** (korisnički izrez + margina ako postoji `plate_crop_*_bp`; inače cijela slika; max 1600 px, Q80) — **ne** mijenja OCR niti original tok uploada. **`limo_incidents`** u prvoj iteraciji komande nisu obuhvaćeni.
+- **Admin pregled Limo događaja (pickup + incidenti):** na **`GET /admin/limo`** parametar **`type=pickup`** (podrazumijevano) ili **`type=incident`**; za pickup sa **`source=plate`** link **„Slika tablice”** otvara server-side preview (uključujući privremeni re-download sa MEGA ako je lokalni fajl obrisan poslije arhive); za incidente linkovi **„Slika tablice”** / **„Slika brendinga”** vode na **`/admin/limo/incidents/{id}/…-photo-preview`** (isti MEGA preview princip, dozvoljen prefiks **`limo_incidents/`**); vidi **[admin-panel.md](./admin-panel.md)** i **`external-file-archive.md`**.
 - **Incident flow (minimalno):** `POST /limo/incident` (`limo.incident.store`) — samo **`limo_access`** evidententeri; **obavezna fotografija tablice** (bez nje nema incidenta); opciona fotografija brendinga; tipovi u bazi (`qr_insufficient_funds`, `plate_insufficient_funds`, `unregistered_vehicle_with_branding`, `invalid_qr_token`, `driver_non_cooperative`); snimanje na **private `local`** (`limo_incidents/{uuid}/…`); kolona **`report_emails.purpose`** je ENUM **`report` \| `limo_incidents`**; email sa servera: primaoci iz **`report_emails`** gdje je **`purpose = limo_incidents`** (sve navedene adrese); ako je ta lista **prazna**, podrazumijevani primalac ostaje **`komunalna.policija@kotor.me`** (log na kanalu **`payments`**: `limo_incident_communal_email_using_fallback_recipient`). **`ReportEmailsSeeder`** idempotentno dodaje **`komunalna.policija@kotor.me`** sa **`purpose=limo_incidents`**. Isti mailable **`LimoCommunalPoliceIncidentMail`** (prilozi: tablica ± brending). **`admin_alerts`** tip `limo_incident`; log kanal **`payments`**: `limo_incident_created`, `limo_incident_communal_email_recipients_from_settings` (kad su adrese iz baze), `limo_incident_communal_email_sent` / `_failed`, `limo_incident_admin_alert_created`. **Sistem ne izriče sankcije**, ne dira avans, fiskal, rezervacije niti kreira `limo_pickup_events`. Ako email ne pošalje, red u `limo_incidents` ostaje, `communal_email_sent_at` ostaje `NULL`, alert i dalje nastaje. UI na **`GET /limo`**: sekcija „Prijavi incident”. **Ne prijavljivati** incident za neregistrovano vozilo bez vidljivog brendinga agencije (uputstvo u UI). Nakon obavještenja, odluka je **ručna** (admin / Komunalna policija). Konfiguracija primalaca incidenta: **`GET /admin/podesavanja`** → sekcija **Incident – email adrese**. Testovi: `tests/Feature/Limo/LimoIncidentFlowTest.php`.
 
 ### Još nije / TODO
 
 - (OCR je **advisory** prijedlog; manualna potvrda ostaje obavezna. Dalje TODO: dodatni jezici, eventualno OpenCV pretprocesiranje ako bude potrebno.)
 - **Incident workflow** — šire od minimalnog: statusi (reported/closed), administrativno rešavanje, integracije; trenutno je samo evidencija + obavještenje
-- ~~**Admin analitika** — uključivanje Limo prihoda~~ → **urađeno:** Admin **Analitika** (`/admin/analitika`) ima poseban blok **Limo servis** i KPI za prihod (rezervacije vs Limo vs ukupno); detaljan read-only pregled događaja ostaje **`GET /admin/limo`** (`admin.limo.index`).
+- ~~**Admin analitika** — uključivanje Limo prihoda~~ → **urađeno:** Admin **Analitika** (`/admin/analitika`) ima poseban blok **Limo servis** i KPI za prihod (rezervacije vs Limo vs ukupno); detaljan read-only pregled događaja i incidenta ostaje **`GET /admin/limo`** (`admin.limo.index`, `type=pickup|incident`).
 - **Offline sync**
 - **PWA polish** (instalabilni shell, napredniji UX) — po potrebi nakon terenskog testa
 - **Native Android** — odluka nakon terenskog testa PWA-e
@@ -163,7 +164,7 @@ Kada vozač nema QR, evidenter već fotografiše tablicu kroz tok **`POST /limo/
 
 ## Evidence / audit
 
-Za plate fallback, fotografije su na **`local`** disku (privatno), putanja u `limo_pickup_photos.path`. Za incidente, fotografije su u **`limo_incidents/{incident_uuid}/`** na istom disku (`plate_photo_path`, opciono `branding_photo_path`).
+Za plate fallback, nakon potvrde tablice fotografija dokaza je u **`limo_pickup_evidence/{event_id}/`** na **`local`** disku; red u tabeli **`limo_pickup_photos`** drži relativnu putanju u koloni `path`. Za incidente, fotografije su u **`limo_incidents/{incident_uuid}/`** na istom disku (`plate_photo_path`, opciono `branding_photo_path`).
 
 ---
 

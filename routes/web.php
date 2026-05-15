@@ -1,11 +1,14 @@
 <?php
 
 use App\Http\Controllers\Admin\LimoController as AdminLimoOverviewController;
+use App\Http\Controllers\Admin\LimoIncidentPhotoPreviewController;
+use App\Http\Controllers\Admin\LimoPickupPlatePhotoPreviewController;
 use App\Http\Controllers\Admin\LateSuccessController;
 use App\Http\Controllers\Admin\ReservationActionController;
 use App\Http\Controllers\Admin\ReservationListController;
 use App\Http\Controllers\AdminPanel\AuthController as AdminPanelAuthController;
 use App\Http\Controllers\AdminPanel\BlockingController as AdminPanelBlockingController;
+use App\Http\Controllers\AdminPanel\FzbrAttachmentPreviewController;
 use App\Http\Controllers\AdminPanel\FreeReservationController as AdminPanelFreeReservationController;
 use App\Http\Controllers\AdminPanel\AnalyticsController as AdminPanelAnalyticsController;
 use App\Http\Controllers\AdminPanel\InsightController as AdminPanelInsightController;
@@ -55,6 +58,8 @@ Route::prefix('admin')->name('panel_admin.')->group(function () {
 
         Route::get('besplatne-rezervacije', [AdminPanelFreeReservationController::class, 'create'])->name('free-reservations');
         Route::post('besplatne-rezervacije', [AdminPanelFreeReservationController::class, 'store'])->name('free-reservations.store');
+        Route::get('besplatne-rezervacije/fzbr/attachments/{freeReservationRequestAttachment}/preview', FzbrAttachmentPreviewController::class)
+            ->name('fzbr-attachments.preview');
         Route::post('besplatne-rezervacije/zahtjevi/{freeReservationRequest}/fulfill', [AdminPanelFreeReservationController::class, 'fulfillRequest'])->name('free-reservation-requests.fulfill');
         Route::put('besplatne-rezervacije/zahtjevi/{freeReservationRequest}', [AdminPanelFreeReservationController::class, 'updateRequest'])->name('free-reservation-requests.update');
         Route::delete('besplatne-rezervacije/zahtjevi/{freeReservationRequest}', [AdminPanelFreeReservationController::class, 'rejectRequest'])->name('free-reservation-requests.reject');
@@ -97,6 +102,18 @@ Route::prefix('admin')->name('panel_admin.')->group(function () {
 Route::middleware(['auth:panel_admin', 'admin.panel'])
     ->get('admin/limo', [AdminLimoOverviewController::class, 'index'])
     ->name('admin.limo.index');
+
+Route::middleware(['auth:panel_admin', 'admin.panel'])
+    ->get('admin/limo/pickups/{limoPickupEvent}/plate-photo-preview', LimoPickupPlatePhotoPreviewController::class)
+    ->name('admin.limo.pickups.plate-photo-preview');
+
+Route::middleware(['auth:panel_admin', 'admin.panel'])
+    ->get('admin/limo/incidents/{limoIncident}/plate-photo-preview', [LimoIncidentPhotoPreviewController::class, 'plate'])
+    ->name('admin.limo.incidents.plate-photo-preview');
+
+Route::middleware(['auth:panel_admin', 'admin.panel'])
+    ->get('admin/limo/incidents/{limoIncident}/branding-photo-preview', [LimoIncidentPhotoPreviewController::class, 'branding'])
+    ->name('admin.limo.incidents.branding-photo-preview');
 
 Route::middleware(['auth:panel_admin', 'limo.feature', 'limo.access'])->prefix('limo')->group(function () {
     Route::get('/', [LimoEntryController::class, 'entry'])->name('limo.entry');

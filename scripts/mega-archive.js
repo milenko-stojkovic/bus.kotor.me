@@ -1,12 +1,19 @@
 /**
  * Server-side MEGA helper for Bus Kotor (upload/download under one base folder).
- * Credentials: MEGA_EMAIL, MEGA_PASSWORD, MEGA_BASE_FOLDER (env).
+ * Credentials: MEGA_EMAIL, MEGA_PASSWORD, MEGA_BASE_FOLDER, MEGA_USER_AGENT (env).
  * stdin: JSON payload. stdout: single-line JSON result.
  */
 import { createReadStream, createWriteStream, existsSync, mkdirSync } from 'fs';
 import { statSync } from 'fs';
 import { dirname } from 'path';
 import { Storage } from 'megajs';
+
+const DEFAULT_MEGA_USER_AGENT = 'BusKotorArchive/1.0';
+
+function megaUserAgent() {
+    const v = (process.env.MEGA_USER_AGENT || '').trim();
+    return v !== '' ? v : DEFAULT_MEGA_USER_AGENT;
+}
 
 function readStdin() {
     return new Promise((resolve) => {
@@ -29,7 +36,7 @@ async function getStorage() {
     if (!email || !password) {
         throw new Error('MEGA_EMAIL and MEGA_PASSWORD are required');
     }
-    const storage = await new Storage({ email, password }).ready;
+    const storage = await new Storage({ email, password, userAgent: megaUserAgent() }).ready;
     return storage;
 }
 
@@ -69,6 +76,68 @@ async function upload(payload) {
         mega_node_id: nodeId != null ? String(nodeId) : null,
         mega_path: megaPath,
     };
+}
+
+async function diagnose() {
+    const emailPresent = Boolean((process.env.MEGA_EMAIL || '').trim());
+    const passwordPresent = Boolean((process.env.MEGA_PASSWORD || '').trim());
+    const baseFolder = process.env.MEGA_BASE_FOLDER || 'bus.kotor';
+    const userAgent = megaUserAgent();
+    const rootChildrenSample = [];
+
+    if (!emailPresent || !passwordPresent) {
+        return {
+            ok: false,
+            email_present: emailPresent,
+            password_present: passwordPresent,
+            base_folder: baseFolder,
+            user_agent: userAgent,
+            node_version: process.version,
+            login_ok: false,
+            folder_found: false,
+            root_children_sample: [],
+            error: 'MEGA_EMAIL or MEGA_PASSWORD missing in environment',
+        };
+    }
+
+    try {
+        const storage = await getStorage();
+        const children = storage.root.children || [];
+        for (let i = 0; i < children.length && rootChildrenSample.length < 10; i++) {
+            const c = children[i];
+            const tag = c.directory ? `dir:${c.name}` : `file:${c.name}`;
+            rootChildrenSample.push(tag);
+        }
+        const folder = children.find((c) => c.directory && c.name === baseFolder);
+        const folderFound = Boolean(folder);
+        return {
+            ok: folderFound,
+            email_present: true,
+            password_present: true,
+            base_folder: baseFolder,
+            user_agent: userAgent,
+            node_version: process.version,
+            login_ok: true,
+            folder_found: folderFound,
+            root_children_sample: rootChildrenSample,
+            error: folderFound
+                ? ''
+                : `Base folder "${baseFolder}" not found under MEGA root (not created during diagnose).`,
+        };
+    } catch (e) {
+        return {
+            ok: false,
+            email_present: true,
+            password_present: true,
+            base_folder: baseFolder,
+            user_agent: userAgent,
+            node_version: process.version,
+            login_ok: false,
+            folder_found: false,
+            root_children_sample: rootChildrenSample,
+            error: e && e.message ? String(e.message) : 'login failed',
+        };
+    }
 }
 
 async function download(payload) {
@@ -127,6 +196,8 @@ async function main() {
             out = await upload(payload);
         } else if (action === 'download') {
             out = await download(payload);
+        } else if (action === 'diagnose') {
+            out = await diagnose();
         } else {
             out = { ok: false, error: 'unknown action: ' + String(action) };
         }

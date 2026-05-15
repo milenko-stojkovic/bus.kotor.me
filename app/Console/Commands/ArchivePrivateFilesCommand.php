@@ -7,7 +7,9 @@ use App\Models\FreeReservationRequest;
 use App\Models\FreeReservationRequestAttachment;
 use App\Models\LimoPickupPhoto;
 use App\Models\LimoPlateUpload;
+use App\Services\ExternalArchive\ArchiveDerivativeUpload;
 use App\Services\ExternalArchive\ExternalFileArchiveService;
+use App\Services\Limo\LimoPlateArchiveDerivativeBuilder;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
@@ -26,7 +28,10 @@ class ArchivePrivateFilesCommand extends Command
 
     protected $description = 'Archive eligible private files to MEGA (server-side only)';
 
-    public function handle(ExternalFileArchiveService $archiveService): int
+    public function handle(
+        ExternalFileArchiveService $archiveService,
+        LimoPlateArchiveDerivativeBuilder $plateDerivativeBuilder,
+    ): int
     {
         $source = strtolower(trim((string) $this->option('source')));
         if (! in_array($source, ['all', 'fzbr', 'limo'], true)) {
@@ -86,14 +91,14 @@ class ArchivePrivateFilesCommand extends Command
                     continue;
                 }
                 try {
-                    $archiveService->archiveLocalPrivateFile(
+                    $row = $archiveService->archiveLocalPrivateFile(
                         $fzbrTable,
                         (int) $att->id,
                         $col,
                         $path,
                         'fzbr_attachment',
                     );
-                    $archived++;
+                    $this->recordArchiveServiceResult($row, 'FZBR attachment '.$att->id, $archived, $failed);
                 } catch (Throwable $e) {
                     $failed++;
                     $this->error('FZBR attachment '.$att->id.': '.$e->getMessage());
@@ -131,14 +136,28 @@ class ArchivePrivateFilesCommand extends Command
                     continue;
                 }
                 try {
-                    $archiveService->archiveLocalPrivateFile(
+                    $derivativeUpload = $this->buildLimoPlateDerivativeUpload(
+                        $plateDerivativeBuilder,
+                        $disk->path($path),
+                        $path,
+                        $row->plateCropBasisPoints(),
+                    );
+                    if ($derivativeUpload === null) {
+                        $failed++;
+                        $this->error('limo_plate_uploads '.$row->id.': failed to build archive derivative image');
+
+                        continue;
+                    }
+
+                    $archiveRow = $archiveService->archiveLocalPrivateFile(
                         $plateTable,
                         (int) $row->id,
                         $col,
                         $path,
                         'limo_plate_upload',
+                        $derivativeUpload,
                     );
-                    $archived++;
+                    $this->recordArchiveServiceResult($archiveRow, 'limo_plate_uploads '.$row->id, $archived, $failed);
                 } catch (Throwable $e) {
                     $failed++;
                     $this->error('limo_plate_uploads '.$row->id.': '.$e->getMessage());
@@ -176,14 +195,14 @@ class ArchivePrivateFilesCommand extends Command
                     continue;
                 }
                 try {
-                    $archiveService->archiveLocalPrivateFile(
+                    $archiveRow = $archiveService->archiveLocalPrivateFile(
                         $pickupPhotoTable,
                         (int) $photo->id,
                         $col,
                         $path,
                         'limo_pickup_photo',
                     );
-                    $archived++;
+                    $this->recordArchiveServiceResult($archiveRow, 'limo_pickup_photos '.$photo->id, $archived, $failed);
                 } catch (Throwable $e) {
                     $failed++;
                     $this->error('limo_pickup_photos '.$photo->id.': '.$e->getMessage());
@@ -201,6 +220,30 @@ class ArchivePrivateFilesCommand extends Command
         return self::SUCCESS;
     }
 
+    /**
+     * @param  array{left:int,top:int,width:int,height:int}|null  $cropBasisPoints
+     */
+    private function buildLimoPlateDerivativeUpload(
+        LimoPlateArchiveDerivativeBuilder $builder,
+        string $absoluteOriginalPath,
+        string $relativeOriginalPath,
+        ?array $cropBasisPoints,
+    ): ?ArchiveDerivativeUpload {
+        $built = $builder->buildForArchive($absoluteOriginalPath, $cropBasisPoints);
+        if ($built === null) {
+            return null;
+        }
+
+        return new ArchiveDerivativeUpload(
+            uploadAbsolutePath: $built->absolutePath,
+            derivativeSourcePath: $relativeOriginalPath,
+            derivativeOptions: $built->options,
+            originalBytes: $built->originalBytes,
+            archiveBytes: $built->archiveBytes,
+            generatedExtension: 'jpg',
+        );
+    }
+
     private function hasUploadedArchive(string $sourceTable, int $sourceId, string $sourceColumn): bool
     {
         return ExternalFileArchive::query()
@@ -209,5 +252,27 @@ class ArchivePrivateFilesCommand extends Command
             ->where('source_column', $sourceColumn)
             ->where('status', ExternalFileArchive::STATUS_UPLOADED)
             ->exists();
+    }
+
+    /**
+     * Tally Archived / Failed from {@see ExternalFileArchiveService::archiveLocalPrivateFile} return value.
+     * Upload failures update the row to {@see ExternalFileArchive::STATUS_FAILED} without throwing.
+     */
+    private function recordArchiveServiceResult(ExternalFileArchive $row, string $errorPrefix, int &$archived, int &$failed): void
+    {
+        if ($row->status === ExternalFileArchive::STATUS_UPLOADED) {
+            $archived++;
+
+            return;
+        }
+
+        $failed++;
+        if ($row->status === ExternalFileArchive::STATUS_FAILED) {
+            $this->error($errorPrefix.': '.(string) ($row->error_message ?? 'failed'));
+
+            return;
+        }
+
+        $this->error($errorPrefix.': unexpected archive status '.(string) $row->status);
     }
 }

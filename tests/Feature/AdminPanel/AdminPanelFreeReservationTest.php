@@ -229,6 +229,12 @@ class AdminPanelFreeReservationTest extends TestCase
             'status' => FreeReservationRequest::STATUS_REJECTED,
         ]);
 
+        // Terminal requests appear in the FZBR review table when updated_at falls in the filter window;
+        // keep them outside the default "today" review range so this test still targets only the active queue.
+        \Illuminate\Support\Facades\DB::table('free_reservation_requests')->whereIn('id', [$fulfilled->id, $rejected->id])->update([
+            'updated_at' => Carbon::now()->subDays(120),
+        ]);
+
         $html = $this->get(route('panel_admin.free-reservations', [], false))->assertOk()->getContent();
 
         // Shows only active statuses

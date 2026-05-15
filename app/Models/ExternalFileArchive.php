@@ -24,7 +24,12 @@ class ExternalFileArchive extends Model
         'mega_node_id',
         'mega_path',
         'original_local_path',
+        'archived_derivative',
+        'derivative_source_path',
+        'derivative_options',
         'local_deleted_at',
+        'preview_restored_at',
+        'preview_expires_at',
         'archived_at',
         'status',
         'error_message',
@@ -33,8 +38,12 @@ class ExternalFileArchive extends Model
     protected function casts(): array
     {
         return [
+            'archived_derivative' => 'boolean',
+            'derivative_options' => 'array',
             'archived_at' => 'datetime',
             'local_deleted_at' => 'datetime',
+            'preview_restored_at' => 'datetime',
+            'preview_expires_at' => 'datetime',
         ];
     }
 }

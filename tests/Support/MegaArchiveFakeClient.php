@@ -13,6 +13,10 @@ final class MegaArchiveFakeClient implements MegaArchiveClient
 
     public ?string $lastDownloadGeneratedFileName = null;
 
+    public ?string $lastUploadAbsolutePath = null;
+
+    public ?int $lastUploadedBytes = null;
+
     public bool $uploadShouldFail = false;
 
     public bool $downloadShouldFail = false;
@@ -20,6 +24,8 @@ final class MegaArchiveFakeClient implements MegaArchiveClient
     public function uploadLocalFile(string $absoluteLocalPath, string $generatedFileName): MegaUploadResult
     {
         $this->uploadCalls++;
+        $this->lastUploadAbsolutePath = $absoluteLocalPath;
+        $this->lastUploadedBytes = is_file($absoluteLocalPath) ? (int) filesize($absoluteLocalPath) : null;
         if ($this->uploadShouldFail) {
             return new MegaUploadResult(false, null, null, 'fake_upload_failed');
         }

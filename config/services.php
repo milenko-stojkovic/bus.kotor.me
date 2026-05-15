@@ -77,6 +77,7 @@ return [
         'password' => env('MEGA_PASSWORD'),
         'base_folder' => env('MEGA_BASE_FOLDER', 'bus.kotor'),
         'node_binary' => env('MEGA_NODE_BINARY'),
+        'user_agent' => env('MEGA_USER_AGENT', 'BusKotorArchive/1.0'),
     ],
 
 ];

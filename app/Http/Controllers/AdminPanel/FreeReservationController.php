@@ -11,23 +11,82 @@ use App\Http\Requests\AdminPanel\AdminFreeReservationRequestUpdateRequest;
 use App\Models\AdminAlert;
 use App\Models\FreeReservationRequest;
 use App\Models\FreeReservationRequestAttachment;
+use App\Services\AdminPanel\FreeReservation\AdminDirectFreeReservationService;
 use App\Services\AdminPanel\FreeReservation\FreeReservationRequestAvailability;
 use App\Services\AdminPanel\FreeReservation\FreeReservationRequestFulfillmentService;
-use App\Services\AdminPanel\FreeReservation\AdminDirectFreeReservationService;
+use App\Services\AdminPanel\FreeReservation\ServeFzbrAttachmentFile;
+use App\Services\ExternalArchive\ExternalFileArchiveService;
 use App\Services\Reservation\ReservationBookingPageData;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class FreeReservationController extends Controller
 {
-    public function create(Request $request, ReservationBookingPageData $pageData): View
+    private const TZ = 'Europe/Podgorica';
+
+    public function create(Request $request, ReservationBookingPageData $pageData): View|RedirectResponse
     {
         App::setLocale('cg');
+
+        $today = Carbon::now(self::TZ)->toDateString();
+        $fzbrReview = $request->query('fzbr_review', 'approved');
+        if (! in_array($fzbrReview, ['approved', 'rejected'], true)) {
+            $fzbrReview = 'approved';
+        }
+        $fzbrDateFrom = $request->query('fzbr_date_from', $today);
+        $fzbrDateTo = $request->query('fzbr_date_to', $today);
+
+        $fzbrValidator = Validator::make(
+            [
+                'fzbr_date_from' => $fzbrDateFrom,
+                'fzbr_date_to' => $fzbrDateTo,
+            ],
+            [
+                'fzbr_date_from' => ['required', 'date'],
+                'fzbr_date_to' => ['required', 'date', 'after_or_equal:fzbr_date_from'],
+            ]
+        );
+
+        if ($fzbrValidator->fails()) {
+            return redirect()
+                ->route('panel_admin.free-reservations', array_filter([
+                    'fzbr_review' => $fzbrReview,
+                    'fzbr_date_from' => $fzbrDateFrom,
+                    'fzbr_date_to' => $fzbrDateTo,
+                ], static fn ($v) => $v !== null && $v !== ''), false)
+                ->withErrors($fzbrValidator)
+                ->withInput();
+        }
+
+        /** @var array{fzbr_date_from: string, fzbr_date_to: string} $fzbrDates */
+        $fzbrDates = $fzbrValidator->validated();
+        $fzbrFrom = Carbon::parse($fzbrDates['fzbr_date_from'], self::TZ)->startOfDay();
+        $fzbrTo = Carbon::parse($fzbrDates['fzbr_date_to'], self::TZ)->endOfDay();
+
+        $status = $fzbrReview === 'approved'
+            ? FreeReservationRequest::STATUS_FULFILLED
+            : FreeReservationRequest::STATUS_REJECTED;
+
+        $fzbrReviewRequests = FreeReservationRequest::query()
+            ->where('status', $status)
+            ->whereBetween('updated_at', [$fzbrFrom, $fzbrTo])
+            ->with([
+                'attachments',
+                'dropOffTimeSlot',
+                'pickUpTimeSlot',
+                'segments.dropOffTimeSlot',
+                'segments.pickUpTimeSlot',
+                'segments.vehicles',
+                'user',
+            ])
+            ->orderByDesc('updated_at')
+            ->get();
 
         $requests = FreeReservationRequest::query()
             ->whereIn('status', [
@@ -59,6 +118,10 @@ class FreeReservationController extends Controller
                 'navActive' => 'free-reservations',
                 'pageTitle' => 'Besplatne rezervacije',
                 'freeReservationRequests' => $requests,
+                'fzbrReview' => $fzbrReview,
+                'fzbrDateFrom' => $fzbrDates['fzbr_date_from'],
+                'fzbrDateTo' => $fzbrDates['fzbr_date_to'],
+                'fzbrReviewRequests' => $fzbrReviewRequests,
             ]
         ));
     }
@@ -198,9 +261,10 @@ class FreeReservationController extends Controller
     }
 
     public function previewAttachment(
-        Request $request,
         FreeReservationRequest $freeReservationRequest,
         FreeReservationRequestAttachment $attachment,
+        ExternalFileArchiveService $archiveService,
+        ServeFzbrAttachmentFile $serve,
     ): BinaryFileResponse {
         if ((int) $attachment->request_id !== (int) $freeReservationRequest->id) {
             abort(404);
@@ -216,18 +280,6 @@ class FreeReservationController extends Controller
                 'status' => AdminAlert::STATUS_IN_PROGRESS,
             ]);
 
-        $path = (string) $attachment->stored_path;
-        if ($path === '' || ! Storage::disk('local')->exists($path)) {
-            abort(404);
-        }
-
-        $absolute = Storage::disk('local')->path($path);
-        $mime = is_string($attachment->mime_type) && $attachment->mime_type !== '' ? $attachment->mime_type : null;
-
-        return response()->file($absolute, [
-            'Content-Type' => $mime,
-            'Content-Disposition' => 'inline; filename="'.addslashes((string) $attachment->original_name).'"',
-            'X-Content-Type-Options' => 'nosniff',
-        ]);
+        return $serve->respond($attachment, $archiveService);
     }
 }

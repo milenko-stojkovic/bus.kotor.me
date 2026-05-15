@@ -81,6 +81,9 @@ Schedule::command('parking:sync-days')->dailyAt('00:05');
 Schedule::command('limo:cleanup-temporary-data')
     ->dailyAt('00:10')
     ->timezone('Europe/Podgorica');
+Schedule::command('files:cleanup-preview-cache')
+    ->dailyAt('00:15')
+    ->timezone('Europe/Podgorica');
 Schedule::command('temp-data:cleanup')->daily();
 
 // Scheduled admin PDF report emails (SAFE: reads data + sends email)

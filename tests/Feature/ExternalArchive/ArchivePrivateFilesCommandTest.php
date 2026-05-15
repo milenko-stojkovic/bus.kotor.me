@@ -3,16 +3,22 @@
 namespace Tests\Feature\ExternalArchive;
 
 use App\Contracts\MegaArchiveClient;
+use App\Models\Admin;
 use App\Models\ExternalFileArchive;
 use App\Models\FreeReservationRequest;
 use App\Models\FreeReservationRequestAttachment;
+use App\Models\LimoPickupEvent;
+use App\Models\LimoPickupPhoto;
+use App\Models\LimoPlateUpload;
 use App\Models\ListOfTimeSlot;
+use App\Models\User;
 use App\Models\VehicleType;
 use App\Models\VehicleTypeTranslation;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Tests\Support\MegaArchiveFakeClient;
 use Tests\TestCase;
 
@@ -105,6 +111,103 @@ class ArchivePrivateFilesCommandTest extends TestCase
 
         $this->assertSame(0, $fake->uploadCalls);
         $this->assertTrue(Storage::disk('local')->exists($relPath));
+    }
+
+    public function test_all_source_reports_failed_not_archived_when_mega_upload_fails_and_skips_other_categories(): void
+    {
+        Storage::fake('local');
+        $fake = new MegaArchiveFakeClient;
+        $fake->uploadShouldFail = true;
+        $this->app->instance(MegaArchiveClient::class, $fake);
+
+        [, $fzbrAtt, $fzbrPath] = $this->makeFulfilledFzbrWithAttachmentFile();
+
+        $admin = Admin::query()->create([
+            'username' => 'arch_plate_u',
+            'email' => 'arch-plate-u@test.local',
+            'password' => bcrypt('x'),
+            'control_access' => false,
+            'admin_access' => true,
+            'limo_access' => true,
+        ]);
+        $platePath = 'limo_plate_uploads/9001/plate.jpg';
+        Storage::disk('local')->put($platePath, 'x');
+        $plate = LimoPlateUpload::query()->create([
+            'upload_token' => Str::random(64),
+            'path' => $platePath,
+            'uploaded_by_limo_admin_id' => $admin->id,
+            'expires_at' => now()->addHour(),
+            'consumed_at' => now(),
+        ]);
+        ExternalFileArchive::query()->create([
+            'source_table' => (new LimoPlateUpload)->getTable(),
+            'source_id' => (int) $plate->id,
+            'source_column' => 'path',
+            'context_type' => 'limo_plate_upload',
+            'archive_provider' => ExternalFileArchive::PROVIDER_MEGA,
+            'generated_file_name' => 'ex__limo_plate_'.$plate->id.'__'.Str::uuid()->toString().'.jpg',
+            'mega_node_id' => 'n',
+            'mega_path' => 'bus.kotor/p.jpg',
+            'original_local_path' => $platePath,
+            'local_deleted_at' => now(),
+            'archived_at' => now(),
+            'status' => ExternalFileArchive::STATUS_UPLOADED,
+            'error_message' => null,
+        ]);
+
+        $user = User::factory()->create(['country' => 'ME']);
+        $recorder = Admin::query()->create([
+            'username' => 'arch_lim_rec',
+            'email' => 'arch-lim-rec@test.local',
+            'password' => bcrypt('x'),
+            'control_access' => false,
+            'admin_access' => true,
+            'limo_access' => true,
+        ]);
+        $event = LimoPickupEvent::query()->create([
+            'merchant_transaction_id' => (string) Str::uuid(),
+            'agency_user_id' => $user->id,
+            'agency_name_snapshot' => 'Ag',
+            'agency_email_snapshot' => $user->email,
+            'agency_country_snapshot' => 'ME',
+            'source' => 'plate',
+            'qr_token_hash' => null,
+            'qr_valid_on' => Carbon::today('Europe/Podgorica'),
+            'license_plate_snapshot' => 'KO1',
+            'amount_snapshot' => '10.00',
+            'service_name_snapshot' => 'Limo',
+            'occurred_at' => now(),
+            'recorded_by_limo_admin_id' => $recorder->id,
+            'status' => 'pending_fiscal',
+            'invoice_email_sent_at' => now(),
+            'email_sent' => LimoPickupEvent::EMAIL_SENT,
+        ]);
+        $missingPhotoPath = 'limo_pickup_evidence/'.$event->id.'/missing.jpg';
+        LimoPickupPhoto::query()->create([
+            'limo_pickup_event_id' => $event->id,
+            'path' => $missingPhotoPath,
+            'type' => 'plate',
+        ]);
+
+        Artisan::call('files:archive-private', [
+            '--source' => 'all',
+            '--limit' => 1,
+        ]);
+        $out = Artisan::output();
+
+        $this->assertStringContainsString('Scanned: 3', $out);
+        $this->assertStringContainsString('Archived: 0', $out);
+        $this->assertStringContainsString('Failed: 1', $out);
+        $this->assertStringContainsString('Skipped: 2', $out);
+
+        $this->assertTrue(Storage::disk('local')->exists($fzbrPath));
+        $this->assertDatabaseHas('external_file_archives', [
+            'source_table' => (new FreeReservationRequestAttachment)->getTable(),
+            'source_id' => $fzbrAtt->id,
+            'source_column' => 'stored_path',
+            'status' => ExternalFileArchive::STATUS_FAILED,
+        ]);
+        $this->assertSame(1, $fake->uploadCalls);
     }
 
     /**
