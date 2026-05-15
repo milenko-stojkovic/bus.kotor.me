@@ -9,17 +9,23 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('admins', function (Blueprint $table) {
-            $table->boolean('control_access')->default(false)->after('password');
-        });
+        if (! Schema::hasColumn('admins', 'control_access')) {
+            Schema::table('admins', function (Blueprint $table) {
+                $table->boolean('control_access')->default(false)->after('password');
+            });
+        }
 
-        DB::table('admins')->where('username', 'control')->update(['control_access' => true]);
+        if (Schema::hasColumn('admins', 'control_access')) {
+            DB::table('admins')->where('username', 'control')->update(['control_access' => true]);
+        }
     }
 
     public function down(): void
     {
-        Schema::table('admins', function (Blueprint $table) {
-            $table->dropColumn('control_access');
-        });
+        if (Schema::hasColumn('admins', 'control_access')) {
+            Schema::table('admins', function (Blueprint $table) {
+                $table->dropColumn('control_access');
+            });
+        }
     }
 };

@@ -1,6 +1,6 @@
 # Project status — indeks
 
-**Poslednje ažuriranje:** 2026-05-13
+**Poslednje ažuriranje:** 2026-05-15
 
 Ovaj fajl je **kratak smerač**. Detalji su podeljeni da bi novi chat mogao da učita samo ono što treba. Ako prilažeš samo folder **`docs/`**, počni od **[README.md](./README.md)** pa ovde.
 
@@ -26,6 +26,7 @@ Ovaj fajl je **kratak smerač**. Detalji su podeljeni da bi novi chat mogao da u
 
 - `.env`: `BANK_DRIVER=fake`, `FISCALIZATION_DRIVER=fake`, **`QUEUE_CONNECTION=sync`** (ili `queue:work`).
 - Detalji: [fake-payment-and-fiscal-qa-checklist.md](./fake-payment-and-fiscal-qa-checklist.md).
+- Opciono — **puni suite na MySQL** (`phpunit.mysql.xml`, baza `*_test`, na Windowsu **`mysql.exe` u PATH**): [testing-mysql.md](./testing-mysql.md).
 
 ---
 
@@ -63,5 +64,6 @@ Ovi fajlovi treba da prate trenutni kod; v. `project-conventions.md` § 8.
 | Raspored scheduler-a | [scheduled-tasks-overview.md](./scheduled-tasks-overview.md) |
 | Ručni QA payment | [payment-manual-qa-checklist.md](./payment-manual-qa-checklist.md) |
 | Fake QA | [fake-payment-and-fiscal-qa-checklist.md](./fake-payment-and-fiscal-qa-checklist.md) |
+| PHPUnit na MySQL (opciono, Laragon) | [testing-mysql.md](./testing-mysql.md) |
 
 Još: [payment-v1-production-audit.md](./payment-v1-production-audit.md), [eloquent-relationships.md](./eloquent-relationships.md), [provera-modela.md](./provera-modela.md).

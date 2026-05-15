@@ -9,7 +9,6 @@ use App\Models\VehicleType;
 use App\Models\VehicleTypeTranslation;
 use App\Services\AdminFiscalizationAlertService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Mockery;
 use Tests\TestCase;
 
@@ -25,10 +24,6 @@ class PaymentCallbackSuccessAfterCanceledAdminEmailTest extends TestCase
 
     public function test_notifies_admin_when_success_arrives_on_canceled_temp_data(): void
     {
-        if (DB::getDriverName() === 'sqlite') {
-            $this->markTestSkipped('SQLite test schema does not widen temp_data.status CHECK to include canceled (MySQL ENUM migrations are guarded).');
-        }
-
         $temp = $this->createCanceledTemp('tx-success-after-cancel-1');
 
         $mock = Mockery::mock(AdminFiscalizationAlertService::class);
@@ -48,6 +43,8 @@ class PaymentCallbackSuccessAfterCanceledAdminEmailTest extends TestCase
             ['merchant_transaction_id' => $temp->merchant_transaction_id, 'status' => 'success'],
             ['source' => 'test_incoming'],
         ))->handle();
+
+        $this->assertSame(TempData::STATUS_CANCELED, $temp->fresh()->status);
     }
 
     private function createCanceledTemp(string $merchantTx): TempData

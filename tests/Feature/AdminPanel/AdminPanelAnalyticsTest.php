@@ -101,8 +101,7 @@ class AdminPanelAnalyticsTest extends TestCase
             'license_plate' => 'KO1',
             'vehicle_type_id' => $vt->id,
             'email' => 'x@example.com',
-            // SQLite test schema has limited enum: pending|failed|late_success.
-            'status' => 'failed',
+            'status' => TempData::STATUS_CANCELED,
         ]);
 
         $resp = $this->get(route('panel_admin.analytics', [

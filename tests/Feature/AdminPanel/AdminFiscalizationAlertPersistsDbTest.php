@@ -9,7 +9,6 @@ use App\Models\VehicleType;
 use App\Models\VehicleTypeTranslation;
 use App\Services\AdminFiscalizationAlertService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
@@ -19,10 +18,6 @@ class AdminFiscalizationAlertPersistsDbTest extends TestCase
 
     public function test_notify_payment_success_after_canceled_creates_admin_alert_record(): void
     {
-        if (DB::getDriverName() === 'sqlite') {
-            $this->markTestSkipped('SQLite test schema may not align with temp_data.status canceled (MySQL ENUM migrations are guarded).');
-        }
-
         Mail::fake();
 
         $drop = ListOfTimeSlot::query()->create(['time_slot' => '10:00 - 10:20']);

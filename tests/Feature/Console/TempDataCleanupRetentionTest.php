@@ -3,6 +3,7 @@
 namespace Tests\Feature\Console;
 
 use App\Models\ListOfTimeSlot;
+use App\Models\TempData;
 use App\Models\VehicleType;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -37,8 +38,7 @@ final class TempDataCleanupRetentionTest extends TestCase
                 'license_plate' => 'KO1',
                 'vehicle_type_id' => $vt->id,
                 'email' => 'x@example.com',
-                // SQLite schema historically allows pending|failed|late_success; keep test compatible.
-                'status' => 'failed',
+                'status' => TempData::STATUS_CANCELED,
                 'created_at' => $old,
                 'updated_at' => $old,
             ],
@@ -83,7 +83,7 @@ final class TempDataCleanupRetentionTest extends TestCase
                 'license_plate' => 'KO4',
                 'vehicle_type_id' => $vt->id,
                 'email' => 'r@example.com',
-                'status' => 'failed',
+                'status' => TempData::STATUS_CANCELED,
                 'created_at' => $recent,
                 'updated_at' => $recent,
             ],

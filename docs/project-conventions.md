@@ -1,6 +1,6 @@
 # Konvencije projekta (bus.kotor.me)
 
-**Poslednje ažuriranje:** 2026-05-14  
+**Poslednje ažuriranje:** 2026-05-15  
 
 Za AI i ljude: držati se ovoga pri novim izmenama da ostane konzistentno.
 
@@ -71,6 +71,7 @@ Preporučeni oblik (naslovi ili bold oznake moraju biti eksplicitni):
 - **Sintaksa (`php -l`):** ne pokretati gol `php -l` ako Windows nudi „Open with…“ — koristi **`.\laragon-php.ps1 -l putanja\do\fajla.php`** ili **`.\laragon-php.cmd -l putanja\do\fajla.php`**.
 - **AI / automatizacija (Cursor agent, skripte):** iz korena repoa **`.\laragon-artisan.ps1`** ili **`.\laragon-artisan.cmd`** (npr. `test`, `migrate`, `queue:work`) — **ne** `php artisan ...` osim ako je `php` u PATH-u. Isto **`.\laragon-php.ps1`** / **`.\laragon-php.cmd`** umesto `php` za `-l`. Kada korisnik ima strogu Execution Policy, u primerima predložiti **`.cmd`**.
 - **Git / GitHub:** nakon izmjena u kodu i **`docs/`**, uobičajeni tok je `git add`, `git commit` sa jasnom porukom, zatim **`git push origin`** (grana u kojoj radiš, npr. `main`). Prije push-a poželjno pokrenuti **`.\laragon-artisan.cmd test`** (ili ciljani podskup testova).
+- **MySQL test suite (opciono):** podrazumijevani testovi koriste SQLite (`phpunit.xml`). Za pokretanje protiv MySQL baze čije ime **mora završavati na `_test`**, `phpunit.mysql.xml` i Laragon putanje, vidi **[testing-mysql.md](./testing-mysql.md)** — uključujući **`mysql.exe` u `PATH`** na Windowsu i record **Verified local MySQL run**. Puni MySQL suite je preporučena **pre-release** provjera šeme kao u produkciji.
 
 ---
 
