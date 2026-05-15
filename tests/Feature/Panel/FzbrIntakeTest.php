@@ -101,15 +101,73 @@ class FzbrIntakeTest extends TestCase
             Storage::disk('local')->assertExists($a->stored_path);
         }
 
+        $alert = AdminAlert::query()->where('type', 'free_reservation_request')->first();
+        $this->assertNotNull($alert);
+        $this->assertSame('free_reservation_request:'.$req->id, $alert->payload_json['dedupe_key'] ?? null);
+
         Mail::assertSent(AgencyFreeReservationRequestSubmittedMail::class, function (AgencyFreeReservationRequestSubmittedMail $m) use ($req) {
             return $m->hasTo('bus@kotor.me') && $m->request->id === $req->id;
         });
 
-        $alert = AdminAlert::query()->where('type', 'free_reservation_request')->first();
-        $this->assertNotNull($alert);
         $this->assertStringContainsString($user->email, $alert->message);
         $this->assertSame($req->id, $alert->payload_json['free_reservation_request_id'] ?? null);
         $this->assertSame('agency_panel_fzbr', $alert->payload_json['source'] ?? null);
+    }
+
+    public function test_agency_fzbr_submit_creates_unnotified_alert_when_mail_fails(): void
+    {
+        Storage::fake('local');
+        \Illuminate\Support\Facades\Event::listen(
+            \Illuminate\Mail\Events\MessageSending::class,
+            static fn () => throw new \RuntimeException('mail transport simulated failure')
+        );
+
+        $user = User::factory()->create(['lang' => 'cg', 'country' => 'ME']);
+        $this->actingAs($user);
+
+        $drop = ListOfTimeSlot::query()->create(['time_slot' => '10:00 - 10:20']);
+        $pick = ListOfTimeSlot::query()->create(['time_slot' => '11:00 - 11:20']);
+
+        $vt = VehicleType::query()->create(['price' => 10]);
+        VehicleTypeTranslation::query()->create(['vehicle_type_id' => $vt->id, 'locale' => 'cg', 'name' => 'Autobus', 'description' => null]);
+        VehicleTypeTranslation::query()->create(['vehicle_type_id' => $vt->id, 'locale' => 'en', 'name' => 'Bus', 'description' => null]);
+
+        $v1 = Vehicle::query()->create(['user_id' => $user->id, 'license_plate' => 'KO111AA', 'vehicle_type_id' => $vt->id]);
+
+        $d = now()->addDays(3)->toDateString();
+
+        $this->post(route('panel.fzbr.store', [], false), [
+            'reservation_date' => $d,
+            'segments' => [
+                [
+                    'drop_off_time_slot_id' => $drop->id,
+                    'pick_up_time_slot_id' => $pick->id,
+                    'vehicles' => [$v1->id],
+                ],
+            ],
+            'documents' => [
+                UploadedFile::fake()->create('osnov.pdf', 120, 'application/pdf'),
+            ],
+            'accept_privacy' => 1,
+        ])->assertRedirect(route('panel.fzbr.create', [], false));
+
+        $req = FreeReservationRequest::query()->first();
+        $this->assertNotNull($req);
+
+        $this->assertDatabaseHas('admin_alerts', [
+            'type' => 'free_reservation_request',
+        ]);
+        $this->assertDatabaseHas('admin_alerts', [
+            'type' => 'fzbr_request_unnotified',
+        ]);
+
+        $un = AdminAlert::query()->where('type', 'fzbr_request_unnotified')->first();
+        $this->assertNotNull($un);
+        $this->assertSame('high', $un->payload_json['severity'] ?? null);
+        $this->assertSame(
+            'free_reservation_request:'.$req->id.':unnotified',
+            $un->payload_json['dedupe_key'] ?? null
+        );
     }
 }
 

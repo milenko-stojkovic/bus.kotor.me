@@ -126,4 +126,22 @@ return [
         'table' => 'failed_jobs',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | alerts:system-health — database queue stale double-check
+    |--------------------------------------------------------------------------
+    |
+    | Used only when QUEUE_CONNECTION=database. First stale observation is
+    | cached (no admin_alert); alert fires after stale persists confirm window.
+    | queue_stale_marker_ttl_minutes default (~25h) keeps the marker until the
+    | next daily scheduled run (07:30). Lower TTL only if alerts:system-health
+    | runs more frequently (e.g. every minute via schedule:run).
+    |
+    */
+    'system_health' => [
+        'queue_stale_minutes' => (int) env('SYSTEM_HEALTH_QUEUE_STALE_MINUTES', 5),
+        'queue_stale_confirm_minutes' => (int) env('SYSTEM_HEALTH_QUEUE_STALE_CONFIRM_MINUTES', 2),
+        'queue_stale_marker_ttl_minutes' => (int) env('SYSTEM_HEALTH_QUEUE_STALE_MARKER_TTL_MINUTES', 1500),
+    ],
+
 ];

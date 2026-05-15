@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Panel;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Panel\FzbrStoreRequest;
 use App\Mail\AgencyFreeReservationRequestSubmittedMail;
-use App\Models\AdminAlert;
 use App\Models\FreeReservationRequest;
 use App\Models\FreeReservationRequestAttachment;
 use App\Models\FreeReservationRequestSegment;
@@ -18,9 +17,12 @@ use App\Services\Reservation\ReservationBookingPageData;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use App\Services\AdminPanel\AdminAlertService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use Throwable;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -216,21 +218,44 @@ final class FzbrController extends Controller
         $createdReq = $created['request'];
         $createdReq->load(['segments.vehicles', 'segments.dropOffTimeSlot', 'segments.pickUpTimeSlot', 'attachments']);
 
-        Mail::to('bus@kotor.me')->send(new AgencyFreeReservationRequestSubmittedMail($createdReq));
-
-        AdminAlert::query()->create([
-            'type' => 'free_reservation_request',
-            'status' => AdminAlert::STATUS_UNREAD,
-            'title' => 'Zahtjev za besplatnu rezervaciju',
-            'message' => 'Došao je zahtjev za besplatnu rezervaciju od '.$user->name
+        $alertService = app(AdminAlertService::class);
+        $alertService->createOnce(
+            'free_reservation_request',
+            'Zahtjev za besplatnu rezervaciju',
+            'Došao je zahtjev za besplatnu rezervaciju od '.$user->name
                 .'. Email '.$user->email
                 .'. Vidi pod Besplatne rezervacije.',
-            'payload_json' => [
+            'medium',
+            'free_reservation_request:'.$createdReq->id,
+            [
                 'free_reservation_request_id' => $createdReq->id,
                 'source' => 'agency_panel_fzbr',
                 'user_id' => $user->id,
             ],
-        ]);
+        );
+
+        try {
+            Mail::to('bus@kotor.me')->send(new AgencyFreeReservationRequestSubmittedMail($createdReq));
+        } catch (Throwable $e) {
+            Log::channel('payments')->warning('fzbr_agency_submit_mail_failed', [
+                'free_reservation_request_id' => $createdReq->id,
+                'user_id' => $user->id,
+                'message' => $e->getMessage(),
+                'exception' => $e::class,
+            ]);
+            $alertService->createOnce(
+                'fzbr_request_unnotified',
+                'FZBR: zahtjev u bazi bez email obavještenja',
+                'Zahtjev ID '.$createdReq->id.'. '.$user->name.' / '.$user->email,
+                'high',
+                'free_reservation_request:'.$createdReq->id.':unnotified',
+                [
+                    'free_reservation_request_id' => $createdReq->id,
+                    'source' => 'agency_panel_fzbr',
+                    'user_id' => $user->id,
+                ],
+            );
+        }
 
         return redirect()
             ->to(route('panel.fzbr.create', [], false))

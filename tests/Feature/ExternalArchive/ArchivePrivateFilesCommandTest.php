@@ -14,11 +14,15 @@ use App\Models\ListOfTimeSlot;
 use App\Models\User;
 use App\Models\VehicleType;
 use App\Models\VehicleTypeTranslation;
+use App\Services\ExternalArchive\MegaDiagnoseService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Mockery;
 use Tests\Support\MegaArchiveFakeClient;
 use Tests\TestCase;
 
@@ -208,6 +212,120 @@ class ArchivePrivateFilesCommandTest extends TestCase
             'status' => ExternalFileArchive::STATUS_FAILED,
         ]);
         $this->assertSame(1, $fake->uploadCalls);
+    }
+
+    public function test_require_mega_health_skips_when_mega_diagnose_unhealthy(): void
+    {
+        Storage::fake('local');
+        $fake = new MegaArchiveFakeClient;
+        $this->app->instance(MegaArchiveClient::class, $fake);
+
+        $partial = Mockery::mock(new MegaDiagnoseService);
+        $partial->shouldReceive('run')->once()->andReturn([
+            'ok' => false,
+            'email_present' => true,
+            'password_present' => true,
+            'base_folder' => 'bus.kotor',
+            'login_ok' => false,
+            'folder_found' => false,
+            'node_version' => null,
+            'root_children_sample' => [],
+            'error' => 'ENOENT',
+            'node_binary' => 'node',
+            'user_agent' => 'x',
+        ]);
+        $this->instance(MegaDiagnoseService::class, $partial);
+
+        [, , $relPath] = $this->makeFulfilledFzbrWithAttachmentFile();
+
+        Artisan::call('files:archive-private', [
+            '--source' => 'fzbr',
+            '--limit' => 10,
+            '--require-mega-health' => true,
+        ]);
+        $out = Artisan::output();
+
+        $this->assertStringContainsString('Skipped: MEGA not ready', $out);
+        $this->assertSame(0, $fake->uploadCalls);
+        $this->assertTrue(Storage::disk('local')->exists($relPath));
+        $this->assertSame(0, ExternalFileArchive::query()->count());
+    }
+
+    public function test_require_mega_health_proceeds_when_mega_diagnose_ok(): void
+    {
+        Storage::fake('local');
+        $fake = new MegaArchiveFakeClient;
+        $this->app->instance(MegaArchiveClient::class, $fake);
+
+        $partial = Mockery::mock(new MegaDiagnoseService);
+        $partial->shouldReceive('run')->once()->andReturn([
+            'ok' => true,
+            'email_present' => true,
+            'password_present' => true,
+            'base_folder' => 'bus.kotor',
+            'login_ok' => true,
+            'folder_found' => true,
+            'node_version' => '20',
+            'root_children_sample' => [],
+            'error' => '',
+            'node_binary' => 'node',
+            'user_agent' => 'x',
+        ]);
+        $this->instance(MegaDiagnoseService::class, $partial);
+
+        [, , $relPath] = $this->makeFulfilledFzbrWithAttachmentFile();
+
+        Artisan::call('files:archive-private', [
+            '--source' => 'fzbr',
+            '--limit' => 10,
+            '--require-mega-health' => true,
+        ]);
+
+        $this->assertSame(1, $fake->uploadCalls);
+        $this->assertFalse(Storage::disk('local')->exists($relPath));
+    }
+
+    public function test_limit_is_applied_per_fzbr_category(): void
+    {
+        Storage::fake('local');
+        $fake = new MegaArchiveFakeClient;
+        $this->app->instance(MegaArchiveClient::class, $fake);
+
+        $this->makeFulfilledFzbrWithAttachmentFile();
+        $this->makeFulfilledFzbrWithAttachmentFile();
+
+        Artisan::call('files:archive-private', [
+            '--source' => 'fzbr',
+            '--limit' => 1,
+        ]);
+        $out = Artisan::output();
+
+        $this->assertStringContainsString('Scanned: 1', $out);
+        $this->assertStringContainsString('Archived: 1', $out);
+        $this->assertSame(1, $fake->uploadCalls);
+        $this->assertSame(1, ExternalFileArchive::query()->where('status', ExternalFileArchive::STATUS_UPLOADED)->count());
+    }
+
+    public function test_summary_is_logged_after_run(): void
+    {
+        Event::fake([MessageLogged::class]);
+        Storage::fake('local');
+        $fake = new MegaArchiveFakeClient;
+        $this->app->instance(MegaArchiveClient::class, $fake);
+
+        $this->makeFulfilledFzbrWithAttachmentFile();
+
+        Artisan::call('files:archive-private', [
+            '--source' => 'fzbr',
+            '--limit' => 10,
+        ]);
+
+        Event::assertDispatched(MessageLogged::class, function (MessageLogged $e): bool {
+            return $e->level === 'info'
+                && $e->message === 'files_archive_private_summary'
+                && ($e->context['scanned'] ?? 0) >= 1
+                && ($e->context['archived'] ?? 0) >= 1;
+        });
     }
 
     /**

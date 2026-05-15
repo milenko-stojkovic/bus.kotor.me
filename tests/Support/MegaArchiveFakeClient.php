@@ -21,8 +21,32 @@ final class MegaArchiveFakeClient implements MegaArchiveClient
 
     public bool $downloadShouldFail = false;
 
+    /**
+     * When non-empty, each upload consumes the next result (for retry tests).
+     *
+     * @var list<MegaUploadResult>|null
+     */
+    public ?array $uploadResultsQueue = null;
+
+    /**
+     * When non-empty, each download consumes the next result.
+     *
+     * @var list<MegaUploadResult>|null
+     */
+    public ?array $downloadResultsQueue = null;
+
     public function uploadLocalFile(string $absoluteLocalPath, string $generatedFileName): MegaUploadResult
     {
+        if ($this->uploadResultsQueue !== null && $this->uploadResultsQueue !== []) {
+            $this->uploadCalls++;
+            $this->lastUploadAbsolutePath = $absoluteLocalPath;
+            $this->lastUploadedBytes = is_file($absoluteLocalPath) ? (int) filesize($absoluteLocalPath) : null;
+            /** @var MegaUploadResult */
+            $next = array_shift($this->uploadResultsQueue);
+
+            return $next;
+        }
+
         $this->uploadCalls++;
         $this->lastUploadAbsolutePath = $absoluteLocalPath;
         $this->lastUploadedBytes = is_file($absoluteLocalPath) ? (int) filesize($absoluteLocalPath) : null;
@@ -35,6 +59,22 @@ final class MegaArchiveFakeClient implements MegaArchiveClient
 
     public function downloadToAbsolutePath(string $megaPathOrName, string $absoluteDestPath, ?string $generatedFileName = null): MegaUploadResult
     {
+        if ($this->downloadResultsQueue !== null && $this->downloadResultsQueue !== []) {
+            $this->downloadCalls++;
+            $this->lastDownloadGeneratedFileName = $generatedFileName;
+            /** @var MegaUploadResult */
+            $next = array_shift($this->downloadResultsQueue);
+            if ($next->ok) {
+                $dir = dirname($absoluteDestPath);
+                if (! is_dir($dir)) {
+                    mkdir($dir, 0750, true);
+                }
+                file_put_contents($absoluteDestPath, 'restored-by-fake');
+            }
+
+            return $next;
+        }
+
         $this->downloadCalls++;
         $this->lastDownloadGeneratedFileName = $generatedFileName;
         if ($this->downloadShouldFail) {

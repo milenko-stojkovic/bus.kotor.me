@@ -9,8 +9,10 @@ use App\Models\LimoPickupPhoto;
 use App\Models\LimoPlateUpload;
 use App\Services\ExternalArchive\ArchiveDerivativeUpload;
 use App\Services\ExternalArchive\ExternalFileArchiveService;
+use App\Services\ExternalArchive\MegaDiagnoseService;
 use App\Services\Limo\LimoPlateArchiveDerivativeBuilder;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
 
@@ -24,15 +26,15 @@ class ArchivePrivateFilesCommand extends Command
     protected $signature = 'files:archive-private
                             {--source=all : all|fzbr|limo}
                             {--dry-run : List candidates; no upload or delete}
-                            {--limit=100 : Max candidates per category (fzbr / limo plates / limo pickup photos)}';
+                            {--limit=100 : Max candidates per category (fzbr / limo plates / limo pickup photos)}
+                            {--require-mega-health : Abort before archiving if MEGA diagnose is not healthy (scheduled runs)}';
 
     protected $description = 'Archive eligible private files to MEGA (server-side only)';
 
     public function handle(
         ExternalFileArchiveService $archiveService,
         LimoPlateArchiveDerivativeBuilder $plateDerivativeBuilder,
-    ): int
-    {
+    ): int {
         $source = strtolower(trim((string) $this->option('source')));
         if (! in_array($source, ['all', 'fzbr', 'limo'], true)) {
             $this->error('Invalid --source (use all, fzbr, or limo).');
@@ -42,6 +44,25 @@ class ArchivePrivateFilesCommand extends Command
 
         $dryRun = (bool) $this->option('dry-run');
         $limit = max(1, (int) $this->option('limit'));
+        $requireMegaHealth = (bool) $this->option('require-mega-health');
+
+        if ($requireMegaHealth && ! $dryRun) {
+            $gate = $this->megaArchiveHealthGate(app(MegaDiagnoseService::class));
+            if (! $gate['ok']) {
+                $this->warn('Skipped: MEGA not ready for archive ('.$gate['reason'].').');
+                Log::channel('payments')->info('files_archive_private_skipped_mega_unhealthy', [
+                    'reason' => $gate['reason'],
+                    'source' => $source,
+                    'limit' => $limit,
+                    'mega_login_ok' => $gate['mega']['login_ok'] ?? null,
+                    'mega_folder_found' => $gate['mega']['folder_found'] ?? null,
+                    'mega_ok' => $gate['mega']['ok'] ?? null,
+                    'mega_configured' => $gate['mega_configured'] ?? null,
+                ]);
+
+                return self::SUCCESS;
+            }
+        }
 
         if ($dryRun) {
             $this->warn('DRY RUN: no uploads and no local deletes.');
@@ -217,7 +238,56 @@ class ArchivePrivateFilesCommand extends Command
         $this->info('Failed: '.$failed);
         $this->info('Skipped: '.$skipped);
 
+        Log::channel('payments')->info('files_archive_private_summary', [
+            'source' => $source,
+            'limit' => $limit,
+            'dry_run' => $dryRun,
+            'require_mega_health' => $requireMegaHealth,
+            'scanned' => $scanned,
+            'archived' => $archived,
+            'failed' => $failed,
+            'skipped' => $skipped,
+        ]);
+
         return self::SUCCESS;
+    }
+
+    /**
+     * @param  MegaDiagnoseService|\Mockery\MockInterface  $megaDiagnose
+     * @return array{ok: bool, reason: string, mega: array<string, mixed>, mega_configured?: bool}
+     */
+    private function megaArchiveHealthGate(mixed $megaDiagnose): array
+    {
+        $mega = $megaDiagnose->run();
+        $megaConfigured = ($mega['email_present'] ?? false) && ($mega['password_present'] ?? false);
+        if (! $megaConfigured) {
+            return [
+                'ok' => false,
+                'reason' => 'mega_not_configured',
+                'mega' => $mega,
+                'mega_configured' => false,
+            ];
+        }
+
+        $unhealthy = ! ($mega['login_ok'] ?? false)
+            || ! ($mega['folder_found'] ?? false)
+            || ! ($mega['ok'] ?? false);
+
+        if ($unhealthy) {
+            return [
+                'ok' => false,
+                'reason' => 'mega_diagnose_unhealthy',
+                'mega' => $mega,
+                'mega_configured' => true,
+            ];
+        }
+
+        return [
+            'ok' => true,
+            'reason' => '',
+            'mega' => $mega,
+            'mega_configured' => true,
+        ];
     }
 
     /**

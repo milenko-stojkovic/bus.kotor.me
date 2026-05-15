@@ -17,6 +17,7 @@ use App\Http\Controllers\AdminPanel\ReservationController as AdminPanelReservati
 use App\Http\Controllers\AdminPanel\SettingsController as AdminPanelSettingsController;
 use App\Http\Controllers\AdminPanel\WarningsController as AdminPanelWarningsController;
 use App\Http\Controllers\AdminPanel\AgencyController as AdminPanelAgencyController;
+use App\Http\Controllers\AdminPanel\FailedExternalArchiveController;
 use App\Http\Controllers\Control\ControlAuthController;
 use App\Http\Controllers\Control\ControlDashboardController;
 use App\Http\Controllers\CheckoutController;
@@ -96,6 +97,9 @@ Route::prefix('admin')->name('panel_admin.')->group(function () {
 
         Route::get('analitika', [AdminPanelAnalyticsController::class, 'index'])->name('analytics');
         Route::get('analitika/pdf', [AdminPanelAnalyticsController::class, 'pdf'])->name('analytics.pdf');
+
+        Route::get('sistemska-arhiva/neuspjeli', [FailedExternalArchiveController::class, 'index'])->name('archive.failed');
+        Route::post('sistemska-arhiva/neuspjeli/{external_file_archive}/retry', [FailedExternalArchiveController::class, 'retry'])->name('archive.failed.retry');
     });
 });
 

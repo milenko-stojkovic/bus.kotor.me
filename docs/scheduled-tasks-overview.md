@@ -25,9 +25,12 @@ Pregled svih trenutno planiranih (scheduled) taskova u projektu.
 | `reservations:expire-pending` | every 10 minutes | `app/Console/Commands/ExpirePendingReservations.php` | Pending -> expired, oslobađa soft lock |
 | `parking:sync-days` | daily at 00:05 | `app/Console/Commands/SyncDailyParkingDays.php` | Sinhronizuje redove `daily_parking_data` za današnji dan + narednih 90 dana; briše stare datume |
 | `limo:cleanup-temporary-data` | daily at 00:10 | `app/Console/Commands/LimoCleanupTemporaryData.php` | Briše stare nekorišćene `limo_qr_tokens` i istekle nekonzumirane `limo_plate_uploads` (+ privremeni fajlovi); **ne** briše dokaze u `limo_pickup_evidence/` |
+| `files:cleanup-preview-cache` | daily at 00:15 | `app/Console/Commands/CleanupArchivePreviewCacheCommand.php` | Briše istekle privremene MEGA preview fajlove (`external_file_archives` ostaje `uploaded`) |
+| `files:archive-private …` | every 6 hours | `app/Console/Commands/ArchivePrivateFilesCommand.php` | `--source=all --limit=50 --require-mega-health`; MEGA dijagnostika mora proći prije arhive; `withoutOverlapping(360)`; summary/skip logovi na `payments` |
 | `temp-data:cleanup` | daily | `app/Console/Commands/CleanupOldTempData.php` | Briše samo stare **ne-pending** redove po retention pravilu (default 180 dana) |
 | `advance:send-yearly-statements` | yearly on Jan 1 at 10:00 | `routes/console.php` | “Kartica avansa” (prethodna godina); idempotentno; feature-guard |
 | `reports:send-scheduled daily` | daily at 07:00 | `app/Console/Commands/SendScheduledAdminReports.php` | Zakazani admin PDF izvještaji (po uplati, po tipu vozila, + obaveze po avansu kada je enabled) |
+| `alerts:system-health` | daily at 07:30 | `app/Console/Commands/AlertsSystemHealthCommand.php` | Minimalno operativno zdravlje → `admin_alerts` (queue backlog, fake config u produkciji, dnevni rollup: failed jobs / arhive / MEGA / post_fiscalization); dedupe u servisu |
 | `reports:send-scheduled monthly` | monthly on day 1 at 07:05 | `app/Console/Commands/SendScheduledAdminReports.php` | Zakazani admin PDF izvještaji za prethodni mjesec |
 | `reports:send-scheduled yearly` | yearly on Jan 1 at 07:10 | `app/Console/Commands/SendScheduledAdminReports.php` | Zakazani admin PDF izvještaji za prethodnu godinu |
 

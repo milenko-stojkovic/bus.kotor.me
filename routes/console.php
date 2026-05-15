@@ -84,11 +84,18 @@ Schedule::command('limo:cleanup-temporary-data')
 Schedule::command('files:cleanup-preview-cache')
     ->dailyAt('00:15')
     ->timezone('Europe/Podgorica');
+Schedule::command('files:archive-private --source=all --limit=50 --require-mega-health')
+    ->everySixHours()
+    ->timezone('Europe/Podgorica')
+    ->withoutOverlapping(360);
 Schedule::command('temp-data:cleanup')->daily();
 
 // Scheduled admin PDF report emails (SAFE: reads data + sends email)
 Schedule::command('reports:send-scheduled daily')
     ->dailyAt('07:00')
+    ->timezone('Europe/Podgorica');
+Schedule::command('alerts:system-health')
+    ->dailyAt('07:30')
     ->timezone('Europe/Podgorica');
 Schedule::command('reports:send-scheduled monthly')
     ->monthlyOn(1, '07:05')

@@ -4,15 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\FreeReservationRequestStoreRequest;
 use App\Mail\FreeReservationRequestSubmittedMail;
-use App\Models\AdminAlert;
 use App\Models\FreeReservationRequest;
 use App\Models\FreeReservationRequestVehicle;
 use App\Services\Reservation\ReservationBookingPageData;
 use App\Support\UiText;
 use Illuminate\Http\RedirectResponse;
+use App\Services\AdminPanel\AdminAlertService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
+use Throwable;
 
 class FreeReservationRequestController extends Controller
 {
@@ -59,22 +61,42 @@ class FreeReservationRequestController extends Controller
 
         $created->load(['vehicles.vehicleType.translations', 'vehicles', 'dropOffTimeSlot', 'pickUpTimeSlot']);
 
-        // Email to admin (always cg).
-        Mail::to('bus@kotor.me')->send(new FreeReservationRequestSubmittedMail($created));
-
-        // Admin warning pointer (source of truth: free_reservation_requests table).
-        AdminAlert::query()->create([
-            'type' => 'free_reservation_request',
-            'status' => AdminAlert::STATUS_UNREAD,
-            'title' => 'Zahtjev za besplatnu rezervaciju',
-            'message' => 'Došao je zahtjev za besplatnu rezervaciju od '.$created->institution_name
+        $alertService = app(AdminAlertService::class);
+        $alertService->createOnce(
+            'free_reservation_request',
+            'Zahtjev za besplatnu rezervaciju',
+            'Došao je zahtjev za besplatnu rezervaciju od '.$created->institution_name
                 .'. Telefon '.$created->institution_phone
                 .'. Email '.$created->institution_email
                 .'. Vidi pod Besplatne rezervacije.',
-            'payload_json' => [
+            'medium',
+            'free_reservation_request:'.$created->id,
+            [
                 'free_reservation_request_id' => $created->id,
+                'source' => 'guest_free_reservation_request',
             ],
-        ]);
+        );
+
+        try {
+            Mail::to('bus@kotor.me')->send(new FreeReservationRequestSubmittedMail($created));
+        } catch (Throwable $e) {
+            Log::channel('payments')->warning('fzbr_guest_submit_mail_failed', [
+                'free_reservation_request_id' => $created->id,
+                'message' => $e->getMessage(),
+                'exception' => $e::class,
+            ]);
+            $alertService->createOnce(
+                'fzbr_request_unnotified',
+                'FZBR: zahtjev u bazi bez email obavještenja',
+                'Zahtjev ID '.$created->id.'. '.$created->institution_name.' / '.$created->institution_email,
+                'high',
+                'free_reservation_request:'.$created->id.':unnotified',
+                [
+                    'free_reservation_request_id' => $created->id,
+                    'source' => 'guest_free_reservation_request',
+                ],
+            );
+        }
 
         $success = UiText::t(
             'free_request',

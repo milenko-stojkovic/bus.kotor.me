@@ -27,6 +27,17 @@ Tabela **`external_file_archives`** drži:
 
 ---
 
+## Transijentni retry (v1, self-healing)
+
+**Upload:** `ExternalFileArchiveService::archiveLocalPrivateFile` pokušava do **3** puta samo kad Node/client vrati poruku klasificiranu kao **transijentnu** (`MegaArchiveFailureClassifier`: npr. timeout, `ECONNRESET`, `EAI_AGAIN`, tipični HTTP 502/503/504, rate limit — konzervativno; **ne** retry za pogrešnu lozinku, nedostajući folder, nedostajuću konfiguraciju, prazan/nekorektan JSON od skripte). Pauze između pokušaja: **1 s**, **3 s**. Derivat (privremeni JPEG) se briše tek **nakon** što su svi upload pokušaji završeni (da retry ne gubi fajl).  
+Logovi (`payments`): `external_archive_upload_retry`, `external_archive_upload_exhausted`, `external_archive_upload_recovered_after_retry`; konačni neuspjeh i dalje `external_archive_upload_failed`.
+
+**Admin preview restore:** `restoreFromMegaForPreview` / `ensureLocalPreviewForSource` — do **3** preuzimanja, pauze **~400 ms** i **~1,5 s** između pokušaja, samo za transijentne greške; **`status`** reda ostaje **`uploaded`**, ne označava se `failed` zbog preview-a. Logovi: `external_archive_preview_restore_retry`, `external_archive_preview_restore_failed`; uspjeh: postojeći `external_archive_preview_restored` (+ `download_attempt`).
+
+**Admin alerti:** prvi transient MEGA timeout **ne** kreira `admin_alert`; operativni signal i dalje može doći iz **`alerts:system-health`** (npr. red u **`failed`**, dijagnostika) kada problem postane trajni ili agregovan.
+
+---
+
 ## Generisano ime (bez korisničkog imena)
 
 Format (ASCII, bez razmaka):
@@ -53,10 +64,54 @@ Svi fajlovi idu **direktno u bazni folder** na MEGA — **bez podfoldera**.
 
 ---
 
+## Operativni runbook: MEGA security lock i poruka „Wrong password?”
+
+**Kontekst (MEGA support):** nalog može biti **privremeno zaključan** mehanizmom zaštite (npr. sumnjiva aktivnost nalik **credential stuffing**-u). Server-side login preko **megajs** / API-ja tada može pukati sa porukom u stilu:
+
+`ENOENT (-9): Object not found. Wrong password?`
+
+**Važno:** **Browser sesija** na mega.nz može i dalje **izgledati aktivna** — to **nije** dokaz da API login sa servera radi. Web i megijs koriste različite puteve i stanje zaštite naloga.
+
+### 1. Šta „Wrong password?” u megajs poruci **može** značiti
+
+1. **Stvarno pogrešni kredencijali** u `.env` (pogrešan email ili lozinka).
+2. **Zastarjeli Laravel config / keš** (promijenjen `.env`, a aplikacija još drži stari `config`).
+3. **MEGA security lock** ili ograničenje naloga — poruka je **dvosmislena**; sistem može odbiti login iako lozinka u `.env` tačno odgovara zapisu prije zaključavanja.
+
+### 2. Prve operativne provjere (redoslijed)
+
+1. Pokrenuti **`php artisan files:mega-diagnose`** (ili `.\laragon-artisan.cmd files:mega-diagnose` na Windowsu) i pročitati **`login_ok`**, **`folder_found`**, polje **`error`** bez otkrivanja lozinke u logu.
+2. U `.env` provjeriti **`MEGA_EMAIL`** i **`MEGA_PASSWORD`** (bez dijeljenja vrijednosti u tiketima/chatu); uskladiti sa aktivnim nalogom u MEGA web konzoli.
+3. Nakon izmjene env-a: **`php artisan config:clear`** i po potrebi **`php artisan cache:clear`**, zatim ponovo **`files:mega-diagnose`**.
+4. U MEGA **web** interfejsu: historija sesija / sigurnosni događaji / obavještenja o zaključanom ili ograničenom nalogu.
+
+### 3. Ako je nalog zaključan ili zaštita blokira API login
+
+1. **Ručno** promijeniti lozinku naloga u MEGA (prema pravilima provajdera).
+2. Ažurirati **`.env`** (`MEGA_PASSWORD`, i email ako treba).
+3. **`config:clear`**, po potrebi **`cache:clear`**.
+4. Ponovo **`files:mega-diagnose`** dok **`login_ok`** ne bude uspješan prije ponovnog oslanjanja na `files:archive-private` / preview restore.
+
+### 4. Šta **ne** raditi
+
+- **Ne** pokretati masovno ili u uskoj petlji login/upload/dijagnozu (pojačava rizik da MEGA ponovo okine zaštitu).
+- Kod operativnih problema prvo **uzrok** (kredencijali vs keš vs lock), pa umereni retry — v. i transijentni retry u kodu (**ne** odnosi se na pogrešnu klasifikaciju zaključanog naloga).
+
+### 5. `MEGA_USER_AGENT`
+
+**Ostaviti uvek konfigurisanim** (`MEGA_USER_AGENT` / `services.mega.user_agent`) — identifikacija klijenta je bitna za server-side ponašanje i podršku.
+
+### 6. Strategija ako se zaključavanja ponavljaju
+
+Razmotriti **migraciju** ka **S3-kompatibilnom** objektnom skladištu (ili drugom provajderu) kao smanjenje operativnog rizika od MEGA security pravila — plan posebno, nije implementacija u ovom repou dokumentovana.
+
+---
+
 ## Servisi
 
 - `App\Services\ExternalArchive\MegaArchiveService` — implementacija `MegaArchiveClient` (Node `scripts/mega-archive.js`, paket `megajs`). Login koristi fiksni **`userAgent`** iz `MEGA_USER_AGENT` / `services.mega.user_agent` (default `BusKotorArchive/1.0`). **Download:** megajs `File.prototype.download(opts)` vraća **Readable** stream; callback (ako se koristi) dobija **`(err, Buffer)`**, ne stream — skripta koristi `const rs = file.download({}); rs.pipe(writeStream)`.
-- `App\Services\ExternalArchive\ExternalFileArchiveService::archiveLocalPrivateFile(...)` — pending red → upload → `uploaded` → brisanje **originalnog** lokalnog fajla na `original_local_path`. Opcioni argument **`ArchiveDerivativeUpload`**: upload sa privremenog JPEG-a (`LimoPlateArchiveDerivativeBuilder`), metadata na redu; privremeni derivat se briše nakon Node poziva.
+- **`App\Services\ExternalArchive\MegaArchiveFailureClassifier`** — konzervativno: da li je tekst greške **transijentan** (retry) ili ne (fail fast).
+- `App\Services\ExternalArchive\ExternalFileArchiveService::archiveLocalPrivateFile(...)` — pending red → upload (do 3 pokušaja za transijentne greške) → `uploaded` → brisanje **originalnog** lokalnog fajla na `original_local_path`. Opcioni argument **`ArchiveDerivativeUpload`**: upload sa privremenog JPEG-a (`LimoPlateArchiveDerivativeBuilder`), metadata na redu; privremeni derivat se briše nakon Node poziva.
 - **`App\Services\Limo\LimoPlateArchiveDerivativeBuilder`** — samo za arhivu (ne dira OCR niti upload tok): korisnički izrez `plate_crop_*_bp` + **~12,5%** margine, inače cijela slika; max duža strana **1600 px**; **JPEG Q80**; bez grayscale. Zahtijeva PHP **GD**.
 - **`App\Services\ExternalArchive\MegaDiagnoseService`** + komanda **`files:mega-diagnose`** — login + listing root + postojanje `MEGA_BASE_FOLDER` bez uploada (vidi Artisan).
 - `ExternalFileArchiveService::restoreFromMega(...)` — trajni restore: preuzimanje na `original_local_path`, **`local_deleted_at = null`**.
@@ -82,19 +137,26 @@ Svi fajlovi idu **direktno u bazni folder** na MEGA — **bez podfoldera**.
 
 - Ako je lokalni fajl obrisan poslije arhive, prvi zahtjev ga **privremeno** vraća na disk; čišćenje: **`php artisan files:cleanup-preview-cache`** (zakazano dnevno **00:15** `Europe/Podgorica` u `routes/console.php`) briše istekle preview fajlove gdje je **`local_deleted_at` još uvijek postavljen** i **`preview_expires_at <= sada`**; red u **`external_file_archives`** ostaje **`uploaded`**, MEGA se ne dira.
 
-Log kanal `payments` (bez binarnog sadržaja): `external_archive_upload_started`, **`external_archive_derivative_prepared`** (`original_bytes`, `archive_bytes`, `reduction_percent`, `derivative_options`), `external_archive_upload_succeeded` (ista polja veličine kad je derivat), `external_archive_upload_failed`, `external_archive_local_deleted`, **`external_archive_preview_restored`**, **`external_archive_preview_cache_cleanup`**, `external_archive_preview_restore_failed`.
+Log kanal `payments` (bez binarnog sadržaja): `external_archive_upload_started`, **`external_archive_derivative_prepared`** (`original_bytes`, `archive_bytes`, `reduction_percent`, `derivative_options`), `external_archive_upload_succeeded` (ista polja veličine kad je derivat), **`external_archive_upload_retry`**, **`external_archive_upload_exhausted`**, **`external_archive_upload_recovered_after_retry`**, `external_archive_upload_failed`, `external_archive_local_deleted`, **`external_archive_preview_restored`** (uklj. `download_attempt`), **`external_archive_preview_restore_retry`**, **`external_archive_preview_restore_failed`**, **`external_archive_preview_cache_cleanup`**, rani `external_archive_preview_restore_failed` iz `ensureLocalPreviewForSource` samo za neočekivane izuzetke (ne za uobičajeni neuspjeh downloada nakon logovanja u preview servisu). **Arhiva komanda:** **`files_archive_private_summary`** (na kraju prolaza: `scanned` / `archived` / `failed` / `skipped`, `source`, `limit`, `dry_run`, `require_mega_health`), **`files_archive_private_skipped_mega_unhealthy`** kad je uključen `--require-mega-health` a MEGA dijagnostika nije prošla. **Admin ponovni pokušaj:** **`external_archive_admin_retry_started`** (kad operator pokrene retry iz panela).
 
 ---
+
+### Admin — neuspjeli uploadi (glavni panel)
+
+- **`GET /admin/sistemska-arhiva/neuspjeli`** (`panel_admin.archive.failed`) — samo **`status = failed`**; oznaka da li **`original_local_path`** još postoji lokalno.
+- **`POST /admin/sistemska-arhiva/neuspjeli/{external_file_archive}/retry`** (`panel_admin.archive.failed.retry`) — **`ExternalFileArchiveService::retryFailedArchive`**: isti red i **`generated_file_name`**, bez brisanja na MEGA; za **`limo_plate_upload`** sa derivatom ponovo se gradi JPEG. Vidi **[admin-panel.md](./admin-panel.md)**.
 
 ## Artisan
 
 - `php artisan files:archive-private --source=all|fzbr|limo --dry-run --limit=100`  
+  - **`--require-mega-health`:** pri stvarnoj arhivi (bez `--dry-run`) prvo poziva **`MegaDiagnoseService`** (login + bazni folder, kao **`files:mega-diagnose`**). Ako nije „zdravo“ (`ok`, `login_ok`, `folder_found` — smisao kao u `alerts:system-health`), komanda **prekida prije skeniranja kandidata** (nema uploada/brisanja) i loguje **`files_archive_private_skipped_mega_unhealthy`** na `payments`. Korisno za **zakazane** prolaze. Ručno testiranje i dry-run i dalje mogu **bez** ovog flag-a.
   - **FZBR:** samo kada je zahtjev u terminalnom statusu (`fulfilled`, `rejected` — vidi `FreeReservationRequest`). PDF/dokumenti se arhiviraju **bez** slike derivata.  
   - **Limo plate:** `consumed_at` nije `NULL`. Prije uploada na MEGA gradi se **JPEG derivat** (korisnički izrez + ~12,5% margine ako postoji `plate_crop_*_bp`, inače cijela slika; max duža strana 1600 px, kvalitet 80). Na MEGA ide derivat; `original_local_path` i dalje pokazuje na originalnu privatnu putanju. U `external_file_archives`: `archived_derivative`, `derivative_source_path`, `derivative_options` (JSON). Log `payments`: `original_bytes`, `archive_bytes`, `reduction_percent`. Original na disku ostaje do uspješnog uploada + DB update.  
   - **Limo pickup foto:** roditeljski `limo_pickup_events.invoice_email_sent_at` nije `NULL` (konzervativno: poslije slanja računa emailom).  
   - **`limo_incidents`:** još **nije** uključeno (TODO — politika zadržavanja dokaza / email).
+- **Zakazivanje (lokalni SAFE scheduler, `routes/console.php`):** `files:archive-private --source=all --limit=50 --require-mega-health` — **svakih šest sati**, timezone **`Europe/Podgorica`**, **`withoutOverlapping(360)`** (mutex do 360 min). Mala serija po kategoriji; incident fajlovi i dalje nisu obuhvaćeni dok komanda ne proširi izvor.
 - `php artisan files:restore-private {archive_id}` — trajni restore sa MEGA na originalnu privatnu putanju (`local_deleted_at` se briše).
-- **`php artisan files:mega-diagnose`** — provjera login-a i postojanja baznog foldera na MEGA (Node akcija `diagnose` u `scripts/mega-archive.js`; **ne** kreira bazni folder). Izlaz: maskirani email, **User-Agent** (`MEGA_USER_AGENT` / config), JSON polja (`login_ok`, `folder_found`, `root_children_sample`, …); lozinka se **nikad** ne ispisuje. Korisno kad browser login radi, a megajs vraća npr. `ENOENT (-9)`.
+- **`php artisan files:mega-diagnose`** — provjera login-a i postojanja baznog foldera na MEGA (Node akcija `diagnose` u `scripts/mega-archive.js`; **ne** kreira bazni folder). Izlaz: maskirani email, **User-Agent** (`MEGA_USER_AGENT` / config), JSON polja (`login_ok`, `folder_found`, `root_children_sample`, …); lozinka se **nikad** ne ispisuje. Korisno kad browser login radi, a megajs vraća npr. `ENOENT (-9)`. **Kada poruka spominje „Wrong password?”:** prvo slijediti sekciju **Operativni runbook: MEGA security lock** iznad — ne zaključivati odmah da je `.env` pogrešan.
 - **`php artisan files:cleanup-preview-cache`** — briše **istekle** privremene preview fajlove (vidi gore); ne dira redove gdje je **`local_deleted_at` null** (lokalno zadržani fajlovi).
 
 Na Windows-u iz korena repa: `.\laragon-artisan.cmd files:archive-private --dry-run`, `.\laragon-artisan.cmd files:mega-diagnose` (vidi `docs/project-conventions.md` §3).

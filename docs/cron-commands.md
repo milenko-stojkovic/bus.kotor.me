@@ -235,8 +235,18 @@ Ovi job-ovi su dodati u `routes/console.php` i smatraju se bezbednim za lokalni 
   - PDF paketi: “po uplati”, “po tipu vozila” i (kada je `advance_payments` ON) “obaveze po avansu”
   - Idempotency: tabela `scheduled_report_deliveries` (unique: period + recipient)
   - Failure: bez parcijalnih emailova ako PDF generisanje padne; admin email `bus@kotor.me` + `admin_alerts` zapis (idempotentno po periodu)
+- `alerts:system-health` — **`dailyAt('07:30')`** (`Europe/Podgorica`)
+  - Kreira **`admin_alerts`** samo kada je potrebno; **v1** — nije pun monitoring, nema posebnog email kanala za ove tipove.
+  - **`queue_worker_down`:** samo za **`database`** queue; prvi „stale“ `jobs` signal **nije** alarm — keš + log; alarm nakon potvrde (v. **`config/queue.php`** `system_health` i **`docs/admin-panel.md`**). **Bez** auto-restarta workera u kodu.
+  - Ostalo: u **production** — fake payment/fiscal / `FAKE_PAYMENT_E2E_SYNC`; dnevni rollup (neuspeli poslovi 24h, `external_file_archives.status=failed`, MEGA dijagnostika ako su kredencijali podešeni, nerešeni `post_fiscalization_data` stariji od 2h).
+  - Deduplikacija: **`AdminAlertService::createOnce`** (v. **`docs/admin-panel.md`**).
 - `reservations:expire-pending` — **everyTenMinutes**
 - `parking:sync-days` — **dailyAt('00:05')**
+- `files:archive-private --source=all --limit=50 --require-mega-health` — **everySixHours** (`Europe/Podgorica`), **withoutOverlapping(360)** (mutex do 360 minuta ako se run „zaglavio“)
+  - Mala serija: najviše **50** kandidata po kategoriji (FZBR prilozi / Limo plate / Limo pickup foto — v. komanda).
+  - **MEGA gate:** ako je `--require-mega-health` i MEGA dijagnostika nije uspješna (`MegaDiagnoseService`, ista `login_ok` / `folder_found` / `ok` ideja kao u `alerts:system-health`), komanda **ne arhivira**; log na `payments`: **`files_archive_private_skipped_mega_unhealthy`**. Ručni ili dry-run pozivi **bez** ovog flag-a ostaju kao prije.
+  - Na kraju rada (kad se kandidati obrade): log **`files_archive_private_summary`** na `payments` (ukupno `scanned` / `archived` / `failed` / `skipped`, itd.).
+  - **`limo_incidents`** i dalje nisu u obimu `files:archive-private` (TODO u kodu).
 - `temp-data:cleanup` — **daily**
 
 ### EXCLUDED job-ovi (namerno nisu zakazani lokalno)
@@ -255,6 +265,15 @@ Sledeće komande su **nezakazane** jer frekvencija u dokumentu nije striktno def
 - `reservations:assign-late-success` — **Reason**: “po potrebi / 5–15 minuta” (nije striktna frekvencija)
 - `parking:update-availability` — **Reason**: “svakih 5–10 minuta” (nije striktna frekvencija)
 - `reservations:send-emails` — **Reason**: “svakih 5–10 minuta” (nije striktna frekvencija)
+
+---
+
+## MEGA arhiva — `files:mega-diagnose` i security lock
+
+- Ručna dijagnostika: **`php artisan files:mega-diagnose`** — ne šifruje lozinku u izlazu; potvrđuje login i bazni folder (v. `docs/external-file-archive.md` → Artisan).
+- Ako megajs javi **`Wrong password?`** / **`ENOENT (-9)`** a browser na mega.nz i dalje radi, to **ne** znači ispravne server kredencijale: mogući su zastareli Laravel config keš, ili **MEGA security lock** (npr. nakon sumnjive aktivnosti). **Puna procedura** (zaključavanje, promjena lozinke, `config:clear`, šta ne raditi kod retry-a): v. **[external-file-archive.md](./external-file-archive.md)** — sekcija **Operativni runbook: MEGA security lock**.
+- **Ne** agresivno ponavljati login iz skripti/crona dok se uzrok ne riješi — rizik ponovnog okidanja zaštite.
+- Zakazani **`alerts:system-health`** (dnevni MEGA dio) umereno poziva dijagnozu; **`queue_worker_down`** koristi dvostruku provjeru i cache marker (v. **`docs/admin-panel.md`**). Ručni „hammer“ MEGA login-a i dalje izbjegavati.
 
 ---
 
