@@ -91,7 +91,7 @@ Puna tabela rasporeda: **`docs/scheduled-tasks-overview.md`**.
 
 **Opis:** Ažurira daily_parking_data prema napravljenim rezervacijama. Povećava **reserved** i smanjuje **pending** kada se rezervacija fiskalizuje. Može proveravati i resetovati kapacitet za novi datum ako je potrebno.
 
-**Frekvencija:** svakih 5–10 minuta.
+**Frekvencija:** **nije** u Laravel `Schedule` u repozitorijumu — pokretanje **ručno** ili vlastiti cron ako operativno treba (u nekim tekstovima ostaje spomen opsega 5–10 min kao orijentacija).
 
 **Tabele:** daily_parking_data, reservations, temp_data.
 
@@ -103,7 +103,7 @@ Puna tabela rasporeda: **`docs/scheduled-tasks-overview.md`**.
 
 **Opis:** Proverava reservations gde **`email_sent = Reservation::EMAIL_NOT_SENT` (0)**. Šalje potvrdu rezervacije korisniku. Nakon slanja → **`EMAIL_SENT` (1)** preko **`markConfirmationEmailSent()`**. *(Stanje **EMAIL_SENDING** (2) koriste queue jobovi za lock — v. `SendInvoiceEmailJob`.)*
 
-**Frekvencija:** svakih 5–10 minuta.
+**Frekvencija:** **nije** u Laravel `Schedule` u repozitorijumu — pokretanje **ručno** ili vlastiti cron ako operativno treba (u nekim tekstovima ostaje spomen opsega 5–10 min kao orijentacija).
 
 **Tabele:** reservations.
 
@@ -142,7 +142,8 @@ Puna tabela rasporeda: **`docs/scheduled-tasks-overview.md`**.
 
 ## Napomene
 
-- Svaka komanda koristi Eloquent za status (pending, failed, late_success) i snapshot polja.
+- **`reservations:process-pending`** je trenutno **intencionalno no-op** (v. §1 ispod) — ostale komande u ovom fajlu opisuju stvarno ponašanje kada `handle()` radi posao.
+- Ostale komande koriste tipično Eloquent za statuse (`pending`, `failed`, `late_success`, …) i snapshot polja gde je primenjivo.
 - Za pokretanje scheduler-a na serveru: `* * * * * php /path/to/artisan schedule:run` (cron entry).
 - Lokalno: `php artisan schedule:work` ili `php artisan schedule:list`.
 - Komande su u `app/Console/Commands/`.
@@ -240,7 +241,7 @@ Ovi job-ovi su dodati u `routes/console.php` i smatraju se bezbednim za lokalni 
   - **`queue_worker_down`:** samo za **`database`** queue; prvi „stale“ `jobs` signal **nije** alarm — keš + log; alarm nakon potvrde (v. **`config/queue.php`** `system_health` i **`docs/admin-panel.md`**). **Bez** auto-restarta workera u kodu.
   - Ostalo: u **production** — fake payment/fiscal / `FAKE_PAYMENT_E2E_SYNC`; dnevni rollup (neuspeli poslovi 24h, `external_file_archives.status=failed`, MEGA dijagnostika ako su kredencijali podešeni, nerešeni `post_fiscalization_data` stariji od 2h).
   - Deduplikacija: **`AdminAlertService::createOnce`** (v. **`docs/admin-panel.md`**).
-  - **Heartbeat (cache):** na početku run-a **`system_health:last_run_at`**; nakon normalnog završetka komande **`system_health:last_ok_at`**; nakon `MegaDiagnoseService::run()` — **`mega:last_diagnose_at`**, **`mega:last_diagnose_ok`**, opciono **`mega:last_diagnose_error`** (skraćeno). Klasa **`App\Support\OperationalHeartbeatCache`**, TTL ~30 dana (priprema za budući read-only „Sistem status“).
+  - **Heartbeat (cache):** na početku run-a **`system_health:last_run_at`**; nakon normalnog završetka komande **`system_health:last_ok_at`**; nakon `MegaDiagnoseService::run()` — **`mega:last_diagnose_at`**, **`mega:last_diagnose_ok`**, opciono **`mega:last_diagnose_error`** (skraćeno). Klasa **`App\Support\OperationalHeartbeatCache`**, TTL ~30 dana (čita **Sistem status** u adminu, v. **`docs/admin-panel.md`**).
 - `reservations:expire-pending` — **everyTenMinutes**
 - `parking:sync-days` — **dailyAt('00:05')**
 - `files:archive-private --source=all --limit=50 --require-mega-health` — **everySixHours** (`Europe/Podgorica`), **withoutOverlapping(360)** (mutex do 360 minuta ako se run „zaglavio“)
@@ -260,7 +261,7 @@ Sledeći job-ovi su **namerno izostavljeni** iz lokalnog scheduler-a (ne pojavlj
 - `payment:check-pending-inquiry`
   - **Reason**: radi bankarski inquiry prema stvarnoj banci (Bankart), može triggerovati payment state machine
 - `reservations:process-pending`
-  - **Reason**: u opisu je direktno vezano za naknadnu/stvarnu fiskalizaciju; iako delovi mogu biti stub, tretira se kao unsafe za lokalni scheduler
+  - **Reason**: registrovana samo u **`bootstrap/app.php`** kada je okruženje **`production`**; u kodu je trenutno **no-op** (broji pending `temp_data`, bez izmjena). Nije duplirana u `routes/console.php` SAFE listi.
 
 Sledeće komande su **nezakazane** jer frekvencija u dokumentu nije striktno definisana (navedeno je opseg ili “po potrebi”):
 
@@ -299,8 +300,8 @@ Sledeći scheduled job-ovi su kritični za produkciju jer imaju veze sa **stvarn
   - **Pre produkcije**: potvrditi da su fiskalni env parametri validni, retry/backoff pravila i audit logovi rade, i da je email flow stabilan.
 
 - `reservations:process-pending`
-  - **Zašto je kritično**: namenjeno pipeline obradi i može uključiti fiskal tokove; u dokumentaciji je označeno da je delimično stub.
-  - **Pre produkcije**: eksplicitno definisati šta tačno radi, završiti stub delove (ako postoje), i dodati operativnu proveru (logovi, metrika, alerti).
+  - **Stanje u kodu:** **no-op** — v. **`docs/cron-commands.md`** §1. Zakazana u produkciji u **`bootstrap/app.php`**, ali **trenutno ne izvršava** pipeline obrade plaćanja.
+  - **Pre produkcije / operativno:** ne očekivati efekat ove komande dok se ne dogodi stvarna implementacija `handle()`; kada se implementira, ponovo procijeniti rizik i dokumentaciju.
 
 ### Operativni minimum (pre produkcije)
 

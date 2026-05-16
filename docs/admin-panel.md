@@ -26,7 +26,7 @@ Specifikacija admin funkcionalnosti. Modeli: Reservation, TempData, DailyParking
 - **`system_config_fake_production`** — samo u **`production`** (ili ručno `--assume-production` u testu): fake bank/fiskal ili `payment.fake_e2e_sync`.
 - **`system_health_daily`** — najviše **jedan** zapis dnevno (dedupe `system_health_daily:YYYY-MM-DD`, datum **`Europe/Podgorica`**): skraćen pregled neuspelih jobova (24h), neuspelih MEGA arhiva, MEGA dijagnostike (ako su kredencijali podešeni), i „zaglaveljene“ **`post_fiscalization_data`** (>2h, ako tabela postoji). Komanda: **`alerts:system-health`**, scheduler **07:30** Podgorica — v. **`cron-commands.md`** / **`scheduled-tasks-overview.md`**. **MEGA privremene mrežne greške** pri uploadu / admin preview restore **ne** prave `admin_alerts` same po sebi (v. **`external-file-archive.md`** — retry u servisu); rollup i dalje može brojati redove u **`failed`** kad konačno ostanu neuspješni.
 
-- **Operativni heartbeat (cache):** **`alerts:system-health`** i **`files:archive-private`** upisuju u **Laravel Cache** metapodatke za budući read-only „Sistem status“ (bez nove DB šeme). Ključevi i TTL (~30 dana): **`App\Support\OperationalHeartbeatCache`** i **`docs/cron-commands.md`**.
+- **Operativni heartbeat (cache):** **`alerts:system-health`** i **`files:archive-private`** pišu u **Laravel Cache** metapodatke za **Sistem status** i operativni pregled (bez nove DB šeme). Ključevi i TTL (~30 dana): **`App\Support\OperationalHeartbeatCache`** i **`docs/cron-commands.md`**.
 
 ### Sistem status — `GET /admin/sistem-status` (`panel_admin.system-status`)
 

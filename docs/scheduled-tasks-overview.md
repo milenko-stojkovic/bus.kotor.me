@@ -40,7 +40,7 @@ Ovi taskovi su **namerno zakazani samo u produkciji** (da se lokalno izbegnu rea
 
 | Command | Schedule | Command file | Kratko |
 |---|---|---|---|
-| `reservations:process-pending` | every 5 minutes | `app/Console/Commands/ProcessPendingReservations.php` | Obrada `temp_data` / pipeline (može uključiti fiskal tokove) |
+| `reservations:process-pending` | every 5 minutes | `app/Console/Commands/ProcessPendingReservations.php` | **No-op (stub):** samo broji pending `temp_data`, **ne** mijenja DB / fiskal / rezervacije (v. **`docs/cron-commands.md`** §1). Zakazano samo u produkciji (`bootstrap/app.php`). |
 | `payment:check-pending-inquiry` | every 5 minutes | `app/Console/Commands/CheckPendingPaymentStatus.php` | Bank inquiry (Bankart) → `PaymentCallbackJob` |
 | `post-fiscalization:retry` | every 10 minutes | `app/Console/Commands/RetryPostFiscalization.php` | Retry stvarne fiskalizacije |
 
@@ -49,6 +49,8 @@ Ovi taskovi su **namerno zakazani samo u produkciji** (da se lokalno izbegnu rea
 ## Ručno pokretanje komandi
 
 Možeš ih pokrenuti pojedinačno. Na **Windowsu** u Cursor terminalu često **`php` nije u PATH-u** — koristi iz korena repoa **`.\laragon-artisan.cmd <komanda>`** (v. **`docs/project-conventions.md`** §3).
+
+**Napomena:** komande **`parking:update-availability`** i **`reservations:send-emails`** **nisu** u Laravel `Schedule` u repozitorijumu — ovde su navedene samo za ručno pokretanje / eventualni spoljni cron.
 
 - `php artisan reservations:process-pending`
 - `php artisan payment:check-pending-inquiry`
