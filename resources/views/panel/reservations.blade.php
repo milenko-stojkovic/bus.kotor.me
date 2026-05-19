@@ -74,18 +74,7 @@
                     @endif
 
                     <form method="GET" action="{{ route('panel.reservations', [], false) }}" class="space-y-4" id="panelStepForm">
-                            <div>
-                                <x-input-label for="reservation_date" :value="$ui('date')" />
-                                <input
-                                    id="reservation_date"
-                                    name="reservation_date"
-                                    type="date"
-                                    min="{{ $minDate }}"
-                                    max="{{ $maxDate }}"
-                                    value="{{ $selected_date ?? '' }}"
-                                    class="mt-1 block w-full rounded-md border-red-200 shadow-sm focus:border-red-500 focus:ring-red-500"
-                                />
-                            </div>
+                            @include('partials.reservation-date-calendar')
 
                             <div>
                                 <x-input-label for="drop_off_time_slot_id" :value="$ui('arrival_time')" />
@@ -261,11 +250,19 @@
         (function () {
             const stepForm = document.getElementById('panelStepForm');
             if (stepForm) {
-                const date = document.getElementById('reservation_date');
+                const dateInput = document.getElementById('reservation_date');
+                if (dateInput) {
+                    stepForm.querySelectorAll('[data-reservation-date]').forEach((btn) => {
+                        btn.addEventListener('click', () => {
+                            const v = btn.getAttribute('data-reservation-date');
+                            if (v) dateInput.value = v;
+                            stepForm.submit();
+                        });
+                    });
+                }
                 const arrival = document.getElementById('drop_off_time_slot_id');
                 const departure = document.getElementById('pick_up_time_slot_id');
                 const vehicle = document.getElementById('vehicle_id_panel');
-                if (date) date.addEventListener('change', () => stepForm.submit());
                 if (arrival) arrival.addEventListener('change', () => stepForm.submit());
                 if (departure) departure.addEventListener('change', () => stepForm.submit());
                 if (vehicle) vehicle.addEventListener('change', () => stepForm.submit());
