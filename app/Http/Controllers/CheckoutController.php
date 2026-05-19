@@ -231,7 +231,7 @@ class CheckoutController extends Controller
         $retryToken = Str::uuid()->toString();
 
         try {
-            $temp = DB::transaction(function () use ($request, $date, $dropOffSlotId, $pickUpSlotId, $merchantTransactionId, $retryToken, $snapshot) {
+            $temp = DB::transaction(function () use ($request, $date, $dropOffSlotId, $pickUpSlotId, $merchantTransactionId, $retryToken, $snapshot, $isFree) {
                 $slotIds = array_values(array_unique([
                     (int) $dropOffSlotId,
                     $pickUpSlotId,
