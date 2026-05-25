@@ -1,0 +1,987 @@
+================================================================================
+  BUS KOTOR — KORISNIČKO UPUTSTVO ZA AGENCIJE
+  Agency user guide (CG + EN)
+  Verzija: 2026-05-19
+================================================================================
+
+Napomena za autora uputstva:
+- Tekst je spreman za copy/paste u Word, PDF ili CMS.
+- Na mjestima gdje treba screenshot stoji:  <opis onoga što treba da se vidi na slici>
+- Jezik interfejsa u panelu: crnogorski (cg) ili engleski (en) — bira se u profilu.
+
+================================================================================
+DIO A — CRNOGORSKI (CG)
+================================================================================
+
+--------------------------------------------------------------------------------
+1. UVOD
+--------------------------------------------------------------------------------
+
+Ovo uputstvo objašnjava kako agencije (prevoznici) koriste web aplikaciju
+bus.kotor.me za rezervacije parkinga u Kotoru, upravljanje voznim parkom,
+avansno plaćanje (ako je uključeno), Limo QR (ako je uključeno) i podnošenje
+zahtjeva za besplatne rezervacije (FZBR).
+
+Agencija radi u dijelu aplikacije pod adresom /panel (Agency panel).
+Pristup zahtijeva registrovan nalog, potvrđenu email adresu i prijavu.
+
+<opis: naslovna stranica sajta bus.kotor.me sa linkom „Prijava“ / „Agency sign in“>
+
+--------------------------------------------------------------------------------
+2. PRIJAVA AGENCIJE (AGENCY SIGN IN)
+--------------------------------------------------------------------------------
+
+2.1. Otvaranje stranice za prijavu
+
+1. Otvorite web stranicu bus.kotor.me u pregledaču.
+2. Izaberite jezik stranice (cg ili en), ako je dostupan prekidač jezika.
+3. Kliknite na link za prijavu agencije (Agency sign in / Prijava).
+
+<opis: početna stranica sa istaknutim linkom za prijavu agencije>
+
+2.2. Unos podataka
+
+Unesite:
+- Email adresu koju ste koristili pri registraciji
+- Lozinku
+
+Kliknite dugme za prijavu.
+
+<opis: forma za prijavu — polja Email i Password, dugme Log in / Prijavi se>
+
+2.3. Zaboravljena lozinka
+
+Ako ste zaboravili lozinku:
+1. Na stranici za prijavu kliknite „Zaboravili ste lozinku?“ / „Forgot password?“
+2. Unesite email i pošaljite zahtjev.
+3. Otvorite link iz emaila i postavite novu lozinku.
+
+<opis: link „Zaboravili ste lozinku?“ na login formi>
+
+2.4. Nakon prijave
+
+- Ako je email već potvrđen, ulazite u Agency panel (/panel).
+- Ako email nije potvrđen, sistem vas upućuje na stranicu za verifikaciju
+  (vidi poglavlje 4).
+
+--------------------------------------------------------------------------------
+3. REGISTRACIJA NOVE AGENCIJE
+--------------------------------------------------------------------------------
+
+3.1. Otvaranje forme
+
+1. Na stranici za prijavu kliknite link za registraciju (Register / Registracija).
+2. Otvori se forma za kreiranje naloga agencije.
+
+<opis: link „Registracija“ / „Register“ ispod login forme>
+
+3.2. Obavezna polja
+
+Popunite:
+- Naziv (ime agencije / prevoznika) — minimum 2 znaka
+- Država — iz padajuće liste
+- Email — mora biti jedinstven (jedan nalog po emailu)
+- Lozinka i potvrda lozinke — u skladu sa pravilima sigurnosti (minimalna
+  dužina i složenost koje sistem traži)
+
+Jezik naloga pri registraciji odgovara trenutno izabranom jeziku stranice
+(cg ili en). Kasnije ga možete promijeniti u profilu.
+
+<opis: registraciona forma sa poljima Name, Country, Email, Password, Confirm password>
+
+3.3. Završetak registracije
+
+Nakon slanja forme:
+- Kreira se vaš korisnički nalog (User).
+- Automatski ste prijavljeni.
+- Sistem vas preusmjerava na stranicu za potvrdu email adrese (verifikacija).
+
+Registracija NIJE završena operativno dok ne potvrdite email (poglavlje 4).
+
+<opis: poruka nakon registracije koja traži verifikaciju emaila>
+
+--------------------------------------------------------------------------------
+4. VERIFIKACIJA EMAIL ADRESE
+--------------------------------------------------------------------------------
+
+4.1. Zašto je potrebna
+
+Agency panel (/panel) zaštićen je tako da samo verifikovani korisnici mogu
+rezervisati, upravljati vozilima i slati FZBR zahtjeve. Bez potvrđenog emaila
+nećete imati pun pristup panelu.
+
+4.2. Prvi korak nakon registracije
+
+Na ekranu „Potvrdite email“ / „Verify your email“:
+- Pročitajte uputstvo da otvorite link iz emaila.
+- Možete ponovo poslati verification email dugmetom
+  „Pošalji ponovo“ / „Resend verification email“.
+
+<opis: stranica verify-email sa dugmetom za ponovno slanje i opcijom odjave>
+
+4.3. Email sa linkom
+
+1. Otvorite inbox za email koji ste unijeli pri registraciji.
+2. Pronađite poruku za verifikaciju (provjerite spam/junk).
+3. Kliknite na link za potvrdu.
+
+<opis: primjer emaila za verifikaciju sa linkom (bez osjetljivih podataka)>
+
+4.4. Nakon uspješne verifikacije
+
+- Email je označen kao potvrđen.
+- Možete koristiti Agency panel: Rezervacije, Vozila, FZBR, itd.
+
+4.5. Promjena email adrese u profilu
+
+Ako u profilu (User) promijenite email:
+- Nova adresa se upisuje odmah.
+- Verifikacija se poništava — morate ponovo potvrditi novi email prije punog
+  pristupa panelu.
+
+<opis: User tab u panelu — polje Email i Save>
+
+--------------------------------------------------------------------------------
+5. PREGLED AGENCY PANELA (NAKON PRIJAVE)
+--------------------------------------------------------------------------------
+
+Nakon prijave i verifikacije emaila otvara se Agency panel. U gornjem meniju
+nalaze se (prema uključenim funkcijama):
+
+- Rezervacije — nova rezervacija (plaćena ili besplatna, kartica ili avans)
+- Avans — stanje avansa, uplate, istorija (samo ako je funkcija uključena)
+- Limo QR — generisanje QR kodova za Limo pickup (samo ako su uključeni avans
+  i Limo servis)
+- Korisnik — profil, jezik, lozinka, email
+- Vozila — vozni park
+- FZBR — Formular za besplatnu rezervaciju
+- Predstojeće rezervacije
+- Realizovane rezervacije
+- Statistika
+
+<opis: gornja navigacija Agency panela sa označenim stavkama menija>
+
+Jezik panela prati postavku „Jezik“ u profilu korisnika (cg ili en).
+
+--------------------------------------------------------------------------------
+6. VOZNI PARK (VOZILA)
+--------------------------------------------------------------------------------
+
+6.1. Dodavanje vozila
+
+1. Otvorite Vozila / Vehicles.
+2. Unesite registarsku tablicu (samo velika slova i brojevi, bez razmaka).
+3. Izaberite kategoriju vozila (tip vozila sa cijenom).
+4. Sačuvajte.
+
+<opis: forma za dodavanje vozila — tablica i kategorija>
+
+6.2. Uklanjanje vozila
+
+- Ako vozilo nikada nije korišćeno u rezervaciji — može se obrisati.
+- Ako je bilo u istoriji rezervacija — ne briše se trajno; dobija status
+  „uklonjeno“ (removed) i nestaje iz liste aktivnih vozila.
+
+6.3. Ponovni unos iste tablice
+
+- Ista tablica + ista kategorija kao ranije uklonjeno vozilo → vozilo se
+  reaktivira.
+- Ista tablica + DRUGA kategorija → direktan unos je blokiran. Morate
+  priložiti dokument (slika ili PDF) i poslati zahtjev administratoru za
+  odobrenje promjene kategorije. Dok zahtjev nije odobren, vozilo se ne može
+  koristiti sa novom kategorijom.
+
+<opis: poruka i forma za upload dokumenta pri promjeni kategorije tablice>
+
+6.4. Brisanje vozila koje ima predstojeće rezervacije
+
+Ako pokušate ukloniti vozilo vezano za predstojeće rezervacije:
+- Sistem traži zamjensko vozilo (ista ili niža kategorija, bez konflikta
+  termina — vidi pravila u poglavlju 10).
+- Ako zamjena postoji za sve rezervacije, otvara se korak-po-korak zamjena,
+  pa tek onda brisanje.
+
+<opis: ekran zamjene vozila pri brisanju vozila sa predstojećim rezervacijama>
+
+--------------------------------------------------------------------------------
+7. NOVA REZERVACIJA (REZERVACIJE)
+--------------------------------------------------------------------------------
+
+7.1. Osnovni koraci
+
+1. Otvorite Rezervacije.
+2. Izaberite datum rezervacije.
+3. Izaberite termin dolaska (drop-off) i odlaska (pick-up).
+4. Izaberite vozilo iz voznog parka (aktivna vozila).
+5. Provjerite cijenu / da li je termin besplatan (vidi 7.2).
+6. Izaberite način plaćanja ako je plaćena rezervacija (kartica ili avans).
+7. Potvrdite rezervaciju.
+
+<opis: stranica Rezervacije sa kalendarom/slotovima, izborom vozila i dugmetom za potvrdu>
+
+7.2. Besplatni termini
+
+Određeni termini mogu biti besplatni (jutarnji i večernji prozori, prema
+pravilima sistema). Za besplatnu rezervaciju:
+- Ne ide se na banku za plaćanje.
+- Ne izdaje se fiskalni račun kao za plaćenu rezervaciju.
+- Šalje se email potvrde besplatne rezervacije.
+
+Posebna kombinacija termina 1→1 i 41→41 takođe može biti besplatna (sistem
+to automatski prepoznaje).
+
+7.3. Plaćena rezervacija — kartica
+
+- Nakon potvrde preusmjereni ste na stranicu banke za plaćanje karticom.
+- Nakon uspješne uplate kreira se rezervacija, fiskalizuje se i šalje račun
+  na email.
+
+7.4. Plaćena rezervacija — avans (ako je uključeno)
+
+- Na stranici Rezervacije prikazuje se raspoloživi avans.
+- Ako je saldo dovoljan, možete izabrati plaćanje iz avansa.
+- Rezervacija se odmah evidentira kao plaćena; iznos se skida sa avansa.
+- Ne koristi se bankarski redirect za tu rezervaciju.
+
+Ako avans nije dovoljan, opcija je onemogućena — koristite karticu ili
+dopunite avans (poglavlje 8).
+
+7.5. Kapacitet i blokirani termini
+
+- Termin mora imati slobodan kapacitet (uključujući pending rezervacije u
+  obradi).
+- Blokirani termini nisu dostupni za kupovinu.
+- Datum obično može biti najviše ~90 dana unaprijed (ograničenje sistema).
+
+--------------------------------------------------------------------------------
+8. AVANS (AKO JE FUNKCIJA UKLJUČENA)
+--------------------------------------------------------------------------------
+
+8.1. Pregled stanja
+
+Otvorite Avans. Vidite:
+- Trenutno stanje (zbir svih knjiženja na avansu)
+- Istoriju knjiženja (uplate, korišćenje za rezervacije, korekcije admina)
+- Istoriju pokušaja dopune avansa
+
+<opis: stranica Avans sa saldom i tabelom knjiženja>
+
+8.2. Dopuna avansa (top-up)
+
+1. Unesite iznos dopune.
+2. Pokrenite uplatu — preusmjerenje na banku (ili test okruženje).
+3. Nakon uspješne uplate stanje avansa se povećava.
+4. Na email stiže PDF potvrda o evidentiranoj avansnoj uplati (to NIJE fiskalni
+   račun).
+
+<opis: forma za top-up i povratak sa banke>
+
+8.3. Korišćenje avansa za rezervacije
+
+Vidi poglavlje 7.4. Svaka plaćena rezervacija iz avansa smanjuje saldo za
+iznos rezervacije.
+
+--------------------------------------------------------------------------------
+9. PREDSTOJEĆE I REALIZOVANE REZERVACIJE
+--------------------------------------------------------------------------------
+
+9.1. Predstojeće (Upcoming)
+
+Prikaz rezervacija čiji je datum u budućnosti ili je danas, a termin odlaska
+još nije prošao. Ovdje možete:
+- Promijeniti vozilo na rezervaciji (samo zamjena koja zadovoljava pravila)
+- Otvoriti PDF računa (pregled ili preuzimanje) za plaćene rezervacije
+
+<opis: lista predstojećih rezervacija sa opcijom promjene vozila>
+
+9.2. Realizovane (Realized)
+
+Prikaz prošlih rezervacija i današnjih gdje je termin odlaska već prošao.
+PDF računa dostupan za pregled/preuzimanje gdje je primjenjivo.
+
+<opis: lista realizovanih rezervacija>
+
+9.3. Promjena vozila na predstojećoj rezervaciji
+
+Dozvoljeno samo vozilo:
+- iz vašeg voznog parka (aktivno),
+- iste ili NIŽE kategorije (cijena kategorije ≤ cijena na rezervaciji),
+- bez konflikta: ne smije imati drugu rezervaciju na isti datum sa istim
+  terminom DOLASKA ili istim terminom ODLASKA (cross-match nije zabranjen).
+
+Za plaćenu rezervaciju nakon promjene vozila može se ponovo poslati email
+sa računom.
+
+--------------------------------------------------------------------------------
+10. FZBR — ZAHTJEV ZA BESPLATNU REZERVACIJU
+--------------------------------------------------------------------------------
+
+FZBR služe školama i sličnim ustanovama kada Sekretarijat za lokalne prihode
+odobri besplatne termine.
+
+10.1. Proces (obavezno pročitati)
+
+1. Ustanova (škola) prvo kontaktira Sekretarijat:
+   prihodi@kotor.me
+2. Nakon odobrenja Sekretarijata, odobrenje se proslijedi agenciji/prevozniku.
+3. Tek tada agencija podnosi FZBR u sistemu uz dokumentaciju.
+
+Administrator NE odobrava besplatnu rezervaciju dok sva neophodna dokumentacija
+nije dostavljena i pregledana. Možete poslati dokumentaciju i u više koraka,
+ali zahtjev neće biti odobren dok komplet ne bude.
+
+<opis: informativni blok na vrhu FZBR stranice sa tekstom o prihodi@kotor.me>
+
+10.2. Popunjavanje forme u panelu
+
+1. Otvorite FZBR u meniju.
+2. Izaberite jedan datum za cijeli zahtjev.
+3. Dodajte 1 do 5 segmenata. Svaki segment = jedan par:
+   - Vrijeme dolaska
+   - Vrijeme odlaska
+4. Za svaki segment izaberite vozila iz voznog parka (min. 1 vozilo po
+   segmentu; maksimum po segmentu = operativni kapacitet parkinga, obično
+   do 9 vozila).
+5. Isto vozilo ne smije biti izabrano dva puta u istom segmentu.
+6. Priložite dokumentaciju: slike ili PDF, ukupno do 10 MB.
+7. Potvrdite saglasnost sa politikom privatnosti.
+8. Pošaljite zahtjev.
+
+<opis: FZBR forma — segmenti, izbor vozila, upload dokumenata, dugme Podnesi>
+
+10.3. Nakon slanja
+
+- Zahtjev dobija status „submitted“ (podnesen).
+- Administrator pregleda zahtjev u admin panelu.
+- Možete dobiti status „updated“, „fulfilled“ (odobreno i realizovano) ili
+  „rejected“ (odbijeno).
+
+Agencija NE finalizuje besplatnu rezervaciju sama — čeka admin akciju.
+
+--------------------------------------------------------------------------------
+11. LIMO QR (AKO JE UKLJUČENO)
+--------------------------------------------------------------------------------
+
+Dostupno samo kada su uključeni i avans i Limo servis.
+
+11.1. Šta radi QR
+
+- Agencija generiše QR kod za tekući dan.
+- QR koristi Limo evidenter na terenu pri potvrdi pickup-a.
+- Samo generisanje QR-a NE troši avans i NE fiskalizuje.
+
+11.2. Ograničenja
+
+- QR važi samo za današnji kalendarski dan (vremenska zona projekta).
+- Maksimalno 20 generisanih „slotova“ po agenciji po danu (aktivni tokeni +
+  već evidentirani pickup-i tog dana).
+
+11.3. Koraci
+
+1. Otvorite Limo QR u meniju.
+2. Generišite novi QR.
+3. Prikažite ili preuzmite PDF za štampu.
+4. Predajte QR evidenteru na terenu.
+
+<opis: lista QR tokena za današnji dan i dugme Generiši>
+
+--------------------------------------------------------------------------------
+12. STATISTIKA
+--------------------------------------------------------------------------------
+
+- Pregled ukupno plaćenog iznosa, broja posjeta i tablica po vozilima.
+- Filter po datumu (od–do), u okviru dozvoljenog opsega za vašu agenciju.
+- Moguć export u PDF (informativni izvještaj, jezik prati vaš profil).
+
+<opis: stranica Statistika sa filterima i tabelom>
+
+--------------------------------------------------------------------------------
+13. PROFIL KORISNIKA (USER)
+--------------------------------------------------------------------------------
+
+Možete mijenjati:
+- Ime / naziv
+- Jezik (cg ili en) — utiče na tekstove u panelu
+- Email — nakon promjene potrebna ponovna verifikacija
+- Lozinku (trenutna + nova + potvrda)
+
+Save / Sačuvaj aktivno samo kada ima izmjena.
+
+<opis: User forma sa poljima i dugmadima Save / Cancel>
+
+Brisanje naloga: dostupna opcija u profilu (oprez — nepovratno za pristup).
+
+--------------------------------------------------------------------------------
+14. PRAVILA KOJIH SE AGENCIJE MORAJU PRIDRŽAVATI
+--------------------------------------------------------------------------------
+
+14.1. Nalog i pristup
+
+- Jedan email = jedan nalog agencije.
+- Email mora biti verifikovan za pun pristup /panel funkcijama.
+- Čuvajte lozinku povjerljivo; koristite opciju reset lozinke ako je zaboravljena.
+
+14.2. Registarske tablice
+
+- Unosite tablice tačno (sistem normalizuje velika slova; dijakritici se
+  tolerišu pri provjeri duplikata).
+- Ne pokušavajte zaobići promjenu kategorije vozila ponovnim unosom iste
+  tablice bez admin odobrenja.
+
+14.3. Rezervacije i duplikati
+
+- NE možete kreirati novu rezervaciju ako za isti datum i istu tablicu već
+  postoji rezervacija sa ISTIM terminom dolaska ILI ISTIM terminom odlaska.
+- Dozvoljeno je da imate rezervaciju gdje je vaš dolazak = tuđi odlazak
+  (cross-match) — to NIJE duplikat.
+
+14.4. Kapacitet i termini
+
+- Rezervišite samo kada sistem prikaže dostupan termin.
+- Ne rezervišite za prošle datume.
+- Poštujte blokade termina koje je postavio administrator.
+
+14.5. Plaćanje
+
+- Za plaćene rezervacije završite bankarski tok ako plaćate karticom.
+- Za avans: prvo dopunite avans ako nema dovoljno sredstava.
+- Besplatne rezervacije ne zaobilazite plaćanjem — koristite ispravan FZBR
+  proces za škole/ustanove.
+
+14.6. FZBR i dokumentacija
+
+- Prvo odobrenje preko prihodi@kotor.me, zatim FZBR u sistemu.
+- Priložite jasnu dokumentaciju (odobrenje, angažovanje prevoznika, itd.).
+- Administrator ne odobrava dok dokumentacija nije kompletna.
+- Maks. 5 segmenata po zahtjevu; po segmentu poštujte limit broja vozila.
+
+14.7. Promjena vozila na rezervaciji
+
+- Samo niža ili ista kategorija.
+- Bez konflikta termina (isto pravilo drop/pick kao pri duplikatima).
+- Za plaćene rezervacije promjena može pokrenuti novi email sa računom.
+
+14.8. Limo (ako je uključeno)
+
+- QR samo za današnji dan; ne dijelite QR izvan operativne namjene.
+- Finansijski efekat nastaje tek kada evidenter potvrdi pickup na terenu.
+
+14.9. Tačni podaci
+
+- Email za račune i potvrde mora biti ispravan.
+- Podaci ustanove u FZBR procesu moraju biti tačni.
+
+14.10. Zabranjeno / ne raditi
+
+- Ne koristite tuđe naloge.
+- Ne manipulišite URL-ovima ili API-jem van predviđenog UI-ja.
+- Ne očekujte automatsko odobrenje FZBR bez admin pregleda.
+- Ne brišite vozila sa predstojećim rezervacijama bez zamjene kada sistem
+  to traži.
+
+--------------------------------------------------------------------------------
+15. ČESTA PITANJA (KRATKO)
+--------------------------------------------------------------------------------
+
+P: Zašto ne vidim Avans ili Limo u meniju?
+O: Funkcije zavise od podešavanja sistema (feature flags). Ako su isključene,
+   stavka je siva ili nedostupna.
+
+P: Zašto me sistem ne pušta na /panel nakon prijave?
+O: Vjerovatno email nije verifikovan — provjerite inbox i stranicu za
+   verifikaciju.
+
+P: Mogu li imati više agencija na jedan email?
+O: Ne — email mora biti jedinstven.
+
+P: Šta ako plaćanje karticom ne uspije?
+O: Pending rezervacija može isteći; pokušajte ponovo ili kontaktirajte podršku.
+
+--------------------------------------------------------------------------------
+KRAJ DIO A (CG)
+
+
+================================================================================
+DIO B — ENGLISH (EN)
+================================================================================
+
+--------------------------------------------------------------------------------
+1. INTRODUCTION
+--------------------------------------------------------------------------------
+
+This guide explains how transport agencies use the bus.kotor.me web
+application to book Kotor parking, manage their vehicle fleet, use advance
+payments (if enabled), Limo QR (if enabled), and submit free reservation
+requests (FZBR).
+
+Agencies work in the /panel area (Agency panel). Access requires a registered
+account, verified email address, and sign-in.
+
+<screenshot: site home page with “Agency sign in” / “Log in” link highlighted>
+
+--------------------------------------------------------------------------------
+2. AGENCY SIGN IN
+--------------------------------------------------------------------------------
+
+2.1. Opening the sign-in page
+
+1. Open bus.kotor.me in your browser.
+2. Select the site language (cg or en) if a language switcher is available.
+3. Click the agency sign-in link (Agency sign in / Log in).
+
+<screenshot: home page with agency login link>
+
+2.2. Entering credentials
+
+Enter:
+- The email address used at registration
+- Your password
+
+Click the sign-in button.
+
+<screenshot: login form — Email, Password, Log in button>
+
+2.3. Forgot password
+
+If you forgot your password:
+1. On the login page click “Forgot your password?”
+2. Enter your email and submit the request.
+3. Open the link in the email and set a new password.
+
+<screenshot: “Forgot your password?” link on login form>
+
+2.4. After sign-in
+
+- If your email is already verified, you enter the Agency panel (/panel).
+- If not verified, you are redirected to email verification (see section 4).
+
+--------------------------------------------------------------------------------
+3. REGISTERING A NEW AGENCY
+--------------------------------------------------------------------------------
+
+3.1. Opening the form
+
+1. On the login page click Register.
+2. The agency registration form opens.
+
+<screenshot: “Register” link below login form>
+
+3.2. Required fields
+
+Fill in:
+- Name (agency / carrier name) — minimum 2 characters
+- Country — from dropdown
+- Email — must be unique (one account per email)
+- Password and confirmation — must meet system security rules
+
+Account language at registration follows the current site language (cg or en).
+You can change it later in your profile.
+
+<screenshot: registration form — Name, Country, Email, Password, Confirm password>
+
+3.3. After registration
+
+When you submit:
+- Your user account is created.
+- You are logged in automatically.
+- You are redirected to email verification.
+
+Registration is NOT operationally complete until you verify email (section 4).
+
+<screenshot: post-registration message asking to verify email>
+
+--------------------------------------------------------------------------------
+4. EMAIL VERIFICATION
+--------------------------------------------------------------------------------
+
+4.1. Why it is required
+
+The Agency panel (/panel) is protected: only verified users can book,
+manage vehicles, and submit FZBR requests. Without verified email you will
+not have full panel access.
+
+4.2. Right after registration
+
+On the “Verify your email” screen:
+- Read the instruction to open the link in your email.
+- You can resend the verification email with “Resend verification email”.
+
+<screenshot: verify-email page with resend button and log out option>
+
+4.3. Verification email
+
+1. Open the inbox for the email you registered with.
+2. Find the verification message (check spam/junk).
+3. Click the confirmation link.
+
+<screenshot: sample verification email with link (no sensitive data)>
+
+4.4. After successful verification
+
+- Your email is marked verified.
+- You can use the Agency panel: Reservations, Vehicles, FZBR, etc.
+
+4.5. Changing email in profile
+
+If you change email in User profile:
+- The new address is saved immediately.
+- Verification is reset — you must verify the new email before full access
+  returns.
+
+<screenshot: User tab — Email field and Save>
+
+--------------------------------------------------------------------------------
+5. AGENCY PANEL OVERVIEW (AFTER SIGN IN)
+--------------------------------------------------------------------------------
+
+After sign-in and verification you see the Agency panel. Top menu items
+(depending on enabled features):
+
+- Reservations — new booking (paid or free, card or advance)
+- Advance — balance, top-ups, history (if feature enabled)
+- Limo QR — generate QR codes for Limo pickup (if advance + Limo enabled)
+- User — profile, language, password, email
+- Vehicles — fleet
+- FZBR — free reservation request form
+- Upcoming reservations
+- Realized reservations
+- Statistics
+
+<screenshot: agency panel top navigation with menu items labeled>
+
+Panel language follows your User profile language setting (cg or en).
+
+--------------------------------------------------------------------------------
+6. VEHICLE FLEET (VEHICLES)
+--------------------------------------------------------------------------------
+
+6.1. Adding a vehicle
+
+1. Open Vehicles.
+2. Enter license plate (uppercase letters and digits only, no spaces).
+3. Select vehicle category (type with price).
+4. Save.
+
+<screenshot: add vehicle form — plate and category>
+
+6.2. Removing a vehicle
+
+- If the vehicle was never used in a reservation — it can be deleted.
+- If it appears in reservation history — it is not physically deleted;
+  status becomes “removed” and it disappears from active fleet lists.
+
+6.3. Re-entering the same plate
+
+- Same plate + same category as a previously removed vehicle → vehicle is
+  reactivated.
+- Same plate + DIFFERENT category → direct entry is blocked. You must upload
+  a document (image or PDF) and submit an admin approval request for category
+  change. Until approved, the vehicle cannot be used with the new category.
+
+<screenshot: message and upload form for category change approval>
+
+6.4. Deleting a vehicle with upcoming reservations
+
+If you try to remove a vehicle linked to upcoming reservations:
+- The system requires replacement vehicles (same or lower category, no slot
+  conflict — see rules in section 10).
+- If replacement exists for all reservations, a step-by-step replacement
+  flow runs, then deletion.
+
+<screenshot: vehicle replacement screen when deleting vehicle with upcoming bookings>
+
+--------------------------------------------------------------------------------
+7. NEW RESERVATION (RESERVATIONS)
+--------------------------------------------------------------------------------
+
+7.1. Basic steps
+
+1. Open Reservations.
+2. Select reservation date.
+3. Select arrival (drop-off) and departure (pick-up) time slots.
+4. Select a vehicle from your active fleet.
+5. Check price / whether the slot is free (see 7.2).
+6. For paid bookings choose payment method (card or advance).
+7. Confirm the reservation.
+
+<screenshot: Reservations page with date/slots, vehicle picker, confirm button>
+
+7.2. Free time slots
+
+Certain slots may be free (morning/evening windows per system rules). For free
+bookings:
+- No bank payment redirect.
+- No fiscal receipt like a paid booking.
+- A free reservation confirmation email is sent.
+
+Special slot combinations 1→1 and 41→41 may also be free (system detects
+automatically).
+
+7.3. Paid reservation — card
+
+- After confirm you are redirected to the bank to pay by card.
+- After successful payment a reservation is created, fiscalized, and invoice
+  emailed.
+
+7.4. Paid reservation — advance (if enabled)
+
+- Reservations page shows available advance balance.
+- If balance is sufficient you can pay from advance.
+- Reservation is immediately marked paid; amount is deducted from advance.
+- No bank redirect for that booking.
+
+If advance is insufficient, the option is disabled — use card or top up advance
+(section 8).
+
+7.5. Capacity and blocked slots
+
+- Slot must have available capacity (including pending bookings in progress).
+- Blocked slots cannot be purchased.
+- Dates are typically limited to ~90 days ahead (system limit).
+
+--------------------------------------------------------------------------------
+8. ADVANCE PAYMENTS (IF ENABLED)
+--------------------------------------------------------------------------------
+
+8.1. Viewing balance
+
+Open Advance. You see:
+- Current balance (sum of ledger entries)
+- Ledger history (top-ups, usage for reservations, admin corrections)
+- Top-up attempt history
+
+<screenshot: Advance page with balance and ledger table>
+
+8.2. Topping up advance
+
+1. Enter top-up amount.
+2. Start payment — redirect to bank (or test environment).
+3. After successful payment advance balance increases.
+4. A confirmation PDF is emailed (this is NOT a fiscal invoice).
+
+<screenshot: top-up form and return from bank>
+
+8.3. Using advance for reservations
+
+See section 7.4. Each paid booking from advance reduces balance by the
+reservation amount.
+
+--------------------------------------------------------------------------------
+9. UPCOMING AND REALIZED RESERVATIONS
+--------------------------------------------------------------------------------
+
+9.1. Upcoming
+
+Lists reservations whose date is in the future, or today before pick-up end
+time. Here you can:
+- Change vehicle on a reservation (only allowed replacements)
+- Open invoice PDF (view or download) for paid reservations
+
+<screenshot: upcoming reservations list with change vehicle option>
+
+9.2. Realized
+
+Past reservations and today after pick-up end time. Invoice PDF available
+where applicable.
+
+<screenshot: realized reservations list>
+
+9.3. Changing vehicle on upcoming reservation
+
+Allowed only if replacement vehicle:
+- is in your active fleet,
+- has same or LOWER category (category price ≤ reservation category price),
+- has no conflict: no other reservation on same date with same ARRIVAL slot
+  OR same DEPARTURE slot (cross-match is allowed).
+
+For paid reservations a vehicle change may trigger a new invoice email.
+
+--------------------------------------------------------------------------------
+10. FZBR — FREE RESERVATION REQUEST
+--------------------------------------------------------------------------------
+
+FZBR is for schools and similar institutions after the Secretariat approves
+free slots.
+
+10.1. Process (must read)
+
+1. The institution (school) first contacts the Secretariat:
+   prihodi@kotor.me
+2. After Secretariat approval, approval is forwarded to the agency/carrier.
+3. Only then the agency submits FZBR in the system with documentation.
+
+An administrator will NOT approve the free reservation until all required
+documentation is submitted and reviewed. You may upload in steps, but approval
+waits until complete.
+
+<screenshot: informational block at top of FZBR page mentioning prihodi@kotor.me>
+
+10.2. Filling the form in the panel
+
+1. Open FZBR in the menu.
+2. Select one date for the whole request.
+3. Add 1 to 5 segments. Each segment = one pair:
+   - Arrival time
+   - Departure time
+4. For each segment select vehicles from your fleet (min. 1 per segment;
+   max per segment = parking operational capacity, usually up to 9).
+5. The same vehicle cannot be selected twice in one segment.
+6. Attach documentation: images or PDF, total up to 10 MB.
+7. Accept privacy policy.
+8. Submit the request.
+
+<screenshot: FZBR form — segments, vehicle selection, document upload, Submit>
+
+10.3. After submission
+
+- Request status becomes “submitted”.
+- Administrator reviews in admin panel.
+- You may receive “updated”, “fulfilled” (approved and completed), or
+  “rejected”.
+
+The agency does NOT finalize the free reservation alone — wait for admin action.
+
+--------------------------------------------------------------------------------
+11. LIMO QR (IF ENABLED)
+--------------------------------------------------------------------------------
+
+Available only when both advance and Limo service features are enabled.
+
+11.1. What the QR does
+
+- Agency generates a QR code for the current day.
+- Limo staff use it in the field when confirming pickup.
+- Generating QR alone does NOT charge advance and does NOT fiscalize.
+
+11.2. Limits
+
+- QR valid only for today’s calendar day (project timezone).
+- Maximum 20 generated “slots” per agency per day (active tokens + pickups
+  already recorded that day).
+
+11.3. Steps
+
+1. Open Limo QR in the menu.
+2. Generate a new QR.
+3. Display or download PDF for printing.
+4. Hand QR to field staff.
+
+<screenshot: list of today’s QR tokens and Generate button>
+
+--------------------------------------------------------------------------------
+12. STATISTICS
+--------------------------------------------------------------------------------
+
+- View total paid amount, visit count, and per-plate breakdown.
+- Filter by date range within allowed bounds for your agency.
+- Optional PDF export (informational report; language follows your profile).
+
+<screenshot: Statistics page with filters and table>
+
+--------------------------------------------------------------------------------
+13. USER PROFILE
+--------------------------------------------------------------------------------
+
+You can change:
+- Name
+- Language (cg or en) — affects panel texts
+- Email — after change, re-verification required
+- Password (current + new + confirmation)
+
+Save is active only when there are changes.
+
+<screenshot: User form with fields and Save / Cancel>
+
+Account deletion: available in profile (caution — irreversible for access).
+
+--------------------------------------------------------------------------------
+14. RULES AGENCIES MUST FOLLOW
+--------------------------------------------------------------------------------
+
+14.1. Account and access
+
+- One email = one agency account.
+- Email must be verified for full /panel access.
+- Keep password confidential; use password reset if forgotten.
+
+14.2. License plates
+
+- Enter plates accurately (system normalizes uppercase; diacritics tolerated
+  for duplicate checks).
+- Do not bypass category change rules by re-entering the same plate without
+  admin approval.
+
+14.3. Reservations and duplicates
+
+- You CANNOT create a new reservation if the same date and plate already has
+  a reservation with the SAME arrival slot OR the SAME departure slot.
+- Having arrival = someone else’s departure (cross-match) is allowed — NOT a
+  duplicate.
+
+14.4. Capacity and slots
+
+- Book only when the system shows availability.
+- Do not book past dates.
+- Respect administrator slot blocks.
+
+14.5. Payment
+
+- For paid bookings complete the bank flow when paying by card.
+- For advance: top up first if balance is insufficient.
+- Do not bypass payment for cases that require FZBR — use the school/institution
+  process.
+
+14.6. FZBR and documentation
+
+- Secretariat approval via prihodi@kotor.me first, then FZBR in the system.
+- Attach clear documentation (approval, carrier engagement, etc.).
+- Admin will not approve until documentation is complete.
+- Max. 5 segments per request; respect per-segment vehicle limits.
+
+14.7. Vehicle change on reservation
+
+- Same or lower category only.
+- No slot conflict (same drop/pick duplicate rule).
+- Paid reservations may trigger a new invoice email.
+
+14.8. Limo (if enabled)
+
+- QR for today only; do not misuse QR outside operations.
+- Financial effect only when field staff confirms pickup.
+
+14.9. Accurate data
+
+- Email for invoices and confirmations must be correct.
+- Institution data in FZBR must be accurate.
+
+14.10. Do not
+
+- Do not use others’ accounts.
+- Do not manipulate URLs/API outside the intended UI.
+- Do not expect automatic FZBR approval without admin review.
+- Do not delete vehicles with upcoming reservations without replacement when
+  the system requires it.
+
+--------------------------------------------------------------------------------
+15. FAQ (SHORT)
+--------------------------------------------------------------------------------
+
+Q: Why don’t I see Advance or Limo in the menu?
+A: Features depend on system settings. If disabled, the item is greyed out
+   or unavailable.
+
+Q: Why can’t I access /panel after login?
+A: Email is probably not verified — check inbox and verification page.
+
+Q: Can I have multiple agencies on one email?
+A: No — email must be unique.
+
+Q: What if card payment fails?
+A: Pending booking may expire; try again or contact support.
+
+--------------------------------------------------------------------------------
+END PART B (EN)
+
+================================================================================
+KRAJ DOKUMENTA / END OF DOCUMENT
+================================================================================

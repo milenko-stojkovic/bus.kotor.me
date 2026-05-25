@@ -23,6 +23,7 @@
 | Admin panel | [admin-panel.md](./admin-panel.md) |
 | Limo (stanje u kodu) | [limo-service.md](./limo-service.md) |
 | Agencijski panel | [agency-panel.md](./agency-panel.md) |
+| Korisničko uputstvo za agencije (CG+EN) | [agency-user-guide.txt](./agency-user-guide.txt) |
 | Šalter / dolasci | [control-panel.md](./control-panel.md) |
 | Zakazani zadaci | [scheduled-tasks-overview.md](./scheduled-tasks-overview.md) |
 | Operativna spremnost, backup, DR | [production-readiness-and-disaster-recovery.md](./production-readiness-and-disaster-recovery.md) |
