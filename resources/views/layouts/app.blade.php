@@ -16,22 +16,32 @@
         @include('partials.password-field-overlay-styles')
     </head>
     <body class="font-sans antialiased">
-        <div class="flex min-h-screen flex-col bg-red-50">
-            @include('layouts.navigation')
+        <div class="relative isolate flex min-h-screen flex-col bg-red-50">
+            @if (request()->routeIs('panel.*'))
+                <div
+                    aria-hidden="true"
+                    class="pointer-events-none fixed inset-0 z-0 bg-red-50"
+                    style="background-image: url('{{ asset('images/background.svg') }}'); background-repeat: no-repeat; background-position: center center; background-size: 50% auto;"
+                ></div>
+            @endif
 
-            @isset($header)
-                <header class="bg-white shadow">
-                    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                        {{ $header }}
-                    </div>
-                </header>
-            @endisset
+            <div class="relative z-10 flex min-h-screen flex-1 flex-col">
+                @include('layouts.navigation')
 
-            <main class="flex-1 w-full">
-                {{ $slot }}
-            </main>
+                @isset($header)
+                    <header class="bg-white shadow">
+                        <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                            {{ $header }}
+                        </div>
+                    </header>
+                @endisset
 
-            @include('partials.site-footer')
+                <main class="flex-1 w-full">
+                    {{ $slot }}
+                </main>
+
+                @include('partials.site-footer')
+            </div>
         </div>
     </body>
 </html>

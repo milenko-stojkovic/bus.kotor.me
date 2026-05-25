@@ -10,7 +10,7 @@
     </x-slot>
 
     <div class="py-6">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+        <div class="max-w-3xl mx-auto sm:px-6 lg:px-8 space-y-6">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 space-y-6">
                 <div class="flex justify-center">
                     <img src="{{ $qrDataUri }}" alt="{{ $p('limo_qr_img_alt', 'Limo QR kod') }}" class="max-w-xs w-full h-auto border border-red-100 rounded" />

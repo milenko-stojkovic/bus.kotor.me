@@ -35,7 +35,7 @@
     </x-slot>
 
     <div class="py-6">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+        <div class="max-w-3xl mx-auto sm:px-6 lg:px-8 space-y-6">
             @if ($advanceEnabled && !is_null($advanceBalance))
                 <div class="rounded-md border border-red-100 bg-red-50 p-3">
                     <span class="text-sm text-gray-600">Ukupan iznos avansa:</span>
