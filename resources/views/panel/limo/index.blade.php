@@ -1,7 +1,8 @@
 @php
     $p = fn (string $key, ?string $fallback = null) => \App\Support\UiText::t('panel', $key, $fallback);
     $locale = app()->getLocale();
-    $pickupMapUrl = 'https://maps.app.goo.gl/BkmeQ1ZAo8XG1FDb6';
+    $pickupMapUrl1 = 'https://maps.app.goo.gl/BkmeQ1ZAo8XG1FDb6';
+    $pickupMapUrl2 = 'https://maps.app.goo.gl/qdy9YmTLRBsggPCD6';
     /** @var \Illuminate\Support\Collection<int, \App\Models\LimoQrToken> $tokens */
     $tokens = $tokens ?? collect();
     $slotsUsedToday = $slotsUsedToday ?? 0;
@@ -35,19 +36,26 @@
             @endif
 
             @php
-                $pickupLinkText = $p(
-                    'limo_notice_pickup_place',
+                $pickupLinkText1 = $p(
+                    'limo_notice_pickup_place_1',
                     $locale === 'en'
                         ? 'the bus stop by the city market'
                         : 'autobuskom stajalištu kod gradske pijace',
                 );
+                $pickupLinkText2 = $p(
+                    'limo_notice_pickup_place_2',
+                    $locale === 'en'
+                        ? 'the bus stop near the extension of the parking area'
+                        : 'autobuskom stajalištu u produžetku parkinga',
+                );
 
-                $pickupLinkHtml = '<a href="' . e($pickupMapUrl) . '" target="_blank" rel="noopener noreferrer" class="font-medium text-red-700 hover:text-red-600 underline decoration-red-200 underline-offset-2">' . e($pickupLinkText) . '</a>';
+                $pickupLinkHtml1 = '<a href="' . e($pickupMapUrl1) . '" target="_blank" rel="noopener noreferrer" class="font-medium text-red-700 hover:text-red-600 underline decoration-red-200 underline-offset-2">' . e($pickupLinkText1) . '</a>';
+                $pickupLinkHtml2 = '<a href="' . e($pickupMapUrl2) . '" target="_blank" rel="noopener noreferrer" class="font-medium text-red-700 hover:text-red-600 underline decoration-red-200 underline-offset-2">' . e($pickupLinkText2) . '</a>';
                 $p1Escaped = e($p(
                     'limo_notice_p1',
                     $locale === 'en'
-                        ? 'Agencies that provide limo service must pick up passengers at the designated location — :pickup_link.'
-                        : 'Agencije koje pružaju uslugu limo servisa imaju obavezu da ukrcavanje putnika vrše na za to predviđenom mjestu — :pickup_link.',
+                        ? 'Agencies that provide limo service must pick up passengers at the designated pickup locations — :pickup_link_1 and :pickup_link_2.'
+                        : 'Agencije koje pružaju uslugu limo servisa imaju obavezu da ukrcavanje putnika vrše na za to predviđenim mjestima — :pickup_link_1 i :pickup_link_2.',
                 ));
             @endphp
 
@@ -57,7 +65,9 @@
                         {{ $p('limo_notice_title', $locale === 'en' ? 'Important information' : 'Važne informacije') }}
                     </h3>
 
-                    <p>{!! str_replace(':pickup_link', $pickupLinkHtml, $p1Escaped) !!}</p>
+                    <p>
+                        {!! str_replace([':pickup_link_1', ':pickup_link_2'], [$pickupLinkHtml1, $pickupLinkHtml2], $p1Escaped) !!}
+                    </p>
 
                     <p>
                         {{ $p(
