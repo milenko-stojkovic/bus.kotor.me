@@ -23,7 +23,7 @@ final class AdminDailyTicketUpdateService
     public function apply(Reservation $reservation, array $data): array
     {
         if (! $reservation->isDailyTicket()) {
-            throw new \RuntimeException('Rezervacija nije dnevna karta.');
+            throw new \RuntimeException('Rezervacija nije dnevna naknada.');
         }
 
         $newVtId = (int) $data['vehicle_type_id'];

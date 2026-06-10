@@ -29,6 +29,9 @@ class LimoPlateFallbackTest extends TestCase
     {
         parent::setUp();
         Carbon::setTestNow(Carbon::parse('2026-05-04 12:00:00', 'Europe/Podgorica'));
+        config(['features.advance_payments' => true]);
+        config(['features.limo_service' => true]);
+        config(['features.limo_qr_workflow' => true]);
         config(['limo.ocr.enabled' => false]);
     }
 

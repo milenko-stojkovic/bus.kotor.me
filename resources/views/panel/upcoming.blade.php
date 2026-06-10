@@ -97,13 +97,17 @@
                                             <td class="px-3 py-2 text-gray-700">{{ $r->vehicleType?->formatLabel($locale, 'EUR') ?? '—' }}</td>
                                             <td class="px-3 py-2 text-right whitespace-nowrap">
                                                 <div x-show="! editing" class="flex justify-end">
-                                                    @if ($allowed->isNotEmpty())
+                                                    @if ($r->isDailyTicket())
+                                                        <span class="text-gray-500 text-xs max-w-[12rem] text-right">
+                                                            {{ $p('upcoming_plate_change_unavailable_daily_fee', $locale === 'cg' ? 'Promjena tablice nije dostupna za dnevnu naknadu.' : 'Plate change is not available for Daily fee reservations.') }}
+                                                        </span>
+                                                    @elseif ($allowed->isNotEmpty())
                                                         <button
                                                             type="button"
                                                             class="inline-flex items-center px-3 py-1.5 border border-red-200 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-red-50"
                                                             @click="editing = true"
                                                         >
-                                                            {{ $p('change_vehicle', 'Change vehicle') }}
+                                                            {{ $p('change_vehicle', 'Change plate') }}
                                                         </button>
                                                     @else
                                                         <span class="text-gray-400 text-xs">—</span>

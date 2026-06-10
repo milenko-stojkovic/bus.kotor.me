@@ -92,7 +92,7 @@ class ReservationController extends Controller
 
             return view('admin-panel.reservations.edit-daily-ticket', [
                 'navActive' => 'reservations',
-                'pageTitle' => 'Rezervacija #'.$reservation->id.' — Dnevna karta',
+                'pageTitle' => 'Rezervacija #'.$reservation->id.' — Dnevna naknada',
                 'reservation' => $reservation,
                 'returnQuery' => $returnQuery,
                 'dateMin' => $boundsMin,

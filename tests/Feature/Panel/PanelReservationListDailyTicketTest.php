@@ -93,8 +93,8 @@ final class PanelReservationListDailyTicketTest extends TestCase
             ->getContent();
 
         $this->assertTrue(
-            str_contains($html, 'Dnevna karta') || str_contains($html, 'Daily ticket'),
-            'Expected daily ticket label in upcoming list',
+            str_contains($html, 'Dnevna naknada') || str_contains($html, 'Daily fee'),
+            'Expected daily fee label in upcoming list',
         );
         $this->assertStringContainsString($r->license_plate, $html);
     }

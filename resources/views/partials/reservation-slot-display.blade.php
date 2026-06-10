@@ -4,7 +4,7 @@
     $dailyLabel = \App\Support\UiText::t(
         'panel',
         'daily_ticket_label',
-        $locale === 'cg' ? 'Dnevna karta' : 'Daily ticket',
+        $locale === 'cg' ? 'Dnevna naknada' : 'Daily fee',
         $locale,
     );
 @endphp

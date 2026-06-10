@@ -9,6 +9,7 @@ use App\Models\AgencyAdvanceTransaction;
 use App\Services\AgencyAdvance\AgencyAdvanceService;
 use App\Services\AgencyAdvance\AdvanceTopupProcessor;
 use App\Services\AgencyAdvance\RealAdvanceTopupPaymentProvider;
+use App\Support\UiText;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -46,6 +47,7 @@ final class AdvanceController extends Controller
         }
 
         $userId = (int) $request->user()->id;
+        $locale = (string) ($request->user()->lang ?? app()->getLocale());
         $amount = (string) $request->validated('amount');
 
         /** @var AgencyAdvanceTopup $topup */
@@ -72,7 +74,7 @@ final class AdvanceController extends Controller
 
             return redirect()
                 ->to(route('panel.advance.index', [], false))
-                ->with('status', 'Avansna uplata je uspješno evidentirana.');
+                ->with('status', UiText::t('panel', 'advance_topup_success', 'Advance top-up was successfully recorded.', $locale));
         }
 
         $provider = app(RealAdvanceTopupPaymentProvider::class);
@@ -109,7 +111,7 @@ final class AdvanceController extends Controller
 
         return redirect()
             ->to(route('panel.advance.index', [], false))
-            ->with('error', 'Avansna uplata nije mogla biti pokrenuta.');
+            ->with('error', UiText::t('panel', 'advance_topup_start_failed', 'Advance top-up could not be started.', $locale));
     }
 
     /**
@@ -120,6 +122,7 @@ final class AdvanceController extends Controller
         if (! (bool) config('features.advance_payments')) {
             abort(404);
         }
+        $locale = (string) ($request->user()?->lang ?? app()->getLocale());
 
         $txId = $request->query('merchant_transaction_id');
         $txId = is_string($txId) ? trim($txId) : '';
@@ -134,17 +137,17 @@ final class AdvanceController extends Controller
 
         if ($topup->status === AgencyAdvanceTopup::STATUS_PAID) {
             return redirect()->to(route('panel.advance.index', [], false))
-                ->with('status', 'Avansna uplata je uspješno evidentirana.');
+                ->with('status', UiText::t('panel', 'advance_topup_success', 'Advance top-up was successfully recorded.', $locale));
         }
 
         if ($topup->status === AgencyAdvanceTopup::STATUS_FAILED) {
             return redirect()->to(route('panel.advance.index', [], false))
-                ->with('error', 'Avansna uplata nije uspješno završena.');
+                ->with('error', UiText::t('panel', 'advance_topup_failed', 'Advance top-up was not completed successfully.', $locale));
         }
 
         // pending: callback may arrive slightly later
         return redirect()->to(route('panel.advance.index', [], false))
-            ->with('message', 'Avansna uplata se obrađuje. Ako je potrebno, osvježite stranicu za nekoliko trenutaka.');
+            ->with('message', UiText::t('panel', 'advance_topup_pending', 'Advance top-up is being processed. If needed, refresh the page in a few moments.', $locale));
     }
 }
 

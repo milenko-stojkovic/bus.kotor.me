@@ -24,6 +24,14 @@ class LimoIncidentFlowTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['features.advance_payments' => true]);
+        config(['features.limo_service' => true]);
+        config(['features.limo_qr_workflow' => true]);
+    }
+
     private function makePlateUpload(Admin $admin, array $attrs = []): LimoPlateUpload
     {
         Storage::disk('local')->put('limo_plate_uploads/upl.jpg', 'plate-bytes');

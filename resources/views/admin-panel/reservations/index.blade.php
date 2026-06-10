@@ -150,7 +150,7 @@
                         class="mt-1 block w-full rounded-md border-red-200 shadow-sm focus:border-red-500 focus:ring-red-500">
                         <option value="" @selected(old('reservation_kind', $filters['reservation_kind'] ?? '') === '')>Sve</option>
                         <option value="time_slots" @selected(old('reservation_kind', $filters['reservation_kind'] ?? '') === 'time_slots')>Termini</option>
-                        <option value="daily_ticket" @selected(old('reservation_kind', $filters['reservation_kind'] ?? '') === 'daily_ticket')>Dnevna karta</option>
+                        <option value="daily_ticket" @selected(old('reservation_kind', $filters['reservation_kind'] ?? '') === 'daily_ticket')>Dnevna naknada</option>
                     </select>
                     <x-input-error class="mt-2" :messages="$errors->get('reservation_kind')" />
                 </div>

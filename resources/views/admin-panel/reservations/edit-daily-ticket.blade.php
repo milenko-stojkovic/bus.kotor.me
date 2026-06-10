@@ -3,7 +3,7 @@
     $cancelUrl = $cancelUrl ?? route('panel_admin.reservations', [], false).($returnQuery !== '' ? '?'.$returnQuery : '');
 @endphp
 
-<x-admin-panel-layout :page-title="$pageTitle ?? 'Dnevna karta'" nav-active="reservations">
+<x-admin-panel-layout :page-title="$pageTitle ?? 'Dnevna naknada'" nav-active="reservations">
     <div class="space-y-6">
         @if (session('status'))
             <div class="rounded-md bg-red-50 p-4 text-sm text-red-900">{{ session('status') }}</div>
@@ -16,7 +16,7 @@
             <div>
                 <h1 class="text-lg font-semibold text-gray-900">Rezervacija #{{ $reservation->id }}</h1>
                 <p class="text-sm text-gray-600 mt-1">
-                    Vrsta: <span class="font-medium text-red-800">Dnevna karta</span>
+                    Vrsta: <span class="font-medium text-red-800">Dnevna naknada</span>
                     · Status: <span class="font-medium">{{ $reservation->status }}</span>
                     @if ($reservation->merchant_transaction_id)
                         · MTID: {{ $reservation->merchant_transaction_id }}
@@ -27,7 +27,7 @@
         </div>
 
         <p class="text-sm text-red-800 bg-red-50 border border-red-200 rounded-md p-3">
-            Dnevna karta nema termine dolaska/odlaska. Vrsta rezervacije se ne može mijenjati.
+            Dnevna naknada nema termine dolaska/odlaska. Vrsta rezervacije se ne može mijenjati.
         </p>
 
         <form method="post" action="{{ route('panel_admin.reservations.update', $reservation, false) }}"

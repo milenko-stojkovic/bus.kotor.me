@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Panel;
 
 use App\Services\AgencyAdvance\AgencyAdvanceService;
+use App\Support\UiText;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -27,7 +28,16 @@ final class PanelAdvanceTopupRequest extends FormRequest
             $amount = $this->input('amount');
 
             if (! $svc->isValidTopupAmount($amount)) {
-                $validator->errors()->add('amount', 'Iznos avansne uplate mora biti cio broj eura i završavati se na 0 ili 5.');
+                $locale = app()->getLocale();
+                $validator->errors()->add(
+                    'amount',
+                    UiText::t(
+                        'panel',
+                        'advance_topup_amount_invalid',
+                        'Top-up amount must be a whole number of euros and end with 0 or 5.',
+                        $locale
+                    )
+                );
                 return;
             }
 

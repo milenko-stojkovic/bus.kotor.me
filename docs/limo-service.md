@@ -1,6 +1,8 @@
 # Limo service
 
-**Poslednje ažuriranje:** 2026-05-13
+**Poslednje ažuriranje:** 2026-06-10
+
+**Phase 2 (2026-06):** QR workflow je **deaktiviran** po defaultu (`LIMO_QR_WORKFLOW_ENABLED=false`). Agencijski `/panel/limo` je informativan; operativni mehanizam je **dnevna naknada** kroz Rezervacije. Kod, tabele i admin istorija su očuvani; rollback preko ENV flaga.
 
 **Povezano:** [project-todo.md](./project-todo.md) (preostali Limo TODO), [project-done.md](./project-done.md) (urađeno), [agency-panel.md](./agency-panel.md) (agencijski `/panel/limo`).
 
@@ -12,6 +14,8 @@ Ovaj dokument opisuje **trenutno implementirano stanje** u kodu i **preostale pl
 
 ### Implementirano
 
+> **Operativni model (2026-06):** Novi tok je **dnevna naknada** (agency Rezervacije) + **Control** provjera tablice (`/control/dnevna-naknada`). Sekcije ispod koje opisuju **QR, OCR i evidentičar** su **LEGACY / PRESERVED** — rute postoje, ali su po defaultu **404** (`limo.qr_workflow` / `LIMO_QR_WORKFLOW_ENABLED=false`). Admin **`GET /admin/limo`** i analitika i dalje prikazuju historijske pickup/incident zapise.
+
 - **Baza:** tabele `limo_qr_tokens`, `limo_pickup_events`, `limo_pickup_photos`, `limo_plate_uploads` (privremeni upload tablice; vidi sekciju [Implemented tables](#implemented-tables)), **`limo_incidents`** (incidenti — evidencija bez finansijskog efekta; vidi [Incident flow (implementirano)](#incident-flow-implementirano)).
 - **Granica autentifikacije / autorizacije (Limo evidenter):**
   - kolona `admins.limo_access`
@@ -19,8 +23,9 @@ Ovaj dokument opisuje **trenutno implementirano stanje** u kodu i **preostale pl
   - rute `/limo/*` zaštićene `auth:panel_admin` + `limo.access` (ne glavni `admin.panel`)
   - `GET /limo` — mobilni Blade UI za evidentiranje pickup-a (`limo.entry`), uključujući nakon prijave za nalog „samo Limo“; QR: **`getUserMedia`** stream na vidljiv `<video>` (isti obrazac kao DEBUG test kamere) + dekodiranje kadra; na **mobilnom** **jsQR** (Vite bundle `limo-jsqr.js`); na **desktopu** opciono **`BarcodeDetector`** na istom canvas kadru ako je API dostupan, inače **jsQR**; ručni token uvijek dostupan
   - `GET /limo/health` — isti guard kao ostatak `/limo/*`; JSON `{ status, scope }` za health/smoke
-- **Agencijski panel — QR:**
-  - `GET /panel/limo` — lista aktivnih QR za **današnji** dan (`Europe/Podgorica`)
+- **Agencijski panel — QR (LEGACY; zaštićeno `limo.qr_workflow`):**
+  - `GET /panel/limo` — **trenutno** informativna stranica (dnevna naknada, mjesta ukrcaja); ispod navedene QR rute su legacy
+  - `GET /panel/limo` (legacy) — lista aktivnih QR za **današnji** dan (`Europe/Podgorica`) — samo uz `LIMO_QR_WORKFLOW_ENABLED=true`
   - `POST /panel/limo/qr/generate` — generisanje tokena (raw se jednom prikaže / flash; u bazi `token_hash` + `encrypted_token`); poruke grešaka (limit, nedovoljan avans) preko **`UiText`** grupe `panel` (`limo_generate_error_*`), prema **`users.lang`**
   - `GET /panel/limo/qr/{limoQrToken}` — prikaz QR slike iz dekriptovanog `encrypted_token`
   - `GET /panel/limo/qr/{limoQrToken}/pdf` — **PDF export** za štampu (QR + agencija + datum); token mora biti **današnji** (Podgorica) i vlasništvo agencije, inače 404; nema finansijskog efekta; tekst u PDF-u iz **`ui_translations`** (`panel`, `limo_qr_pdf_*`) prema jeziku korisnika (`LimoQrPdfGenerator` / `users.lang`)

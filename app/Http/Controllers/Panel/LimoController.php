@@ -16,15 +16,9 @@ use Illuminate\View\View;
 
 final class LimoController extends Controller
 {
-    public function index(Request $request, LimoQrService $limoQrService): View
+    public function index(): View
     {
-        $userId = (int) $request->user()->id;
-
-        return view('panel.limo.index', [
-            'tokens' => $limoQrService->listActiveTokensForToday($userId),
-            'slotsUsedToday' => $limoQrService->countQrSlotsUsedToday($userId),
-            'slotsMax' => LimoQrService::MAX_ACTIVE_GENERATIONS_PER_DAY,
-        ]);
+        return view('panel.limo.index');
     }
 
     public function generateQr(Request $request, LimoQrService $limoQrService): RedirectResponse

@@ -2,9 +2,7 @@
 
 namespace Tests\Feature\Panel;
 
-use App\Models\Admin;
 use App\Models\AgencyAdvanceTransaction;
-use App\Models\LimoPickupEvent;
 use App\Models\LimoQrToken;
 use App\Models\User;
 use App\Services\Limo\LimoPickupService;
@@ -12,7 +10,6 @@ use App\Services\Limo\LimoQrService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Str;
 use Tests\TestCase;
 
 final class LimoQrGenerationTest extends TestCase
@@ -33,8 +30,57 @@ final class LimoQrGenerationTest extends TestCase
         parent::tearDown();
     }
 
+    public function test_informational_limo_page_has_no_qr_actions(): void
+    {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+
+        $html = $this->actingAs($user)
+            ->get(route('panel.limo.index'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('Limo', $html);
+        $this->assertStringNotContainsString('Generiši QR', $html);
+        $this->assertStringNotContainsString('Generate QR', $html);
+        $this->assertStringNotContainsString('Aktivni QR', $html);
+        $this->assertStringNotContainsString('Active QR', $html);
+        $this->assertStringNotContainsString('/panel/limo/qr/', $html);
+    }
+
+    public function test_qr_endpoints_return_404_when_workflow_disabled(): void
+    {
+        $user = User::factory()->create();
+        AgencyAdvanceTransaction::query()->create([
+            'agency_user_id' => $user->id,
+            'amount' => '100.00',
+            'type' => AgencyAdvanceTransaction::TYPE_TOPUP,
+            'reference_type' => null,
+            'reference_id' => null,
+            'merchant_transaction_id' => null,
+            'note' => 'test',
+        ]);
+
+        $this->withoutMiddleware(ValidateCsrfToken::class);
+
+        $this->actingAs($user)
+            ->post(route('panel.limo.qr.generate'))
+            ->assertNotFound();
+
+        $created = app(LimoQrService::class)->generateForAgency($user->id)['token'];
+
+        $this->actingAs($user)
+            ->get(route('panel.limo.qr.show', ['limoQrToken' => $created->id]))
+            ->assertNotFound();
+
+        $this->actingAs($user)
+            ->get(route('panel.limo.qr.pdf', ['limoQrToken' => $created->id]))
+            ->assertNotFound();
+    }
+
     public function test_generate_token_success_creates_row_and_flashes_raw_once(): void
     {
+        config(['features.limo_qr_workflow' => true]);
+
         $user = User::factory()->create();
         AgencyAdvanceTransaction::query()->create([
             'agency_user_id' => $user->id,
@@ -71,6 +117,8 @@ final class LimoQrGenerationTest extends TestCase
 
     public function test_daily_limit_returns_error_after_twentieth_slot(): void
     {
+        config(['features.limo_qr_workflow' => true]);
+
         $user = User::factory()->create();
         AgencyAdvanceTransaction::query()->create([
             'agency_user_id' => $user->id,
@@ -99,6 +147,8 @@ final class LimoQrGenerationTest extends TestCase
 
     public function test_insufficient_advance_returns_error(): void
     {
+        config(['features.limo_qr_workflow' => true]);
+
         $user = User::factory()->create();
         AgencyAdvanceTransaction::query()->create([
             'agency_user_id' => $user->id,
@@ -118,85 +168,6 @@ final class LimoQrGenerationTest extends TestCase
             ->assertSessionHasErrors('generate');
 
         $this->assertDatabaseCount('limo_qr_tokens', 0);
-    }
-
-    public function test_user_sees_only_own_tokens(): void
-    {
-        $userA = User::factory()->create();
-        $userB = User::factory()->create();
-        foreach ([$userA, $userB] as $u) {
-            AgencyAdvanceTransaction::query()->create([
-                'agency_user_id' => $u->id,
-                'amount' => '100.00',
-                'type' => AgencyAdvanceTransaction::TYPE_TOPUP,
-                'reference_type' => null,
-                'reference_id' => null,
-                'merchant_transaction_id' => null,
-                'note' => 'test',
-            ]);
-        }
-
-        app(LimoQrService::class)->generateForAgency($userA->id);
-
-        $this->actingAs($userB)
-            ->get(route('panel.limo.index'))
-            ->assertOk()
-            ->assertViewHas('tokens', fn ($tokens) => $tokens->count() === 0);
-
-        $this->actingAs($userA)
-            ->get(route('panel.limo.index'))
-            ->assertOk()
-            ->assertViewHas('tokens', fn ($tokens) => $tokens->count() === 1);
-    }
-
-    public function test_used_token_not_listed_after_simulated_pickup(): void
-    {
-        $user = User::factory()->create();
-        AgencyAdvanceTransaction::query()->create([
-            'agency_user_id' => $user->id,
-            'amount' => '100.00',
-            'type' => AgencyAdvanceTransaction::TYPE_TOPUP,
-            'reference_type' => null,
-            'reference_id' => null,
-            'merchant_transaction_id' => null,
-            'note' => 'test',
-        ]);
-
-        $admin = Admin::query()->create([
-            'username' => 'pickup_admin',
-            'email' => 'pickup-admin@test.local',
-            'password' => bcrypt('secret'),
-            'control_access' => false,
-            'admin_access' => true,
-            'limo_access' => false,
-        ]);
-
-        $tokenRow = app(LimoQrService::class)->generateForAgency($user->id)['token'];
-        $hash = $tokenRow->token_hash;
-        $tokenRow->delete();
-
-        LimoPickupEvent::query()->create([
-            'merchant_transaction_id' => (string) Str::uuid(),
-            'agency_user_id' => $user->id,
-            'agency_name_snapshot' => $user->name,
-            'agency_email_snapshot' => $user->email,
-            'agency_country_snapshot' => $user->country,
-            'source' => 'qr',
-            'qr_token_hash' => $hash,
-            'qr_valid_on' => Carbon::today('Europe/Podgorica'),
-            'license_plate_snapshot' => null,
-            'amount_snapshot' => '15.00',
-            'service_name_snapshot' => LimoPickupService::SERVICE_NAME,
-            'occurred_at' => now(),
-            'recorded_by_limo_admin_id' => $admin->id,
-            'device_info' => null,
-            'status' => 'pending_fiscal',
-        ]);
-
-        $this->actingAs($user)
-            ->get(route('panel.limo.index'))
-            ->assertOk()
-            ->assertViewHas('tokens', fn ($tokens) => $tokens->count() === 0);
     }
 
     public function test_advance_feature_off_returns_404(): void

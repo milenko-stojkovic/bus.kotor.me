@@ -1,18 +1,20 @@
-# Project TODO (otvoreno)
+﻿# Project TODO (otvoreno)
 
-**Poslednje ažuriranje:** 2026-05-28
+**Poslednje ažuriranje:** 2026-06-10
 
 Stavke su prioritetne grupe. Kada nešto **završiš**, premesti opis u `docs/project-done.md` i ukloni odavde.
 
 ---
 
-## Dnevna karta (agency)
+## Dnevna naknada (agency)
 
 - [x] **Phase 1 — šema/model:** `reservation_kind`, nullable slot FK, `ReservationKind` + testovi (v. `project-done.md` 2026-05-28).
-- [x] **Phase 2 — agency UI + checkout:** izbor Termini / Dnevna karta, validacija, checkout bez `daily_parking_data` za daily (v. `project-done.md` 2026-05-28).
+- [x] **Phase 2 — agency UI + checkout:** izbor Termini / Dnevna naknada, validacija, checkout bez `daily_parking_data` za daily (v. `project-done.md` 2026-05-28).
 - [x] **Phase 3A — PDF/email + panel liste:** fiskalni PDF, email, upcoming/realized lifecycle, admin prikaz (v. `project-done.md` 2026-05-28).
-- [x] **Phase 3B — admin analitika:** odvojeni brojači/prihod Termini vs Dnevna karta; zauzetost slotova samo time_slots (v. `project-done.md` 2026-05-28).
-- [x] **Phase 5 — admin edit:** izmena rezervacija u admin panelu (termini + dnevna karta); v. `project-done.md` 2026-05-28.
+- [x] **Phase 3B — admin analitika:** odvojeni brojači/prihod Termini vs Dnevna naknada; zauzetost slotova samo time_slots (v. `project-done.md` 2026-05-28).
+- [x] **Phase 5 — Promjena tablica:** rename menija/stranice; daily fee bez promjene tablice; testovi `PlateChangePageTest` (v. `project-done.md` 2026-06-10).
+- [x] **Phase 4 — Termini bez limo putničkih kategorija (4+1–7+1):** `ReservationVehicleEligibilityService`; UI + `CheckoutReservationRequest`; historija/admin/PDF ne dirani (v. `project-done.md` 2026-06-10).
+- [x] **Admin edit (dnevna naknada + termini):** izmena rezervacija u admin panelu; v. `project-done.md` 2026-05-28.
 
 **Napomena:** Operativni sloj (zakazane komande, `alerts:system-health`, heartbeat keš, **Sistem status** u adminu, MEGA retry/arhiva, queue stale signalizacija) je **uvezen u kod i dokumentaciju** — v. `docs/admin-panel.md`, `docs/cron-commands.md`, `docs/production-readiness-and-disaster-recovery.md`. Ovaj fajl ne navodi ponovo te zadatke; fokus je na **preostalom** poslu, roadmapu i otvorenim poslovnim/ E2E pitanjima.
 
@@ -22,10 +24,10 @@ Stavke su prioritetne grupe. Kada nešto **završiš**, premesti opis u `docs/pr
 
 Stanje implementacije vs detalji: **[limo-service.md](./limo-service.md)**.
 
-Osnovni operativni tok, OCR, eksterna arhiva relevantnih dokaza i minimalni incident workflow su pokriveni u produkcijskom kodu; **preostaje širenje** UX-a, procesa i eventualno deduplikacije/štireg admin toka po realnom terenskom iskustvu.
+**Operativni model (2026-06):** agencije kupuju **dnevnu naknadu** kroz Rezervacije; terenska provjera tablice: **Control** `GET /control/dnevna-naknada`. QR/OCR/evidentičar (`/limo/*`, `/panel/limo/qr/*`) su **legacy** — isključeni po defaultu (`LIMO_QR_WORKFLOW_ENABLED=false`). Kod, tabele i admin istorija očuvani.
 
-- [ ] **Incident workflow — šire:** statusi (reported/closed), administrativna rešenja, eventualno deduplikacija šire od `incident_uuid`; minimalni tok (evidencija + email KP + `admin_alerts`) je urađen — v. `limo-service.md`.
-- [ ] **PWA / instalabilni** shell i napredniji terenski UX (osnovni mobilni web na `GET /limo` postoji).
+- [ ] **Incident workflow — šire:** statusi (reported/closed), administrativna rešenja, eventualno deduplikacija šire od `incident_uuid`; minimalni legacy tok (evidencija + email KP + `admin_alerts`) je urađen — v. `limo-service.md`.
+- [ ] **PWA / instalabilni** shell (opciono) — legacy mobilni web na `GET /limo` dostupan samo uz `LIMO_QR_WORKFLOW_ENABLED=true`.
 - [ ] **Native Android:** odluka nakon PWA field testa da li je potreban poseban klijent.
 
 ---

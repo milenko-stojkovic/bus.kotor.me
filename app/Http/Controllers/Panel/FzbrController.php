@@ -14,6 +14,7 @@ use App\Models\SystemConfig;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Services\Reservation\ReservationBookingPageData;
+use App\Support\UiText;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -122,7 +123,7 @@ final class FzbrController extends Controller
                 ->all();
 
             if (count($vehicles) !== count($allVehicleIds)) {
-                abort(422, 'Invalid vehicles selection.');
+                abort(422, UiText::t('panel', 'fzbr_invalid_vehicles_selection', 'Invalid vehicles selection.', $locale));
             }
 
             $vehiclesById = [];
@@ -132,7 +133,7 @@ final class FzbrController extends Controller
 
             $firstSeg = $segmentsIn[0] ?? null;
             if (! $firstSeg) {
-                abort(422, 'Missing segments.');
+                abort(422, UiText::t('panel', 'fzbr_missing_segments', 'Missing segments.', $locale));
             }
 
             $req = FreeReservationRequest::query()->create([
@@ -165,7 +166,7 @@ final class FzbrController extends Controller
                 foreach ($seg['vehicles'] as $vid) {
                     $v = $vehiclesById[(int) $vid] ?? null;
                     if (! $v) {
-                        abort(422, 'Invalid vehicles selection.');
+                        abort(422, UiText::t('panel', 'fzbr_invalid_vehicles_selection', 'Invalid vehicles selection.', $locale));
                     }
 
                     $vt = $v->vehicleType;

@@ -182,7 +182,7 @@
                 {{ $u('cancel', 'Cancel') }}
             </button>
 
-            @if (session('status') === 'profile-updated')
+            @if (session('status') === 'profile_updated')
                 <p
                     x-data="{ show: true }"
                     x-show="show"

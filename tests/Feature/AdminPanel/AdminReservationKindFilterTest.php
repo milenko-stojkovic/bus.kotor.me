@@ -82,7 +82,7 @@ class AdminReservationKindFilterTest extends TestCase
             ->assertOk()
             ->assertSee('mt-kind-both-ts', false)
             ->assertSee('mt-kind-both-dk', false)
-            ->assertSee('Dnevna karta', false)
+            ->assertSee('Dnevna naknada', false)
             ->assertSee('Dolazak', false);
     }
 
@@ -183,7 +183,7 @@ class AdminReservationKindFilterTest extends TestCase
         ], false))
             ->assertOk()
             ->assertSee('mt-kind-dk-only', false)
-            ->assertSee('Dnevna karta', false)
+            ->assertSee('Dnevna naknada', false)
             ->assertDontSee('mt-kind-dk-hidden-ts', false)
             ->assertDontSee('hidden-ts@example.com', false);
     }

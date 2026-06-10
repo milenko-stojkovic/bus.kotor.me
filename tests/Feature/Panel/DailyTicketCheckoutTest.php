@@ -11,6 +11,7 @@ use App\Models\TempData;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehicleType;
+use App\Models\AgencyAdvanceTransaction;
 use App\Services\Payment\PaymentSuccessHandler;
 use App\Support\ReservationKind;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -111,7 +112,7 @@ final class DailyTicketCheckoutTest extends TestCase
         $html = $this->get(route('panel.reservations', [], false))->assertOk()->getContent();
 
         $this->assertStringContainsString('Time slots', $html);
-        $this->assertStringContainsString('Daily ticket', $html);
+        $this->assertStringContainsString('Daily fee', $html);
         foreach ([
             'maps.app.goo.gl/5Mp6LFS1gNLYFrSQA',
             'maps.app.goo.gl/BqfQWnYqy8mjTo1D8',
@@ -160,6 +161,50 @@ final class DailyTicketCheckoutTest extends TestCase
         $this->assertNull($temp->drop_off_time_slot_id);
         $this->assertNull($temp->pick_up_time_slot_id);
         $this->assertSame('12.50', (string) $temp->invoice_amount_snapshot);
+    }
+
+    public function test_daily_ticket_advance_payment_creates_paid_reservation_and_advance_usage_ledger_without_temp_data(): void
+    {
+        config(['features.advance_payments' => true]);
+        config(['services.bank.driver' => 'bankart']); // ensure we are not using fake bank path
+
+        [$user, $vehicle, $vt] = $this->agencyWithVehicle();
+        $date = now()->addDays(7)->toDateString();
+
+        AgencyAdvanceTransaction::query()->create([
+            'agency_user_id' => $user->id,
+            'amount' => number_format(((float) $vt->price) + 10.00, 2, '.', ''),
+            'type' => AgencyAdvanceTransaction::TYPE_TOPUP,
+            'reference_type' => 'seed',
+            'reference_id' => 1,
+            'merchant_transaction_id' => 'mtid_seed_dt_adv',
+            'note' => 'seed',
+        ]);
+
+        $this->actingAs($user)->post(route('checkout.store', [], false), [
+            'auth_panel_booking' => 1,
+            'reservation_kind' => ReservationKind::DAILY_TICKET,
+            'payment_method' => 'advance',
+            'reservation_date' => $date,
+            'vehicle_id' => $vehicle->id,
+            'accept_terms' => 1,
+            'accept_privacy' => 1,
+            'merchant_transaction_id' => 'mtid_dt_adv_1',
+        ])->assertRedirect(route('panel.reservations', [], false));
+
+        $res = Reservation::query()->where('merchant_transaction_id', 'mtid_dt_adv_1')->firstOrFail();
+        $this->assertSame(ReservationKind::DAILY_TICKET, (string) $res->reservation_kind);
+        $this->assertSame('paid', (string) $res->status);
+        $this->assertSame('advance', (string) $res->payment_method);
+
+        $this->assertFalse(TempData::query()->where('merchant_transaction_id', 'mtid_dt_adv_1')->exists());
+
+        $usage = AgencyAdvanceTransaction::query()
+            ->where('type', AgencyAdvanceTransaction::TYPE_USAGE)
+            ->where('reference_type', 'reservation')
+            ->where('reference_id', $res->id)
+            ->firstOrFail();
+        $this->assertSame('-' . number_format((float) $res->invoice_amount, 2, '.', ''), (string) $usage->amount);
     }
 
     public function test_daily_ticket_checkout_does_not_change_daily_parking_counters(): void

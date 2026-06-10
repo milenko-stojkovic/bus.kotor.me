@@ -18,7 +18,7 @@ class PaidInvoicePdfGenerator
 {
     public const NON_FISCAL_NOTE_TIME_SLOTS = 'Račun je važeći kao potvrda o kupovini termina. Fiskalizovani račun biće dostavljen naknadno.';
 
-    public const NON_FISCAL_NOTE_DAILY_TICKET = 'Račun je važeći kao potvrda o kupovini dnevne karte. Fiskalizovani račun biće dostavljen naknadno.';
+    public const NON_FISCAL_NOTE_DAILY_TICKET = 'Račun je važeći kao potvrda o kupovini dnevne naknade. Fiskalizovani račun biće dostavljen naknadno.';
 
     /** @deprecated Use {@see nonFiscalNoteFor()} */
     public const NON_FISCAL_NOTE = self::NON_FISCAL_NOTE_TIME_SLOTS;

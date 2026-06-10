@@ -17,6 +17,10 @@ use Illuminate\Http\Request;
  */
 final class ReservationBookingPageData
 {
+    public function __construct(
+        private readonly ReservationVehicleEligibilityService $vehicleEligibility,
+    ) {}
+
     /**
      * Small helper for dynamic slot UIs (e.g. agency FZBR) that want the same
      * availability rules as the booking pages, but via JSON.
@@ -71,10 +75,13 @@ final class ReservationBookingPageData
         $slotPayload = $this->buildSlotPayload($selectedDate, $arrivalId, $departureId, $locale);
         $departureId = $slotPayload['effective_departure_id'];
 
-        $vehicleTypes = VehicleType::query()
-            ->with('translations')
-            ->orderBy('id')
-            ->get();
+        $vehicleTypes = $this->vehicleEligibility->filterVehicleTypesForKind(
+            VehicleType::query()
+                ->with('translations')
+                ->orderBy('id')
+                ->get(),
+            ReservationKind::TIME_SLOTS,
+        );
 
         $countries = (array) config('countries', []);
 
@@ -171,23 +178,28 @@ final class ReservationBookingPageData
         $slotPayload = $this->buildSlotPayload($selectedDate, $arrivalId, $departureId, $locale);
         $departureId = $slotPayload['effective_departure_id'];
 
-        $vehicles = $user->vehicles()
-            ->where('status', \App\Models\Vehicle::STATUS_ACTIVE)
-            ->with(['vehicleType.translations'])
-            ->orderBy('license_plate')
-            ->get();
+        $vehicles = $this->vehicleEligibility->filterVehiclesForKind(
+            $user->vehicles()
+                ->where('status', \App\Models\Vehicle::STATUS_ACTIVE)
+                ->with(['vehicleType.translations'])
+                ->orderBy('license_plate')
+                ->get(),
+            $reservationKind,
+        );
 
         $vehicleId = $this->asIntOrNull($request->query('vehicle_id'));
         $selectedVehicle = null;
         if ($vehicleId !== null) {
             $selectedVehicle = $vehicles->firstWhere('id', $vehicleId);
             if (! $selectedVehicle) {
-                $selectedVehicle = Vehicle::query()
+                $candidate = Vehicle::query()
                     ->where('user_id', $user->id)
                     ->where('status', \App\Models\Vehicle::STATUS_ACTIVE)
                     ->with(['vehicleType.translations'])
                     ->find($vehicleId);
-                if ($selectedVehicle) {
+                if ($candidate !== null
+                    && $this->vehicleEligibility->isVehicleTypeAllowedForKind((int) $candidate->vehicle_type_id, $reservationKind)) {
+                    $selectedVehicle = $candidate;
                     $vehicles = $vehicles->push($selectedVehicle)->unique('id')->sortBy('license_plate')->values();
                 }
             }

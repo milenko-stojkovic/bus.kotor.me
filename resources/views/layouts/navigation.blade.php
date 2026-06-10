@@ -23,11 +23,11 @@
                         </x-nav-link>
                         @if ($limoEnabled)
                             <x-nav-link :href="route('panel.limo.index')" :active="request()->routeIs('panel.limo.*')">
-                                {{ $p('nav_limo', 'Limo QR') }}
+                                {{ $p('nav_limo', 'Limo') }}
                             </x-nav-link>
                         @else
                             <span class="px-3 py-2 text-sm text-white/40 cursor-not-allowed" title="{{ $p('limo_disabled_hint', 'Limo servis trenutno nije dostupan.') }}">
-                                {{ $p('nav_limo', 'Limo QR') }}
+                                {{ $p('nav_limo', 'Limo') }}
                             </span>
                         @endif
                     @else
@@ -45,7 +45,7 @@
                         {{ $p('nav_fzbr', 'FZBR') }}
                     </x-nav-link>
                     <x-nav-link :href="route('panel.upcoming')" :active="request()->routeIs('panel.upcoming')">
-                        {{ $p('nav_upcoming', 'Upcoming reservations') }}
+                        {{ $p('nav_upcoming', 'Plate change') }}
                     </x-nav-link>
                     <x-nav-link :href="route('panel.realized')" :active="request()->routeIs('panel.realized')">
                         {{ $p('nav_realized', 'Realized reservations') }}
@@ -118,11 +118,11 @@
                 </x-responsive-nav-link>
                 @if ($limoEnabled)
                     <x-responsive-nav-link :href="route('panel.limo.index')" :active="request()->routeIs('panel.limo.*')">
-                        {{ $p('nav_limo', 'Limo QR') }}
+                        {{ $p('nav_limo', 'Limo') }}
                     </x-responsive-nav-link>
                 @else
                     <span class="block px-3 py-2 text-sm text-white/40 cursor-not-allowed" title="{{ $p('limo_disabled_hint', 'Limo servis trenutno nije dostupan.') }}">
-                        {{ $p('nav_limo', 'Limo QR') }}
+                        {{ $p('nav_limo', 'Limo') }}
                     </span>
                 @endif
             @else
@@ -140,7 +140,7 @@
                 {{ $p('nav_fzbr', 'FZBR') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('panel.upcoming')" :active="request()->routeIs('panel.upcoming')">
-                {{ $p('nav_upcoming', 'Upcoming reservations') }}
+                {{ $p('nav_upcoming', 'Plate change') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('panel.realized')" :active="request()->routeIs('panel.realized')">
                 {{ $p('nav_realized', 'Realized reservations') }}

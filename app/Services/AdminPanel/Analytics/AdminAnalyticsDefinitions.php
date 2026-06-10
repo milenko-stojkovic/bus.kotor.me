@@ -19,7 +19,7 @@ final class AdminAnalyticsDefinitions
             self::PART_FREE_MORNING => 'Free jutro (00:00–07:00)',
             self::PART_PAID_DAY => 'Paid dnevni prozor (07:00–20:00)',
             self::PART_FREE_EVENING => 'Free veče (20:00–24:00)',
-            self::PART_DAILY_TICKET => 'Dnevna karta (bez termina)',
+            self::PART_DAILY_TICKET => 'Dnevna naknada (bez termina)',
             default => $key,
         };
     }

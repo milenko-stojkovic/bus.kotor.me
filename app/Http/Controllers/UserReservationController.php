@@ -130,7 +130,7 @@ class UserReservationController extends Controller
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            if (! \App\Services\Reservation\PanelReservationListService::isUpcoming($lockedReservation)) {
+            if (! \App\Services\Reservation\PanelReservationListService::allowsPlateChange($lockedReservation)) {
                 abort(422);
             }
 

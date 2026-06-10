@@ -1,4 +1,4 @@
-# Konvencije projekta (bus.kotor.me)
+﻿# Konvencije projekta (bus.kotor.me)
 
 **Poslednje ažuriranje:** 2026-05-28  
 
@@ -89,8 +89,9 @@ Preporučeni oblik (naslovi ili bold oznake moraju biti eksplicitni):
 
 - **Limo servis:** `features.limo_service` (ENV `LIMO_SERVICE_ENABLED`) i **mora** imati i `features.advance_payments` ON. Effective rule: \(advance\_payments \land limo\_service\).
 
-### Rezervacije — `reservation_kind` (Dnevna karta)
+### Rezervacije — `reservation_kind` (Dnevna naknada / Daily fee)
 
+- Korisnički naziv: **Dnevna naknada** (CG) / **Daily fee** (EN). Interna vrijednost ostaje **`daily_ticket`**.
 - Kolona **`reservation_kind`** na **`reservations`** i **`temp_data`**: `time_slots` (default) | `daily_ticket`.
 - Konstante: **`App\Support\ReservationKind`**, aliasi na **`Reservation`** / **`TempData`**; helperi **`isTimeSlots()`**, **`isDailyTicket()`**.
 - **Invariant (Phase 2+ checkout/admin):** `time_slots` → oba slot ID NOT NULL; `daily_ticket` → oba NULL (bez sentinel slotova; ne dira **`daily_parking_data`**).

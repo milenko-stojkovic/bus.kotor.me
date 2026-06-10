@@ -1,6 +1,6 @@
 # Control panel (operativni dolasci)
 
-**Poslednje ažuriranje:** 2026-04-27  
+**Poslednje ažuriranje:** 2026-06-10  
 
 Lagani panel za šalter / kontrolu ulaska: **login**, **grupe dolazaka po terminu** i **pretraga rezervacija**. Odvojen je od **agency** panela (`/panel`, `User`), od **glavnog admin panela** (`/admin`, guard `panel_admin`, `admins.admin_access`) i od **operativnog staff pregleda** (`/staff`, `User` + `AdminMiddleware` — rezervacije, late-success).
 
@@ -14,6 +14,8 @@ Lagani panel za šalter / kontrolu ulaska: **login**, **grupe dolazaka po termin
 | Login POST | `POST /control/login` → `control.login.store` |
 | Logout | `POST /control/logout` → `control.logout` |
 | Dashboard | `GET /control/` → `control.dashboard` |
+| Kontrola dnevne naknade | `GET /control/dnevna-naknada` → `control.daily_fee.index` |
+| Provjera tablice (POST) | `POST /control/dnevna-naknada/provjeri` → `control.daily_fee.check` |
 
 - **Guard:** `control` (`config/auth.php`) — session, provider **`admins`**, model **`App\Models\Admin`**.
 - **Gost na `/control/*`:** `bootstrap/app.php` šalje neulogovane na **`control.login`** (ne na `login` za agencije).
@@ -22,6 +24,19 @@ Lagani panel za šalter / kontrolu ulaska: **login**, **grupe dolazaka po termin
 - **Seed:** `AdminsSeeder` — npr. nalog sa `control_access` za lokalni QA (email v. seeder; lozinka je heš u seedu).
 
 Tekstovi u view-ima su **hardcoded CG stringovi** (nema `UiText` grupe za control), namerno kratak operativni UI.
+
+---
+
+## Kontrola dnevne naknade (2026-06)
+
+**Phase 3:** QR provjera je ukinuta; komunalna policija / kontrolori ručno unose registarsku tablicu.
+
+- **Rute:** `control.daily_fee.index`, `control.daily_fee.check` — isti guard **`auth:control`** (`admins.control_access = true`).
+- **Servis:** `App\Services\Control\DailyFeeControlService` — normalizacija tablice (`DuplicateReservationAttemptService::normalizeLicensePlate`), pretraga **`reservation_kind = daily_ticket`**, **`status = paid`**, **`reservation_date` = danas** (`Europe/Podgorica`).
+- **Samo čitanje:** nema plaćanja, fiskalizacije, emaila, OCR-a, GPS-a, QR-a, izmjena rezervacija.
+- **Rezultat:** „Plaćena dnevna naknada: DA/NE“ + detalji (agencija, datum važenja, tip vozila, email, vrijeme kreiranja). Više pogodaka istog dana/tablice — lista.
+- **Ne provjerava:** termine (`time_slots`), historijske Limo QR tabele, druge datume.
+- **Testovi:** `tests/Feature/Control/DailyFeeControlTest.php`.
 
 ---
 

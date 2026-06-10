@@ -5,6 +5,7 @@ namespace App\Http\Requests\Panel;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\DB;
 use App\Models\SystemConfig;
+use App\Support\UiText;
 use Illuminate\Validation\Validator;
 
 class FzbrStoreRequest extends FormRequest
@@ -54,11 +55,28 @@ class FzbrStoreRequest extends FormRequest
                     ), fn (int $v) => $v > 0));
 
                     if ($maxVehicles > 0 && count($vehicleIds) > $maxVehicles) {
-                        $validator->errors()->add("segments.$i.vehicles", "Maksimalan broj vozila po segmentu je $maxVehicles.");
+                        $locale = app()->getLocale();
+                        $msg = UiText::t(
+                            'panel',
+                            'fzbr_max_vehicles_per_segment',
+                            'Maximum number of vehicles per segment is :max.',
+                            $locale
+                        );
+                        $msg = str_replace(':max', (string) $maxVehicles, $msg);
+                        $validator->errors()->add("segments.$i.vehicles", $msg);
                     }
 
                     if (count($vehicleIds) !== count(array_unique($vehicleIds))) {
-                        $validator->errors()->add("segments.$i.vehicles", 'Isto vozilo ne može biti izabrano dva puta u istom segmentu.');
+                        $locale = app()->getLocale();
+                        $validator->errors()->add(
+                            "segments.$i.vehicles",
+                            UiText::t(
+                                'panel',
+                                'fzbr_vehicle_duplicate_in_segment',
+                                'The same vehicle cannot be selected twice in the same segment.',
+                                $locale
+                            )
+                        );
                     }
                 }
             }
@@ -82,7 +100,11 @@ class FzbrStoreRequest extends FormRequest
                         ->whereIn('id', $allVehicleIds)
                         ->count();
                     if ($count !== count($allVehicleIds)) {
-                        $validator->errors()->add('segments', 'Nevažeći izbor vozila.');
+                        $locale = app()->getLocale();
+                        $validator->errors()->add(
+                            'segments',
+                            UiText::t('panel', 'fzbr_invalid_vehicles_selection', 'Invalid vehicles selection.', $locale)
+                        );
                     }
                 }
             }
@@ -101,7 +123,11 @@ class FzbrStoreRequest extends FormRequest
             }
 
             if ($sum > 10 * 1024 * 1024) {
-                $validator->errors()->add('documents', 'Ukupna veličina dokumenata ne smije preći 10 MB.');
+                $locale = app()->getLocale();
+                $validator->errors()->add(
+                    'documents',
+                    UiText::t('panel', 'fzbr_documents_total_too_big', 'Total document size must not exceed 10 MB.', $locale)
+                );
             }
         });
     }

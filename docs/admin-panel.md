@@ -1,4 +1,4 @@
-# Admin panel – funkcionalnosti
+﻿# Admin panel – funkcionalnosti
 
 Specifikacija admin funkcionalnosti. Modeli: Reservation, TempData, DailyParkingData, ListOfTimeSlot, ReportEmail, system_config.
 
@@ -65,6 +65,7 @@ Kontroler: **`WarningsController::index`**. Stranica ima tri bloka: **Upozorenja
 
 ### Limo događaji (read-only) — `GET /admin/limo` (`admin.limo.index`)
 
+- **Napomena (2026-06):** QR workflow za agencije i evidentičara je ukinut; ova stranica ostaje za **istorijske** pickup/incident zapise. Novi operativni mehanizam za agencije je **dnevna naknada** kroz Rezervacije; provjera na terenu: **Control panel** → `GET /control/dnevna-naknada` (v. `docs/control-panel.md`).
 - **Middleware:** `auth:panel_admin` + `admin.panel` (kao ostali moduli glavnog admin panela; **nije** `limo.access` — pristup imaju samo `admins` sa `admin_access=1`, ne i „samo Limo” nalozi).
 - **Kontroler:** `App\Http\Controllers\Admin\LimoController::index`; pogled `resources/views/admin/limo/index.blade.php`.
 - **Vrsta pregleda (GET `type`):** **`pickup`** (podrazumijevano) ili **`incident`**. Radio dugmad u filter formi; ostaju **`date_from`** / **`date_to`** (zatvoren interval **`[from, to]`** po **`occurred_at`**, **`Europe/Podgorica`**).
@@ -127,17 +128,18 @@ Kontroler: **`WarningsController::index`**. Stranica ima tri bloka: **Upozorenja
 |------|--------|
 | `GET /admin/rezervacije` | `panel_admin.reservations` — pretraga nad tabelom **`reservations`** (bez `temp_data`). |
 | `GET /admin/rezervacije/{reservation}/uredi` | `panel_admin.reservations.edit` — izmena samo **nerealizovanih** rezervacija (`PanelReservationListService::isRealized`); u listi akcije **PDF** + **Izmeni**. |
-| `PUT /admin/rezervacije/{reservation}` | `panel_admin.reservations.update` — **termine** (`time_slots`): transakcija, `lockForUpdate` na `daily_parking_data`, **`BlockReservationAdjustmentValidator`**, izmene `reserved`; **dnevna karta**: samo sigurna polja, bez `daily_parking_data`. Reset `invoice_sent_at` / `email_sent`, dispatch email job. |
+| `PUT /admin/rezervacije/{reservation}` | `panel_admin.reservations.update` — **termine** (`time_slots`): transakcija, `lockForUpdate` na `daily_parking_data`, **`BlockReservationAdjustmentValidator`**, izmene `reserved`; **dnevna naknada**: samo sigurna polja, bez `daily_parking_data`. Reset `invoice_sent_at` / `email_sent`, dispatch email job. |
 | `GET /admin/rezervacije/{reservation}/pdf` | `panel_admin.reservations.pdf` — PDF računa (paid) ili potvrde (free) preko postojećih generatora. |
 
 - **Kontroler:** `App\Http\Controllers\AdminPanel\ReservationController`.
 - **Pretraga:** `AdminReservationSearchService` — svi kriterijumi su **AND** između popunjenih polja; polje **MTID** traži **tačno poklapanje** — rezervacije sa **`merchant_transaction_id` = NULL** (ako postoje) ovim kriterijumom se ne nalaze.
-- **Vrsta rezervacije (filter):** **Sve** (podrazumijevano), **Termini** (`reservation_kind = time_slots`), **Dnevna karta** (`daily_ticket`); kombinuje se sa ostalim kriterijumima (AND).
+- **Vrsta rezervacije (filter):** **Sve** (podrazumijevano), **Termini** (`reservation_kind = time_slots`), **Dnevna naknada** (`daily_ticket`); kombinuje se sa ostalim kriterijumima (AND).
+- **Limo putnička vozila (4+1–7+1):** admin pretraga/uredi/PDF/analitika **ne mijenjaju** prikaz historijskih rezervacija sa tim kategorijama; nova ograničenja važe samo za **booking** (Termini isključuju tip; dnevna naknada u agenciji ga zadržava) — v. `docs/agency-panel.md`.
 - **Heuristika imena/emaila:** `AdminReservationSearchHeuristic` — jednostavne LIKE varijante (jedno izostavljeno slovo, zamena dva susedna; za ime normalizacija **doo** / **d.o.o.**).
 - **Povratak sa edit strane:** query parametar **`rq`** čuva enkodiran prethodni query string pretrage; **`Odkaži`** i uspešan **`PUT`** vode na `GET /admin/rezervacije?{rq}`.
 - **Izmena termina po tipu:** `AdminReservationSlotRules` — **paid** i **free + `created_by_admin`** mogu na bilo koje validne termine; **free bez admin kreacije** samo u besplatnom prozoru (`FreeReservationRules::isFreeReservation`, npr. 1/41). **Paid** ostaje paid i pri premještaju u free termine; **`invoice_amount` se ne preračunava**. Status, MTID, `reservation_kind` i fiskalno stanje se **ne** mijenjaju.
 - **Posle prošlog dolaska (isti dan):** `AdminReservationEditPolicy::isPickUpOnlyMode` — dozvoljena je izmjena samo pick-up termina i ostalih polja (ne datuma ni drop-off).
-- **Dnevna karta:** forma bez termina; `AdminDailyTicketUpdateService` — datum, ime, država, tablica, tip vozila, email; bez konverzije vrste i bez kapaciteta.
+- **Dnevna naknada:** forma bez termina; `AdminDailyTicketUpdateService` — datum, ime, država, tablica, tip vozila, email; bez konverzije vrste i bez kapaciteta.
 - **Kategorija vozila:** u edit formi samo tipovi sa **`price` ≤** cene trenutnog tipa (`vehicle_types` po postojećem poretku cene).
 - **Kalendar:** granice pretrage — `AdminReservationDateBounds` (min = najraniji datum u `reservations`, max = danas + 90 dana); edit — danas … danas + 90.
 - **Email i slanje dokumenta:** račun (paid) i potvrda (free) uvek se šalju na **`reservations.email`** — to je snapshot na rezervaciji, isti izvor kao u PDF-u. **Admin** ima pravo da menja taj snapshot (uključujući email) u toku izmene rezervacije. Posle uspješne izmene: **`SendAdminUpdatedReservationDocumentJob`** regeneriše PDF iz trenutnih podataka rezervacije i šalje ažurirani prilog (predmet/tijelo `paid_invoice_updated_*` / `free_reservation_updated_*` u **`ui_translations`**). **Ne mijenjaju se** MTID, status, `invoice_amount`, JIR/IKOF ni fiskalni zapisi. **`users.email`** se ne koristi kao primalac.
@@ -276,10 +278,10 @@ Napomena: `system_config` ima `name` (unique) i `value` (integer). Za admin form
 - **Datum do (max):** danas + 90 dana.
 - **Source of truth:** rezervacije iz `reservations`, blokiranje iz `daily_parking_data.is_blocked`, operativni problemi iz `temp_data` i `post_fiscalization_data`; **Limo** iz `limo_pickup_events` (posebno; nije rezervacija).
 - **Prihod (rezervacije):** suma `reservations.invoice_amount` za `status = paid` u periodu (KPI: **Prihod od rezervacija (paid)** / **Ukupno**). **Ne** uključuje Limo.
-- **Termini vs dnevna karta (`reservation_kind`):** KPI kartice i polja `time_slots_count`, `daily_ticket_count`, `time_slots_revenue`, `daily_ticket_revenue` — odvojeno; ukupan prihod rezervacija uključuje oba tipa. **Dnevna karta** nema termine i **ne ulazi** u zauzete slotove, popunjenost, delove dana (slot prozori), duplo plaćanje istog termina ni „paid u free terminima” (samo `time_slots`). U tabeli delova dana može postojati red **Dnevna karta (bez termina)** van slot grupisanja. Agencijska tabela: kolone **Dnevne karte** / **Prihod (DK)**.
+- **Termini vs dnevna naknada (`reservation_kind`):** KPI kartice i polja `time_slots_count`, `daily_ticket_count`, `time_slots_revenue`, `daily_ticket_revenue` — odvojeno; ukupan prihod rezervacija uključuje oba tipa. **Dnevna naknada** nema termine i **ne ulazi** u zauzete slotove, popunjenost, delove dana (slot prozori), duplo plaćanje istog termina ni „paid u free terminima” (samo `time_slots`). U tabeli delova dana može postojati red **Dnevna naknada (bez termina)** van slot grupisanja. Agencijska tabela: kolone **Dnevne naknade** / **Prihod (DN)**.
 - **Limo servis (poseban blok + KPI):** period po **`occurred_at`**, zatvoren interval, vremenska zona **Europe/Podgorica** (start dana / kraj dana). U obzir: `status IN (pending_fiscal, fiscalized, fiscal_failed)`; **`incident` isključen** (nema prihoda u analitici). Prihod = **SUM(`amount_snapshot`)**; brojevi po izvoru (**QR** / **tablica**) i po fiskalnom statusu. Limo **ne ulazi** u broj rezervacija, zauzete slotove, tipove vozila, agencijske rezervacijske statistike niti trend rezervacija — ostaje odvojeno.
 - **Ukupan prihod (rezervacije + Limo):** zbir KPI prihoda od plaćenih rezervacija i Limo prihoda za isti izabrani period (jasno označeno u UI i PDF).
-- **Zauzeti slotovi:** samo `reservation_kind = time_slots` — po rezervaciji 1 ako `drop_off_time_slot_id == pick_up_time_slot_id`, inače 2; dnevna karta doprinosi 0.
+- **Zauzeti slotovi:** samo `reservation_kind = time_slots` — po rezervaciji 1 ako `drop_off_time_slot_id == pick_up_time_slot_id`, inače 2; dnevna naknada doprinosi 0.
 - **Popunjenost (slot-level):** \(occupied\_slots / (broj\_slotova \* broj\_dana)\).
 - **Delovi dana:** grupisanje po početnom vremenu *drop-off* termina (00–07, 07–20, 20–24).
 - **Analiza po agencijama:** pregled prihoda, rezervacija i zauzetosti po registrovanim korisnicima (`reservations.user_id`), sortirano po prihodu opadajuće. Prihod = suma `invoice_amount` za `paid`; free se prikazuje kao posebna kolona i procenat.

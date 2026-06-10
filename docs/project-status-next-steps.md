@@ -1,6 +1,8 @@
 # Project status — indeks
 
-**Poslednje ažuriranje:** 2026-05-15
+**Poslednje ažuriranje:** 2026-06-10
+
+**Završena tranzicija (2026-06):** Dnevna naknada / Daily fee (korisnički naziv), Limo QR workflow ukinut, Control provjera dnevne naknade, Termini bez limo putničkih kategorija 4+1–7+1, **Promjena tablica** (bivše Predstojeće rezervacije). Sažetak: `project-done.md` sekcija 2026-06.
 
 Ovaj fajl je **kratak smerač**. Detalji su podeljeni da bi novi chat mogao da učita samo ono što treba. Ako prilažeš samo folder **`docs/`**, počni od **[README.md](./README.md)** pa ovde.
 
@@ -53,9 +55,10 @@ Ovi fajlovi treba da prate trenutni kod; v. `project-conventions.md` § 8.
 | Uspešan tok (job, PDF) | [success-payment-pipeline.md](./success-payment-pipeline.md) |
 | Jezik, PDF, callback | [language-and-invoice-rules.md](./language-and-invoice-rules.md) |
 | Auth vs guest | [auth-and-guests.md](./auth-and-guests.md) |
-| Agency panel (rezervacije, upcoming/realized, user) | [agency-panel.md](./agency-panel.md) |
-| Limo service (**stanje u kodu** + plan) | [limo-service.md](./limo-service.md) |
-| Control panel (dolasci, pretraga, guard `control`) | [control-panel.md](./control-panel.md) |
+| Agency panel (rezervacije, Promjena tablica, realized, user) | [agency-panel.md](./agency-panel.md) |
+| Korisničko uputstvo agencija (CG+EN) | [agency-user-guide.txt](./agency-user-guide.txt) |
+| Limo service (legacy QR + informativna stranica) | [limo-service.md](./limo-service.md) |
+| Control panel (dolasci, **dnevna naknada**, guard `control`) | [control-panel.md](./control-panel.md) |
 | Admin (spec + šta je urađeno) | [admin-panel.md](./admin-panel.md) |
 | Cron detalji | [cron-commands.md](./cron-commands.md) |
 | Deploy / produkcija (checklist) | [production-runbook.md](./production-runbook.md) |

@@ -70,7 +70,7 @@
                     <div class="text-sm text-gray-700">Prihod (paid): <span class="font-semibold text-gray-900">{{ $fmtMoney((float) ($tsKind['revenue'] ?? 0)) }}</span></div>
                 </div>
                 <div class="bg-white shadow rounded-lg p-4 border border-red-100">
-                    <div class="text-xs font-medium text-gray-500 uppercase tracking-wide">Dnevne karte</div>
+                    <div class="text-xs font-medium text-gray-500 uppercase tracking-wide">Dnevne naknade</div>
                     <div class="mt-2 text-sm text-gray-700">Broj rezervacija: <span class="font-semibold text-gray-900">{{ (int) ($dtKind['count'] ?? 0) }}</span></div>
                     <div class="text-sm text-gray-700">Prihod (paid): <span class="font-semibold text-gray-900">{{ $fmtMoney((float) ($dtKind['revenue'] ?? 0)) }}</span></div>
                 </div>
@@ -193,7 +193,7 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <section class="bg-white shadow rounded-lg p-6 border border-red-100">
                     <h2 class="text-base font-semibold text-gray-900">Analiza po delovima dana</h2>
-                    <p class="text-sm text-gray-600 mt-1">{{ $st['day_parts'] ?? '' }} Zauzetost slotova i prozori dana odnose se samo na rezervacije sa terminima; dnevna karta je prikazana odvojeno.</p>
+                    <p class="text-sm text-gray-600 mt-1">{{ $st['day_parts'] ?? '' }} Zauzetost slotova i prozori dana odnose se samo na rezervacije sa terminima; dnevna naknada je prikazana odvojeno.</p>
                     <div class="mt-4 overflow-x-auto">
                         <table class="min-w-full text-sm">
                             <thead class="text-xs text-gray-500 uppercase">
@@ -285,8 +285,8 @@
                                 <th class="py-2 pr-4 text-right">Free</th>
                                 <th class="py-2 pr-4 text-right">% free</th>
                                 <th class="py-2 pr-4 text-right">Prosj. prihod (paid)</th>
-                                <th class="py-2 pr-4 text-right">Dnevne karte</th>
-                                <th class="py-2 pr-4 text-right">Prihod (DK)</th>
+                                <th class="py-2 pr-4 text-right">Dnevne naknade</th>
+                                <th class="py-2 pr-4 text-right">Prihod (DN)</th>
                                 <th class="py-2 pr-4 text-right" title="Samo rezervacije sa terminima">Zauzeti slotovi</th>
                                 <th class="py-2 pr-4 text-right">Prosj. slotova</th>
                                 <th class="py-2 pr-4 text-left">Najčešći tip vozila</th>

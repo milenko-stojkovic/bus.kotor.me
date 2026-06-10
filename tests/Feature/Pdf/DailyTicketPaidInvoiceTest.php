@@ -24,7 +24,7 @@ final class DailyTicketPaidInvoiceTest extends TestCase
     {
         $html = $this->renderHtml($this->makeDailyTicketReservation(), false);
 
-        $this->assertStringContainsString('Dnevna karta', $html);
+        $this->assertStringContainsString('Dnevna naknada', $html);
         $this->assertStringContainsString('Vrsta rezervacije:', $html);
         $this->assertStringContainsString('Datum važenja:', $html);
         $this->assertStringContainsString('Lokacije korišćenja:', $html);
@@ -49,7 +49,7 @@ final class DailyTicketPaidInvoiceTest extends TestCase
         );
 
         $html = $this->renderHtml($reservation, false);
-        $this->assertStringContainsString('kupovini dnevne karte', $html);
+        $this->assertStringContainsString('kupovini dnevne naknade', $html);
         $this->assertStringNotContainsString('kupovini termina', $html);
     }
 
@@ -67,7 +67,7 @@ final class DailyTicketPaidInvoiceTest extends TestCase
         $ref->setAccessible(true);
         $body = $ref->invoke($job, $reservation->fresh(), 'en');
 
-        $this->assertStringContainsString('daily ticket', strtolower($body));
+        $this->assertStringContainsString('daily fee', strtolower($body));
         $this->assertStringContainsString($reservation->reservation_date->format('Y-m-d'), $body);
         $this->assertStringNotContainsString('arrival', strtolower($body));
         $this->assertStringNotContainsString('departure', strtolower($body));

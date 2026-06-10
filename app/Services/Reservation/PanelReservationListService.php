@@ -76,6 +76,12 @@ final class PanelReservationListService
         return ! self::isUpcoming($r);
     }
 
+    /** Plate change on upcoming list: Termini only (not daily fee). */
+    public static function allowsPlateChange(Reservation $r): bool
+    {
+        return self::isUpcoming($r) && ! $r->isDailyTicket();
+    }
+
     /** Kraj departure (pick-up) termina za sortiranje realizovanih (najnovije prvo). */
     public static function pickUpEndForSort(Reservation $r): ?Carbon
     {

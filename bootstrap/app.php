@@ -35,6 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'limo.access' => \App\Http\Middleware\EnsureLimoAccess::class,
             'advance.feature' => \App\Http\Middleware\EnsureAdvancePaymentsEnabled::class,
             'limo.feature' => \App\Http\Middleware\EnsureLimoServiceEnabled::class,
+            'limo.qr_workflow' => \App\Http\Middleware\EnsureLimoQrWorkflowEnabled::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

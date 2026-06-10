@@ -1,13 +1,13 @@
-================================================================================
+﻿================================================================================
   BUS KOTOR — KORISNIČKO UPUTSTVO ZA AGENCIJE
   Agency user guide (CG + EN)
-  Verzija: 2026-05-19
+  Verzija: 2026-05-28
 ================================================================================
 
-Napomena za autora uputstva:
-- Tekst je spreman za copy/paste u Word, PDF ili CMS.
-- Na mjestima gdje treba screenshot stoji:  <opis onoga što treba da se vidi na slici>
-- Jezik interfejsa u panelu: crnogorski (cg) ili engleski (en) — bira se u profilu.
+Napomena za tim za dokumentaciju (zadržati na vrhu):
+- Tekst je spreman za copy/paste u Word ili PDF.
+- Mjesta za screenshot označena su sa [SLIKA: ...] u CG dijelu i [IMAGE: ...] u EN dijelu.
+- Jezik panela: cg ili en (bira se u profilu korisnika — User).
 
 ================================================================================
 DIO A — CRNOGORSKI (CG)
@@ -19,26 +19,40 @@ DIO A — CRNOGORSKI (CG)
 
 Ovo uputstvo objašnjava kako agencije (prevoznici) koriste web aplikaciju
 bus.kotor.me za rezervacije parkinga u Kotoru, upravljanje voznim parkom,
-avansno plaćanje (ako je uključeno), Limo QR (ako je uključeno) i podnošenje
-zahtjeva za besplatne rezervacije (FZBR).
+plaćanje karticom ili avansom (ako je uključeno), Limo informacije (ako je uključeno)
+i podnošenje zahtjeva za besplatne rezervacije po terminima (FZBR).
 
-Nakon prijave radite u panelu za agencije (stavke u gornjem meniju: Rezervacije,
-Vozila, FZBR i sl.). Pristup zahtijeva registrovan nalog, potvrđenu email
-adresu i prijavu.
+Možete rezervisati na dva načina:
+- Termini — fiksni termini dolaska i odlaska na lokaciji Benovo.
+- Dnevna naknada — fleksibilan ukrcaj i iskrcaj tokom cijelog dana na
+  parkinzima Autoboka i Puč (samo u panelu za agencije).
 
-<opis: naslovna stranica sajta bus.kotor.me sa linkom „Prijava“ / „Agency sign in“>
+Ukratko:
+- Termini — ako želite unaprijed rezervisano vrijeme dolaska i odlaska na Benovu.
+- Dnevna naknada — ako vam nije bitan tačan termin i planirate obilazak više
+  lokacija tokom dana, npr. Perast i Risan.
+
+Ako niste sigurni koju opciju da izaberete, u većini slučajeva koristite Termini.
+Dnevna naknada je prvenstveno namijenjena prevoznicima koji tokom istog dana
+planiraju posjetu više lokacija, npr. Perast i Risan.
+
+Nakon prijave radite u panelu za agencije. U gornjem meniju su stavke poput
+Rezervacije, Vozila, FZBR, Promjena tablica i dr. Da biste koristili
+panel, potrebni su registrovan nalog, potvrđena email adresa i prijava.
+
+[SLIKA: Početna stranica bus.kotor.me sa istaknutim linkom „Prijava“ ili „Agency sign in“ u gornjem dijelu stranice.]
 
 --------------------------------------------------------------------------------
-2. PRIJAVA AGENCIJE (AGENCY SIGN IN)
+2. PRIJAVA AGENCIJE
 --------------------------------------------------------------------------------
 
 2.1. Otvaranje stranice za prijavu
 
-1. Otvorite web stranicu bus.kotor.me u pregledaču.
-2. Izaberite jezik stranice (cg ili en), ako je dostupan prekidač jezika.
-3. Kliknite na link za prijavu agencije (Agency sign in / Prijava).
+1. Otvorite web stranicu bus.kotor.me u pregledaču (Chrome, Edge, Firefox ili slično).
+2. Ako postoji prekidač jezika, izaberite cg ili en.
+3. Kliknite na link za prijavu agencije (Prijava / Agency sign in).
 
-<opis: početna stranica sa istaknutim linkom za prijavu agencije>
+[SLIKA: Početna stranica sajta sa vidljivim linkom za prijavu agencije u navigaciji ili sredini stranice.]
 
 2.2. Unos podataka
 
@@ -46,9 +60,9 @@ Unesite:
 - Email adresu koju ste koristili pri registraciji
 - Lozinku
 
-Kliknite dugme za prijavu.
+Kliknite dugme Prijavi se / Log in.
 
-<opis: forma za prijavu — polja Email i Password, dugme Log in / Prijavi se>
+[SLIKA: Forma za prijavu sa poljima Email i Password i plavim dugmetom Prijavi se.]
 
 2.3. Zaboravljena lozinka
 
@@ -57,13 +71,12 @@ Ako ste zaboravili lozinku:
 2. Unesite email i pošaljite zahtjev.
 3. Otvorite link iz emaila i postavite novu lozinku.
 
-<opis: link „Zaboravili ste lozinku?“ na login formi>
+[SLIKA: Link „Zaboravili ste lozinku?“ ispod polja za lozinku na login formi.]
 
 2.4. Nakon prijave
 
 - Ako je email već potvrđen, ulazite u panel za agencije.
-- Ako email nije potvrđen, sistem vas upućuje na stranicu za verifikaciju
-  (vidi poglavlje 4).
+- Ako email nije potvrđen, otvara se stranica za verifikaciju (poglavlje 4).
 
 --------------------------------------------------------------------------------
 3. REGISTRACIJA NOVE AGENCIJE
@@ -71,10 +84,10 @@ Ako ste zaboravili lozinku:
 
 3.1. Otvaranje forme
 
-1. Na stranici za prijavu kliknite link za registraciju (Register / Registracija).
-2. Otvori se forma za kreiranje naloga agencije.
+1. Na stranici za prijavu kliknite link Registracija / Register.
+2. Otvara se forma za kreiranje naloga agencije.
 
-<opis: link „Registracija“ / „Register“ ispod login forme>
+[SLIKA: Link „Registracija“ / „Register“ ispod login forme, vidljiv prije popunjavanja podataka.]
 
 3.2. Obavezna polja
 
@@ -82,24 +95,25 @@ Popunite:
 - Naziv (ime agencije / prevoznika) — minimum 2 znaka
 - Država — iz padajuće liste
 - Email — mora biti jedinstven (jedan nalog po emailu)
-- Lozinka i potvrda lozinke — u skladu sa pravilima sigurnosti (minimalna
-  dužina i složenost koje sistem traži)
+- Lozinka i potvrda lozinke — u skladu sa pravilima koje forma prikazuje
+  (minimalna dužina i složenost)
 
 Jezik naloga pri registraciji odgovara trenutno izabranom jeziku stranice
-(cg ili en). Kasnije ga možete promijeniti u profilu.
+(cg ili en). Kasnije ga možete promijeniti u profilu (poglavlje 13).
 
-<opis: registraciona forma sa poljima Name, Country, Email, Password, Confirm password>
+[SLIKA: Registraciona forma sa popunjenim primjerom polja Naziv, Država, Email, Lozinka i Potvrda lozinke.]
 
 3.3. Završetak registracije
 
 Nakon slanja forme:
 - Kreira se vaš korisnički nalog agencije.
 - Automatski ste prijavljeni.
-- Sistem vas preusmjerava na stranicu za potvrdu email adrese (verifikacija).
+- Preusmjereni ste na stranicu za potvrdu email adrese.
 
-Registracija NIJE završena operativno dok ne potvrdite email (poglavlje 4).
+Registracija nije završena za svakodnevni rad dok ne potvrdite email
+(poglavlje 4).
 
-<opis: poruka nakon registracije koja traži verifikaciju emaila>
+[SLIKA: Poruka nakon registracije koja traži verifikaciju emaila, sa dugmetom za ponovno slanje.]
 
 --------------------------------------------------------------------------------
 4. VERIFIKACIJA EMAIL ADRESE
@@ -114,24 +128,23 @@ emaila ne možete rezervisati, upravljati vozilima ni slati FZBR zahtjeve.
 
 Na ekranu „Potvrdite email“ / „Verify your email“:
 - Pročitajte uputstvo da otvorite link iz emaila.
-- Možete ponovo poslati verification email dugmetom
+- Možete ponovo poslati email za verifikaciju dugmetom
   „Pošalji ponovo“ / „Resend verification email“.
 
-<opis: stranica verify-email sa dugmetom za ponovno slanje i opcijom odjave>
+[SLIKA: Stranica verify-email sa tekstom uputstva, dugmetom za ponovno slanje i linkom za odjavu.]
 
 4.3. Email sa linkom
 
 1. Otvorite inbox za email koji ste unijeli pri registraciji.
-2. Pronađite poruku za verifikaciju (provjerite spam/junk).
+2. Pronađite poruku za verifikaciju (provjerite spam/junk folder).
 3. Kliknite na link za potvrdu.
 
-<opis: primjer emaila za verifikaciju sa linkom (bez osjetljivih podataka)>
+[SLIKA: Primjer emaila za verifikaciju sa linkom za potvrdu (bez stvarnih ličnih podataka).]
 
 4.4. Nakon uspješne verifikacije
 
 - Email je označen kao potvrđen.
-- Možete koristiti panel za agencije: Rezervacije, Vozila, FZBR i ostale stavke
-  iz menija.
+- Možete koristiti panel: Rezervacije, Vozila, FZBR i ostale stavke iz menija.
 
 4.5. Promjena email adrese u profilu
 
@@ -140,33 +153,40 @@ Ako u profilu (User) promijenite email:
 - Verifikacija se poništava — morate ponovo potvrditi novi email prije punog
   pristupa panelu.
 
-<opis: User tab u panelu — polje Email i Save>
+[SLIKA: Stranica User u panelu sa poljem Email, ostalim poljima profila i dugmetom Sačuvaj.]
 
 --------------------------------------------------------------------------------
-5. PREGLED PANELA ZA AGENCIJE (NAKON PRIJAVE)
+5. PREGLED PANELA ZA AGENCIJE
 --------------------------------------------------------------------------------
 
 Nakon prijave i verifikacije emaila otvara se panel za agencije. U gornjem meniju
-nalaze se (prema uključenim funkcijama):
+nalaze se (prema tome šta vam je omogućeno), otprilike ovim redoslijedom:
 
-- Rezervacije — nova rezervacija (plaćena ili besplatna, kartica ili avans)
-- Avans — stanje avansa, uplate, istorija (samo ako je funkcija uključena)
-- Limo QR — generisanje QR kodova za Limo uslugu na terenu (samo ako su uključeni
-  avans i Limo servis)
-- Korisnik — profil, jezik, lozinka, email
+- Rezervacije — nova rezervacija: Termini ili Dnevna naknada; plaćena ili
+  besplatna (samo Termini), kartica ili avans
 - Vozila — vozni park
-- FZBR — Formular za besplatnu rezervaciju
-- Predstojeće rezervacije
+- Promjena tablica
 - Realizovane rezervacije
+- FZBR — Formular za besplatnu rezervaciju
+- Avans — stanje avansa, uplate, istorija (samo ako je funkcija uključena)
+- Limo — informacije o limo usluzi u Starom gradu (samo ako su uključeni avans i
+  Limo servis); dnevna naknada se kupuje kroz Rezervacije
 - Statistika
+- Korisnik — profil, jezik, lozinka, email
 
-<opis: gornja navigacija panela za agencije sa označenim stavkama menija>
+[SLIKA: Gornja navigacija panela za agencije sa vidljivim stavkama menija Rezervacije, Vozila, FZBR, Promjena tablica i Realizovane.]
+
+Neke stavke menija možda neće biti prikazane svim agencijama. Prikazane su samo
+funkcionalnosti koje su omogućene za vaš nalog.
 
 Jezik panela prati postavku „Jezik“ u profilu korisnika (cg ili en).
 
 --------------------------------------------------------------------------------
 6. VOZNI PARK (VOZILA)
 --------------------------------------------------------------------------------
+
+Preporučuje se da prvo unesete sva vozila koja planirate da koristite za
+rezervacije.
 
 6.1. Dodavanje vozila
 
@@ -175,7 +195,7 @@ Jezik panela prati postavku „Jezik“ u profilu korisnika (cg ili en).
 3. Izaberite kategoriju vozila (tip vozila sa cijenom).
 4. Sačuvajte.
 
-<opis: forma za dodavanje vozila — tablica i kategorija>
+[SLIKA: Forma za dodavanje vozila sa praznim poljem za tablicu, padajućom listom kategorije i dugmetom Sačuvaj.]
 
 6.2. Uklanjanje vozila
 
@@ -186,81 +206,134 @@ Jezik panela prati postavku „Jezik“ u profilu korisnika (cg ili en).
 6.3. Ponovni unos iste tablice
 
 - Ista tablica + ista kategorija kao ranije uklonjeno vozilo → vozilo se
-  reaktivira.
-- Ista tablica + DRUGA kategorija → direktan unos je blokiran. Morate
+  ponovo aktivira.
+- Ista tablica + druga kategorija → direktan unos je blokiran. Morate
   priložiti dokument (slika ili PDF) i poslati zahtjev administratoru servisa
   Bus Kotor za odobrenje promjene kategorije. Dok zahtjev nije odobren, vozilo se
   ne može koristiti sa novom kategorijom.
 
-<opis: poruka i forma za upload dokumenta pri promjeni kategorije tablice>
+[SLIKA: Poruka o potrebi odobrenja promjene kategorije sa formom za upload dokumenta (slika ili PDF).]
 
 6.4. Brisanje vozila koje ima predstojeće rezervacije
 
 Ako pokušate ukloniti vozilo vezano za predstojeće rezervacije:
-- Sistem traži zamjensko vozilo (ista ili niža kategorija, bez konflikta
-  termina — vidi pravila u poglavlju 10).
+- Traži se zamjensko vozilo (ista ili niža kategorija, bez preklapanja termina
+  — vidi poglavlje 14).
 - Ako zamjena postoji za sve rezervacije, otvara se korak-po-korak zamjena,
   pa tek onda brisanje.
 
-<opis: ekran zamjene vozila pri brisanju vozila sa predstojećim rezervacijama>
+[SLIKA: Ekran zamjene vozila pri brisanju vozila koje ima predstojeće rezervacije, sa listom rezervacija i izborom novog vozila.]
 
 --------------------------------------------------------------------------------
 7. NOVA REZERVACIJA (REZERVACIJE)
 --------------------------------------------------------------------------------
 
-7.1. Osnovni koraci
+Dnevna naknada dostupna je samo u panelu za agencije (ne na gostovskoj rezervaciji
+na javnoj stranici).
+
+7.1. Izbor vrste rezervacije
+
+Na stranici Rezervacije izaberite jednu od dvije opcije (radio dugmad):
+
+- Termini (podrazumijevano) — kupujete fiksne termine dolaska i odlaska za
+  ukrcaj/iskrcaj na lokaciji Benovo (link na mapu u objašnjenju na stranici).
+- Dnevna naknada — kupujete pravo ukrcaja i iskrcaja tokom odabranog
+  kalendarskog dana na parkinzima Autoboka i Puč, u vrijeme koje vama odgovara.
+  Preporučeno ako planirate posjetu Perastu i Risanu (linkovi u objašnjenju).
+
+Iznad radio dugmadi uvijek su prikazana oba objašnjenja sa linkovima na mape.
+Nakon promjene vrste stranica se osvježava; polja ispod se prilagođavaju izabranoj
+vrsti.
+
+[SLIKA: Uporedni prikaz opcija Termini i Dnevna naknada prije izbora vrste rezervacije.]
+
+[SLIKA: Blok „Vrsta rezervacije“ na stranici Rezervacije sa objašnjenjima, linkovima na mape i radio dugmadima Termini i Dnevna naknada.]
+
+7.2. Rezervacija po terminima — osnovni koraci
+
+Koristite ovaj tok ako ste izabrali Termini.
 
 1. Otvorite Rezervacije.
-2. Izaberite datum rezervacije.
-3. Izaberite termin dolaska i termin odlaska (vrijeme prikazano u padajućoj listi,
+2. Potvrdite da je izabrano Termini.
+3. Izaberite datum rezervacije (mesečni kalendar).
+4. Izaberite termin dolaska i termin odlaska (vrijeme u padajućoj listi,
    npr. „07:00 - 07:20“).
-4. Izaberite vozilo iz voznog parka (aktivna vozila).
-5. Provjerite cijenu / da li je termin besplatan (vidi 7.2).
-6. Izaberite način plaćanja ako je plaćena rezervacija (kartica ili avans).
-7. Potvrdite rezervaciju.
+5. Izaberite vozilo iz voznog parka (aktivna vozila).
+6. Provjerite cijenu / da li je termin besplatan (vidi 7.3).
+7. Izaberite način plaćanja ako je plaćena rezervacija (kartica ili avans).
+8. Potvrdite rezervaciju.
 
-<opis: stranica Rezervacije sa kalendarom/slotovima, izborom vozila i dugmetom za potvrdu>
+[SLIKA: Stranica Rezervacije za Termini sa kalendarom datuma, padajućim listama termina dolaska i odlaska, izborom vozila i prikazanom cijenom.]
 
-7.2. Besplatni termini
+7.3. Besplatni termini (samo Termini)
 
-U padajućim listama „Vrijeme dolaska“ i „Vrijeme odlaska“ pojedini termini mogu
-biti označeni kao besplatni (najčešće jutarnji termin „00:00 - 07:00“ i večernji
-„20:00 - 24:00“, prema pravilima Opštine). Za besplatnu rezervaciju:
-- Ne ide se na banku za plaćanje.
-- Ne izdaje se fiskalni račun kao za plaćenu rezervaciju.
-- Šalje se email potvrde besplatne rezervacije.
+U padajućim listama „Vrijeme dolaska“ i „Vrijeme odlaska“ neki termini mogu
+biti označeni kao besplatni (najčešće jutarnji „00:00 - 07:00“ i večernji
+„20:00 - 24:00“).
 
-Pored toga, sistem automatski tretira kao besplatne i ove kombinacije (koristite
-tačne nazive termina kao u formi):
+Ako izaberete besplatnu kombinaciju termina, prikazaće se cijena 0 i nije
+potrebno plaćanje. Ne idete na banku; stiže email potvrde besplatne rezervacije
+(bez računa kao za plaćenu rezervaciju).
+
+Besplatno je kada kombinujete ove parove (tačni nazivi kao u padajućim listama):
 - dolazak „00:00 - 07:00“ i odlazak „00:00 - 07:00“
 - dolazak „00:00 - 07:00“ i odlazak „20:00 - 24:00“
 - dolazak „20:00 - 24:00“ i odlazak „20:00 - 24:00“
 
-Kombinacija dolazak „20:00 - 24:00“ i odlazak „00:00 - 07:00“ nije besplatna —
-rezervacija se plaća kao i ostali termini u tom periodu.
+Nije besplatno ako izaberete dolazak „20:00 - 24:00“ i odlazak „00:00 - 07:00“
+— u tom slučaju vidite cijenu kao za običnu plaćenu rezervaciju.
 
-7.3. Plaćena rezervacija — kartica
+[SLIKA: Padajuća lista termina dolaska sa označenim besplatnim terminom „00:00 - 07:00“ i prikazom cijene „0“ ili „Besplatno“ ispod forme.]
+
+7.4. Plaćena rezervacija — kartica (Termini i Dnevna naknada)
 
 - Nakon potvrde preusmjereni ste na stranicu banke za plaćanje karticom.
-- Nakon uspješne uplate kreira se rezervacija, fiskalizuje se i šalje račun
-  na email.
+- Nakon uspješne uplate rezervacija je potvrđena i račun stiže na vaš email.
 
-7.4. Plaćena rezervacija — avans (ako je uključeno)
+7.5. Plaćena rezervacija — avans (ako je uključeno; Termini i Dnevna naknada)
 
 - Na stranici Rezervacije prikazuje se raspoloživi avans.
 - Ako je saldo dovoljan, možete izabrati plaćanje iz avansa.
-- Rezervacija se odmah evidentira kao plaćena; iznos se skida sa avansa.
-- Ne koristi se bankarski redirect za tu rezervaciju.
+- Rezervacija je odmah plaćena; iznos se skida sa avansa.
+- Ne idete na banku za tu rezervaciju.
 
 Ako avans nije dovoljan, opcija je onemogućena — koristite karticu ili
 dopunite avans (poglavlje 8).
 
-7.5. Kapacitet i blokirani termini
+7.6. Kapacitet i blokirani termini (samo Termini)
 
-- Termin mora imati slobodan kapacitet (uključujući rezervacije koje su u toku
-  plaćanja karticom i još nisu završene).
-- Blokirani termini nisu dostupni za kupovinu.
-- Datum obično može biti najviše ~90 dana unaprijed (ograničenje sistema).
+- Termin mora biti slobodan — ako nema mjesta, ne možete ga izabrati ili
+  vidite da nije dostupan.
+- Neki termini mogu biti blokirani i neće se pojaviti u listi ili ne mogu
+  biti izabrani.
+- Datum obično možete birati najviše oko 90 dana unaprijed.
+
+Za Dnevnu naknadu nema izbora termina i nema provjere zauzetosti po slotu.
+
+7.7. Dnevna naknada
+
+Koristite ovaj tok ako ste izabrali Dnevnu naknadu.
+
+1. Otvorite Rezervacije i izaberite Dnevnu naknadu.
+2. Izaberite datum važenja (kalendarski dan) na mesečnom kalendaru.
+3. Izaberite vozilo iz voznog parka.
+4. Provjerite cijenu — dnevna naknada se uvijek naplaćuje po cijeni kategorije
+   vozila (kao plaćena rezervacija po terminima). Nema besplatnih jutarnjih/
+   večernjih termina kao kod Termina.
+5. Plaćanje: kartica ili avans (vidi 7.4 i 7.5).
+6. Potvrdite rezervaciju.
+
+Šta je drugačije od Termina:
+- Ne birate termin dolaska ni odlaska.
+- Dnevna naknada ne omogućava korišćenje lokacije Benovo. Za dnevnu naknadu koriste
+  se parkinzi Autoboka i Puč.
+- Ista registarska tablica i isti datum mogu imati i rezervaciju po terminima
+  i dnevnu naknadu — to su dva odvojena proizvoda.
+- U emailu i PDF računu/potvrdi piše Dnevna naknada, datum važenja i
+  lokacije Autoboka/Puč (bez prikaza termina).
+- U listama Promjena tablica i Realizovane rezervacije piše Dnevna naknada.
+
+[SLIKA: Stranica Rezervacije za Dnevnu naknadu sa kalendarom datuma važenja, izborom vozila i cijenom — bez padajućih lista termina dolaska/odlaska.]
 
 --------------------------------------------------------------------------------
 8. AVANS (AKO JE FUNKCIJA UKLJUČENA)
@@ -269,167 +342,167 @@ dopunite avans (poglavlje 8).
 8.1. Pregled stanja
 
 Otvorite Avans. Vidite:
-- Trenutno stanje (zbir svih knjiženja na avansu)
-- Istoriju knjiženja (uplate, korišćenje za rezervacije, korekcije od strane
-  administratora servisa Bus Kotor)
+- Trenutno stanje avansa
+- Istoriju uplata i potrošnje avansa (rezervacije, dopune, korekcije)
 - Istoriju pokušaja dopune avansa
 
-<opis: stranica Avans sa saldom i tabelom knjiženja>
+[SLIKA: Stranica Avans sa prikazom trenutnog salda u gornjem dijelu i tabelom istorije uplata i potrošnje ispod.]
 
 8.2. Dopuna avansa
 
 1. Unesite iznos dopune.
+   Ako postoje minimalni ili maksimalni iznosi dopune, biće prikazani na ekranu.
 2. Pokrenite uplatu — preusmjerenje na stranicu banke za plaćanje karticom.
 3. Nakon uspješne uplate stanje avansa se povećava.
-4. Na email stiže PDF potvrda o evidentiranoj avansnoj uplati (to NIJE fiskalni
-   račun).
+4. Na email stiže PDF potvrda o uplati na avans (to nije račun za rezervaciju).
 
-<opis: forma za dopunu avansa i povratak sa banke>
+[SLIKA: Forma za dopunu avansa sa poljem za iznos i dugmetom za pokretanje uplate, sa prikazom trenutnog salda iznad forme.]
 
 8.3. Korišćenje avansa za rezervacije
 
-Vidi poglavlje 7.4. Svaka plaćena rezervacija iz avansa smanjuje saldo za
-iznos rezervacije.
+Vidi poglavlje 7.5. Svaka plaćena rezervacija iz avansa (Termini ili Dnevna
+naknada) smanjuje saldo za iznos rezervacije.
 
 --------------------------------------------------------------------------------
-9. PREDSTOJEĆE I REALIZOVANE REZERVACIJE
+9. PROMJENA TABLICE I REALIZOVANE REZERVACIJE
 --------------------------------------------------------------------------------
 
-9.1. Predstojeće rezervacije
+9.1. Promjena tablica
 
-Prikaz rezervacija čiji je datum u budućnosti ili je danas, a termin odlaska
-još nije prošao. Ovdje možete:
-- Promijeniti vozilo na rezervaciji (samo zamjena koja zadovoljava pravila)
-- Otvoriti PDF računa (pregled ili preuzimanje) za plaćene rezervacije
+Stranica Promjena tablica prikazuje buduće rezervacije (Termini i dnevna
+naknada) kako biste mogli promijeniti registarsku tablicu tamo gdje je to
+dozvoljeno.
 
-<opis: lista predstojećih rezervacija sa opcijom promjene vozila>
+- Termini: rezervacije čiji je datum u budućnosti, ili je danas a termin
+  odlaska još nije prošao. U listi se vide termini dolaska/odlaska.
+  Za ove rezervacije možete koristiti dugme Promijeni tablicu (zamjena
+  vozila/tablice po pravilima u poglavlju 9.3).
+- Dnevna naknada: predstojeća dok je datum važenja danas ili u budućnosti.
+  U koloni termina piše Dnevna naknada (bez vremena). Za dnevnu naknadu
+  promjena tablice NIJE dostupna — prikazuje se poruka da promjena nije
+  moguća.
+
+[SLIKA: Stranica Promjena tablica sa jednim redom Termini (dugme Promijeni tablicu) i jednim redom Dnevna naknada (poruka da promjena nije dostupna).]
 
 9.2. Realizovane rezervacije
 
-Prikaz prošlih rezervacija i današnjih gdje je termin odlaska već prošao.
+- Termini: prošli datumi i današnji dan nakon što je prošao termin odlaska.
+- Dnevna naknada: realizovana od sljedećeg kalendarskog dana nakon datuma
+  važenja (cijeli dan važenja se broji kao predstojeći).
+
 PDF računa dostupan za pregled/preuzimanje gdje je primjenjivo.
 
-<opis: lista realizovanih rezervacija>
+[SLIKA: Lista realizovanih rezervacija sa datumima, tablicama vozila i linkom za pregled računa.]
 
-9.3. Promjena vozila na predstojećoj rezervaciji
+9.3. Promjena tablice na rezervaciji po terminima
+
+Vrijedi samo za rezervacije po terminima (ne za dnevnu naknadu).
 
 Dozvoljeno samo vozilo:
 - iz vašeg voznog parka (aktivno),
-- iste ili NIŽE kategorije (cijena kategorije ≤ cijena na rezervaciji),
-- bez konflikta: ne smije imati drugu rezervaciju na isti datum sa istim
-  terminom dolaska ili istim terminom odlaska (dozvoljeno je da vaš dolazak
-  bude u istom terminu kao tuđi odlazak — to nije smatrano duplikatom).
+- iste ili niže kategorije (cijena kategorije ne smije biti veća od one na
+  rezervaciji),
+- bez preklapanja termina (pravilo dolaska/odlaska kao u poglavlju 14).
 
-Za plaćenu rezervaciju nakon promjene vozila može se ponovo poslati email
-sa računom.
+Za plaćenu rezervaciju nakon promjene tablice može ponovo stići email sa računom.
+
+[SLIKA: Forma za promjenu tablice na rezervaciji po terminima sa padajućom listom dostupnih vozila.]
 
 --------------------------------------------------------------------------------
 10. FZBR — ZAHTJEV ZA BESPLATNU REZERVACIJU
 --------------------------------------------------------------------------------
 
 FZBR služe školama i sličnim ustanovama kada Sekretarijat za lokalne prihode
-odobri besplatne termine.
+odobri besplatne termine. Odnosi se isključivo na rezervacije po terminima —
+ne na dnevnu naknadu (dnevna naknada se uvijek plaća kroz Rezervacije).
 
 10.1. Proces (obavezno pročitati)
 
 1. Ustanova (škola) prvo kontaktira Sekretarijat:
    prihodi@kotor.me
 2. Nakon odobrenja Sekretarijata, odobrenje se proslijedi agenciji/prevozniku.
-3. Tek tada agencija podnosi FZBR u sistemu uz dokumentaciju.
+3. Tek tada agencija podnosi FZBR u panelu uz dokumentaciju.
 
-Administrator servisa Bus Kotor NE odobrava besplatnu rezervaciju dok sva
+Administrator servisa Bus Kotor ne odobrava besplatnu rezervaciju dok sva
 neophodna dokumentacija nije dostavljena i pregledana. Možete poslati
-dokumentaciju i u više koraka, ali zahtjev neće biti odobren dok komplet ne bude.
+dokumentaciju u više koraka, ali zahtjev neće biti odobren dok komplet ne bude.
 
-<opis: informativni blok na vrhu FZBR stranice sa tekstom o prihodi@kotor.me>
+[SLIKA: Informativni blok na vrhu FZBR stranice sa tekstom o kontaktu prihodi@kotor.me i objašnjenjem procesa za škole.]
 
 10.2. Popunjavanje forme u panelu
 
 1. Otvorite FZBR u meniju.
-2. Izaberite jedan datum za cijeli zahtjev.
-3. Dodajte 1 do 5 blokova termina (u formi: segmenti). Svaki blok = jedan par:
+2. Unesite datum za cijeli zahtjev u polje formata dd/mm/yyyy ili kliknite
+   dugme kalendara pored polja da izaberete datum.
+3. Dodajte 1 do 5 blokova termina. Svaki blok = jedan par:
    - Vrijeme dolaska
    - Vrijeme odlaska
 4. Za svaki blok izaberite vozila iz voznog parka (najmanje 1 vozilo po bloku;
-   obično najviše 9 vozila po bloku — kapacitet parkinga).
+   obično najviše 9 vozila po bloku).
 5. Isto vozilo ne smije biti izabrano dva puta u istom bloku.
 6. Priložite dokumentaciju: slike ili PDF, ukupno do 10 MB.
 7. Potvrdite checkbox sa tekstom o obavezi iskrcaja/ukrcaja na parkingu Autoboka
    i Puč (linkovi u tekstu).
 8. Pošaljite zahtjev.
 
-<opis: FZBR forma — blokovi termina, izbor vozila, upload dokumenata, dugme Podnesi>
+[SLIKA: FZBR forma sa poljem datuma dd/mm/yyyy i dugmetom kalendara, blokovima termina, izborom vozila, upload poljem za dokumente i dugmetom Podnesi.]
 
 10.3. Nakon slanja
 
 - Zahtjev je podnesen — čeka pregled.
 - Administrator servisa Bus Kotor pregleda zahtjev i dokumentaciju.
-- Mogući ishodi koje vidite u sistemu:
+- Mogući ishodi koje vidite:
   • zahtjev je ažuriran (dopuna dokumentacije),
-  • odobren i realizovan (besplatne rezervacije kreirane),
+  • odobren i realizovan (besplatne rezervacije su napravljene),
   • odbijen.
 
-Agencija NE finalizuje besplatnu rezervaciju sama — čeka odluku administratora
+Agencija ne finalizuje besplatnu rezervaciju sama — čeka odluku administratora
 servisa Bus Kotor.
 
 --------------------------------------------------------------------------------
-11. LIMO QR (AKO JE UKLJUČENO)
+11. LIMO (AKO JE UKLJUČENO)
 --------------------------------------------------------------------------------
 
 Dostupno samo kada su uključeni i avans i Limo servis.
 
-VAŽNE INFORMACIJE (OPERATIVA)
+NAPOMENA: QR workflow (generisanje, skeniranje, evidentičar na terenu) je ukinut.
+Operativni mehanizam za taj dan je dnevna naknada kupljena kroz Rezervacije.
 
-Ukrcavanje putnika vrši se isključivo na predviđenom mjestu — autobuskom stajalištu
-kod gradske pijace (mapa: https://maps.app.goo.gl/BkmeQ1ZAo8XG1FDb6).
+VAŽNE INFORMACIJE
 
-Na tom mjestu službeno lice (limo evidentičar) evidentira pružanje limo usluge
-skeniranjem jednokratnog, jednodnevnog QR koda generisanog na ovoj stranici.
+Stranica Limo u meniju sadrži operativne informacije za agencije čija vozila pružaju
+limo (ukrcaj) uslugu u zoni Starog grada.
 
-Skeniranje QR koda ima za posljedicu:
-- umanjenje ukupnog avansa agencije,
-- izradu fiskalnog računa,
-- slanje fiskalnog računa na email agencije,
-- i označavanje QR koda kao iskorištenog (ništavnog).
+Ukrcavanje putnika dozvoljeno je samo na odobrenim mjestima:
+- autobusko stajalište kod gradske pijace
+  (mapa: https://maps.app.goo.gl/BkmeQ1ZAo8XG1FDb6)
+- autobusko stajalište u produžetku parkinga
+  (mapa: https://maps.app.goo.gl/qdy9YmTLRBsggPCD6)
 
-Da bi agencija mogla pružati limo uslugu, potrebno je da:
-- bude registrovana na Bus Kotor servisu,
-- posjeduje dovoljan avans u trenutku evidencije,
-- generiše QR kod koji će biti iskorišten tokom dana,
-- pokaže generisani QR kod evidentičaru.
+Za pružanje usluge tog dana vozilo mora imati važeću dnevnu naknadu (kupljenu kroz
+Rezervacije — kartica ili avans). Dnevna naknada je operativna dozvola za Autoboku
+i Puč tog kalendarskog dana.
 
-QR kod može biti odštampan na papiru ili prikazan kao slika na ekranu uređaja.
+Kontrolu vrši komunalna policija i druga ovlašćena lica. Držite potvrdu o dnevnoj
+naknadi (email/PDF).
 
-11.1. Šta radi QR
+11.1. Koraci
 
-- Agencija generiše QR kod za tekući dan.
-- QR koristi Limo osoblje na terenu pri potvrdi preuzimanja putnika.
-- Samo generisanje QR-a NE troši avans i NE izdaje fiskalni račun.
+1. Otvorite Limo u meniju i pročitajte informacije o odobrenim mjestima ukrcaja.
+2. U Rezervacijama kupite dnevnu naknadu za odgovarajući datum i vozilo.
+3. Na terenu poštujte pravila ukrcaja i imajte potvrdu o plaćenoj dnevnoj naknadi.
 
-11.2. Ograničenja
-
-- QR važi samo za današnji datum (kalendarski dan u sistemu Bus Kotor).
-- Najviše 20 QR kodova po agenciji po danu (uključujući već korišćene i nove
-  za taj dan).
-
-11.3. Koraci
-
-1. Otvorite Limo QR u meniju.
-2. Generišite novi QR.
-3. Prikažite ili preuzmite PDF za štampu.
-4. Predajte QR osoblju na terenu.
-
-<opis: lista QR kodova za današnji dan i dugme Generiši>
+[SLIKA: Informativna stranica Limo sa objašnjenjem zona, mjesta ukrcaja i obaveze dnevne naknade — bez QR dugmadi.]
 
 --------------------------------------------------------------------------------
 12. STATISTIKA
 --------------------------------------------------------------------------------
 
 - Pregled ukupno plaćenog iznosa, broja posjeta i tablica po vozilima.
-- Filter po datumu (od–do), u okviru dozvoljenog opsega za vašu agenciju.
+- Filter po datumu Od–Do: unesite dd/mm/yyyy ili kliknite dugme kalendara pored polja.
 - Moguć export u PDF (informativni izvještaj, jezik prati vaš profil).
 
-<opis: stranica Statistika sa filterima i tabelom>
+[SLIKA: Stranica Statistika sa poljima Od i Do (dd/mm/yyyy i dugme kalendara), tabelom po tablicama vozila i dugmetom za export u PDF.]
 
 --------------------------------------------------------------------------------
 13. PROFIL KORISNIKA (USER)
@@ -443,99 +516,101 @@ Možete mijenjati:
 
 Save / Sačuvaj aktivno samo kada ima izmjena.
 
-<opis: User forma sa poljima i dugmadima Save / Cancel>
+[SLIKA: Stranica User sa poljima Ime, Jezik, Email, Lozinka i dugmadima Sačuvaj i Otkaži.]
 
 Brisanje naloga: dostupna opcija u profilu (oprez — nepovratno za pristup).
 
 --------------------------------------------------------------------------------
-14. PRAVILA KOJIH SE AGENCIJE MORAJU PRIDRŽAVATI
+14. VAŽNO ZAPAMTITI
 --------------------------------------------------------------------------------
 
-14.1. Nalog i pristup
+14.1. Prije nego rezervišete
 
-- Jedan email = jedan nalog agencije.
-- Email mora biti verifikovan za pun pristup panelu za agencije.
-- Čuvajte lozinku povjerljivo; koristite opciju reset lozinke ako je zaboravljena.
+- Provjerite da li vam trebaju Termini (fiksno vrijeme na Benovu) ili Dnevna
+  naknada (cijeli dan na Autoboki i Puču).
+- Dnevna naknada se uvijek plaća — nema besplatnih termina kao kod Termina.
+- FZBR ne važi za dnevnu naknadu; škole prvo pišu na prihodi@kotor.me.
 
-14.2. Registarske tablice
+14.2. Tablice i vozila
 
-- Unosite tablice tačno (sistem normalizuje velika slova; dijakritici se
-  tolerišu pri provjeri duplikata).
-- Ne pokušavajte zaobići promjenu kategorije vozila ponovnim unosom iste
-  tablice bez odobrenja administratora servisa Bus Kotor.
+- Unosite tablice tačno — velika slova i brojevi, bez razmaka.
+- Ako mijenjate kategoriju postojeće tablice, priložite dokument i sačekajte
+  odobrenje prije korišćenja.
 
-14.3. Rezervacije i duplikati
+14.3. Termini — duplikati i zamjena vozila
 
-- NE možete kreirati novu rezervaciju ako za isti datum i istu tablicu već
-  postoji rezervacija sa ISTIM terminom dolaska ILI ISTIM terminom odlaska.
-- Dozvoljeno je da imate rezervaciju gdje je vaš dolazak u istom terminu kao
-  tuđi odlazak — to NIJE duplikat.
+- Za isto vozilo nije moguće napraviti dvije rezervacije koje koriste isti
+  termin dolaska ili isti termin odlaska.
+- Možete imati dolazak u istom terminu u kom neko drugi odlazi — to je dozvoljeno.
+- Pri promjeni vozila birajte istu ili nižu kategoriju.
 
-14.4. Kapacitet i termini
+14.4. Dnevna naknada — šta je korisno znati
 
-- Rezervišite samo kada sistem prikaže dostupan termin.
-- Ne rezervišite za prošle datume.
-- Poštujte blokade termina koje je postavio administrator servisa Bus Kotor.
+- Ista tablica može istog dana imati i Termini rezervaciju i Dnevnu naknadu.
+- U listama uvijek piše Dnevna naknada — lako je prepoznati.
+- Dnevna naknada je dostupna samo u panelu za agencije, ne na javnoj stranici
+  za goste.
 
-14.5. Plaćanje
+14.5. Plaćanje i email
 
-- Za plaćene rezervacije završite bankarski tok ako plaćate karticom.
+- Držite email adresu tačnom — na nju stižu računi i potvrde.
+- Za plaćanje karticom dovršite korak na stranici banke.
 - Za avans: prvo dopunite avans ako nema dovoljno sredstava.
-- Besplatne rezervacije ne zaobilazite plaćanjem — koristite ispravan FZBR
-  proces za škole/ustanove.
 
-14.6. FZBR i dokumentacija
+14.6. Limo (ako je uključeno)
 
-- Prvo odobrenje preko prihodi@kotor.me, zatim FZBR u sistemu.
-- Priložite jasnu dokumentaciju (odobrenje, angažovanje prevoznika, itd.).
-- Administrator servisa Bus Kotor ne odobrava dok dokumentacija nije kompletna.
-- Maks. 5 blokova termina po zahtjevu; po bloku poštujte limit broja vozila.
+- QR workflow je ukinut — koristite dnevnu naknadu iz Rezervacija.
+- Ukrcaj je samo na stajalištu kod gradske pijace ili u produžetku parkinga.
+- Za taj dan kupite dnevnu naknadu prije ukrcaja putnika.
+- Kontrolu vrši komunalna policija / ovlašćena lica.
 
-14.7. Promjena vozila na rezervaciji
-
-- Samo niža ili ista kategorija.
-- Bez konflikta termina (isto pravilo dolaska/odlaska kao pri duplikatima).
-- Za plaćene rezervacije promjena može pokrenuti novi email sa računom.
-
-14.8. Limo (ako je uključeno)
-
-- QR samo za današnji dan; ne dijelite QR izvan operativne namjene.
-- Finansijski efekat nastaje tek kada osoblje na terenu potvrdi preuzimanje
-  putnika skeniranjem QR koda.
-
-14.9. Tačni podaci
-
-- Email za račune i potvrde mora biti ispravan.
-- Podaci ustanove u FZBR procesu moraju biti tačni.
-
-14.10. Zabranjeno / ne raditi
-
-- Ne koristite tuđe naloge.
-- Koristite samo dugmad i forme u aplikaciji — ne pokušavajte ručno mijenjati
-  adrese u pregledaču da biste zaobišli pravila.
-- Ne očekujte automatsko odobrenje FZBR bez pregleda od strane administratora
-  servisa Bus Kotor.
-- Ne brišite vozila sa predstojećim rezervacijama bez zamjene kada sistem
-  to traži.
+[SLIKA: Sažet infobox ili podsjetnik na stranici Rezervacije sa kratkim objašnjenjem razlike između Termina i Dnevne naknade.]
 
 --------------------------------------------------------------------------------
-15. ČESTA PITANJA (KRATKO)
+15. ČESTA PITANJA
 --------------------------------------------------------------------------------
-
-P: Zašto ne vidim Avans ili Limo u meniju?
-O: Te stavke su uključene samo za agencije kojima je to omogućeno u sistemu Bus
-   Kotor. Ako vam nisu potrebne ili niste u programu, stavka je siva ili nedostupna.
 
 P: Zašto nakon prijave ne vidim Rezervacije i ostale stavke?
 O: Vjerovatno email nije verifikovan — provjerite inbox i stranicu za
    verifikaciju (poglavlje 4).
 
-P: Mogu li imati više agencija na jedan email?
-O: Ne — email mora biti jedinstven.
+P: Kada birati Termini, a kada Dnevnu naknadu?
+O: Termini — fiksni dolazak/odlazak na Benovu (uključujući besplatne
+   termine po pravilima). Dnevna naknada — fleksibilan ukrcaj/iskrcaj tokom
+   dana na Autoboki i Puču; uvijek se plaća po cijeni kategorije; nema FZBR-a.
 
-P: Šta ako plaćanje karticom ne uspije?
-O: Rezervacija može ostati nepotvrđena dok se plaćanje ne završi; pokušajte
-   ponovo ili kontaktirajte podršku Bus Kotor.
+P: Mogu li imati i Termini rezervaciju i dnevnu naknadu istog dana za istu tablicu?
+O: Da — to su dva odvojena proizvoda i mogu postojati istovremeno.
+
+P: Kako prepoznati dnevnu naknadu u listama?
+O: U koloni termina piše Dnevna naknada umjesto vremena dolaska/odlaska.
+
+P: Kada dnevna naknada prelazi u realizovane?
+O: Sljedećeg kalendarskog dana nakon datuma važenja.
+
+P: Zašto ne vidim besplatne termine kod dnevne naknade?
+O: Besplatni jutarnji i večernji termini važe samo za rezervacije po
+   terminima (Termini), ne za dnevnu naknadu.
+
+--------------------------------------------------------------------------------
+16. KONTAKT PODRŠKE
+--------------------------------------------------------------------------------
+
+Za tehničke probleme sa aplikacijom Bus Kotor obratite se podršci:
+
+- Email: [UPISATI EMAIL PODRŠKE]
+- Telefon: [UPISATI TELEFON PODRŠKE]
+
+Ako prijavljujete problem, navedite:
+- naziv agencije,
+- email naloga,
+- datum rezervacije,
+- registarsku tablicu,
+- broj računa ili broj rezervacije, ako je poznat,
+- kratak opis problema,
+- po mogućnosti screenshot ekrana.
+
+[SLIKA: Primjer poruke podršci sa najvažnijim podacima koje treba poslati.]
 
 --------------------------------------------------------------------------------
 KRAJ DIO A (CG)
@@ -549,16 +624,30 @@ DIO B — ENGLISH (EN)
 1. INTRODUCTION
 --------------------------------------------------------------------------------
 
-This guide explains how transport agencies use the bus.kotor.me web
-application to book Kotor parking, manage their vehicle fleet, use advance
-payments (if enabled), Limo QR (if enabled), and submit free reservation
+This guide explains how transport agencies use the bus.kotor.me web application
+to book Kotor parking, manage their vehicle fleet, pay by card or advance
+(if enabled), read Limo information (if enabled), and submit free time-slot reservation
 requests (FZBR).
 
-After sign-in you work in the agency panel (top menu: Reservations, Vehicles,
-FZBR, etc.). Access requires a registered account, verified email address, and
-sign-in.
+You can book in two ways:
+- Time slots — fixed arrival and departure times at Benovo.
+- Daily fee — flexible pick-up and drop-off throughout the day at Autoboka
+  and Puč parking (agency panel only).
 
-<screenshot: site home page with “Agency sign in” / “Log in” link highlighted>
+In short:
+- Time slots — when you want a booked arrival and departure time at Benovo.
+- Daily fee — when exact times matter less and you plan to visit several
+  locations during the day, e.g. Perast and Risan.
+
+If you are unsure which option to choose, in most cases use Time slots. Daily
+ticket is mainly for carriers who plan to visit several locations on the same
+day, e.g. Perast and Risan.
+
+After sign-in you work in the agency panel. The top menu includes items such
+as Reservations, Vehicles, FZBR, Plate change, and more. You need a
+registered account, verified email address, and sign-in to use the panel.
+
+[IMAGE: bus.kotor.me home page with the “Agency sign in” or “Log in” link highlighted in the header or main area.]
 
 --------------------------------------------------------------------------------
 2. AGENCY SIGN IN
@@ -566,11 +655,11 @@ sign-in.
 
 2.1. Opening the sign-in page
 
-1. Open bus.kotor.me in your browser.
-2. Select the site language (cg or en) if a language switcher is available.
+1. Open bus.kotor.me in your browser (Chrome, Edge, Firefox, or similar).
+2. Select cg or en if a language switcher is available.
 3. Click the agency sign-in link (Agency sign in / Log in).
 
-<screenshot: home page with agency login link>
+[IMAGE: Site home page with the agency login link visible in the navigation or centre of the page.]
 
 2.2. Entering credentials
 
@@ -578,9 +667,9 @@ Enter:
 - The email address used at registration
 - Your password
 
-Click the sign-in button.
+Click Log in / Prijavi se.
 
-<screenshot: login form — Email, Password, Log in button>
+[IMAGE: Login form with Email and Password fields and a blue Log in button.]
 
 2.3. Forgot password
 
@@ -589,12 +678,12 @@ If you forgot your password:
 2. Enter your email and submit the request.
 3. Open the link in the email and set a new password.
 
-<screenshot: “Forgot your password?” link on login form>
+[IMAGE: “Forgot your password?” link below the password field on the login form.]
 
 2.4. After sign-in
 
 - If your email is already verified, you enter the agency panel.
-- If not verified, you are redirected to email verification (see section 4).
+- If not verified, you are taken to the email verification page (see section 4).
 
 --------------------------------------------------------------------------------
 3. REGISTERING A NEW AGENCY
@@ -605,7 +694,7 @@ If you forgot your password:
 1. On the login page click Register.
 2. The agency registration form opens.
 
-<screenshot: “Register” link below login form>
+[IMAGE: “Register” link below the login form, visible before filling in details.]
 
 3.2. Required fields
 
@@ -613,23 +702,25 @@ Fill in:
 - Name (agency / carrier name) — minimum 2 characters
 - Country — from dropdown
 - Email — must be unique (one account per email)
-- Password and confirmation — must meet system security rules
+- Password and confirmation — must meet the rules shown on the form
+  (minimum length and complexity)
 
 Account language at registration follows the current site language (cg or en).
-You can change it later in your profile.
+You can change it later in your profile (section 13).
 
-<screenshot: registration form — Name, Country, Email, Password, Confirm password>
+[IMAGE: Registration form with sample values in Name, Country, Email, Password, and Confirm password fields.]
 
 3.3. After registration
 
 When you submit:
 - Your user account is created.
 - You are logged in automatically.
-- You are redirected to email verification.
+- You are taken to the email verification page.
 
-Registration is NOT operationally complete until you verify email (section 4).
+Registration is not complete for day-to-day use until you verify your email
+(section 4).
 
-<screenshot: post-registration message asking to verify email>
+[IMAGE: Post-registration message asking to verify email, with a resend button.]
 
 --------------------------------------------------------------------------------
 4. EMAIL VERIFICATION
@@ -646,7 +737,7 @@ On the “Verify your email” screen:
 - Read the instruction to open the link in your email.
 - You can resend the verification email with “Resend verification email”.
 
-<screenshot: verify-email page with resend button and log out option>
+[IMAGE: Verify-email page with instructions, resend button, and log out link.]
 
 4.3. Verification email
 
@@ -654,13 +745,12 @@ On the “Verify your email” screen:
 2. Find the verification message (check spam/junk).
 3. Click the confirmation link.
 
-<screenshot: sample verification email with link (no sensitive data)>
+[IMAGE: Sample verification email with a confirmation link (no real personal data).]
 
 4.4. After successful verification
 
 - Your email is marked verified.
-- You can use the agency panel: Reservations, Vehicles, FZBR, and other menu
-  items.
+- You can use the panel: Reservations, Vehicles, FZBR, and other menu items.
 
 4.5. Changing email in profile
 
@@ -669,32 +759,39 @@ If you change email in User profile:
 - Verification is reset — you must verify the new email before full access
   returns.
 
-<screenshot: User tab — Email field and Save>
+[IMAGE: User page in the panel with Email field, other profile fields, and Save button.]
 
 --------------------------------------------------------------------------------
-5. AGENCY PANEL OVERVIEW (AFTER SIGN IN)
+5. AGENCY PANEL OVERVIEW
 --------------------------------------------------------------------------------
 
 After sign-in and verification you see the agency panel. Top menu items
-(depending on enabled features):
+(depending on what is enabled for you), roughly in this order:
 
-- Reservations — new booking (paid or free, card or advance)
-- Advance — balance, top-up payments, history (if feature enabled)
-- Limo QR — generate QR codes for Limo field service (if advance + Limo enabled)
-- User — profile, language, password, email
+- Reservations — new booking: Time slots or Daily fee; paid or free (time
+  slots only), card or advance
 - Vehicles — fleet
-- FZBR — free reservation request form
-- Upcoming reservations
+- Plate change
 - Realized reservations
+- FZBR — free reservation request form
+- Advance — balance, top-up payments, history (if feature enabled)
+- Limo — information about limo service in the Old Town (if advance + Limo enabled);
+  purchase Daily fees through Reservations
 - Statistics
+- User — profile, language, password, email
 
-<screenshot: agency panel top navigation with menu items labeled>
+[IMAGE: Agency panel top navigation with menu items Reservations, Vehicles, FZBR, Plate change, and Realized visible.]
+
+Some menu items may not appear for every agency. You only see features that are
+enabled for your account.
 
 Panel language follows your User profile language setting (cg or en).
 
 --------------------------------------------------------------------------------
 6. VEHICLE FLEET (VEHICLES)
 --------------------------------------------------------------------------------
+
+We recommend entering all vehicles you plan to use for bookings before you start.
 
 6.1. Adding a vehicle
 
@@ -703,7 +800,7 @@ Panel language follows your User profile language setting (cg or en).
 3. Select vehicle category (type with price).
 4. Save.
 
-<screenshot: add vehicle form — plate and category>
+[IMAGE: Add vehicle form with empty plate field, category dropdown, and Save button.]
 
 6.2. Removing a vehicle
 
@@ -715,78 +812,130 @@ Panel language follows your User profile language setting (cg or en).
 
 - Same plate + same category as a previously removed vehicle → vehicle is
   reactivated.
-- Same plate + DIFFERENT category → direct entry is blocked. You must upload
+- Same plate + different category → direct entry is blocked. You must upload
   a document (image or PDF) and submit a request to the Bus Kotor service
   administrator for category change approval. Until approved, the vehicle cannot
   be used with the new category.
 
-<screenshot: message and upload form for category change approval>
+[IMAGE: Message about category change approval with upload form for a document (image or PDF).]
 
 6.4. Deleting a vehicle with upcoming reservations
 
 If you try to remove a vehicle linked to upcoming reservations:
-- The system requires replacement vehicles (same or lower category, no slot
-  conflict — see rules in section 10).
+- A replacement vehicle is required (same or lower category, no overlapping
+  time slots — see section 14).
 - If replacement exists for all reservations, a step-by-step replacement
   flow runs, then deletion.
 
-<screenshot: vehicle replacement screen when deleting vehicle with upcoming bookings>
+[IMAGE: Vehicle replacement screen when deleting a vehicle with upcoming bookings, showing reservation list and new vehicle selector.]
 
 --------------------------------------------------------------------------------
 7. NEW RESERVATION (RESERVATIONS)
 --------------------------------------------------------------------------------
 
-7.1. Basic steps
+Daily fee is available only in the agency panel (not on the public guest
+booking page).
+
+7.1. Choosing reservation type
+
+On Reservations choose one of two options (radio buttons):
+
+- Time slots (default) — you buy fixed arrival and departure times for
+  pick-up/drop-off at Benovo (map link in the on-page explanation).
+- Daily fee — you buy the right to pick up and drop off passengers on
+  the selected calendar day at Autoboka and Puč bus parking, at times that suit
+  you. Recommended if you plan to visit Perast and Risan (links in the text).
+
+Both explanations with map links are always shown above the radio buttons.
+After changing type the page refreshes; fields below match the selected type.
+
+[IMAGE: Side-by-side view of Time slots and Daily fee options before choosing reservation type.]
+
+[IMAGE: “Reservation type” block on Reservations page with explanations, map links, and Time slots / Daily fee radio buttons.]
+
+7.2. Time-slot booking — basic steps
+
+Use this flow when Time slots is selected.
 
 1. Open Reservations.
-2. Select reservation date.
-3. Select arrival and departure time (as shown in the dropdown, e.g. “07:00 - 07:20”).
-4. Select a vehicle from your active fleet.
-5. Check price / whether the slot is free (see 7.2).
-6. For paid bookings choose payment method (card or advance).
-7. Confirm the reservation.
+2. Confirm Time slots is selected.
+3. Select reservation date (month calendar).
+4. Select arrival and departure time (dropdown, e.g. “07:00 - 07:20”).
+5. Select a vehicle from your active fleet.
+6. Check price / whether the slot is free (see 7.3).
+7. For paid bookings choose payment method (card or advance).
+8. Confirm the reservation.
 
-<screenshot: Reservations page with date/slots, vehicle picker, confirm button>
+[IMAGE: Reservations page for Time slots with date calendar, arrival and departure dropdowns, vehicle selector, and displayed price.]
 
-7.2. Free time slots
+7.3. Free time slots (time slots only)
 
-In the “Arrival time” and “Departure time” dropdowns, some options may be marked
-as free (most often the morning slot “00:00 - 07:00” and the evening slot
-“20:00 - 24:00”, per municipal rules). For a free booking:
-- No bank payment redirect.
-- No fiscal receipt like a paid booking.
-- A free reservation confirmation email is sent.
+In the “Arrival time” and “Departure time” dropdowns, some options may be
+marked as free (most often morning “00:00 - 07:00” and evening “20:00 - 24:00”).
 
-The system also treats these combinations as free automatically (use the exact
-labels shown in the form):
+If you select a free combination of slots, the price will show as 0 and no
+payment is required. You are not taken to the bank; a free confirmation email
+is sent (not an invoice like a paid booking).
+
+These combinations are free (use the exact labels shown in the dropdowns):
 - arrival “00:00 - 07:00” and departure “00:00 - 07:00”
 - arrival “00:00 - 07:00” and departure “20:00 - 24:00”
 - arrival “20:00 - 24:00” and departure “20:00 - 24:00”
 
-Arrival “20:00 - 24:00” with departure “00:00 - 07:00” is not free — you pay
-like any other booking in that period.
+It is not free if you select arrival “20:00 - 24:00” and departure
+“00:00 - 07:00” — in that case you see the price as for a regular paid booking.
 
-7.3. Paid reservation — card
+[IMAGE: Arrival time dropdown with free slot “00:00 - 07:00” marked and price showing “0” or “Free” below the form.]
 
-- After confirm you are redirected to the bank to pay by card.
-- After successful payment a reservation is created, fiscalized, and invoice
-  emailed.
+7.4. Paid reservation — card (time slots and daily fee)
 
-7.4. Paid reservation — advance (if enabled)
+- After confirm you are taken to the bank page to pay by card.
+- After successful payment your booking is confirmed and an invoice is emailed
+  to you.
+
+7.5. Paid reservation — advance (if enabled; time slots and daily fee)
 
 - Reservations page shows available advance balance.
 - If balance is sufficient you can pay from advance.
-- Reservation is immediately marked paid; amount is deducted from advance.
-- No bank redirect for that booking.
+- The booking is paid right away; the amount is deducted from your advance balance.
+- You do not go to the bank page for that booking.
 
 If advance is insufficient, the option is disabled — use card or top up advance
 (section 8).
 
-7.5. Capacity and blocked slots
+7.6. Capacity and blocked slots (time slots only)
 
-- Slot must have available capacity (including card payments still in progress).
-- Blocked slots cannot be purchased.
-- Dates are typically limited to ~90 days ahead (system limit).
+- The slot must be available — if there is no space, you cannot select it or
+  you see it is unavailable.
+- Some slots may be blocked and will not appear in the list or cannot be selected.
+- You can usually select dates up to about 90 days ahead.
+
+For Daily fee there is no slot selection and no per-slot availability check.
+
+7.7. Daily fee
+
+Use this flow when Daily fee is selected.
+
+1. Open Reservations and select Daily fee.
+2. Select the validity date (calendar day) on the month calendar.
+3. Select a vehicle from your fleet.
+4. Check the price — daily fee is always charged at the vehicle category
+   price (same as a paid time-slot booking). Morning/evening free slot rules
+   do not apply.
+5. Pay by card or advance (see 7.4 and 7.5).
+6. Confirm the reservation.
+
+How it differs from time slots:
+- No arrival or departure slot selection.
+- Daily fee does not include Benovo. For daily fee you use Autoboka
+  and Puč parking.
+- The same plate and date may have both a time-slot booking and a daily fee
+  — they are separate products.
+- Email and PDF invoice/confirmation show Daily fee, validity date,
+  and Autoboka/Puč locations (no time slots).
+- Plate change and Realized lists show Daily fee rows where applicable.
+
+[IMAGE: Reservations page for Daily fee with validity date calendar, vehicle selector, and price — no arrival/departure dropdowns.]
 
 --------------------------------------------------------------------------------
 8. ADVANCE PAYMENTS (IF ENABLED)
@@ -795,95 +944,106 @@ If advance is insufficient, the option is disabled — use card or top up advanc
 8.1. Viewing balance
 
 Open Advance. You see:
-- Current balance (sum of ledger entries)
-- Ledger history (top-ups, usage for reservations, corrections by the Bus Kotor
-  service administrator)
+- Current advance balance
+- History of top-ups and use (reservations, top-ups, corrections)
 - History of advance top-up attempts
 
-<screenshot: Advance page with balance and ledger table>
+[IMAGE: Advance page showing current balance at the top and payment and usage history table below.]
 
 8.2. Topping up advance
 
 1. Enter top-up amount.
-2. Start payment — redirect to the bank card payment page.
+   If minimum or maximum top-up amounts apply, they will be shown on screen.
+2. Start payment — you are taken to the bank card payment page.
 3. After successful payment advance balance increases.
-4. A confirmation PDF is emailed (this is NOT a fiscal invoice).
+4. A confirmation PDF is emailed (this is not a reservation invoice).
 
-<screenshot: top-up form and return from bank>
+[IMAGE: Top-up form with amount field and start payment button, with current balance shown above the form.]
 
 8.3. Using advance for reservations
 
-See section 7.4. Each paid booking from advance reduces balance by the
-reservation amount.
+See section 7.5. Each paid booking from advance (time slots or daily fee)
+reduces balance by the reservation amount.
 
 --------------------------------------------------------------------------------
-9. UPCOMING AND REALIZED RESERVATIONS
+9. PLATE CHANGE AND REALIZED RESERVATIONS
 --------------------------------------------------------------------------------
 
-9.1. Upcoming
+9.1. Plate change
 
-Lists reservations whose date is in the future, or today before the departure
-time window ends. Here you can:
-- Change vehicle on a reservation (only allowed replacements)
-- Open invoice PDF (view or download) for paid reservations
+The Plate change page lists future reservations (time slots and daily fee) so
+you can change the registration plate where allowed.
 
-<screenshot: upcoming reservations list with change vehicle option>
+- Time slots: future dates, or today before the departure window ends.
+  Lists show arrival/departure times. Use Change plate for eligible rows
+  (rules in section 9.3).
+- Daily fee: upcoming while the validity date is today or in the future.
+  The time column shows Daily fee (no times). Plate change is NOT available
+  for daily fee — a message explains that plate change is not supported.
+
+[IMAGE: Plate change page with one time-slot row (Change plate button) and one Daily fee row (unavailable message).]
 
 9.2. Realized
 
-Past reservations and today after the departure time window has passed. Invoice
-PDF available
-where applicable.
+- Time slots: past dates and today after the departure window has passed.
+- Daily fee: realized from the next calendar day after the validity
+  date (the full validity day counts as upcoming).
 
-<screenshot: realized reservations list>
+Invoice PDF available where applicable.
 
-9.3. Changing vehicle on upcoming reservation
+[IMAGE: Realized reservations list with dates, vehicle plates, and invoice view link.]
+
+9.3. Changing plate on time-slot reservation
+
+Applies only to time-slot bookings (not daily fee).
 
 Allowed only if replacement vehicle:
 - is in your active fleet,
-- has same or LOWER category (category price ≤ reservation category price),
-- has no conflict: no other reservation on the same date with the same arrival
-  time or the same departure time (your arrival may match someone else’s
-  departure — that is allowed).
+- has same or lower category (category price must not exceed the reservation),
+- has no slot overlap (arrival/departure rules as in section 14).
 
-For paid reservations a vehicle change may trigger a new invoice email.
+For paid reservations a plate change may trigger a new invoice email.
+
+[IMAGE: Form to change plate on a time-slot reservation with dropdown of available vehicles.]
 
 --------------------------------------------------------------------------------
 10. FZBR — FREE RESERVATION REQUEST
 --------------------------------------------------------------------------------
 
 FZBR is for schools and similar institutions after the Secretariat approves
-free slots.
+free time slots. It applies only to time-slot bookings — not daily fee
+(daily fee is always purchased as a paid booking under Reservations).
 
 10.1. Process (must read)
 
 1. The institution (school) first contacts the Secretariat:
    prihodi@kotor.me
 2. After Secretariat approval, approval is forwarded to the agency/carrier.
-3. Only then the agency submits FZBR in the system with documentation.
+3. Only then the agency submits FZBR in the panel with documentation.
 
-The Bus Kotor service administrator will NOT approve the free reservation until
+The Bus Kotor service administrator will not approve the free reservation until
 all required documentation is submitted and reviewed. You may upload in steps,
 but approval waits until complete.
 
-<screenshot: informational block at top of FZBR page mentioning prihodi@kotor.me>
+[IMAGE: Informational block at top of FZBR page with text about prihodi@kotor.me contact and process for schools.]
 
 10.2. Filling the form in the panel
 
 1. Open FZBR in the menu.
-2. Select one date for the whole request.
-3. Add 1 to 5 time blocks (labeled as segments in the form). Each block = one pair:
+2. Enter the date for the whole request in dd/mm/yyyy format or click the
+   calendar button next to the field to pick a date.
+3. Add 1 to 5 time blocks. Each block = one pair:
    - Arrival time
    - Departure time
 4. For each block select vehicles from your fleet (at least 1 per block; usually
-   up to 9 per block — parking capacity).
+   up to 9 per block).
 5. The same vehicle cannot be selected twice in one block.
 6. Attach documentation: images or PDF, total up to 10 MB.
 7. Tick the checkbox about drop-off/pick-up obligation at Autoboka and Puč
    parking (links in the text).
 8. Submit the request.
 
-<screenshot: FZBR form — time blocks, vehicle selection, document upload, Submit>
+[IMAGE: FZBR form with dd/mm/yyyy date field and calendar button, time blocks, vehicle selection, document upload, and Submit button.]
 
 10.3. After submission
 
@@ -891,69 +1051,56 @@ but approval waits until complete.
 - The Bus Kotor service administrator reviews the request and documents.
 - Possible outcomes you may see:
   • request updated (additional documents),
-  • approved and completed (free reservations created),
+  • approved and completed (free reservations are in place),
   • rejected.
 
-The agency does NOT finalize the free reservation alone — wait for a decision
+The agency does not finalize the free reservation alone — wait for a decision
 from the Bus Kotor service administrator.
 
 --------------------------------------------------------------------------------
-11. LIMO QR (IF ENABLED)
+11. LIMO (IF ENABLED)
 --------------------------------------------------------------------------------
 
 Available only when both advance and Limo service features are enabled.
 
-IMPORTANT INFORMATION (OPERATIONS)
+NOTE: The QR workflow (generation, scanning, field registrar) has been retired.
+The operative mechanism for the day is the Daily fee purchased through Reservations.
 
-Passenger pickup must be performed only at the designated location — the bus stop
-by the city market (map: https://maps.app.goo.gl/BkmeQ1ZAo8XG1FDb6).
+IMPORTANT INFORMATION
 
-At that location, an authorized officer (limo registrar) records the limo service
-by scanning a one-time, single-day QR code generated on this page.
+The Limo menu page provides operational information for agencies whose vehicles
+perform limo (pick-up) service in the Old Town zone.
 
-Scanning the QR code results in:
-- deducting the amount from the agency’s advance balance,
-- issuing a fiscal invoice,
-- sending the fiscal invoice to the agency email,
-- and marking the QR code as used (invalid).
+Passenger pickup is allowed only at these approved locations:
+- bus stop by the city market
+  (map: https://maps.app.goo.gl/BkmeQ1ZAo8XG1FDb6)
+- bus stop at the parking extension
+  (map: https://maps.app.goo.gl/qdy9YmTLRBsggPCD6)
 
-To provide limo service, the agency must:
-- be registered on the Bus Kotor service,
-- have sufficient advance balance at the time of registration,
-- generate a QR code that will be used during the day,
-- present the generated QR code to the registrar.
+To operate on that day, the vehicle must have a valid Daily fee (purchased under
+Reservations — card or advance). The Daily fee is the operative permit for Autoboka
+and Puč on that calendar day.
 
-The QR code may be printed on paper or shown as an image on a device screen.
+Compliance is checked by municipal police and other authorised controllers. Keep
+your Daily fee confirmation (email/PDF).
 
-11.1. What the QR does
+11.1. Steps
 
-- Agency generates a QR code for the current day.
-- Limo staff use it in the field when confirming passenger pickup.
-- Generating QR alone does NOT charge advance and does NOT issue a fiscal receipt.
+1. Open Limo in the menu and read the approved pickup rules.
+2. Under Reservations, purchase a Daily fee for the relevant date and vehicle.
+3. On site, follow pickup rules and keep proof of the paid Daily fee.
 
-11.2. Limits
-
-- QR valid only for today’s date (calendar day in the Bus Kotor system).
-- Up to 20 QR codes per agency per day (including codes already used that day).
-
-11.3. Steps
-
-1. Open Limo QR in the menu.
-2. Generate a new QR.
-3. Display or download PDF for printing.
-4. Hand QR to field staff.
-
-<screenshot: list of today’s QR codes and Generate button>
+[IMAGE: Informational Limo page explaining zones, pickup locations, and Daily fee obligation — no QR buttons.]
 
 --------------------------------------------------------------------------------
 12. STATISTICS
 --------------------------------------------------------------------------------
 
 - View total paid amount, visit count, and per-plate breakdown.
-- Filter by date range within allowed bounds for your agency.
+- Filter by date From–To: enter dd/mm/yyyy or click the calendar button next to the field.
 - Optional PDF export (informational report; language follows your profile).
 
-<screenshot: Statistics page with filters and table>
+[IMAGE: Statistics page with From and To date fields (dd/mm/yyyy and calendar buttons), per-plate table, and PDF export button.]
 
 --------------------------------------------------------------------------------
 13. USER PROFILE
@@ -967,102 +1114,106 @@ You can change:
 
 Save is active only when there are changes.
 
-<screenshot: User form with fields and Save / Cancel>
+[IMAGE: User page with Name, Language, Email, Password fields and Save / Cancel buttons.]
 
 Account deletion: available in profile (caution — irreversible for access).
 
 --------------------------------------------------------------------------------
-14. RULES AGENCIES MUST FOLLOW
+14. IMPORTANT REMINDERS
 --------------------------------------------------------------------------------
 
-14.1. Account and access
+14.1. Before you book
 
-- One email = one agency account.
-- Email must be verified for full agency panel access.
-- Keep password confidential; use password reset if forgotten.
+- Decide whether you need Time slots (fixed times at Benovo) or Daily fee
+  (full day at Autoboka and Puč).
+- Daily fee is always paid — there are no free slots like with Time slots.
+- FZBR does not apply to daily fee; schools email prihodi@kotor.me first.
 
-14.2. License plates
+14.2. Plates and vehicles
 
-- Enter plates accurately (system normalizes uppercase; diacritics tolerated
-  for duplicate checks).
-- Do not bypass category change rules by re-entering the same plate without
-  Bus Kotor service administrator approval.
+- Enter plates accurately — uppercase letters and digits, no spaces.
+- If changing category for an existing plate, upload a document and wait for
+  approval before use.
 
-14.3. Reservations and duplicates
+14.3. Time slots — duplicates and vehicle change
 
-- You CANNOT create a new reservation if the same date and plate already has
-  a reservation with the SAME arrival slot OR the SAME departure slot.
-- Your arrival in the same time slot as someone else’s departure is allowed —
-  NOT a duplicate.
+- For the same vehicle you cannot make two bookings that use the same arrival
+  slot or the same departure slot.
+- Your arrival in the same slot as someone else’s departure is allowed.
+- When changing vehicle, choose the same or a lower category.
 
-14.4. Capacity and slots
+14.4. Daily fee — good to know
 
-- Book only when the system shows availability.
-- Do not book past dates.
-- Respect time slot blocks set by the Bus Kotor service administrator.
+- The same plate may have both a Time slots booking and a Daily fee on the
+  same day.
+- Lists always show Daily fee — easy to recognise.
+- Daily fee is only in the agency panel, not on the public guest page.
 
-14.5. Payment
+14.5. Payment and email
 
-- For paid bookings complete the bank flow when paying by card.
+- Keep your email address correct — invoices and confirmations are sent there.
+- When paying by card, complete the step on the bank page.
 - For advance: top up first if balance is insufficient.
-- Do not bypass payment for cases that require FZBR — use the school/institution
-  process.
 
-14.6. FZBR and documentation
+14.6. Limo (if enabled)
 
-- Secretariat approval via prihodi@kotor.me first, then FZBR in the system.
-- Attach clear documentation (approval, carrier engagement, etc.).
-- The Bus Kotor service administrator will not approve until documentation is
-  complete.
-- Max. 5 time blocks per request; respect per-block vehicle limits.
+- QR workflow is retired — use Daily fees from Reservations.
+- Pickup only at the approved bus stops (city market or parking extension).
+- Purchase a Daily fee for that day before picking up passengers.
+- Compliance is checked by municipal police / authorised controllers.
 
-14.7. Vehicle change on reservation
-
-- Same or lower category only.
-- No time conflict (same arrival/departure duplicate rule).
-- Paid reservations may trigger a new invoice email.
-
-14.8. Limo (if enabled)
-
-- QR for today only; do not misuse QR outside operations.
-- Financial effect only when field staff confirm pickup by scanning the QR code.
-
-14.9. Accurate data
-
-- Email for invoices and confirmations must be correct.
-- Institution data in FZBR must be accurate.
-
-14.10. Do not
-
-- Do not use others’ accounts.
-- Use only buttons and forms in the application — do not try to change browser
-  addresses manually to bypass rules.
-- Do not expect automatic FZBR approval without review by the Bus Kotor service
-  administrator.
-- Do not delete vehicles with upcoming reservations without replacement when
-  the system requires it.
+[IMAGE: Short info box or reminder on the Reservations page explaining the difference between Time slots and Daily fee.]
 
 --------------------------------------------------------------------------------
-15. FAQ (SHORT)
+15. FAQ
 --------------------------------------------------------------------------------
-
-Q: Why don’t I see Advance or Limo in the menu?
-A: Those items are enabled only for agencies that are set up for them in the Bus
-   Kotor system. If not applicable, the menu item is greyed out or unavailable.
 
 Q: Why don’t I see Reservations and other menu items after login?
 A: Your email is probably not verified — check your inbox and the verification
    page (section 4).
 
-Q: Can I have multiple agencies on one email?
-A: No — email must be unique.
+Q: When should I choose Time slots vs Daily fee?
+A: Time slots — fixed arrival/departure at Benovo (including free slots per
+   rules). Daily fee — flexible pick-up/drop-off during the day at
+   Autoboka and Puč; always paid at category price; no FZBR.
 
-Q: What if card payment fails?
-A: The booking may remain unconfirmed until payment completes; try again or
-   contact Bus Kotor support.
+Q: Can I have both a Time slots booking and a daily fee the same day for
+   the same plate?
+A: Yes — they are separate products and can exist at the same time.
+
+Q: How do I recognise a daily fee in the lists?
+A: The time column shows Daily fee instead of arrival/departure times.
+
+Q: When does a daily fee move to realized?
+A: On the calendar day after the validity date.
+
+Q: Why don’t I see free slots for daily fee?
+A: Free morning and evening slots apply only to Time slots bookings, not to
+   daily fee.
+
+--------------------------------------------------------------------------------
+16. SUPPORT CONTACT
+--------------------------------------------------------------------------------
+
+For technical problems with the Bus Kotor application, contact support:
+
+- Email: [ENTER SUPPORT EMAIL]
+- Phone: [ENTER SUPPORT PHONE]
+
+When reporting a problem, include:
+- agency name,
+- account email,
+- reservation date,
+- license plate,
+- invoice or reservation number, if known,
+- a short description of the problem,
+- a screenshot of the screen if possible.
+
+[IMAGE: Example support message showing the key information to send.]
 
 --------------------------------------------------------------------------------
 END PART B (EN)
+
 
 ================================================================================
 KRAJ DOKUMENTA / END OF DOCUMENT

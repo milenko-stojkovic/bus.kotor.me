@@ -207,7 +207,7 @@ class SendInvoiceEmailJob implements ShouldQueue
             'emails',
             $bodyKey,
             $reservation->isDailyTicket()
-                ? "Hello,\n\nYour daily ticket reservation #%1\$d is confirmed. Valid on: %2\$s.%3\$s\n\nA PDF copy of your invoice or confirmation is attached.\n\nThank you."
+                ? "Hello,\n\nYour daily fee reservation #%1\$d is confirmed. Valid on: %2\$s.%3\$s\n\nA PDF copy of your invoice or confirmation is attached.\n\nThank you."
                 : "Hello,\n\nYour paid parking reservation #%1\$d is confirmed for date %2\$s.%3\$s\n\nA PDF copy of your invoice or confirmation is attached.\n\nThank you.",
             $emailLocale
         );

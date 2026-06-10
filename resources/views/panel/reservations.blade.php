@@ -107,8 +107,8 @@
                                     $pn(
                                         'booking_kind_expl_daily_ticket',
                                         $locale === 'cg'
-                                            ? 'Dnevna karta — kupujete pravo da u toku odabranog dana izvršite ukrcaj i iskrcaj putnika na parkinzima za autobuse :autoboka_link i :puc_link u periodu kada Vama odgovara. Ako nameravate da posetite :perast_link i :risan_link — odaberite ovu opciju.'
-                                            : 'Daily ticket — you purchase the right to pick up and drop off passengers on the selected calendar day at the :autoboka_link and :puc_link bus parking areas, at times that suit you. Choose this option if you plan to visit :perast_link and :risan_link.',
+                                            ? 'Dnevna naknada — kupujete pravo da u toku odabranog dana izvršite ukrcaj i iskrcaj putnika na parkinzima za autobuse :autoboka_link i :puc_link u periodu kada Vama odgovara. Ako nameravate da posetite :perast_link i :risan_link — odaberite ovu opciju.'
+                                            : 'Daily fee — you purchase the right to pick up and drop off passengers on the selected calendar day at the :autoboka_link and :puc_link bus parking areas, at times that suit you. Choose this option if you plan to visit :perast_link and :risan_link.',
                                     ),
                                 );
                             @endphp
@@ -127,7 +127,7 @@
                                     <label class="inline-flex items-center gap-2">
                                         <input type="radio" name="reservation_kind" value="{{ \App\Support\ReservationKind::DAILY_TICKET }}" class="rounded border-red-200"
                                             {{ $reservationKind === \App\Support\ReservationKind::DAILY_TICKET ? 'checked' : '' }}>
-                                        <span>{{ $pn('booking_kind_daily_ticket', $locale === 'cg' ? 'Dnevna karta' : 'Daily ticket') }}</span>
+                                        <span>{{ $pn('booking_kind_daily_ticket', $locale === 'cg' ? 'Dnevna naknada' : 'Daily fee') }}</span>
                                     </label>
                                 </div>
                             </fieldset>
@@ -244,24 +244,36 @@
                                 </label>
                             </div>
 
-                            @if ($advanceEnabled && !($is_free_reservation ?? false) && !empty($vehicle_id) && (($isDailyTicketBooking && !empty($selected_date)) || (!empty($arrival_id) && !empty($departure_id))))
+                            @php
+                                $paymentUiReady = ! ($is_free_reservation ?? false)
+                                    && ! empty($vehicle_id)
+                                    && (
+                                        ($isDailyTicketBooking && ! empty($selected_date))
+                                        || (! $isDailyTicketBooking && ! empty($arrival_id) && ! empty($departure_id))
+                                    );
+                            @endphp
+                            @if ($paymentUiReady)
                                 <div class="rounded-md bg-red-50 border border-red-100 p-3 text-sm space-y-2">
-                                    <div class="text-gray-800">
-                                        <strong>{{ $pn('advance_available', $locale === 'cg' ? 'Raspoloživi avans' : 'Available advance') }}:</strong>
-                                        {{ number_format((float) $advanceBalance, 2, '.', '') }} EUR
-                                    </div>
+                                    @if ($advanceEnabled)
+                                        <div class="text-gray-800">
+                                            <strong>{{ $pn('advance_available', $locale === 'cg' ? 'Raspoloživi avans' : 'Available advance') }}:</strong>
+                                            {{ number_format((float) $advanceBalance, 2, '.', '') }} EUR
+                                        </div>
+                                    @endif
                                     <div class="space-y-1">
                                         <div class="font-medium text-gray-800">{{ $pn('payment_method_title', $locale === 'cg' ? 'Način plaćanja' : 'Payment method') }}</div>
                                         <label class="flex items-center gap-2">
                                             <input type="radio" name="payment_method" value="card" class="rounded border-red-200" {{ old('payment_method', 'card') === 'card' ? 'checked' : '' }}>
                                             <span>{{ $pn('pay_by_card', $locale === 'cg' ? 'Plati karticom' : 'Pay by card') }}</span>
                                         </label>
-                                        <label class="flex items-center gap-2">
-                                            <input type="radio" name="payment_method" value="advance" class="rounded border-red-200" {{ old('payment_method') === 'advance' ? 'checked' : '' }} {{ $advanceCanPay ? '' : 'disabled' }}>
-                                            <span class="{{ $advanceCanPay ? '' : 'text-gray-400' }}">{{ $pn('pay_from_advance', $locale === 'cg' ? 'Plati iz avansa' : 'Pay from advance') }}</span>
-                                        </label>
-                                        @if (! $advanceCanPay)
-                                            <div class="text-xs text-gray-600">{{ $advanceInsufficientHint }}</div>
+                                        @if ($advanceEnabled)
+                                            <label class="flex items-center gap-2">
+                                                <input type="radio" name="payment_method" value="advance" class="rounded border-red-200" {{ old('payment_method') === 'advance' ? 'checked' : '' }} {{ $advanceCanPay ? '' : 'disabled' }}>
+                                                <span class="{{ $advanceCanPay ? '' : 'text-gray-400' }}">{{ $pn('pay_from_advance', $locale === 'cg' ? 'Plati iz avansa' : 'Pay from advance') }}</span>
+                                            </label>
+                                            @if (! $advanceCanPay)
+                                                <div class="text-xs text-gray-600">{{ $advanceInsufficientHint }}</div>
+                                            @endif
                                         @endif
                                     </div>
                                 </div>

@@ -55,7 +55,7 @@ class ProfileController extends Controller
             $user->sendEmailVerificationNotification();
         }
 
-        return Redirect::route('panel.user')->with('status', 'profile-updated');
+        return Redirect::route('panel.user')->with('status', 'profile_updated');
     }
 
     /**

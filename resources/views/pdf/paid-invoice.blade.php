@@ -165,7 +165,7 @@
                 <span class="bold">Tip vozila:</span> {{ $vehicleLine }}
             </div>
             <div class="small" style="margin-bottom:2px;">
-                <span class="bold">Vrsta rezervacije:</span> Dnevna karta
+                <span class="bold">Vrsta rezervacije:</span> Dnevna naknada
             </div>
             <div class="small" style="margin-bottom:2px;">
                 <span class="bold">Datum važenja:</span> {{ $validityDateDisplay ?? '—' }}

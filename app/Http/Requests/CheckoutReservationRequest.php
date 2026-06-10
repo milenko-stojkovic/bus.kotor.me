@@ -2,7 +2,10 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Vehicle;
+use App\Services\Reservation\ReservationVehicleEligibilityService;
 use App\Support\ReservationKind;
+use App\Support\UiText;
 use Illuminate\Validation\Rule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
@@ -100,18 +103,51 @@ class CheckoutReservationRequest extends FormRequest
         $validator->after(function (Validator $validator): void {
             $authUser = $this->user();
             $panelAuthBooking = $authUser !== null && $this->boolean('auth_panel_booking');
-            if (! $panelAuthBooking) {
+
+            if ($panelAuthBooking) {
+                $method = $this->input('payment_method');
+                $method = is_string($method) ? trim($method) : '';
+                if ($method !== '' && $method === 'advance' && ! (bool) config('features.advance_payments')) {
+                    $locale = app()->getLocale();
+                    $validator->errors()->add(
+                        'payment_method',
+                        UiText::t('panel', 'advance_payment_unavailable', 'Advance payment is currently not available.', $locale)
+                    );
+                }
+            }
+
+            $kind = $this->resolvedReservationKind();
+            if ($kind !== ReservationKind::TIME_SLOTS) {
                 return;
             }
 
-            $method = $this->input('payment_method');
-            $method = is_string($method) ? trim($method) : '';
-            if ($method === '') {
+            $eligibility = app(ReservationVehicleEligibilityService::class);
+            $locale = app()->getLocale();
+            $message = UiText::t(
+                'panel',
+                'booking_vehicle_type_not_allowed_time_slots',
+                $locale === 'cg'
+                    ? 'Ova kategorija vozila nije dostupna za rezervacije po terminima. Za putnička vozila (4+1–7+1) koristite dnevnu naknadu.'
+                    : 'This vehicle category is not available for time-slot bookings. For passenger vehicles (4+1–7+1), use Daily fee.',
+                $locale,
+            );
+
+            $vehicleId = $this->input('vehicle_id');
+            if ($panelAuthBooking && is_numeric($vehicleId)) {
+                $vehicle = Vehicle::query()
+                    ->where('user_id', $authUser?->id)
+                    ->find((int) $vehicleId);
+                if ($vehicle !== null && ! $eligibility->isVehicleTypeAllowedForKind((int) $vehicle->vehicle_type_id, $kind)) {
+                    $validator->errors()->add('vehicle_id', $message);
+                }
+
                 return;
             }
 
-            if ($method === 'advance' && ! (bool) config('features.advance_payments')) {
-                $validator->errors()->add('payment_method', 'Avansno plaćanje trenutno nije dostupno.');
+            $vehicleTypeId = $this->input('vehicle_type_id');
+            if (is_numeric($vehicleTypeId)
+                && ! $eligibility->isVehicleTypeAllowedForKind((int) $vehicleTypeId, $kind)) {
+                $validator->errors()->add('vehicle_type_id', $message);
             }
         });
     }

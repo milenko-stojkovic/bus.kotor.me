@@ -43,7 +43,7 @@
         <tr>
             <td>Termini — broj / prihod</td>
             <td>{{ (int)(($rkPdf['time_slots']['count'] ?? 0)) }} / {{ $fmtMoney((float)(($rkPdf['time_slots']['revenue'] ?? 0))) }}</td>
-            <td>Dnevne karte — broj / prihod</td>
+            <td>Dnevne naknade — broj / prihod</td>
             <td>{{ (int)(($rkPdf['daily_ticket']['count'] ?? 0)) }} / {{ $fmtMoney((float)(($rkPdf['daily_ticket']['revenue'] ?? 0))) }}</td>
         </tr>
         <tr>

@@ -35,4 +35,6 @@
 
 Duga sesija u Cursoru često poveća memoriju i može usporiti odgovore. **Novi chat** je normalan korak; kontekst za zadatak preuzmi iz ovog foldera (`handoff` + TODO/DONE), ne iz starog četa.
 
-**Poslednje ažuriranje:** 2026-05-16
+**Operativni model (2026-06):** Agencije kupuju **Dnevnu naknadu** kroz Rezervacije; terenska provjera tablice: Control **`/control/dnevna-naknada`**. Limo QR/OCR/evidentičar su legacy (isključeni po defaultu). V. `project-done.md` (2026-06-10).
+
+**Poslednje ažuriranje:** 2026-06-10

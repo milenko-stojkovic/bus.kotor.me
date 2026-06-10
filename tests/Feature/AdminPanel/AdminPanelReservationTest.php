@@ -309,7 +309,7 @@ class AdminPanelReservationTest extends TestCase
 
         $this->get(route('panel_admin.reservations', ['merchant_transaction_id' => $mtid], false))
             ->assertOk()
-            ->assertSee('Dnevna karta', false)
+            ->assertSee('Dnevna naknada', false)
             ->assertSee('Autoboka i Puč', false)
             ->assertDontSee('Vrijeme dolaska', false);
     }
@@ -342,7 +342,7 @@ class AdminPanelReservationTest extends TestCase
 
         $this->get(route('panel_admin.reservations.edit', ['reservation' => $r], false))
             ->assertOk()
-            ->assertSee('Dnevna karta', false)
+            ->assertSee('Dnevna naknada', false)
             ->assertSee('Sačuvaj', false);
 
         $this->put(route('panel_admin.reservations.update', $r, false), [

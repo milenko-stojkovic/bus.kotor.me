@@ -57,6 +57,23 @@ class UpdateReservationVehicleRequest extends FormRequest
                 return;
             }
 
+            if ($reservation->isDailyTicket()) {
+                $locale = app()->getLocale();
+                $validator->errors()->add(
+                    'vehicle_id',
+                    UiText::t(
+                        'panel',
+                        'upcoming_plate_change_unavailable_daily_fee',
+                        $locale === 'cg'
+                            ? 'Promjena tablice nije dostupna za dnevnu naknadu.'
+                            : 'Plate change is not available for Daily fee reservations.',
+                        $locale
+                    )
+                );
+
+                return;
+            }
+
             $vehicle = Vehicle::query()
                 ->where('user_id', $this->user()->id)
                 ->with('vehicleType')

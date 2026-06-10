@@ -1,6 +1,6 @@
-# Agency panel (ulogovani korisnik, `/panel`)
+﻿# Agency panel (ulogovani korisnik, `/panel`)
 
-**Poslednje ažuriranje:** 2026-05-28
+**Poslednje ažuriranje:** 2026-06-10
 
 Prefiks ruta: **`/panel`**, middleware **`auth`** + **`verified`**. Gornja navigacija: `resources/views/layouts/navigation.blade.php`.
 
@@ -10,8 +10,8 @@ Prefiks ruta: **`/panel`**, middleware **`auth`** + **`verified`**. Gornja navig
 
 | Ruta | Naziv rute (izbor) | Opis |
 |------|-------------------|------|
-| `GET /panel/reservations` | `panel.reservations` | Nova rezervacija (`ReservationBookingPageData`) — **Termini** (slotovi) ili **Dnevna karta** (agency-only, bez slotova) |
-| `GET /panel/upcoming` | `panel.upcoming` | Predstojeće rezervacije, promena vozila |
+| `GET /panel/reservations` | `panel.reservations` | Nova rezervacija (`ReservationBookingPageData`) — **Termini** (slotovi) ili **Dnevna naknada** (agency-only, bez slotova) |
+| `GET /panel/upcoming` | `panel.upcoming` | **Promjena tablica** — promjena registarske tablice na budućim rezervacijama (samo Termini) |
 | `GET /panel/realized` | `panel.realized` | Realizovane, link na PDF u novom tabu |
 | `GET /panel/vehicles` | `panel.vehicles` | Vozila |
 | `GET /panel/fzbr` | `panel.fzbr.create` | FZBR (Formular za besplatnu rezervaciju) — podnošenje zahtjeva |
@@ -19,13 +19,13 @@ Prefiks ruta: **`/panel`**, middleware **`auth`** + **`verified`**. Gornja navig
 | `POST /panel/avans/topup` | `panel.advance.topup.store` | Pokretanje avansne uplate (kreira topup attempt + start payment) |
 | `GET /panel/avans/return` | `panel.advance.return` | Povratak sa banke (status se čita iz baze) |
 | `GET /panel/statistics` | `panel.statistics` | Statistika: ukupno plaćeno, broj realizovanih posjeta, tabela po tablicama |
-| `GET /panel/limo` | `panel.limo.index` | Limo QR: lista aktivnih QR za današnji dan (samo kad je advance ON) |
-| `POST /panel/limo/qr/generate` | `panel.limo.qr.generate` | Generisanje privremenog QR tokena (limit po agenciji/danu) |
-| `GET /panel/limo/qr/{limoQrToken}` | `panel.limo.qr.show` | Prikaz QR (iz dekriptovanog tokena) |
-| `GET /panel/limo/qr/{limoQrToken}/pdf` | `panel.limo.qr.pdf` | Preuzimanje QR kao PDF (štampa) — samo za današnje tokene |
+| `GET /panel/limo` | `panel.limo.index` | **Limo** — informativna stranica (Stari grad, mjesta ukrcaja, obaveza dnevne naknade) |
+| `POST /panel/limo/qr/generate` | `panel.limo.qr.generate` | **Deprecated** — 404 osim ako je `LIMO_QR_WORKFLOW_ENABLED=true` |
+| `GET /panel/limo/qr/{limoQrToken}` | `panel.limo.qr.show` | **Deprecated** — 404 (isti flag) |
+| `GET /panel/limo/qr/{limoQrToken}/pdf` | `panel.limo.qr.pdf` | **Deprecated** — 404 (isti flag) |
 | `GET /panel/user` | `panel.user` | Korisnik: ime, jezik, email, lozinka |
 | `PATCH /profile` | `profile.update` | Čuva profil (uključujući lozinku ako je uneta) |
-| `PATCH /panel/reservations/{id}/vehicle` | `panel.reservations.vehicle` | Zamena vozila na upcoming rezervaciji |
+| `PATCH /panel/reservations/{id}/vehicle` | `panel.reservations.vehicle` | Promjena tablice/vozila na predstojećoj **Termini** rezervaciji |
 | `GET /panel/reservations/{id}/invoice/view` | `panel.reservations.invoice.view` | PDF **inline** (browser tab) |
 | `GET /panel/reservations/{id}/invoice` | `panel.reservations.invoice` | PDF **download** |
 
@@ -87,36 +87,37 @@ Backend tok `payment_method=advance`:
   - `type=usage`, `amount=-invoice_amount`, `reference_type=reservation`, `reference_id=reservation.id`
 - pokreće standardni post-payment pipeline za `paid` rezervacije (invoice/fiskalizacija kao i inače)
 
-### Dnevna karta (`reservation_kind=daily_ticket`)
+### Kategorije vozila — Termini vs dnevna naknada (2026-06)
 
-Na **`GET /panel/reservations`** agencija bira **Termini** (default) ili **Dnevna karta** (radio ispod objašnjenja). Iznad radio dugmadi stalno su prikazana oba objašnjenja (Termini + Dnevna karta) sa linkovima na mape (Benovo; Autoboka, Puč, Perast, Risan) — CG/EN preko `ui_translations` (`booking_kind_expl_*`). Gost (`/guest/reserve`) **nema** ovu opciju.
+Putnička vozila za limo servis (**Putničko vozilo / 4+1–7+1**, baseline `vehicle_type_id = 1`) **nisu** dostupna za nove rezervacije po **Terminima** (gost i agencija). Ista kategorija ostaje dostupna za **Dnevnu naknadu**. Pravilo: `ReservationVehicleEligibilityService` (ID-jevi iz `vehicle_type_translations`, ne hardkodirani). Validacija: `CheckoutReservationRequest` + filtriranje u `ReservationBookingPageData`. Historijske rezervacije, admin i analitika nisu dirani.
+
+### Dnevna naknada (`reservation_kind=daily_ticket`)
+
+Na **`GET /panel/reservations`** agencija bira **Termini** (default) ili **Dnevna naknada** (radio ispod objašnjenja). Iznad radio dugmadi stalno su prikazana oba objašnjenja (Termini + Dnevna naknada) sa linkovima na mape (Benovo; Autoboka, Puč, Perast, Risan) — CG/EN preko `ui_translations` (`booking_kind_expl_*`). Gost (`/guest/reserve`) **nema** ovu opciju.
 
 - **Termini:** postojeći tok — obavezni arrival/departure slotovi, kapacitet preko `daily_parking_data`, duplicate check po slotu+tablici.
-- **Dnevna karta:** isti iznos po kategoriji vozila kao plaćena slot rezervacija; **bez** slotova, **bez** `daily_parking_data`, **bez** slot duplicate checka; isti plate+datum može imati i slot rezervaciju.
+- **Dnevna naknada:** isti iznos po kategoriji vozila kao plaćena slot rezervacija; **bez** slotova, **bez** `daily_parking_data`, **bez** slot duplicate checka; isti plate+datum može imati i slot rezervaciju.
 - Checkout: `POST /checkout` sa `auth_panel_booking=1` i `reservation_kind=daily_ticket` (kartica → `temp_data` + banka; avans → odmah `Reservation` kao za Termini, bez lock-a na slotovima).
-- PDF i email: fiskalni/ne-fiskalni račun i potvrda prikazuju **Dnevna karta**, datum važenja i lokacije Autoboka/Puč (bez termina).
-- Predstojeće/realizovane: daily ticket je predstojeći cijeli dan važenja, realizovan od sljedećeg kalendarskog dana.
+- PDF i email: fiskalni/ne-fiskalni račun i potvrda prikazuju **Dnevna naknada**, datum važenja i lokacije Autoboka/Puč (bez termina).
+- Predstojeće/realizovane: dnevna naknada je predstojeća cijeli dan važenja, realizovana od sljedećeg kalendarskog dana.
 - Admin analitika (odvojeni brojači) — Phase 3B.
 
-### Limo QR (pick-up taksa)
+### Limo (informativno; QR workflow ukinut)
 
-Rute **`/panel/limo*`** vidljive i dostupne samo kada su ispunjena **oba** uslova:
+**Phase 2 (2026-06):** Agencijska stavka menija **Limo** (ranije „Limo QR”) vodi na informativnu stranicu. QR generisanje, skeniranje, evidentičar na `/limo/*` i OCR su **isključeni** po defaultu (`LIMO_QR_WORKFLOW_ENABLED=false`). Operativni mehanizam za dan je **dnevna naknada** kroz Rezervacije.
+
+Ruta **`GET /panel/limo`** dostupna kada su ispunjena **oba** uslova:
 
 - `ADVANCE_PAYMENTS_ENABLED=true` (config `features.advance_payments`)
 - `LIMO_SERVICE_ENABLED=true` (config `features.limo_service`)
 
-Ako je bilo koji uslov false, `/panel/limo*` vraća **404**, a navigaciona stavka “Limo” može biti vidljiva ali **disabled** (bez linka) uz tooltip.
+Ako je bilo koji uslov false, `/panel/limo` vraća **404**, a navigaciona stavka „Limo” može biti vidljiva ali **disabled** (bez linka) uz tooltip.
 
-- **Lista i generisanje:** `GET /panel/limo`, `POST /panel/limo/qr/generate`, **detalj QR:** `GET /panel/limo/qr/{limoQrToken}`.
-- Na vrhu Limo QR stranice prikazuje se **info-blok** sa operativnim uputstvom: mjesto ukrcavanja (map link), način evidentiranja (skeniranje jednodnevnog QR-a), efekti skeniranja (skidanje avansa + fiskal + email) i osnovni uslovi da agencija može pružati limo uslugu.
-- QR važi **samo za tekući kalendarski dan** (timezone projekta).
-- **Maks. 20 generisanih „slotova”** po agenciji po danu (aktivni tokeni + već evidentirani Limo pickup-i tog dana).
-- U bazi se čuvaju **`token_hash`** i **`encrypted_token`**; na ekranu se QR prikazuje iz dekriptovane vrijednosti.
-- Dugme **„Preuzmi PDF”** preuzima jednostavan PDF za štampu (QR + agencija + datum). **Nema finansijskog efekta**; važi samo za **današnje** tokene (inače 404).
-- **Finansijski efekat** (skidanje avansa, fiskal, email računa) nastupa tek kada **Limo evidenter** potvrdi pickup putem **`POST /limo/pickup/qr`** — samo generisanje QR-a ne troši avans.
-- **Jezik (cg/en):** tekstovi u navigaciji, na stranicama Limo QR-a i u **ne-fiskalnom** PDF-u za štampu koriste grupu **`panel`** u `ui_translations` (ključevi `nav_limo`, `limo_*`, `limo_qr_pdf_*`, `limo_generate_error_*`), prema `users.lang` / `SetLocale`. **Fiskalni Limo račun** (`PaidInvoicePdfGenerator::renderLimoBinary`, šablon `pdf/paid-invoice`) i prateći email (**`SendLimoInvoiceEmailJob`**, `UiText` grupa `emails`) **uvijek su na `cg`**, nezavisno od `users.lang` (v. `limo-service.md`, test `LimoFiscalizationTest::test_limo_invoice_email_body_is_cg_when_agency_lang_is_en`).
+- **Informativna stranica:** odobrena mjesta ukrcaja (map linkovi), obaveza važeće **dnevne naknade**, kontrola od strane komunalne policije / ovlašćenih kontrolora (provjera tablice: Control panel `/control/dnevna-naknada`, v. `docs/control-panel.md`).
+- **Deprecated QR rute** (`panel.limo.qr.*`): ostaju u kodu; middleware **`limo.qr_workflow`** vraća **404** dok je flag isključen. Rollback: `LIMO_QR_WORKFLOW_ENABLED=true`.
+- **Jezik (cg/en):** `nav_limo`, `limo_info_*` u `ui_translations` / `UiText`.
 
-Detalji modela: **[limo-service.md](./limo-service.md)**.
+Istorijski QR podaci, admin pregled događaja (`/admin/limo`) i servisi (fiskalizacija po starim pickup zapisima) **nisu** brisani. Detalji: **[limo-service.md](./limo-service.md)**.
 
 ---
 
@@ -149,16 +150,24 @@ Na vrhu stranice prikazuje se:
 
 ---
 
-## Predstojeće vs realizovane
+## Predstojeće vs realizovane (liste)
 
 Servis: **`App\Services\Reservation\PanelReservationListService`**.
 
-- **Upcoming:** datum rezervacije je **posle** danasnjeg dana **ili** (datum je **danas** i **`now` je pre kraja** pick-up termina: `ListOfTimeSlot::getEndTimeForDate` za taj datum). Ako kraj termina ne može da se parsira, tretira se kao upcoming.
-- **Realized:** sve ostalo (prošlost ili danas posle kraja odlaska).
+- **Predstojeće** (interno `upcoming`): datum rezervacije je **posle** danasnjeg dana **ili** (datum je **danas** i **`now` je pre kraja** pick-up termina: `ListOfTimeSlot::getEndTimeForDate` za taj datum). Za dnevnu naknadu: predstojeća dok je `reservation_date >= danas` (Podgorica).
+- **Realizovane:** komplement (prošlost ili danas posle kraja odlaska; dnevna naknada od sljedećeg kalendarskog dana).
+- **Promjena tablica** (`GET /panel/upcoming`) koristi isti upcoming upit, ali je poslovno usmjerena na promjenu tablice — v. sekcija ispod.
 
 ---
 
-## Promena vozila (samo upcoming)
+## Promjena tablica (`GET /panel/upcoming`, 2026-06)
+
+Korisnički naziv menija: **Promjena tablica** (EN: **Plate change**). Ruta i klasa ostaju `panel.upcoming`. Stranica i dalje učitava predstojeće rezervacije (`PanelReservationListService::upcomingFor`), ali je poslovno usmjerena na promjenu tablice/vozila.
+
+- **Dnevna naknada** (`reservation_kind=daily_ticket`): **nema** akcije promjene; prikazuje se poruka da promjena tablice nije dostupna. `PATCH /panel/reservations/{id}/vehicle` odbija daily fee (`UpdateReservationVehicleRequest` + `PanelReservationListService::allowsPlateChange`).
+- **Termini** (`time_slots`): postojeća pravila (kategorija, konflikt termina, upcoming prozor).
+
+## Promena vozila / tablice (samo predstojeće Termini)
 
 - Dozvoljeno samo vozilo istog korisnika koje ispunjava oba uslova:
   - **kategorija**: **`vehicle_types.price` ≤** cene kategorije na rezervaciji (snapshot **`vehicle_type_id`** se **ne** menja)
