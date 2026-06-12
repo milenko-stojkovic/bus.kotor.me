@@ -32,7 +32,12 @@
                     <p>{{ $p('upcoming_help_intro', 'You can change the vehicle on an upcoming reservation only within the rules below.') }}</p>
                     <ul class="list-disc list-inside space-y-1 text-gray-600">
                         <li>{{ $p('upcoming_help_category_rule', 'You may switch only to a vehicle of the same or a lower category (not a higher one).') }}</li>
-                        <li>{{ $p('upcoming_help_invoice_rule', 'For paid reservations, changing the vehicle generates a new invoice/PDF and sends it to your email.') }}</li>
+                        <li>{{ $p(
+                            'upcoming_help_invoice_rule',
+                            $locale === 'en'
+                                ? 'Each plate change triggers sending an updated confirmation/invoice to your email.'
+                                : 'Svaka promjena tablice povlači slanje ažurirane potvrde/računa na email.',
+                        ) }}</li>
                     </ul>
                 </div>
             </div>

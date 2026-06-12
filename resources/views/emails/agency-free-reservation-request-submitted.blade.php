@@ -2,7 +2,7 @@
     /** @var \App\Models\FreeReservationRequest $req */
 @endphp
 
-<h2>Zahtjev za besplatnu rezervaciju (FZBR)</h2>
+<h2>Zahtjev za besplatnu rezervaciju</h2>
 
 <p>Stigao je novi zahtjev iz agencijskog panela.</p>
 

@@ -11,14 +11,15 @@
 ## Guest korisnici
 
 - Mogu napraviti rezervaciju **bez naloga** – `user_id` je **NULL** u `reservations` i `temp_data`.
+- Na **`/guest/reserve`**: **Termini** (slotovi, bez limo putničkih kategorija) ili **Dnevna naknada** (bez slotova, limo kategorija dozvoljena) — samo **kartica** (nema avansa).
 - Za guest rezervacije svi podaci koji se inače vežu za korisnika ostaju **snapshot** u rezervaciji / `temp_data`:
   - **`user_name`** (kolona u bazi — ime sa forme; u V2 guest formi polje se šalje kao **`name`**, backend mapira u snapshot `user_name`), `country`, `email`, `license_plate`, `vehicle_type_id`
 - Kada guest plati, podaci se čuvaju u tabeli, ali **nema veze sa `users`**.
 
-## FZBR (Formular za besplatnu rezervaciju) — ulogovani korisnik (panel)
+## Besplatne rezervacije — ulogovani korisnik (panel)
 
 - Javni “Učenici/humanitarci” ulaz je ukinut.
-- Agencije (ulogovani korisnici) podnose **zahtjev** kroz panel: **`/panel/fzbr`** (stavka navigacije: **FZBR**).
+- Agencije (ulogovani korisnici) podnose **zahtjev** kroz panel: **`/panel/fzbr`** (stavka navigacije: **Besplatne rezervacije**).
 - Ovo **nije** checkout i **ne kreira** `reservations` niti `temp_data` u trenutku slanja forme.
 - Forma upisuje trajni zapis u tabelu **`free_reservation_requests`** (jedan datum po zahtjevu), zatim segmente u **`free_reservation_request_segments`** (drop/pick po segmentu), vozila u **`free_reservation_request_vehicles`** (snapshot po segmentu), i dokumenta u **`free_reservation_request_attachments`** (na nivou zahtjeva). Zatim šalje admin email i kreira admin warning kao pointer.
 

@@ -47,6 +47,30 @@ final class LimoQrGenerationTest extends TestCase
         $this->assertStringNotContainsString('/panel/limo/qr/', $html);
     }
 
+    public function test_informational_limo_page_shows_regulation_wording_in_cg(): void
+    {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+
+        $this->actingAs($user)
+            ->get('/locale/cg')
+            ->assertRedirect();
+
+        $html = $this->get(route('panel.limo.index'))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('Limo usluga', $html);
+        $this->assertStringContainsString('dnevna naknada', $html);
+        $this->assertStringContainsString('užem centru grada', $html);
+        $this->assertStringContainsString('autobusko stajalište pored pozorišta', $html);
+        $this->assertStringContainsString('izlaz iz parking prostora Riva', $html);
+        $this->assertStringContainsString('https://maps.app.goo.gl/BkmeQ1ZAo8XG1FDb6', $html);
+        $this->assertStringContainsString('https://maps.app.goo.gl/qdy9YmTLRBsggPCD6', $html);
+        $this->assertStringContainsString('nije dozvoljen ukrcaj niti iskrcaj putnika na lokaciji Benovo', $html);
+        $this->assertStringNotContainsString('Autoboka', $html);
+        $this->assertStringNotContainsString('Puč', $html);
+    }
+
     public function test_qr_endpoints_return_404_when_workflow_disabled(): void
     {
         $user = User::factory()->create();

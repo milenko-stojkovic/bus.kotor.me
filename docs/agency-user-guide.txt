@@ -20,7 +20,7 @@ DIO A — CRNOGORSKI (CG)
 Ovo uputstvo objašnjava kako agencije (prevoznici) koriste web aplikaciju
 bus.kotor.me za rezervacije parkinga u Kotoru, upravljanje voznim parkom,
 plaćanje karticom ili avansom (ako je uključeno), Limo informacije (ako je uključeno)
-i podnošenje zahtjeva za besplatne rezervacije po terminima (FZBR).
+i podnošenje zahtjeva za besplatne rezervacije po terminima.
 
 Možete rezervisati na dva načina:
 - Termini — fiksni termini dolaska i odlaska na lokaciji Benovo.
@@ -37,7 +37,7 @@ Dnevna naknada je prvenstveno namijenjena prevoznicima koji tokom istog dana
 planiraju posjetu više lokacija, npr. Perast i Risan.
 
 Nakon prijave radite u panelu za agencije. U gornjem meniju su stavke poput
-Rezervacije, Vozila, FZBR, Promjena tablica i dr. Da biste koristili
+Rezervacije, Vozila, Besplatne rezervacije, Promjena tablica i dr. Da biste koristili
 panel, potrebni su registrovan nalog, potvrđena email adresa i prijava.
 
 [SLIKA: Početna stranica bus.kotor.me sa istaknutim linkom „Prijava“ ili „Agency sign in“ u gornjem dijelu stranice.]
@@ -122,7 +122,7 @@ Registracija nije završena za svakodnevni rad dok ne potvrdite email
 4.1. Zašto je potrebna
 
 Panel za agencije dostupan je samo nakon potvrde email adrese. Bez potvrđenog
-emaila ne možete rezervisati, upravljati vozilima ni slati FZBR zahtjeve.
+emaila ne možete rezervisati, upravljati vozilima ni slati zahtjeve za besplatne rezervacije.
 
 4.2. Prvi korak nakon registracije
 
@@ -144,7 +144,7 @@ Na ekranu „Potvrdite email“ / „Verify your email“:
 4.4. Nakon uspješne verifikacije
 
 - Email je označen kao potvrđen.
-- Možete koristiti panel: Rezervacije, Vozila, FZBR i ostale stavke iz menija.
+- Možete koristiti panel: Rezervacije, Vozila, Besplatne rezervacije i ostale stavke iz menija.
 
 4.5. Promjena email adrese u profilu
 
@@ -167,14 +167,14 @@ nalaze se (prema tome šta vam je omogućeno), otprilike ovim redoslijedom:
 - Vozila — vozni park
 - Promjena tablica
 - Realizovane rezervacije
-- FZBR — Formular za besplatnu rezervaciju
+- Besplatne rezervacije — zahtjev za besplatne termine
 - Avans — stanje avansa, uplate, istorija (samo ako je funkcija uključena)
-- Limo — informacije o limo usluzi u Starom gradu (samo ako su uključeni avans i
+- Limo — informacije o limo usluzi putničkih vozila (samo ako su uključeni avans i
   Limo servis); dnevna naknada se kupuje kroz Rezervacije
 - Statistika
 - Korisnik — profil, jezik, lozinka, email
 
-[SLIKA: Gornja navigacija panela za agencije sa vidljivim stavkama menija Rezervacije, Vozila, FZBR, Promjena tablica i Realizovane.]
+[SLIKA: Gornja navigacija panela za agencije sa vidljivim stavkama menija Rezervacije, Vozila, Besplatne rezervacije, Promjena tablica i Realizovane.]
 
 Neke stavke menija možda neće biti prikazane svim agencijama. Prikazane su samo
 funkcionalnosti koje su omogućene za vaš nalog.
@@ -228,8 +228,8 @@ Ako pokušate ukloniti vozilo vezano za predstojeće rezervacije:
 7. NOVA REZERVACIJA (REZERVACIJE)
 --------------------------------------------------------------------------------
 
-Dnevna naknada dostupna je samo u panelu za agencije (ne na gostovskoj rezervaciji
-na javnoj stranici).
+Dnevna naknada dostupna je u panelu za agencije i na javnoj gostovskoj rezervaciji
+(/guest/reserve). Gosti plaćaju samo karticom (bez avansa).
 
 7.1. Izbor vrste rezervacije
 
@@ -409,10 +409,10 @@ Za plaćenu rezervaciju nakon promjene tablice može ponovo stići email sa rač
 [SLIKA: Forma za promjenu tablice na rezervaciji po terminima sa padajućom listom dostupnih vozila.]
 
 --------------------------------------------------------------------------------
-10. FZBR — ZAHTJEV ZA BESPLATNU REZERVACIJU
+10. BESPLATNE REZERVACIJE
 --------------------------------------------------------------------------------
 
-FZBR služe školama i sličnim ustanovama kada Sekretarijat za lokalne prihode
+Besplatne rezervacije služe školama i sličnim ustanovama kada Sekretarijat za lokalne prihode
 odobri besplatne termine. Odnosi se isključivo na rezervacije po terminima —
 ne na dnevnu naknadu (dnevna naknada se uvijek plaća kroz Rezervacije).
 
@@ -421,17 +421,17 @@ ne na dnevnu naknadu (dnevna naknada se uvijek plaća kroz Rezervacije).
 1. Ustanova (škola) prvo kontaktira Sekretarijat:
    prihodi@kotor.me
 2. Nakon odobrenja Sekretarijata, odobrenje se proslijedi agenciji/prevozniku.
-3. Tek tada agencija podnosi FZBR u panelu uz dokumentaciju.
+3. Tek tada agencija podnosi zahtjev u panelu (Besplatne rezervacije) uz dokumentaciju.
 
 Administrator servisa Bus Kotor ne odobrava besplatnu rezervaciju dok sva
 neophodna dokumentacija nije dostavljena i pregledana. Možete poslati
 dokumentaciju u više koraka, ali zahtjev neće biti odobren dok komplet ne bude.
 
-[SLIKA: Informativni blok na vrhu FZBR stranice sa tekstom o kontaktu prihodi@kotor.me i objašnjenjem procesa za škole.]
+[SLIKA: Informativni blok na vrhu stranice Besplatne rezervacije sa tekstom o kontaktu prihodi@kotor.me i objašnjenjem procesa za škole.]
 
 10.2. Popunjavanje forme u panelu
 
-1. Otvorite FZBR u meniju.
+1. Otvorite Besplatne rezervacije u meniju.
 2. Unesite datum za cijeli zahtjev u polje formata dd/mm/yyyy ili kliknite
    dugme kalendara pored polja da izaberete datum.
 3. Dodajte 1 do 5 blokova termina. Svaki blok = jedan par:
@@ -445,7 +445,7 @@ dokumentaciju u više koraka, ali zahtjev neće biti odobren dok komplet ne bude
    i Puč (linkovi u tekstu).
 8. Pošaljite zahtjev.
 
-[SLIKA: FZBR forma sa poljem datuma dd/mm/yyyy i dugmetom kalendara, blokovima termina, izborom vozila, upload poljem za dokumente i dugmetom Podnesi.]
+[SLIKA: Formular Besplatne rezervacije sa poljem datuma dd/mm/yyyy i dugmetom kalendara, blokovima termina, izborom vozila, upload poljem za dokumente i dugmetom Podnesi.]
 
 10.3. Nakon slanja
 
@@ -463,36 +463,54 @@ servisa Bus Kotor.
 11. LIMO (AKO JE UKLJUČENO)
 --------------------------------------------------------------------------------
 
-Dostupno samo kada su uključeni i avans i Limo servis.
+Dostupno samo kada su uključeni avans i Limo servis.
 
-NAPOMENA: QR workflow (generisanje, skeniranje, evidentičar na terenu) je ukinut.
-Operativni mehanizam za taj dan je dnevna naknada kupljena kroz Rezervacije.
+NAPOMENA:
+QR workflow (generisanje, skeniranje, evidentičar na terenu) je ukinut.
+Operativni mehanizam je dnevna naknada kupljena kroz Rezervacije.
 
 VAŽNE INFORMACIJE
 
-Stranica Limo u meniju sadrži operativne informacije za agencije čija vozila pružaju
-limo (ukrcaj) uslugu u zoni Starog grada.
+Vozila koja obavljaju limo servis dužna su da za svako vozilo imaju plaćenu dnevnu
+naknadu za dan u kojem pružaju uslugu.
 
-Ukrcavanje putnika dozvoljeno je samo na odobrenim mjestima:
-- autobusko stajalište kod gradske pijace
-  (mapa: https://maps.app.goo.gl/BkmeQ1ZAo8XG1FDb6)
-- autobusko stajalište u produžetku parkinga
-  (mapa: https://maps.app.goo.gl/qdy9YmTLRBsggPCD6)
+Dnevna naknada kupuje se kroz Rezervacije i važi za jedno vozilo i jedan kalendarski
+dan. Plaćanje je moguće karticom ili avansom.
 
-Za pružanje usluge tog dana vozilo mora imati važeću dnevnu naknadu (kupljenu kroz
-Rezervacije — kartica ili avans). Dnevna naknada je operativna dozvola za Autoboku
-i Puč tog kalendarskog dana.
+Ako se ukrcaj ili iskrcaj putnika vrši u užem centru grada (od autobuske stanice do
+tržnog centra Kamelija), za tu namjenu moraju se koristiti isključivo sljedeće
+lokacije:
 
-Kontrolu vrši komunalna policija i druga ovlašćena lica. Držite potvrdu o dnevnoj
-naknadi (email/PDF).
+- autobusko stajalište pored pozorišta (kod gradske pijace)
+  mapa: https://maps.app.goo.gl/BkmeQ1ZAo8XG1FDb6
+
+- izlaz iz parking prostora Riva preko puta pijace
+  mapa: https://maps.app.goo.gl/qdy9YmTLRBsggPCD6
+
+Ako se limo usluga pruža van navedene zone, ukrcaj i iskrcaj putnika mogu se vršiti
+i na drugim lokacijama, uz poštovanje saobraćajnih propisa i pravila bezbjednosti
+saobraćaja.
+
+VAŽNO:
+Limo vozilima nije dozvoljen ukrcaj niti iskrcaj putnika na lokaciji Benovo.
+
+Za svako vozilo dnevna naknada se plaća posebno.
+
+Potvrdu o izvršenom plaćanju agencija dobija putem email-a. Preporučuje se da vozač
+ili odgovorno lice ima pristup potvrdi tokom obavljanja usluge.
+
+Kontrolu vrše komunalna policija i druga ovlašćena lica.
 
 11.1. Koraci
 
-1. Otvorite Limo u meniju i pročitajte informacije o odobrenim mjestima ukrcaja.
-2. U Rezervacijama kupite dnevnu naknadu za odgovarajući datum i vozilo.
-3. Na terenu poštujte pravila ukrcaja i imajte potvrdu o plaćenoj dnevnoj naknadi.
+1. U Rezervacijama kupite dnevnu naknadu za odgovarajući datum i vozilo.
+2. Provjerite da li je potvrda o plaćanju stigla na email.
+3. Prilikom pružanja usluge poštujte pravila lokacija za ukrcaj i iskrcaj.
+4. Ukoliko se usluga pruža u zoni užeg centra grada, koristite isključivo odobrene
+   lokacije.
+5. Po potrebi pokažite potvrdu o plaćenoj dnevnoj naknadi ovlašćenom licu.
 
-[SLIKA: Informativna stranica Limo sa objašnjenjem zona, mjesta ukrcaja i obaveze dnevne naknade — bez QR dugmadi.]
+[SLIKA: Informativna stranica Limo sa objašnjenjem dnevne naknade, dozvoljenih lokacija u užem centru grada i zabrane korišćenja Benova za limo vozila.]
 
 --------------------------------------------------------------------------------
 12. STATISTIKA
@@ -529,7 +547,7 @@ Brisanje naloga: dostupna opcija u profilu (oprez — nepovratno za pristup).
 - Provjerite da li vam trebaju Termini (fiksno vrijeme na Benovu) ili Dnevna
   naknada (cijeli dan na Autoboki i Puču).
 - Dnevna naknada se uvijek plaća — nema besplatnih termina kao kod Termina.
-- FZBR ne važi za dnevnu naknadu; škole prvo pišu na prihodi@kotor.me.
+- Besplatne rezervacije ne važe za dnevnu naknadu; škole prvo pišu na prihodi@kotor.me.
 
 14.2. Tablice i vozila
 
@@ -548,8 +566,8 @@ Brisanje naloga: dostupna opcija u profilu (oprez — nepovratno za pristup).
 
 - Ista tablica može istog dana imati i Termini rezervaciju i Dnevnu naknadu.
 - U listama uvijek piše Dnevna naknada — lako je prepoznati.
-- Dnevna naknada je dostupna samo u panelu za agencije, ne na javnoj stranici
-  za goste.
+- Dnevna naknada je dostupna i u panelu za agencije i na javnoj gostovskoj
+  rezervaciji (gosti — samo kartica).
 
 14.5. Plaćanje i email
 
@@ -559,10 +577,14 @@ Brisanje naloga: dostupna opcija u profilu (oprez — nepovratno za pristup).
 
 14.6. Limo (ako je uključeno)
 
-- QR workflow je ukinut — koristite dnevnu naknadu iz Rezervacija.
-- Ukrcaj je samo na stajalištu kod gradske pijace ili u produžetku parkinga.
-- Za taj dan kupite dnevnu naknadu prije ukrcaja putnika.
-- Kontrolu vrši komunalna policija / ovlašćena lica.
+- QR workflow je ukinut — koristite dnevnu naknadu iz Rezervacija (po vozilu, unaprijed).
+- Limo usluga je dozvoljena samo uz plaćenu dnevnu naknadu; potvrda stiže na email.
+- U užem centru grada (od autobuske stanice do TC Kamelija) ukrcaj/iskrcaj samo na
+  odobrenim lokacijama (stajalište pored pozorišta; izlaz iz parkinga Riva preko puta
+  pijace).
+- Van te zone — druge lokacije su moguće uz poštovanje saobraćajnih propisa.
+- Benovo nije dozvoljen za ukrcaj/iskrcaj limo vozila.
+- Kontrolu vrše komunalna policija i druga ovlašćena lica.
 
 [SLIKA: Sažet infobox ili podsjetnik na stranici Rezervacije sa kratkim objašnjenjem razlike između Termina i Dnevne naknade.]
 
@@ -577,7 +599,7 @@ O: Vjerovatno email nije verifikovan — provjerite inbox i stranicu za
 P: Kada birati Termini, a kada Dnevnu naknadu?
 O: Termini — fiksni dolazak/odlazak na Benovu (uključujući besplatne
    termine po pravilima). Dnevna naknada — fleksibilan ukrcaj/iskrcaj tokom
-   dana na Autoboki i Puču; uvijek se plaća po cijeni kategorije; nema FZBR-a.
+   dana na Autoboki i Puču; uvijek se plaća po cijeni kategorije; nema besplatnih rezervacija.
 
 P: Mogu li imati i Termini rezervaciju i dnevnu naknadu istog dana za istu tablicu?
 O: Da — to su dva odvojena proizvoda i mogu postojati istovremeno.
@@ -627,7 +649,7 @@ DIO B — ENGLISH (EN)
 This guide explains how transport agencies use the bus.kotor.me web application
 to book Kotor parking, manage their vehicle fleet, pay by card or advance
 (if enabled), read Limo information (if enabled), and submit free time-slot reservation
-requests (FZBR).
+free reservation requests.
 
 You can book in two ways:
 - Time slots — fixed arrival and departure times at Benovo.
@@ -644,7 +666,7 @@ ticket is mainly for carriers who plan to visit several locations on the same
 day, e.g. Perast and Risan.
 
 After sign-in you work in the agency panel. The top menu includes items such
-as Reservations, Vehicles, FZBR, Plate change, and more. You need a
+as Reservations, Vehicles, Free reservations, Plate change, and more. You need a
 registered account, verified email address, and sign-in to use the panel.
 
 [IMAGE: bus.kotor.me home page with the “Agency sign in” or “Log in” link highlighted in the header or main area.]
@@ -729,7 +751,7 @@ Registration is not complete for day-to-day use until you verify your email
 4.1. Why it is required
 
 The agency panel is available only after email verification. Without a verified
-email you cannot book, manage vehicles, or submit FZBR requests.
+email you cannot book, manage vehicles, or submit free reservation requests.
 
 4.2. Right after registration
 
@@ -750,7 +772,7 @@ On the “Verify your email” screen:
 4.4. After successful verification
 
 - Your email is marked verified.
-- You can use the panel: Reservations, Vehicles, FZBR, and other menu items.
+- You can use the panel: Reservations, Vehicles, Free reservations, and other menu items.
 
 4.5. Changing email in profile
 
@@ -773,14 +795,14 @@ After sign-in and verification you see the agency panel. Top menu items
 - Vehicles — fleet
 - Plate change
 - Realized reservations
-- FZBR — free reservation request form
+- Free reservations — free reservation request form
 - Advance — balance, top-up payments, history (if feature enabled)
-- Limo — information about limo service in the Old Town (if advance + Limo enabled);
-  purchase Daily fees through Reservations
+- Limo — information about limo service for passenger vehicles (if advance + Limo
+  enabled); purchase Daily fees through Reservations
 - Statistics
 - User — profile, language, password, email
 
-[IMAGE: Agency panel top navigation with menu items Reservations, Vehicles, FZBR, Plate change, and Realized visible.]
+[IMAGE: Agency panel top navigation with menu items Reservations, Vehicles, Free reservations, Plate change, and Realized visible.]
 
 Some menu items may not appear for every agency. You only see features that are
 enabled for your account.
@@ -833,8 +855,8 @@ If you try to remove a vehicle linked to upcoming reservations:
 7. NEW RESERVATION (RESERVATIONS)
 --------------------------------------------------------------------------------
 
-Daily fee is available only in the agency panel (not on the public guest
-booking page).
+Daily fee is available in the agency panel and on the public guest booking page
+(/guest/reserve). Guests pay by card only (no advance balance).
 
 7.1. Choosing reservation type
 
@@ -1007,10 +1029,10 @@ For paid reservations a plate change may trigger a new invoice email.
 [IMAGE: Form to change plate on a time-slot reservation with dropdown of available vehicles.]
 
 --------------------------------------------------------------------------------
-10. FZBR — FREE RESERVATION REQUEST
+10. FREE RESERVATIONS
 --------------------------------------------------------------------------------
 
-FZBR is for schools and similar institutions after the Secretariat approves
+Free reservations are for schools and similar institutions after the Secretariat approves
 free time slots. It applies only to time-slot bookings — not daily fee
 (daily fee is always purchased as a paid booking under Reservations).
 
@@ -1019,17 +1041,17 @@ free time slots. It applies only to time-slot bookings — not daily fee
 1. The institution (school) first contacts the Secretariat:
    prihodi@kotor.me
 2. After Secretariat approval, approval is forwarded to the agency/carrier.
-3. Only then the agency submits FZBR in the panel with documentation.
+3. Only then the agency submits the request in the panel (Free reservations) with documentation.
 
 The Bus Kotor service administrator will not approve the free reservation until
 all required documentation is submitted and reviewed. You may upload in steps,
 but approval waits until complete.
 
-[IMAGE: Informational block at top of FZBR page with text about prihodi@kotor.me contact and process for schools.]
+[IMAGE: Informational block at top of Free reservations page with text about prihodi@kotor.me contact and process for schools.]
 
 10.2. Filling the form in the panel
 
-1. Open FZBR in the menu.
+1. Open Free reservations in the menu.
 2. Enter the date for the whole request in dd/mm/yyyy format or click the
    calendar button next to the field to pick a date.
 3. Add 1 to 5 time blocks. Each block = one pair:
@@ -1043,7 +1065,7 @@ but approval waits until complete.
    parking (links in the text).
 8. Submit the request.
 
-[IMAGE: FZBR form with dd/mm/yyyy date field and calendar button, time blocks, vehicle selection, document upload, and Submit button.]
+[IMAGE: Free reservations form with dd/mm/yyyy date field and calendar button, time blocks, vehicle selection, document upload, and Submit button.]
 
 10.3. After submission
 
@@ -1061,36 +1083,53 @@ from the Bus Kotor service administrator.
 11. LIMO (IF ENABLED)
 --------------------------------------------------------------------------------
 
-Available only when both advance and Limo service features are enabled.
+Available only when both advance and Limo service are enabled.
 
-NOTE: The QR workflow (generation, scanning, field registrar) has been retired.
-The operative mechanism for the day is the Daily fee purchased through Reservations.
+NOTE:
+The QR workflow (generation, scanning, field registrar) has been retired.
+The operative mechanism is the Daily fee purchased through Reservations.
 
 IMPORTANT INFORMATION
 
-The Limo menu page provides operational information for agencies whose vehicles
-perform limo (pick-up) service in the Old Town zone.
+Vehicles providing Limo service must have a paid Daily fee for each vehicle on each
+day they operate.
 
-Passenger pickup is allowed only at these approved locations:
-- bus stop by the city market
-  (map: https://maps.app.goo.gl/BkmeQ1ZAo8XG1FDb6)
-- bus stop at the parking extension
-  (map: https://maps.app.goo.gl/qdy9YmTLRBsggPCD6)
+Purchase the Daily fee under Reservations — it applies to one vehicle and one
+calendar day. Payment is by card or advance (if enabled).
 
-To operate on that day, the vehicle must have a valid Daily fee (purchased under
-Reservations — card or advance). The Daily fee is the operative permit for Autoboka
-and Puč on that calendar day.
+If passenger pick-up or drop-off takes place in the narrower city center zone
+(from the bus station to shopping center Kamelija), you must use only these
+locations:
 
-Compliance is checked by municipal police and other authorised controllers. Keep
-your Daily fee confirmation (email/PDF).
+- bus stop beside the theatre (near the city market)
+  map: https://maps.app.goo.gl/BkmeQ1ZAo8XG1FDb6
+
+- exit from Riva parking area across from the market
+  map: https://maps.app.goo.gl/qdy9YmTLRBsggPCD6
+
+If Limo service is provided outside that zone, pick-up and drop-off may take place
+at other locations, provided you comply with traffic regulations and road safety
+rules.
+
+IMPORTANT:
+Limo vehicles may not pick up or drop off passengers at the Benovo location.
+
+Each vehicle requires a separate Daily fee.
+
+Payment confirmation is sent to the agency by email. The driver or responsible
+person should have access to the confirmation while providing the service.
+
+Compliance is checked by municipal police and other authorized persons.
 
 11.1. Steps
 
-1. Open Limo in the menu and read the approved pickup rules.
-2. Under Reservations, purchase a Daily fee for the relevant date and vehicle.
-3. On site, follow pickup rules and keep proof of the paid Daily fee.
+1. Under Reservations, purchase a Daily fee for the relevant date and vehicle.
+2. Check that payment confirmation has arrived by email.
+3. When providing the service, follow the pick-up and drop-off location rules.
+4. If operating in the narrower city center zone, use only the approved locations.
+5. If requested, show proof of the paid Daily fee to an authorized person.
 
-[IMAGE: Informational Limo page explaining zones, pickup locations, and Daily fee obligation — no QR buttons.]
+[IMAGE: Informational Limo page explaining the Daily fee, approved locations in the narrower city center zone, and the Benovo prohibition for Limo vehicles.]
 
 --------------------------------------------------------------------------------
 12. STATISTICS
@@ -1127,7 +1166,7 @@ Account deletion: available in profile (caution — irreversible for access).
 - Decide whether you need Time slots (fixed times at Benovo) or Daily fee
   (full day at Autoboka and Puč).
 - Daily fee is always paid — there are no free slots like with Time slots.
-- FZBR does not apply to daily fee; schools email prihodi@kotor.me first.
+- Free reservations do not apply to daily fee; schools email prihodi@kotor.me first.
 
 14.2. Plates and vehicles
 
@@ -1147,7 +1186,8 @@ Account deletion: available in profile (caution — irreversible for access).
 - The same plate may have both a Time slots booking and a Daily fee on the
   same day.
 - Lists always show Daily fee — easy to recognise.
-- Daily fee is only in the agency panel, not on the public guest page.
+- Daily fee is available in the agency panel and on the public guest booking
+  page (guests — card only).
 
 14.5. Payment and email
 
@@ -1157,10 +1197,15 @@ Account deletion: available in profile (caution — irreversible for access).
 
 14.6. Limo (if enabled)
 
-- QR workflow is retired — use Daily fees from Reservations.
-- Pickup only at the approved bus stops (city market or parking extension).
-- Purchase a Daily fee for that day before picking up passengers.
-- Compliance is checked by municipal police / authorised controllers.
+- QR workflow is retired — use Daily fees from Reservations (per vehicle, in advance).
+- Limo service is allowed only with a paid Daily fee; confirmation is sent by email.
+- In the narrower city center zone (bus station to Kamelija shopping center), pick-up
+  and drop-off only at approved locations (bus stop beside the theatre; exit from
+  Riva parking across from the market).
+- Outside that zone — other locations are allowed if traffic and safety rules are
+  followed.
+- Benovo is not allowed for Limo pick-up or drop-off.
+- Compliance is checked by municipal police and other authorized persons.
 
 [IMAGE: Short info box or reminder on the Reservations page explaining the difference between Time slots and Daily fee.]
 
@@ -1175,7 +1220,7 @@ A: Your email is probably not verified — check your inbox and the verification
 Q: When should I choose Time slots vs Daily fee?
 A: Time slots — fixed arrival/departure at Benovo (including free slots per
    rules). Daily fee — flexible pick-up/drop-off during the day at
-   Autoboka and Puč; always paid at category price; no FZBR.
+   Autoboka and Puč; always paid at category price; no free reservations.
 
 Q: Can I have both a Time slots booking and a daily fee the same day for
    the same plate?

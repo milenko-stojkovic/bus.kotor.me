@@ -6,8 +6,9 @@ Stavke su prioritetne grupe. Kada nešto **završiš**, premesti opis u `docs/pr
 
 ---
 
-## Dnevna naknada (agency)
+## Dnevna naknada (agency + guest)
 
+- [x] **Phase 6 — guest UI + checkout:** `/guest/reserve` Termini / Dnevna naknada; kartica-only; validacija + testovi `GuestDailyFeeCheckoutTest` (v. `project-done.md` 2026-06-10).
 - [x] **Phase 1 — šema/model:** `reservation_kind`, nullable slot FK, `ReservationKind` + testovi (v. `project-done.md` 2026-05-28).
 - [x] **Phase 2 — agency UI + checkout:** izbor Termini / Dnevna naknada, validacija, checkout bez `daily_parking_data` za daily (v. `project-done.md` 2026-05-28).
 - [x] **Phase 3A — PDF/email + panel liste:** fiskalni PDF, email, upcoming/realized lifecycle, admin prikaz (v. `project-done.md` 2026-05-28).

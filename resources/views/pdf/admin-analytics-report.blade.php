@@ -184,7 +184,7 @@
         </tbody>
     </table>
 
-    <h2>Admin free (FZBR) po agencijama</h2>
+    <h2>Besplatne rezervacije po agencijama</h2>
     <div class="muted">{{ $st['admin_free_agencies'] ?? '' }}</div>
     <table>
         <thead>

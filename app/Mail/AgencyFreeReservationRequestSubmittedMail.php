@@ -21,7 +21,7 @@ class AgencyFreeReservationRequestSubmittedMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Zahtjev za besplatnu rezervaciju (FZBR)',
+            subject: 'Zahtjev za besplatnu rezervaciju',
         );
     }
 

@@ -148,7 +148,7 @@
         {{-- Step 2: pregled pristiglih zahtjeva (read-only). --}}
         <div class="pt-2 space-y-3">
             <div class="space-y-1">
-                <h2 class="text-lg font-semibold text-gray-900">Pristigli FZBR zahtjevi</h2>
+                <h2 class="text-lg font-semibold text-gray-900">Pristigli zahtjevi za besplatne rezervacije</h2>
                 <p class="text-sm text-gray-600">Prikazani su samo aktivni zahtjevi (submitted/updated).</p>
             </div>
 
@@ -377,7 +377,7 @@
 
         <div class="border-t border-red-100 pt-8 mt-8 space-y-4">
             <div>
-                <h2 class="text-lg font-semibold text-gray-900">Pregled besplatnih rezervacija po FZBR</h2>
+                <h2 class="text-lg font-semibold text-gray-900">Pregled besplatnih rezervacija</h2>
                 <p class="text-sm text-gray-600 mt-1">Zahtjevi u terminalnom statusu; filtar po <code class="text-xs bg-red-50 px-1 rounded">updated_at</code> (Europe/Podgorica). Dokumenti: lokalno ili privremeni restore sa MEGA (bez javnog linka).</p>
             </div>
 

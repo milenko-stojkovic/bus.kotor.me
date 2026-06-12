@@ -67,7 +67,6 @@
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 space-y-4">
                     <h3 class="text-lg font-medium text-gray-900">{{ $pn('booking_section_title', 'New reservation') }}</h3>
-                    <p class="text-sm text-gray-600">{{ $ui('step_hint') }}</p>
 
                     @if ($vehicles->isEmpty())
                         <div class="rounded-md bg-red-50 p-4 text-sm text-red-900 space-y-2">
@@ -209,7 +208,7 @@
                                         {{ $paid_amount ?? '—' }} EUR
                                     @endif
                                 @else
-                                    {{ $ui('step_hint') }}
+                                    —
                                 @endif
                             </div>
 
@@ -238,10 +237,11 @@
                                         </button>
                                     </span>
                                 </label>
-                                <label class="flex items-start gap-2 text-sm">
-                                    <input type="checkbox" name="accept_privacy" value="1" class="mt-1 rounded border-red-200" {{ old('accept_privacy') ? 'checked' : '' }} required>
+                                <label id="panelAcceptPrivacyRow" class="flex items-start gap-2 text-sm {{ $isDailyTicketBooking ? 'hidden' : '' }}">
+                                    <input type="checkbox" name="accept_privacy" value="1" id="panelAcceptPrivacy" class="mt-1 rounded border-red-200" {{ old('accept_privacy') ? 'checked' : '' }} @if (! $isDailyTicketBooking) required @endif>
                                     <span>@include('partials.reservation-accept-parking-obligation')</span>
                                 </label>
+                                <x-input-error class="mt-2" :messages="$errors->get('accept_privacy')" />
                             </div>
 
                             @php
@@ -342,6 +342,8 @@
             const postKindInput = document.getElementById('panelPostReservationKind');
             const postDropOff = document.getElementById('panelPostDropOff');
             const postPickUp = document.getElementById('panelPostPickUp');
+            const acceptPrivacyRow = document.getElementById('panelAcceptPrivacyRow');
+            const acceptPrivacy = document.getElementById('panelAcceptPrivacy');
 
             function isDailyKindSelected() {
                 if (postKindInput) {
@@ -360,6 +362,15 @@
                 const daily = isDailyKindSelected();
                 if (postDropOff) postDropOff.value = daily ? '' : (document.getElementById('drop_off_time_slot_id')?.value || '');
                 if (postPickUp) postPickUp.value = daily ? '' : (document.getElementById('pick_up_time_slot_id')?.value || '');
+                if (acceptPrivacyRow && acceptPrivacy) {
+                    acceptPrivacyRow.classList.toggle('hidden', daily);
+                    if (daily) {
+                        acceptPrivacy.checked = false;
+                        acceptPrivacy.removeAttribute('required');
+                    } else {
+                        acceptPrivacy.setAttribute('required', 'required');
+                    }
+                }
             }
 
             function computePostValid() {
@@ -367,6 +378,9 @@
                 syncPostKindFromStepForm();
                 const required = Array.from(postForm.querySelectorAll('[required]'));
                 for (const el of required) {
+                    if (el.offsetParent === null && el.type === 'checkbox') {
+                        continue;
+                    }
                     if (el.type === 'checkbox') {
                         if (!el.checked) return false;
                         continue;

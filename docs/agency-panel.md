@@ -10,11 +10,11 @@ Prefiks ruta: **`/panel`**, middleware **`auth`** + **`verified`**. Gornja navig
 
 | Ruta | Naziv rute (izbor) | Opis |
 |------|-------------------|------|
-| `GET /panel/reservations` | `panel.reservations` | Nova rezervacija (`ReservationBookingPageData`) — **Termini** (slotovi) ili **Dnevna naknada** (agency-only, bez slotova) |
+| `GET /panel/reservations` | `panel.reservations` | Nova rezervacija (`ReservationBookingPageData`) — **Termini** (slotovi) ili **Dnevna naknada** (bez slotova; agencija kartica/avans) |
 | `GET /panel/upcoming` | `panel.upcoming` | **Promjena tablica** — promjena registarske tablice na budućim rezervacijama (samo Termini) |
 | `GET /panel/realized` | `panel.realized` | Realizovane, link na PDF u novom tabu |
 | `GET /panel/vehicles` | `panel.vehicles` | Vozila |
-| `GET /panel/fzbr` | `panel.fzbr.create` | FZBR (Formular za besplatnu rezervaciju) — podnošenje zahtjeva |
+| `GET /panel/fzbr` | `panel.fzbr.create` | **Besplatne rezervacije** — podnošenje zahtjeva |
 | `GET /panel/avans` | `panel.advance.index` | Avans: stanje, ledger i istorija topup pokušaja |
 | `POST /panel/avans/topup` | `panel.advance.topup.store` | Pokretanje avansne uplate (kreira topup attempt + start payment) |
 | `GET /panel/avans/return` | `panel.advance.return` | Povratak sa banke (status se čita iz baze) |
@@ -121,13 +121,13 @@ Istorijski QR podaci, admin pregled događaja (`/admin/limo`) i servisi (fiskali
 
 ---
 
-## FZBR (Formular za besplatnu rezervaciju)
+## Besplatne rezervacije
 
 Stranica: **`GET /panel/fzbr`** (`panel.fzbr.create`).
 
 Tekstovi na vrhu forme (pravni uvod, info-blok, pomoć za upload) dolaze iz **`ui_translations`** grupe **`free_request`** (`fzbr_description`, `fzbr_instruction`, `documents_hint`, `documents_limit`, …), seedovano u **`UiTranslationsSeeder`**. Poslije izmjene teksta na produkciji ažurirati redove u bazi (npr. ponovnim seedovanjem ili ručnim SQL-om) — **nema promjene validacije, ruta, kontrolera niti zahtjeva za broj priloga u kodu**.
 
-**Operativni proces (škole i slične ustanove):** škola ili ustanova prvo kontaktira **Sekretarijat za lokalne prihode, budžet i finansije** Opštine Kotor na **prihodi@kotor.me**; nakon odobrenja Sekretarijata, odobrenje se proslijedi agenciji/prevozniku koji podnosi FZBR. Uz formular se prilaže raspoloživa dokumentacija (npr. angažovanje prevoznika, odobrenje Sekretarijata); **nepotpuna dokumentacija se može poslati u prvim koracima**, a ostatak naknadno — **administrator ne odobrava besplatnu rezervaciju dok sva neophodna dokumentacija ne bude dostavljena i pregledana** (poslovno pravilo; implementacija odobrenja ostaje u admin toku).
+**Operativni proces (škole i slične ustanove):** škola ili ustanova prvo kontaktira **Sekretarijat za lokalne prihode, budžet i finansije** Opštine Kotor na **prihodi@kotor.me**; nakon odobrenja Sekretarijata, odobrenje se proslijedi agenciji/prevozniku koji podnosi zahtjev kroz **Besplatne rezervacije**. Uz formular se prilaže raspoloživa dokumentacija (npr. angažovanje prevoznika, odobrenje Sekretarijata); **nepotpuna dokumentacija se može poslati u prvim koracima**, a ostatak naknadno — **administrator ne odobrava besplatnu rezervaciju dok sva neophodna dokumentacija ne bude dostavljena i pregledana** (poslovno pravilo; implementacija odobrenja ostaje u admin toku).
 
 Forma je podijeljena u dvije cjeline:
 
@@ -146,7 +146,7 @@ Na vrhu stranice prikazuje se:
 - **instrukcija korisniku** u odvojenom info-bloku (ključ `free_request.fzbr_instruction`)
 - **pomoć za priloge** (`free_request.documents_hint` + `documents_limit`)
 
-**Arhiva privatnih priloga (MEGA):** kada je zahtjev u terminalnom statusu (`fulfilled` / `rejected`), operativno se mogu arhivirati fajlovi sa privatnog diska na MEGA (`files:archive-private --source=fzbr`); detalji u **[external-file-archive.md](./external-file-archive.md)**. Kredencijali ostaju u `.env`; nema uploada iz browsera. **Admin pregled arhiviranih priloga:** na **`GET /admin/besplatne-rezervacije`** sekcija **„Pregled besplatnih rezervacija po FZBR”** (filter odobreni/odbijeni + datum po `updated_at`) — link **„Dokument”** otvara privatnu preview rutu sa istim TTL / `files:cleanup-preview-cache` ponašanjem kao ostali admin preview-i iz arhive.
+**Arhiva privatnih priloga (MEGA):** kada je zahtjev u terminalnom statusu (`fulfilled` / `rejected`), operativno se mogu arhivirati fajlovi sa privatnog diska na MEGA (`files:archive-private --source=fzbr`); detalji u **[external-file-archive.md](./external-file-archive.md)**. Kredencijali ostaju u `.env`; nema uploada iz browsera. **Admin pregled arhiviranih priloga:** na **`GET /admin/besplatne-rezervacije`** sekcija **„Pregled besplatnih rezervacija”** (filter odobreni/odbijeni + datum po `updated_at`) — link **„Dokument”** otvara privatnu preview rutu sa istim TTL / `files:cleanup-preview-cache` ponašanjem kao ostali admin preview-i iz arhive.
 
 ---
 
@@ -257,7 +257,7 @@ Ovaj modul sprečava da se ista registarska tablica ponovo unese sa drugom kateg
 
 ### Statusi vozila: active vs removed
 
-- **`active` vozila** se prikazuju agenciji u voznom parku i nude se u dropdown-ovima (Rezervacije, Upcoming, FZBR…).
+- **`active` vozila** se prikazuju agenciji u voznom parku i nude se u dropdown-ovima (Rezervacije, Promjena tablica, Besplatne rezervacije…).
 - **`removed` vozila** se **ne prikazuju** agenciji u voznom parku i ne koriste se u dropdown-ovima.
 
 ### Uklanjanje vozila

@@ -29,7 +29,8 @@ class CheckoutReservationRequest extends FormRequest
 
         $authUser = $this->user();
         $panelAuthBooking = $authUser !== null && $this->boolean('auth_panel_booking');
-        if ($panelAuthBooking) {
+        $guestBooking = $authUser === null;
+        if ($panelAuthBooking || $guestBooking) {
             $kind = $this->input('reservation_kind');
             if (! is_string($kind) || trim($kind) === '') {
                 $this->merge(['reservation_kind' => ReservationKind::TIME_SLOTS]);
@@ -56,6 +57,7 @@ class CheckoutReservationRequest extends FormRequest
         $panelAuthBooking = $authUser !== null && $this->boolean('auth_panel_booking');
         $advanceEnabled = (bool) config('features.advance_payments');
         $isDailyTicket = $this->resolvedReservationKind() === ReservationKind::DAILY_TICKET;
+        $guestBooking = $authUser === null;
 
         return [
             // Opciono: ako frontend pošalje, koristi se za dupli klik; inače backend generiše UUID
@@ -66,7 +68,7 @@ class CheckoutReservationRequest extends FormRequest
                 'in:card,advance',
             ],
             'auth_panel_booking' => ['nullable', 'boolean'],
-            'reservation_kind' => $panelAuthBooking
+            'reservation_kind' => ($panelAuthBooking || $guestBooking)
                 ? ['nullable', 'string', Rule::in(ReservationKind::ALL)]
                 : ['prohibited'],
             'vehicle_id' => [
@@ -94,7 +96,9 @@ class CheckoutReservationRequest extends FormRequest
 
             // Guest UX hard requirements (not persisted; audit/UI later).
             'accept_terms' => ['required', 'accepted'],
-            'accept_privacy' => ['required', 'accepted'],
+            'accept_privacy' => $isDailyTicket
+                ? ['prohibited']
+                : ['required', 'accepted'],
         ];
     }
 
@@ -154,7 +158,7 @@ class CheckoutReservationRequest extends FormRequest
 
     public function resolvedReservationKind(): string
     {
-        if ($this->user() !== null && $this->boolean('auth_panel_booking')) {
+        if ($this->isPanelAuthBooking() || $this->user() === null) {
             $kind = $this->input('reservation_kind');
 
             return is_string($kind) && in_array($kind, ReservationKind::ALL, true)

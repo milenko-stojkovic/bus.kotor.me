@@ -42,7 +42,7 @@
                         {{ $p('nav_vehicles', 'Vehicles') }}
                     </x-nav-link>
                     <x-nav-link :href="route('panel.fzbr.create')" :active="request()->routeIs('panel.fzbr.*')">
-                        {{ $p('nav_fzbr', 'FZBR') }}
+                        {{ $p('nav_fzbr', app()->getLocale() === 'cg' ? 'Besplatne rezervacije' : 'Free reservations') }}
                     </x-nav-link>
                     <x-nav-link :href="route('panel.upcoming')" :active="request()->routeIs('panel.upcoming')">
                         {{ $p('nav_upcoming', 'Plate change') }}
@@ -137,7 +137,7 @@
                 {{ $p('nav_vehicles', 'Vehicles') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('panel.fzbr.create')" :active="request()->routeIs('panel.fzbr.*')">
-                {{ $p('nav_fzbr', 'FZBR') }}
+                {{ $p('nav_fzbr', app()->getLocale() === 'cg' ? 'Besplatne rezervacije' : 'Free reservations') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('panel.upcoming')" :active="request()->routeIs('panel.upcoming')">
                 {{ $p('nav_upcoming', 'Plate change') }}

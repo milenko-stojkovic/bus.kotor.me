@@ -328,14 +328,14 @@
             </section>
 
             <section class="bg-white shadow rounded-lg p-6 border border-red-100">
-                <h2 class="text-base font-semibold text-gray-900">Admin free (FZBR) po agencijama</h2>
+                <h2 class="text-base font-semibold text-gray-900">Besplatne rezervacije po agencijama</h2>
                 <p class="text-sm text-gray-600 mt-1">{{ $st['admin_free_agencies'] ?? '' }}</p>
                 <div class="mt-4 overflow-x-auto">
                     <table class="min-w-full text-sm">
                         <thead class="text-xs text-gray-500 uppercase">
                             <tr class="border-b">
                                 <th class="py-2 pr-4 text-left">Agencija</th>
-                                <th class="py-2 pr-4 text-right">Broj FZBR rezervacija</th>
+                                <th class="py-2 pr-4 text-right">Broj besplatnih rezervacija</th>
                                 <th class="py-2 pr-4 text-right">Zauzeti slotovi</th>
                                 <th class="py-2 pr-4 text-right">Prosj. slotova</th>
                                 <th class="py-2 pr-4 text-left">Najčešći tip vozila</th>

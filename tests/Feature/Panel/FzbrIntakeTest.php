@@ -31,6 +31,21 @@ class FzbrIntakeTest extends TestCase
         $this->assertStringNotContainsString('/free-reservation-request', $html);
     }
 
+    public function test_agency_menu_and_page_use_besplatne_rezervacije_not_fzbr_abbreviation(): void
+    {
+        $user = User::factory()->create(['lang' => 'cg', 'country' => 'ME']);
+        $this->actingAs($user);
+        app()->setLocale('cg');
+
+        $nav = $this->get(route('panel.reservations', [], false))->assertOk()->getContent();
+        $this->assertStringContainsString('Besplatne rezervacije', $nav);
+        $this->assertStringNotContainsString('>FZBR<', $nav);
+
+        $page = $this->get(route('panel.fzbr.create', [], false))->assertOk()->getContent();
+        $this->assertStringContainsString('Besplatne rezervacije', $page);
+        $this->assertStringNotContainsString('>FZBR<', $page);
+    }
+
     public function test_fzbr_page_uses_hybrid_iso_date_input_for_reservation_date(): void
     {
         $user = User::factory()->create(['lang' => 'cg', 'country' => 'ME']);

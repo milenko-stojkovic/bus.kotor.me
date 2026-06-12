@@ -402,7 +402,7 @@ class AdminPanelAnalyticsTest extends TestCase
             'include_free' => 0,
         ], false))->assertOk()->getContent();
 
-        $this->assertStringContainsString('Admin free (FZBR) po agencijama', $html);
+        $this->assertStringContainsString('Besplatne rezervacije po agencijama', $html);
 
         // Agency appears with 2 reservations and occupied slots = 1 + 2 = 3.
         $this->assertMatchesRegularExpression('/Agencija X[\s\S]*?<td[^>]*>\s*2\s*<\/td>[\s\S]*?<td[^>]*>\s*3\s*<\/td>/i', $html);

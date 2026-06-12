@@ -10,6 +10,49 @@ Ovaj dokument opisuje **trenutno implementirano stanje** u kodu i **preostale pl
 
 ---
 
+## Istorijat: zašto je QR model zamijenjen
+
+Tokom razvoja projekta **Limo QR workflow je u potpunosti implementiran** u kodu (agencijsko generisanje, evidentičar na terenu, OCR fallback za tablicu, fiskalizacija, admin pregled). Model **nije napušten zbog tehničkog neuspjeha** — softver je radio prema specifikaciji. U početku sezone 2026. operativna procjena pokazala je da **terenski poslovni model nije praktičan** za trenutne kapacitete i obim usluge, pa je rukovodstvo odabralo jednostavniji model.
+
+### Stari QR model (implementiran, sada legacy)
+
+1. Agencija generiše jednodnevni QR kod u panelu.
+2. Vozač ili agencija prikazuje QR evidentičaru na odobrenom mjestu ukrcaja.
+3. Evidentičar skenira QR mobilnim web sučeljem (`/limo`).
+4. Sistem oduzima iznos iz avansa agencije.
+5. Nakon potvrđenog skeniranja generiše se fiskalni račun i šalje agenciji.
+
+Uz to postoji OCR fallback (fotografija tablice) kada QR nije dostupan — takođe dio legacy implementacije.
+
+### Zašto je zamijenjen
+
+Model je zavisio od **fizičkog prisustva službenika (evidentičara)** na kontrolnim tačkama u zoni ukrcaja. U praksi:
+
+- **Nedovoljan broj evidentičara** — opština nije mogla pouzdano pokriti cijelu relevantnu teritoriju.
+- **Ograničena pokrivenost** — ne mogu se postaviti kontrolne tačke na svim mjestima gdje se limo usluga stvarno pruža.
+- **Gužva i uska grla** — kontrolna tačka na ukrcaju može stvarati zastoje ili biti zaobiđena.
+- **Rute van zone Starog grada** — mnoga vozila ne prolaze prirodno kroz odobrena mjesta ukrcaja u Starom gradu (npr. preuzimanje u hotelu ili privatnom smještaju → transfer prema aerodromu).
+- **Početak sezone i ograničeni kapaciteti** — potreban je bio model koji odmah funkcioniše uz manje terenskog osoblja.
+- **Jednostavniji prihod** — rukovodstvo je kao praktičan prvi korak odabralo model **Dnevne naknade** (jednokratna dnevna uplata po vozilu/kategoriji, provjera tablice na terenu).
+
+### Trenutni aktivni model
+
+- Plaćanje vezano za limo operativu ide kroz **Dnevnu naknadu / Daily fee** (agencija: Rezervacije → `reservation_kind=daily_ticket`).
+- Terenska provjera: ručni unos tablice na **`/control/dnevna-naknada`** (Control panel, read-only lookup za današnji datum).
+- QR, OCR i evidentičar **nisu aktivni po defaultu** (`LIMO_QR_WORKFLOW_ENABLED=false`).
+
+### Zašto QR/OCR i dalje postoji u repou
+
+Kod, rute, servisi, tabele (`limo_qr_tokens`, `limo_pickup_events`, …) i testovi **namjerno su sačuvani**:
+
+- **Historijski podaci** — postojeći pickup-i, incidenti i analitika.
+- **Mogućnost rollback-a** — ENV flag može ponovo uključiti QR tok bez ponovne implementacije.
+- **Moguća buduća osnova** — ako se operativni model kasnije proširi, postojeća implementacija može poslužiti kao polazna tačka.
+
+Brisanje QR/OCR koda ili tabela **nije predviđeno tokom sezone** bez posebne odluke o čišćenju (v. `project-done.md`).
+
+---
+
 ## Implementation status (Bus Kotor V2)
 
 ### Implementirano

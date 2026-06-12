@@ -435,7 +435,7 @@ class CheckoutController extends Controller
      * @return array{vehicle_id:int|null,user_name:string,country:string,license_plate:string,vehicle_type_id:int,email:string}
      */
     /**
-     * Agency-only daily ticket: no slot capacity, no daily_parking_data, no slot duplicate check.
+     * Daily ticket (guest card-only or agency card/advance): no slot capacity, no daily_parking_data, no slot duplicate check.
      */
     private function storeDailyTicketBooking(
         CheckoutReservationRequest $request,

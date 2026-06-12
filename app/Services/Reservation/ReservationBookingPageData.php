@@ -69,8 +69,14 @@ final class ReservationBookingPageData
         $dateStr = (string) $request->query('reservation_date', '');
         $selectedDate = $this->parseAllowedDate($dateStr);
 
-        $arrivalId = $this->asIntOrNull($request->query('drop_off_time_slot_id'));
-        $departureId = $this->asIntOrNull($request->query('pick_up_time_slot_id'));
+        $reservationKind = (string) $request->query('reservation_kind', ReservationKind::TIME_SLOTS);
+        if (! in_array($reservationKind, ReservationKind::ALL, true)) {
+            $reservationKind = ReservationKind::TIME_SLOTS;
+        }
+        $isDailyTicketBooking = $reservationKind === ReservationKind::DAILY_TICKET;
+
+        $arrivalId = $isDailyTicketBooking ? null : $this->asIntOrNull($request->query('drop_off_time_slot_id'));
+        $departureId = $isDailyTicketBooking ? null : $this->asIntOrNull($request->query('pick_up_time_slot_id'));
 
         $slotPayload = $this->buildSlotPayload($selectedDate, $arrivalId, $departureId, $locale);
         $departureId = $slotPayload['effective_departure_id'];
@@ -80,17 +86,29 @@ final class ReservationBookingPageData
                 ->with('translations')
                 ->orderBy('id')
                 ->get(),
-            ReservationKind::TIME_SLOTS,
+            $reservationKind,
         );
 
         $countries = (array) config('countries', []);
 
         $vehicleTypeId = $this->asIntOrNull($request->query('vehicle_type_id'));
         $selectedVehicleType = $vehicleTypeId ? $vehicleTypes->firstWhere('id', $vehicleTypeId) : null;
+        if ($selectedVehicleType === null && $vehicleTypeId !== null) {
+            $candidate = VehicleType::query()->with('translations')->find($vehicleTypeId);
+            if ($candidate !== null
+                && $this->vehicleEligibility->isVehicleTypeAllowedForKind((int) $candidate->id, $reservationKind)) {
+                $selectedVehicleType = $candidate;
+                $vehicleTypes = $vehicleTypes->push($candidate)->unique('id')->sortBy('id')->values();
+            }
+        }
 
         $isFreeReservation = false;
         $paidAmount = null;
-        if ($slotPayload['selected_arrival_slot'] && $slotPayload['selected_departure_slot']) {
+        if ($isDailyTicketBooking && $selectedDate && $selectedVehicleType) {
+            if (is_numeric((string) $selectedVehicleType->price)) {
+                $paidAmount = number_format((float) $selectedVehicleType->price, 2, '.', '');
+            }
+        } elseif ($slotPayload['selected_arrival_slot'] && $slotPayload['selected_departure_slot']) {
             $isFreeReservation = FreeReservationRules::isFreeReservation(
                 $slotPayload['selected_arrival_slot'],
                 $slotPayload['selected_departure_slot']
@@ -106,6 +124,8 @@ final class ReservationBookingPageData
             'selected_date' => $selectedDate?->toDateString(),
             'arrival_id' => $arrivalId,
             'departure_id' => $departureId,
+            'reservation_kind' => $reservationKind,
+            'is_daily_ticket_booking' => $isDailyTicketBooking,
             'vehicle_types' => $vehicleTypes,
             'countries' => $countries,
             'paid_amount' => $paidAmount,

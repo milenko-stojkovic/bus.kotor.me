@@ -246,7 +246,7 @@ final class FzbrController extends Controller
             ]);
             $alertService->createOnce(
                 'fzbr_request_unnotified',
-                'FZBR: zahtjev u bazi bez email obavještenja',
+                'Besplatne rezervacije: zahtjev u bazi bez email obavještenja',
                 'Zahtjev ID '.$createdReq->id.'. '.$user->name.' / '.$user->email,
                 'high',
                 'free_reservation_request:'.$createdReq->id.':unnotified',

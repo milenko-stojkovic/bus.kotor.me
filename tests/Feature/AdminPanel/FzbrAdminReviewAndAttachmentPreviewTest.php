@@ -42,7 +42,7 @@ final class FzbrAdminReviewAndAttachmentPreviewTest extends TestCase
         $this->actingAs($admin, 'panel_admin')
             ->get(route('panel_admin.free-reservations', [], false))
             ->assertOk()
-            ->assertSee('Pregled besplatnih rezervacija po FZBR', false);
+            ->assertSee('Pregled besplatnih rezervacija', false);
     }
 
     public function test_default_fzbr_review_is_approved_and_shows_fulfilled_in_range(): void

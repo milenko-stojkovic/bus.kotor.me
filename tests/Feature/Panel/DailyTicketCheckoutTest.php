@@ -136,7 +136,6 @@ final class DailyTicketCheckoutTest extends TestCase
             'reservation_date' => $date,
             'vehicle_id' => $vehicle->id,
             'accept_terms' => 1,
-            'accept_privacy' => 1,
         ])->assertRedirect('https://bank.example/pay');
     }
 
@@ -152,7 +151,6 @@ final class DailyTicketCheckoutTest extends TestCase
             'reservation_date' => $date,
             'vehicle_id' => $vehicle->id,
             'accept_terms' => 1,
-            'accept_privacy' => 1,
         ]);
 
         $temp = TempData::query()->latest('id')->firstOrFail();
@@ -188,7 +186,6 @@ final class DailyTicketCheckoutTest extends TestCase
             'reservation_date' => $date,
             'vehicle_id' => $vehicle->id,
             'accept_terms' => 1,
-            'accept_privacy' => 1,
             'merchant_transaction_id' => 'mtid_dt_adv_1',
         ])->assertRedirect(route('panel.reservations', [], false));
 
@@ -228,34 +225,11 @@ final class DailyTicketCheckoutTest extends TestCase
             'reservation_date' => $date,
             'vehicle_id' => $vehicle->id,
             'accept_terms' => 1,
-            'accept_privacy' => 1,
         ]);
 
         $daily->refresh();
         $this->assertSame(1, (int) $daily->reserved);
         $this->assertSame(2, (int) $daily->pending);
-    }
-
-    public function test_guest_cannot_submit_daily_ticket_kind(): void
-    {
-        $vt = VehicleType::query()->create(['price' => 10]);
-        $drop = ListOfTimeSlot::query()->create(['time_slot' => '09:00 - 09:20']);
-        $pick = ListOfTimeSlot::query()->create(['time_slot' => '10:00 - 10:20']);
-        $date = now()->addDays(3)->toDateString();
-
-        $this->post(route('checkout.store', [], false), [
-            'reservation_kind' => ReservationKind::DAILY_TICKET,
-            'reservation_date' => $date,
-            'drop_off_time_slot_id' => $drop->id,
-            'pick_up_time_slot_id' => $pick->id,
-            'vehicle_type_id' => $vt->id,
-            'name' => 'Guest',
-            'country' => 'ME',
-            'license_plate' => 'KO111AA',
-            'email' => 'g@example.com',
-            'accept_terms' => 1,
-            'accept_privacy' => 1,
-        ])->assertSessionHasErrors('reservation_kind');
     }
 
     public function test_time_slots_flow_still_requires_both_slots(): void
@@ -404,9 +378,82 @@ final class DailyTicketCheckoutTest extends TestCase
             'reservation_date' => $date,
             'vehicle_id' => $vehicle->id,
             'accept_terms' => 1,
-            'accept_privacy' => 1,
         ])->assertRedirect('https://bank.example/pay');
 
         $this->assertSame(1, TempData::query()->where('reservation_kind', ReservationKind::DAILY_TICKET)->count());
+    }
+
+    public function test_agency_termini_page_shows_fallback_parking_checkbox(): void
+    {
+        $user = User::factory()->create(['email_verified_at' => now(), 'country' => 'ME', 'lang' => 'cg']);
+        $vt = VehicleType::query()->create(['price' => 12.50]);
+        $vehicle = Vehicle::query()->create([
+            'user_id' => $user->id,
+            'license_plate' => 'KO999ZZ',
+            'vehicle_type_id' => $vt->id,
+        ]);
+        app()->setLocale('cg');
+        $date = now()->addDays(3)->toDateString();
+        $drop = ListOfTimeSlot::query()->create(['time_slot' => '10:00 - 10:20']);
+        $pick = ListOfTimeSlot::query()->create(['time_slot' => '11:00 - 11:20']);
+
+        $html = $this->actingAs($user)->get(route('panel.reservations', [
+            'reservation_kind' => ReservationKind::TIME_SLOTS,
+            'reservation_date' => $date,
+            'drop_off_time_slot_id' => $drop->id,
+            'pick_up_time_slot_id' => $pick->id,
+            'vehicle_id' => $vehicle->id,
+        ], false))->assertOk()->getContent();
+
+        $this->assertStringContainsString('id="panelAcceptPrivacy"', $html);
+        $this->assertStringContainsString('nije u mogućnosti da izvrši iskrcaj', $html);
+        $this->assertStringNotContainsString('id="panelAcceptPrivacyRow" class="flex items-start gap-2 text-sm hidden"', $html);
+    }
+
+    public function test_agency_daily_fee_page_hides_fallback_parking_checkbox(): void
+    {
+        [$user, $vehicle] = $this->agencyWithVehicle();
+        $date = now()->addDays(3)->toDateString();
+
+        $html = $this->actingAs($user)->get(route('panel.reservations', [
+            'reservation_kind' => ReservationKind::DAILY_TICKET,
+            'reservation_date' => $date,
+            'vehicle_id' => $vehicle->id,
+        ], false))->assertOk()->getContent();
+
+        $this->assertStringContainsString('id="panelAcceptPrivacyRow" class="flex items-start gap-2 text-sm hidden"', $html);
+    }
+
+    public function test_agency_daily_fee_submit_succeeds_without_accept_privacy(): void
+    {
+        $this->mockPaymentRedirect();
+        [$user, $vehicle] = $this->agencyWithVehicle();
+        $date = now()->addDays(4)->toDateString();
+
+        $this->actingAs($user)->post(route('checkout.store', [], false), [
+            'auth_panel_booking' => 1,
+            'reservation_kind' => ReservationKind::DAILY_TICKET,
+            'reservation_date' => $date,
+            'vehicle_id' => $vehicle->id,
+            'accept_terms' => 1,
+        ])->assertRedirect('https://bank.example/pay');
+    }
+
+    public function test_agency_termini_submit_without_accept_privacy_fails(): void
+    {
+        [$user, $vehicle] = $this->agencyWithVehicle();
+        $drop = ListOfTimeSlot::query()->create(['time_slot' => '09:00 - 09:20']);
+        $pick = ListOfTimeSlot::query()->create(['time_slot' => '10:00 - 10:20']);
+        $date = now()->addDays(3)->toDateString();
+
+        $this->actingAs($user)->post(route('checkout.store', [], false), [
+            'auth_panel_booking' => 1,
+            'reservation_kind' => ReservationKind::TIME_SLOTS,
+            'reservation_date' => $date,
+            'drop_off_time_slot_id' => $drop->id,
+            'pick_up_time_slot_id' => $pick->id,
+            'vehicle_id' => $vehicle->id,
+            'accept_terms' => 1,
+        ])->assertSessionHasErrors('accept_privacy');
     }
 }
