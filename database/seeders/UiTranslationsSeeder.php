@@ -215,8 +215,8 @@ class UiTranslationsSeeder extends Seeder
             ['group' => 'payment', 'key' => 'reservation_confirmed_invoice_later', 'locale' => 'en', 'text' => 'The reservation is confirmed. The invoice will be delivered later.'],
 
             // landing (V2 predsoblje)
-            ['group' => 'landing', 'key' => 'title', 'locale' => 'cg', 'text' => 'Rezervacija termina za turističke autobuse'],
-            ['group' => 'landing', 'key' => 'title', 'locale' => 'en', 'text' => 'Tourist bus time-slot reservation'],
+            ['group' => 'landing', 'key' => 'title', 'locale' => 'cg', 'text' => 'Plaćanje naknade za ekonomsko iskorišćavanje kulturnih dobara'],
+            ['group' => 'landing', 'key' => 'title', 'locale' => 'en', 'text' => 'Payment of the fee for the economic use of cultural assets'],
             ['group' => 'landing', 'key' => 'subtitle', 'locale' => 'cg', 'text' => 'Izaberite način nastavka.'],
             ['group' => 'landing', 'key' => 'subtitle', 'locale' => 'en', 'text' => 'Choose how you want to continue.'],
             ['group' => 'landing', 'key' => 'guest_title', 'locale' => 'cg', 'text' => 'Guest'],
@@ -305,6 +305,10 @@ class UiTranslationsSeeder extends Seeder
             ['group' => 'auth', 'key' => 'remember_me', 'locale' => 'en', 'text' => 'Remember me'],
             ['group' => 'auth', 'key' => 'forgot_password', 'locale' => 'cg', 'text' => 'Zaboravili ste lozinku?'],
             ['group' => 'auth', 'key' => 'forgot_password', 'locale' => 'en', 'text' => 'Forgot your password?'],
+            ['group' => 'auth', 'key' => 'forgot_password_prompt', 'locale' => 'cg', 'text' => 'Zaboravili ste lozinku? Nema problema. Unesite svoju email adresu i poslaćemo vam link za reset lozinke pomoću kojeg možete odabrati novu.'],
+            ['group' => 'auth', 'key' => 'forgot_password_prompt', 'locale' => 'en', 'text' => 'Forgot your password? No problem. Just let us know your email address and we will email you a password reset link that will allow you to choose a new one.'],
+            ['group' => 'auth', 'key' => 'forgot_password_send_link', 'locale' => 'cg', 'text' => 'Pošalji link za reset lozinke'],
+            ['group' => 'auth', 'key' => 'forgot_password_send_link', 'locale' => 'en', 'text' => 'Email Password Reset Link'],
             ['group' => 'auth', 'key' => 'login_button', 'locale' => 'cg', 'text' => 'Prijavite se'],
             ['group' => 'auth', 'key' => 'login_button', 'locale' => 'en', 'text' => 'Log in'],
             ['group' => 'auth', 'key' => 'login_no_account', 'locale' => 'cg', 'text' => 'Nemate nalog?'],
@@ -865,6 +869,10 @@ class UiTranslationsSeeder extends Seeder
         Cache::forget('ui_translations:any:group=panel:key=vehicle_remove_blocked_upcoming');
         Cache::forget('ui_translations:group=landing:locale=cg');
         Cache::forget('ui_translations:group=landing:locale=en');
+        Cache::forget('ui_translations:group=auth:locale=cg');
+        Cache::forget('ui_translations:group=auth:locale=en');
+        Cache::forget('ui_translations:any:group=auth:key=forgot_password_prompt');
+        Cache::forget('ui_translations:any:group=auth:key=forgot_password_send_link');
         Cache::forget('ui_translations:group=free_request:locale=cg');
         Cache::forget('ui_translations:group=free_request:locale=en');
         Cache::forget('ui_translations:any:group=landing:key=students_title');

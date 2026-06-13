@@ -21,13 +21,17 @@ class UiText
             return $text;
         }
 
+        if (is_string($fallback) && $fallback !== '') {
+            return $fallback;
+        }
+
         // Fallback to any locale (first row) if missing for requested locale.
         $any = self::getAnyLocale($group, $key);
         if (is_string($any) && $any !== '') {
             return $any;
         }
 
-        return $fallback ?? ($group.'.'.$key);
+        return $group.'.'.$key;
     }
 
     /**
