@@ -45,6 +45,7 @@ class Reservation extends Model
     /** Fillable: FK, termini, datum, snapshot polja, fiscal, status (za masovno punjenje). */
     protected $fillable = [
         'user_id',
+        'free_reservation_request_id',
         'vehicle_id',
         'merchant_transaction_id',
         'reservation_kind',
@@ -178,6 +179,11 @@ class Reservation extends Model
     public function vehicle(): BelongsTo
     {
         return $this->belongsTo(Vehicle::class)->withDefault();
+    }
+
+    public function freeReservationRequest(): BelongsTo
+    {
+        return $this->belongsTo(FreeReservationRequest::class, 'free_reservation_request_id');
     }
 
     /**

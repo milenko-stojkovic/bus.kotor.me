@@ -330,5 +330,90 @@ class VehicleRemovalReplacementWorkflowTest extends TestCase
         $this->assertSame($target->id, (int) $r2->vehicle_id);
         $this->assertSame(1, Vehicle::query()->whereKey($target->id)->count());
     }
+
+    public function test_remove_workflow_page_shows_cg_labels_when_session_locale_is_cg(): void
+    {
+        [$low] = $this->seedTypes();
+        $user = User::factory()->create(['lang' => 'en']);
+        $this->actingAs($user)->withSession(['locale' => 'cg']);
+
+        $slotA = ListOfTimeSlot::query()->create(['time_slot' => '09:40 - 10:00']);
+        $slotB = ListOfTimeSlot::query()->create(['time_slot' => '11:20 - 11:40']);
+        $date = Carbon::now()->addDays(3)->toDateString();
+
+        $target = Vehicle::query()->create(['user_id' => $user->id, 'license_plate' => 'KOTZ123', 'vehicle_type_id' => $low->id, 'status' => Vehicle::STATUS_ACTIVE]);
+        Vehicle::query()->create(['user_id' => $user->id, 'license_plate' => 'KO999', 'vehicle_type_id' => $low->id, 'status' => Vehicle::STATUS_ACTIVE]);
+
+        Reservation::query()->create([
+            'user_id' => $user->id,
+            'vehicle_id' => $target->id,
+            'merchant_transaction_id' => 'mt-locale-cg',
+            'drop_off_time_slot_id' => $slotA->id,
+            'pick_up_time_slot_id' => $slotB->id,
+            'reservation_date' => $date,
+            'user_name' => 'u',
+            'country' => 'ME',
+            'license_plate' => $target->license_plate,
+            'vehicle_type_id' => $target->vehicle_type_id,
+            'email' => 'u@example.com',
+            'preferred_locale' => 'cg',
+            'status' => 'paid',
+            'invoice_amount' => 1,
+        ]);
+
+        $html = $this->get(route('panel.vehicles.remove', $target->id, false))->assertOk()->getContent();
+
+        $this->assertStringContainsString('Ciljno vozilo:', $html);
+        $this->assertStringContainsString('Predstojeće rezervacije za zamjenu', $html);
+        $this->assertStringContainsString('Zamjensko vozilo', $html);
+        $this->assertStringContainsString('Izaberite vozilo', $html);
+        $this->assertStringContainsString('Primijeni i ukloni', $html);
+        $this->assertStringNotContainsString('Target vehicle:', $html);
+        $this->assertStringNotContainsString('Upcoming reservations to replace', $html);
+        $this->assertStringNotContainsString('Replacement vehicle', $html);
+        $this->assertStringNotContainsString('Apply &amp; remove', $html);
+    }
+
+    public function test_remove_workflow_page_shows_english_labels_when_session_locale_is_en(): void
+    {
+        [$low] = $this->seedTypes();
+        $user = User::factory()->create(['lang' => 'cg']);
+        $this->actingAs($user)->withSession(['locale' => 'en']);
+
+        $slotA = ListOfTimeSlot::query()->create(['time_slot' => '09:40 - 10:00']);
+        $slotB = ListOfTimeSlot::query()->create(['time_slot' => '11:20 - 11:40']);
+        $date = Carbon::now()->addDays(3)->toDateString();
+
+        $target = Vehicle::query()->create(['user_id' => $user->id, 'license_plate' => 'KOTZ123', 'vehicle_type_id' => $low->id, 'status' => Vehicle::STATUS_ACTIVE]);
+        Vehicle::query()->create(['user_id' => $user->id, 'license_plate' => 'KO999', 'vehicle_type_id' => $low->id, 'status' => Vehicle::STATUS_ACTIVE]);
+
+        Reservation::query()->create([
+            'user_id' => $user->id,
+            'vehicle_id' => $target->id,
+            'merchant_transaction_id' => 'mt-locale-en',
+            'drop_off_time_slot_id' => $slotA->id,
+            'pick_up_time_slot_id' => $slotB->id,
+            'reservation_date' => $date,
+            'user_name' => 'u',
+            'country' => 'ME',
+            'license_plate' => $target->license_plate,
+            'vehicle_type_id' => $target->vehicle_type_id,
+            'email' => 'u@example.com',
+            'preferred_locale' => 'en',
+            'status' => 'paid',
+            'invoice_amount' => 1,
+        ]);
+
+        $html = $this->get(route('panel.vehicles.remove', $target->id, false))->assertOk()->getContent();
+
+        $this->assertStringContainsString('Target vehicle:', $html);
+        $this->assertStringContainsString('Upcoming reservations to replace', $html);
+        $this->assertStringContainsString('Replacement vehicle', $html);
+        $this->assertStringContainsString('Select vehicle', $html);
+        $this->assertStringContainsString('Apply &amp; remove', $html);
+        $this->assertStringNotContainsString('Ciljno vozilo:', $html);
+        $this->assertStringNotContainsString('Predstojeće rezervacije za zamjenu', $html);
+        $this->assertStringNotContainsString('Primijeni i ukloni', $html);
+    }
 }
 

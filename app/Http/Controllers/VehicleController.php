@@ -40,7 +40,7 @@ class VehicleController extends Controller
 
     public function store(StoreVehicleRequest $request): RedirectResponse
     {
-        $locale = $request->user()->lang ?? app()->getLocale();
+        $locale = app()->getLocale();
         $validated = $request->validated();
 
         $plate = (string) $validated['license_plate'];
@@ -76,7 +76,9 @@ class VehicleController extends Controller
                 ->with('error', UiText::t(
                     'panel',
                     'vehicle_category_change_requires_approval',
-                    'Za ovu registarsku tablicu već postoji ranije uklonjeno vozilo sa drugom kategorijom. Promjena kategorije mora biti odobrena od strane administratora. Molimo priložite fotografiju ili PDF saobraćajne dozvole ili drugog dokumenta iz kojeg se vidi registarska tablica i kategorija vozila.',
+                    $locale === 'en'
+                        ? 'This vehicle plate exists with a different category. Please submit a category change request with a document.'
+                        : 'Ova tablica već postoji u drugoj kategoriji. Pošaljite zahtjev za promjenu kategorije uz dokument.',
                     $locale
                 ));
         }
@@ -94,7 +96,7 @@ class VehicleController extends Controller
     public function storeCategoryChangeRequest(Request $request): RedirectResponse
     {
         $user = $request->user();
-        $locale = $user->lang ?? app()->getLocale();
+        $locale = app()->getLocale();
 
         $data = $request->validate([
             'old_vehicle_id' => ['required', 'integer'],
@@ -217,7 +219,7 @@ class VehicleController extends Controller
         $model = $this->ownedVehicleOrFail($request, $vehicle);
         $model->update($request->validated());
 
-        $locale = $request->user()->lang ?? app()->getLocale();
+        $locale = app()->getLocale();
 
         return redirect()->route('panel.vehicles')->with(
             'message',
@@ -228,7 +230,7 @@ class VehicleController extends Controller
     public function destroy(Request $request, int $vehicle, PanelReservationListService $lists): RedirectResponse
     {
         $model = $this->ownedVehicleOrFail($request, $vehicle);
-        $locale = $request->user()->lang ?? app()->getLocale();
+        $locale = app()->getLocale();
 
         $usedInUpcoming = $lists->upcomingFor($request->user())
             ->contains(fn ($r) => (int) ($r->vehicle_id ?? 0) === (int) $model->id);
@@ -254,7 +256,7 @@ class VehicleController extends Controller
     ): View {
         $user = $request->user();
         $target = $this->ownedVehicleOrFail($request, $vehicle)->loadMissing('vehicleType');
-        $locale = $user->lang ?? app()->getLocale();
+        $locale = app()->getLocale();
 
         $upcoming = $lists->upcomingFor($user)->filter(fn ($r) => (int) ($r->vehicle_id ?? 0) === (int) $target->id)->values();
         $maxPrice = (float) ($target->vehicleType?->price ?? 0);
@@ -288,7 +290,7 @@ class VehicleController extends Controller
     ): RedirectResponse {
         $user = $request->user();
         $target = $this->ownedVehicleOrFail($request, $vehicle)->loadMissing('vehicleType');
-        $locale = $user->lang ?? app()->getLocale();
+        $locale = app()->getLocale();
 
         $upcoming = $lists->upcomingFor($user)->filter(fn ($r) => (int) ($r->vehicle_id ?? 0) === (int) $target->id)->values();
         if ($upcoming->isEmpty()) {

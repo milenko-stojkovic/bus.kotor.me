@@ -61,7 +61,10 @@ Ako je flag **ON**:
 - topup prelazi u `paid` (callback / fake)
 - kreira se ledger red u `agency_advance_transactions`:
   - `type=topup`, `reference_type=advance_topup`, `reference_id=topup.id`, `amount=+X`
-- **avansna uplata se NE fiskalizuje**
+
+**avansna uplata se NE fiskalizuje**
+- razlog: uplata avansa predstavlja povećanje obaveze Opštine prema agenciji (prepaid saldo), a ne realizovan prihod
+- fiskalizacija nastaje tek kada se avans iskoristi za kupovinu rezervacije ili dnevne naknade kroz standardni paid reservation pipeline
 
 ### 2) Potvrda o evidentiranoj avansnoj uplati (PDF + email)
 
@@ -93,7 +96,14 @@ Putnička vozila za limo servis (**Putničko vozilo / 4+1–7+1**, baseline `veh
 
 ### Dnevna naknada (`reservation_kind=daily_ticket`)
 
-Na **`GET /panel/reservations`** agencija bira **Termini** (default) ili **Dnevna naknada** (radio ispod objašnjenja). Iznad radio dugmadi stalno su prikazana oba objašnjenja (Termini + Dnevna naknada) sa linkovima na mape (Benovo; Autoboka, Puč, Perast, Risan) — CG/EN preko `ui_translations` (`booking_kind_expl_*`). Gost (`/guest/reserve`) **nema** ovu opciju.
+Na **`GET /panel/reservations`** agencija bira **Termini** (default) ili **Dnevna naknada** (radio ispod objašnjenja). Iznad radio dugmadi stalno su prikazana oba objašnjenja (Termini + Dnevna naknada) sa linkovima na mape (Benovo; Autoboka, Puč, Perast, Risan) — CG/EN preko `ui_translations` (`booking_kind_expl_*`).
+
+**Dnevna naknada** je dostupna i agencijama (`/panel/reservations`) i gostima (`/guest/reserve`).
+
+- Agencije mogu platiti karticom ili iz raspoloživog avansa.
+- Gosti mogu platiti isključivo karticom.
+- Za goste i agencije važe ista poslovna pravila: Dnevna naknada nema slotove, ne koristi `daily_parking_data` i ne podliježe kontroli kapaciteta.
+- Putnička vozila (limo servis, 4+1 do 7+1) dostupna su samo za Dnevnu naknadu i nisu dostupna za Termini rezervacije.
 
 - **Termini:** postojeći tok — obavezni arrival/departure slotovi, kapacitet preko `daily_parking_data`, duplicate check po slotu+tablici.
 - **Dnevna naknada:** isti iznos po kategoriji vozila kao plaćena slot rezervacija; **bez** slotova, **bez** `daily_parking_data`, **bez** slot duplicate checka; isti plate+datum može imati i slot rezervaciju.
@@ -147,6 +157,19 @@ Na vrhu stranice prikazuje se:
 - **pomoć za priloge** (`free_request.documents_hint` + `documents_limit`)
 
 **Arhiva privatnih priloga (MEGA):** kada je zahtjev u terminalnom statusu (`fulfilled` / `rejected`), operativno se mogu arhivirati fajlovi sa privatnog diska na MEGA (`files:archive-private --source=fzbr`); detalji u **[external-file-archive.md](./external-file-archive.md)**. Kredencijali ostaju u `.env`; nema uploada iz browsera. **Admin pregled arhiviranih priloga:** na **`GET /admin/besplatne-rezervacije`** sekcija **„Pregled besplatnih rezervacija”** (filter odobreni/odbijeni + datum po `updated_at`) — link **„Dokument”** otvara privatnu preview rutu sa istim TTL / `files:cleanup-preview-cache` ponašanjem kao ostali admin preview-i iz arhive.
+
+### Moji poslati zahtjevi (2026-06)
+
+Na dnu **`GET /panel/fzbr`** prikazuje se sekcija **„Moji poslati zahtjevi”** — lista zahtjeva ulogovane agencije (`free_reservation_requests.user_id`).
+
+- **Izvor:** `AgencyFzbrSubmittedRequestListService` (učitava zahtjeve agencije, filtrira vidljivost).
+- **Kolone:** datum zahtjeva, vrijeme dolaska/odlaska (po segmentu), tablice, status, datum slanja (`created_at`, Podgorica).
+- **Statusi (DB → UI):** `submitted` / `updated` → *Čeka se obrada*; `fulfilled` → *Odobreno*; `rejected` → *Odbijeno*. Nema polja za razlog odbijanja u bazi.
+- **Vidljivost:** `submitted` i `updated` uvijek vidljivi. `rejected` vidljiv dok barem jedan segment zahtjeva još nije prošao (kraj pick-up termina na `reservation_date`, ista logika vremena kao `PanelReservationListService::isUpcoming`). `fulfilled` ostaje dok postoji barem jedna povezana besplatna rezervacija koja još nije realizovana; sakriva se kad su sve realizovane.
+- **Veza zahtjev ↔ rezervacija:** migracija `reservations.free_reservation_request_id` (nullable FK); admin fulfill postavlja FK pri kreiranju `status=free` rezervacija. Stariji odobreni bez FK: servis pri učitavanju pronalazi odgovarajuće admin `free` redove (email agencije, tablice i termini iz segmenta zahtjeva) i upisuje FK; prikaz i sakrivanje `fulfilled` tada idu preko povezanih rezervacija. Ako nema pronađenih rezervacija, koriste se termini iz snapshot-a samog zahtjeva.
+- **Prazno stanje:** *Nemate poslatih zahtjeva za besplatne rezervacije.*
+- **i18n:** `panel.fzbr_submitted_*`, `panel.fzbr_request_status_*` u `UiTranslationsSeeder`.
+- **Testovi:** `tests/Feature/Panel/FzbrSubmittedRequestsListTest.php`.
 
 ---
 

@@ -301,6 +301,13 @@
                 </button>
             </form>
         </div>
+
+            @include('panel.partials.fzbr-submitted-requests', [
+                'submittedRequests' => $submittedRequests ?? collect(),
+                'statusLabelsByRequestId' => $statusLabelsByRequestId ?? collect(),
+                'listEntriesByRequestId' => $listEntriesByRequestId ?? collect(),
+                'locale' => $locale,
+            ])
     </div>
 
     @php

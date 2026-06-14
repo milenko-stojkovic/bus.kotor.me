@@ -13,6 +13,7 @@ use App\Models\ListOfTimeSlot;
 use App\Models\SystemConfig;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Services\Panel\AgencyFzbrSubmittedRequestListService;
 use App\Services\Reservation\ReservationBookingPageData;
 use App\Support\UiText;
 use Illuminate\Http\RedirectResponse;
@@ -39,12 +40,14 @@ final class FzbrController extends Controller
         return $max;
     }
 
-    public function create(Request $request): View
+    public function create(Request $request, AgencyFzbrSubmittedRequestListService $submittedList): View
     {
         /** @var User $user */
         $user = $request->user();
 
         $locale = app()->getLocale();
+
+        $submittedRequests = $submittedList->visibleForAgency($user);
 
         return view('panel.fzbr', [
             'locale' => $locale,
@@ -54,6 +57,15 @@ final class FzbrController extends Controller
                 ->orderBy('license_plate')
                 ->get(),
             'maxVehiclesPerSegment' => $this->maxVehiclesPerSegment(),
+            'submittedRequests' => $submittedRequests,
+            'statusLabelsByRequestId' => $submittedRequests
+                ->mapWithKeys(fn (FreeReservationRequest $req) => [
+                    $req->id => $submittedList->statusLabel($req->status, $locale),
+                ]),
+            'listEntriesByRequestId' => $submittedRequests
+                ->mapWithKeys(fn (FreeReservationRequest $req) => [
+                    $req->id => $submittedList->listEntriesForRequest($req),
+                ]),
         ]);
     }
 

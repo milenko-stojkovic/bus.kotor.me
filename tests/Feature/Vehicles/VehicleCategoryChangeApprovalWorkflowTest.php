@@ -134,6 +134,59 @@ final class VehicleCategoryChangeApprovalWorkflowTest extends TestCase
         $this->assertNotNull(session('category_change_needed'));
     }
 
+    public function test_add_same_plate_different_category_shows_english_message_when_session_locale_is_en(): void
+    {
+        [$a, $b] = $this->seedTypes();
+        $user = User::factory()->create(['lang' => 'cg']);
+        $this->actingAs($user)->withSession(['locale' => 'en']);
+
+        Vehicle::query()->create([
+            'user_id' => $user->id,
+            'license_plate' => 'KO111',
+            'vehicle_type_id' => $a->id,
+            'status' => Vehicle::STATUS_REMOVED,
+        ]);
+
+        $response = $this->post(route('panel.vehicles.store', [], false), [
+            'license_plate' => 'KO111',
+            'vehicle_type_id' => $b->id,
+        ]);
+
+        $response->assertRedirect(route('panel.vehicles', [], false));
+        $response->assertSessionHas('error');
+
+        $error = (string) session('error');
+        $this->assertMatchesRegularExpression('/different category|category change request/i', $error);
+        $this->assertStringNotContainsString('Ova tablica već postoji', $error);
+    }
+
+    public function test_add_same_plate_different_category_shows_cg_message_when_session_locale_is_cg(): void
+    {
+        [$a, $b] = $this->seedTypes();
+        $user = User::factory()->create(['lang' => 'en']);
+        $this->actingAs($user)->withSession(['locale' => 'cg']);
+
+        Vehicle::query()->create([
+            'user_id' => $user->id,
+            'license_plate' => 'KO111',
+            'vehicle_type_id' => $a->id,
+            'status' => Vehicle::STATUS_REMOVED,
+        ]);
+
+        $response = $this->post(route('panel.vehicles.store', [], false), [
+            'license_plate' => 'KO111',
+            'vehicle_type_id' => $b->id,
+        ]);
+
+        $response->assertRedirect(route('panel.vehicles', [], false));
+        $response->assertSessionHas('error');
+
+        $error = (string) session('error');
+        $this->assertMatchesRegularExpression('/kategorij/i', $error);
+        $this->assertStringNotContainsString('different category', $error);
+        $this->assertStringNotContainsString('Please submit a category change request', $error);
+    }
+
     public function test_request_stores_private_document_sends_mail_and_creates_warning_and_dedupes_pending(): void
     {
         [$a, $b] = $this->seedTypes();

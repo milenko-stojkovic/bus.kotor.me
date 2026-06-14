@@ -62,5 +62,10 @@ class FreeReservationRequest extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+
+    public function reservations(): HasMany
+    {
+        return $this->hasMany(Reservation::class, 'free_reservation_request_id');
+    }
 }
 

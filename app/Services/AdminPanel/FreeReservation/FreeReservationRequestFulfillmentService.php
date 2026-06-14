@@ -84,6 +84,7 @@ class FreeReservationRequestFulfillmentService
                 foreach ($seg->vehicles as $v) {
                     $mtid = Str::uuid()->toString();
                     $reservation = Reservation::query()->create([
+                        'free_reservation_request_id' => $req->id,
                         'user_id' => null,
                         'vehicle_id' => null,
                         'merchant_transaction_id' => $mtid,

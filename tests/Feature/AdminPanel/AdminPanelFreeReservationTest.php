@@ -505,6 +505,7 @@ class AdminPanelFreeReservationTest extends TestCase
         $this->assertSame('KO111', $res[0]->license_plate);
         $this->assertSame('en', $res[0]->preferred_locale);
         foreach ($res as $row) {
+            $this->assertSame($req->id, (int) $row->free_reservation_request_id);
             $this->assertSame(Reservation::EMAIL_SENT, (int) $row->email_sent);
             $this->assertNotNull($row->invoice_sent_at);
         }

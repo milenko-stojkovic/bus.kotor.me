@@ -456,6 +456,13 @@ dokumentaciju u više koraka, ali zahtjev neće biti odobren dok komplet ne bude
   • odobren i realizovan (besplatne rezervacije su napravljene),
   • odbijen.
 
+Na dnu iste stranice (Besplatne rezervacije) nalazi se lista „Moji poslati zahtjevi“.
+Tu vidite datum, termine, tablice, status i datum slanja svakog vašeg zahtjeva.
+Statusi: Čeka se obrada (poslat ili ažuriran), Odobreno (admin je napravio besplatne
+rezervacije), Odbijeno. Odobreni zahtjevi nestaju sa liste tek kada su sve povezane
+besplatne rezervacije prošle (realizovane po vremenu odlaska). Odbijeni zahtjevi nestaju sa liste
+nakon što prođe traženi termin odlaska u zahtjevu.
+
 Agencija ne finalizuje besplatnu rezervaciju sama — čeka odluku administratora
 servisa Bus Kotor.
 
