@@ -197,15 +197,38 @@ class SendInvoiceEmailJob implements ShouldQueue
 
         $generatedAt = now('Europe/Podgorica')->format('d.m.Y H:i');
 
+        $bodyTemplate = $this->resolvePaidInvoiceEmailBodyTemplate($emailLocale);
+
+        return str_replace(
+            ['%1$s', '%2$s'],
+            [$name, $generatedAt],
+            $bodyTemplate,
+        );
+    }
+
+    private function resolvePaidInvoiceEmailBodyTemplate(string $emailLocale): string
+    {
+        $fallback = $this->defaultPaidInvoiceEmailBodyTemplate($emailLocale);
+
         $bodyTemplate = UiText::t(
             'emails',
             'paid_invoice_email_body',
-            $emailLocale === 'cg'
-                ? "Poštovani, %1\$s\n\nVaša rezervacija je uspješno potvrđena!\n\nUz ovu poruku u prilogu se nalazi Vaš račun za plaćanje.\n\nMolimo Vas da ga sačuvate radi evidencije.\n\nS poštovanjem,\nOpština Kotor\nOva poruka je automatski generisana %2\$s"
-                : "Dear, %1\$s\n\nYour reservation has been successfully confirmed!\n\nAttached to this email you will find your Invoice for the payment.\n\nPlease keep it for your records.\n\nBest regards,\nMunicipality of Kotor\nThis message was generated automatically %2\$s",
+            $fallback,
             $emailLocale
         );
 
-        return sprintf($bodyTemplate, $name, $generatedAt);
+        // Stale DB copy (pre-unified email) used %1$d / %3$s — sprintf would crash the job.
+        if (str_contains($bodyTemplate, '%1$d') || str_contains($bodyTemplate, '%3$s')) {
+            return $fallback;
+        }
+
+        return $bodyTemplate;
+    }
+
+    private function defaultPaidInvoiceEmailBodyTemplate(string $emailLocale): string
+    {
+        return $emailLocale === 'cg'
+            ? "Poštovani, %1\$s\n\nVaša rezervacija je uspješno potvrđena!\n\nUz ovu poruku u prilogu se nalazi Vaš račun za plaćanje.\n\nMolimo Vas da ga sačuvate radi evidencije.\n\nS poštovanjem,\nOpština Kotor\nOva poruka je automatski generisana %2\$s"
+            : "Dear, %1\$s\n\nYour reservation has been successfully confirmed!\n\nAttached to this email you will find your Invoice for the payment.\n\nPlease keep it for your records.\n\nBest regards,\nMunicipality of Kotor\nThis message was generated automatically %2\$s";
     }
 }

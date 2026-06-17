@@ -10,6 +10,8 @@ use App\Services\Pdf\PaidInvoicePdfGenerator;
 use App\Support\ReservationKind;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
 use App\Jobs\SendInvoiceEmailJob;
@@ -100,6 +102,39 @@ final class DailyTicketPaidInvoiceTest extends TestCase
         $this->assertStringContainsString('uspješno potvrđena', $body);
         $this->assertStringContainsString('Opština Kotor', $body);
         $this->assertStringContainsString('automatski generisana 17.06.2026 09:15', $body);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_invoice_email_tolerates_stale_three_placeholder_db_template(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-06-17 20:34:30', 'Europe/Podgorica'));
+
+        DB::table('ui_translations')->updateOrInsert(
+            ['group' => 'emails', 'key' => 'paid_invoice_email_body', 'locale' => 'en'],
+            [
+                'text' => "Hello,\n\nYour paid parking reservation #%1\$d is confirmed for date %2\$s.%3\$s\n\nA PDF copy of your invoice or confirmation is attached.\n\nThank you.",
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        );
+        Cache::forget('ui_translations:group=emails:locale=en');
+        Cache::forget('ui_translations:any:group=emails:key=paid_invoice_email_body');
+
+        $reservation = $this->makeDailyTicketReservation([
+            'user_name' => 'Stale Template Test',
+            'preferred_locale' => 'en',
+        ]);
+
+        $job = new SendInvoiceEmailJob($reservation->id, false);
+        $ref = new \ReflectionMethod($job, 'buildConfirmationText');
+        $ref->setAccessible(true);
+        $body = $ref->invoke($job, $reservation->fresh(), 'en');
+
+        $this->assertStringContainsString('Dear, Stale Template Test', $body);
+        $this->assertStringContainsString('successfully confirmed', $body);
+        $this->assertStringNotContainsString('%3$s', $body);
+        $this->assertStringNotContainsString('paid parking reservation #', $body);
 
         Carbon::setTestNow();
     }
