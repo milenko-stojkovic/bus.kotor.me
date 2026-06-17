@@ -33,6 +33,8 @@ final class PaidInvoicePdfRegressionTest extends TestCase
 
         $this->assertStringContainsString('Detalji rezervacije', $html);
         $this->assertStringContainsString('Datum rezervacije', $html);
+        $reservationDateFormatted = Carbon::parse($reservation->reservation_date)->format('d.m.Y');
+        $this->assertStringContainsString('Datum rezervacije:</span> '.$reservationDateFormatted, $html);
         $this->assertStringContainsString('Vrijeme dolaska', $html);
         $this->assertStringContainsString('Vrijeme odlaska', $html);
         $this->assertStringContainsString('Lokacija:', $html);
@@ -161,12 +163,15 @@ final class PaidInvoicePdfRegressionTest extends TestCase
         ]);
 
         $date = Carbon::now()->addDays(5)->toDateString();
+        $createdAt = Carbon::now()->subDay();
 
         return Reservation::query()->create([
             'merchant_transaction_id' => 'mt-pdf-reg-'.Str::random(8),
             'drop_off_time_slot_id' => $drop->id,
             'pick_up_time_slot_id' => $pick->id,
             'reservation_date' => $date,
+            'created_at' => $createdAt,
+            'updated_at' => $createdAt,
             'user_name' => 'Test Agency',
             'country' => 'ME',
             'license_plate' => 'KO999ZZ',

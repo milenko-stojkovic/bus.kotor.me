@@ -181,7 +181,7 @@
                 <span class="bold">Tip vozila:</span> {{ $vehicleLine }}
             </div>
             <div class="small" style="margin-bottom:2px;">
-                <span class="bold">Datum rezervacije:</span> {{ ($reservation->created_at ?? now())->format('d.m.Y') }}
+                <span class="bold">Datum rezervacije:</span> {{ $reservation->reservation_date?->format('d.m.Y') ?? '—' }}
             </div>
             <div class="small" style="margin-bottom:2px;">
                 <span class="bold">Vrijeme dolaska:</span> {{ $reservation->dropOffTimeSlot?->time_slot ?? 'N/A' }}
