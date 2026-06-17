@@ -60,8 +60,6 @@ final class DailyTicketCheckoutTest extends TestCase
         $this->assertStringContainsString('maps.app.goo.gl/5Mp6LFS1gNLYFrSQA', $html);
         $this->assertStringContainsString('maps.app.goo.gl/BqfQWnYqy8mjTo1D8', $html);
         $this->assertStringContainsString('maps.app.goo.gl/1XKocEMgyYi7YoD99', $html);
-        $this->assertStringContainsString('maps.app.goo.gl/7nMtnAKLNubDNvVm8', $html);
-        $this->assertStringContainsString('maps.app.goo.gl/TxjFWQfkTGQARAE97', $html);
     }
 
     public function test_agency_reservation_page_shows_both_explanations_when_daily_ticket_selected(): void
@@ -85,8 +83,8 @@ final class DailyTicketCheckoutTest extends TestCase
         ], false))->assertOk()->getContent();
 
         $this->assertStringContainsString('id="panelBookingKindExplanation"', $html);
-        $this->assertStringContainsString('kupujete termine', $html);
-        $this->assertStringContainsString('kupujete pravo', $html);
+        $this->assertStringContainsString('unaprijed rezervisano', $html);
+        $this->assertStringContainsString('Stari grad', $html);
         $this->assertStringContainsString('maps.app.goo.gl/5Mp6LFS1gNLYFrSQA', $html);
         $this->assertStringContainsString('maps.app.goo.gl/BqfQWnYqy8mjTo1D8', $html);
         $this->assertStringNotContainsString('panelKindExplDaily', $html);
@@ -117,8 +115,6 @@ final class DailyTicketCheckoutTest extends TestCase
             'maps.app.goo.gl/5Mp6LFS1gNLYFrSQA',
             'maps.app.goo.gl/BqfQWnYqy8mjTo1D8',
             'maps.app.goo.gl/1XKocEMgyYi7YoD99',
-            'maps.app.goo.gl/7nMtnAKLNubDNvVm8',
-            'maps.app.goo.gl/TxjFWQfkTGQARAE97',
         ] as $url) {
             $this->assertStringContainsString($url, $html);
         }

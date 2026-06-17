@@ -84,32 +84,28 @@
                                 $benovoUrl = 'https://maps.app.goo.gl/5Mp6LFS1gNLYFrSQA';
                                 $autobokaUrl = 'https://maps.app.goo.gl/BqfQWnYqy8mjTo1D8';
                                 $pucUrl = 'https://maps.app.goo.gl/1XKocEMgyYi7YoD99';
-                                $perastUrl = 'https://maps.app.goo.gl/7nMtnAKLNubDNvVm8';
-                                $risanUrl = 'https://maps.app.goo.gl/TxjFWQfkTGQARAE97';
                                 $linkClass = 'font-medium text-red-700 hover:text-red-600 underline decoration-red-200 underline-offset-2';
                                 $benovoLink = '<a href="' . e($benovoUrl) . '" target="_blank" rel="noopener noreferrer" class="' . $linkClass . '">' . e($pn('booking_link_benovo', 'Benovo')) . '</a>';
                                 $autobokaLink = '<a href="' . e($autobokaUrl) . '" target="_blank" rel="noopener noreferrer" class="' . $linkClass . '">' . e($pn('booking_link_autoboka', 'Autoboka')) . '</a>';
                                 $pucLink = '<a href="' . e($pucUrl) . '" target="_blank" rel="noopener noreferrer" class="' . $linkClass . '">' . e($pn('booking_link_puc', 'Puč')) . '</a>';
-                                $perastLink = '<a href="' . e($perastUrl) . '" target="_blank" rel="noopener noreferrer" class="' . $linkClass . '">' . e($pn('booking_link_perast', 'Perast')) . '</a>';
-                                $risanLink = '<a href="' . e($risanUrl) . '" target="_blank" rel="noopener noreferrer" class="' . $linkClass . '">' . e($pn('booking_link_risan', 'Risan')) . '</a>';
                                 $explTimeSlots = str_replace(
                                     ':benovo_link',
                                     $benovoLink,
                                     $pn(
                                         'booking_kind_expl_time_slots',
                                         $locale === 'cg'
-                                            ? 'Termini — kupujete termine koji će se koristiti za ukrcaj i iskrcaj putnika na lokaciji :benovo_link.'
-                                            : 'Time slots — you purchase arrival and departure time slots for passenger pick-up and drop-off at :benovo_link.',
+                                            ? 'Termini — ako želite unaprijed rezervisano vrijeme dolaska i odlaska na lokaciji :benovo_link (obavezna lokacija). Ako Vam nisu na raspolaganju željeni termini odaberite dnevnu naknadu.'
+                                            : 'Time slots — if you want reserved arrival and departure times at :benovo_link (mandatory location). If your preferred time slots are unavailable, choose the daily fee.',
                                     ),
                                 );
                                 $explDaily = str_replace(
-                                    [':autoboka_link', ':puc_link', ':perast_link', ':risan_link'],
-                                    [$autobokaLink, $pucLink, $perastLink, $risanLink],
+                                    [':autoboka_link', ':puc_link'],
+                                    [$autobokaLink, $pucLink],
                                     $pn(
                                         'booking_kind_expl_daily_ticket',
                                         $locale === 'cg'
-                                            ? 'Dnevna naknada — kupujete pravo da u toku odabranog dana izvršite ukrcaj i iskrcaj putnika na parkinzima za autobuse :autoboka_link i :puc_link u periodu kada Vama odgovara. Ako nameravate da posetite :perast_link i :risan_link — odaberite ovu opciju.'
-                                            : 'Daily fee — you purchase the right to pick up and drop off passengers on the selected calendar day at the :autoboka_link and :puc_link bus parking areas, at times that suit you. Choose this option if you plan to visit :perast_link and :risan_link.',
+                                            ? 'Dnevna naknada — ako vam nije bitan tačan termin ili planirate obilazak više lokacija tokom dana, npr. Perast, Risan, žičara Kotor - Lovćen... U slučaju da želite da posjetite Stari grad, za iskrcaj i ukrcaj putnika koriste se lokacije parkinga :autoboka_link i :puc_link.'
+                                            : 'Daily fee — if an exact time is not important or you plan to visit several locations during the day, e.g. Perast, Risan, the Kotor–Lovćen cable car… When visiting the Old Town, passenger pick-up and drop-off use the :autoboka_link and :puc_link parking areas.',
                                     ),
                                 );
                             @endphp
