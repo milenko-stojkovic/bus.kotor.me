@@ -785,4 +785,60 @@ class AdminReservationEditHardeningTest extends TestCase
             ->assertSee('Izmeni', false)
             ->assertSee('Realizovana rezervacija', false);
     }
+
+    public function test_admin_edit_blocked_when_changing_into_conflicting_plate_and_slots(): void
+    {
+        $admin = $this->seedAdmin();
+        $slots = $this->seedSlotsAndVehicle();
+        $d = Carbon::now()->addDays(5)->toDateString();
+        $this->seedDailyForDate($d, [$slots['paidDrop'], $slots['paidPick'], $slots['s1'], $slots['s41']]);
+
+        Reservation::query()->create([
+            'merchant_transaction_id' => 'mt-conflict-existing',
+            'drop_off_time_slot_id' => $slots['paidDrop']->id,
+            'pick_up_time_slot_id' => $slots['paidPick']->id,
+            'reservation_date' => $d,
+            'user_name' => 'Existing',
+            'country' => 'ME',
+            'license_plate' => 'KOCON1',
+            'vehicle_type_id' => $slots['vt']->id,
+            'email' => 'existing@example.com',
+            'status' => 'paid',
+            'invoice_amount' => '25.00',
+            'email_sent' => Reservation::EMAIL_NOT_SENT,
+        ]);
+
+        $target = Reservation::query()->create([
+            'merchant_transaction_id' => 'mt-conflict-target',
+            'drop_off_time_slot_id' => $slots['s1']->id,
+            'pick_up_time_slot_id' => $slots['s41']->id,
+            'reservation_date' => $d,
+            'user_name' => 'Target',
+            'country' => 'ME',
+            'license_plate' => 'KOCON2',
+            'vehicle_type_id' => $slots['vt']->id,
+            'email' => 'target@example.com',
+            'status' => 'paid',
+            'invoice_amount' => '25.00',
+            'email_sent' => Reservation::EMAIL_NOT_SENT,
+        ]);
+
+        DailyParkingData::query()
+            ->whereDate('date', $d)
+            ->whereIn('time_slot_id', [$slots['s1']->id, $slots['s41']->id])
+            ->increment('reserved');
+
+        $this->actingAs($admin, 'panel_admin');
+
+        $this->put(route('panel_admin.reservations.update', $target, false), $this->validPayload($target, [
+            'license_plate' => 'KOCON1',
+            'drop_off_time_slot_id' => $slots['paidDrop']->id,
+            'pick_up_time_slot_id' => $slots['paidPick']->id,
+        ]))
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        $target->refresh();
+        $this->assertSame('KOCON2', $target->license_plate);
+    }
 }

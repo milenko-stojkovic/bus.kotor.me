@@ -694,4 +694,44 @@ class AdminPanelFreeReservationTest extends TestCase
         $this->assertNotNull($alert);
         $this->assertSame(AdminAlert::STATUS_IN_PROGRESS, $alert->status);
     }
+
+    public function test_admin_direct_free_reservation_blocked_for_duplicate_plate_slot(): void
+    {
+        Queue::fake();
+        $admin = $this->seedAdmin();
+        $date = Carbon::now()->addDay()->toDateString();
+        [$date, $s1, $s2, $vt] = $this->seedSlotsAndVehicle($date);
+
+        Reservation::query()->create([
+            'merchant_transaction_id' => 'mt-existing-free',
+            'drop_off_time_slot_id' => $s1->id,
+            'pick_up_time_slot_id' => $s2->id,
+            'reservation_date' => $date,
+            'user_name' => 'Existing',
+            'country' => 'ME',
+            'license_plate' => 'KO123AB',
+            'vehicle_type_id' => $vt->id,
+            'email' => 'ex@example.com',
+            'status' => 'paid',
+            'invoice_amount' => '10.00',
+            'email_sent' => Reservation::EMAIL_NOT_SENT,
+            'created_by_admin' => false,
+        ]);
+
+        $this->actingAs($admin, 'panel_admin')
+            ->post(route('panel_admin.free-reservations.store', [], false), [
+                'reservation_date' => $date,
+                'drop_off_time_slot_id' => $s1->id,
+                'pick_up_time_slot_id' => $s2->id,
+                'vehicle_type_id' => $vt->id,
+                'name' => 'Škola Primjer',
+                'country' => 'ME',
+                'license_plate' => 'KO123AB',
+                'email' => 'skola2@example.com',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        $this->assertSame(1, Reservation::query()->where('license_plate', 'KO123AB')->count());
+    }
 }

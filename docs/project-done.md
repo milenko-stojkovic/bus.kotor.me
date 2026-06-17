@@ -168,6 +168,10 @@ Hronološki najnovije na vrhu unutar svake sekcije. Pri zatvaranju zadatka dodaj
 - Payment V1 tok: checkout, redirect, callback, success/fail, `merchant_transaction_id`, `retry_token`, guest retry API.
 - Dokumenti: `fake-vs-real-contract-parity.md`, `fake-payment-and-fiscal-qa-checklist.md`, `scheduled-tasks-overview.md`, itd.
 
+## 2026-06-17 (staging validation)
+
+- **Termini duplicate plate/slot rule:** `DuplicateReservationAttemptService` — ista normalizovana tablica + isti datum blokira novi Termini checkout/izmjenu ako se poklapa dolazak **ili** odlazak (`paid`/`free` + pending `temp_data`); cross-match ne blokira; Dnevna naknada izuzeta; avans checkout i admin free/fulfill/edit pokriveni; kasni bank SUCCESS uz konflikt → `late_manual_review`. Testovi: `TerminiDuplicateReservationTest`, prošireni admin testovi.
+
 ---
 
 ## Ključni fajlovi (referenca, ne potpuna lista)

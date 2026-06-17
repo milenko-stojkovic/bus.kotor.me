@@ -634,6 +634,8 @@ class UiTranslationsSeeder extends Seeder
 
             ['group' => 'panel', 'key' => 'booking_section_title', 'locale' => 'en', 'text' => 'New reservation'],
             ['group' => 'panel', 'key' => 'booking_section_title', 'locale' => 'cg', 'text' => 'Nova rezervacija'],
+            ['group' => 'booking', 'key' => 'duplicate_termini_slot', 'locale' => 'en', 'text' => 'A reservation already exists for this license plate on the selected date with the same arrival time or the same departure time.'],
+            ['group' => 'booking', 'key' => 'duplicate_termini_slot', 'locale' => 'cg', 'text' => 'Za istu registarsku tablicu već postoji rezervacija za odabrani datum sa istim vremenom dolaska ili istim vremenom odlaska.'],
             ['group' => 'panel', 'key' => 'booking_kind_legend', 'locale' => 'en', 'text' => 'Reservation type'],
             ['group' => 'panel', 'key' => 'booking_kind_legend', 'locale' => 'cg', 'text' => 'Vrsta rezervacije'],
             ['group' => 'panel', 'key' => 'booking_kind_time_slots', 'locale' => 'en', 'text' => 'Time slots'],

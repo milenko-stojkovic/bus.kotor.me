@@ -162,7 +162,7 @@ class DuplicateReservationAttemptTest extends TestCase
                 'accept_privacy' => 1,
             ])
             ->assertStatus(422)
-            ->assertDontSee('Već postoji rezervacija za ovaj datum, odabrani termin i ovu registarsku tablicu.', false);
+            ->assertDontSee('A reservation already exists for this license plate on the selected date with the same arrival time or the same departure time.', false);
 
         $this->assertSame(0, TempData::query()->count());
     }

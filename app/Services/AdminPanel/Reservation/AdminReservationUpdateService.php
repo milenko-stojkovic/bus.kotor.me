@@ -7,6 +7,7 @@ use App\Models\ListOfTimeSlot;
 use App\Models\Reservation;
 use App\Models\VehicleType;
 use App\Services\AdminPanel\Blocking\BlockReservationAdjustmentValidator;
+use App\Services\Reservation\DuplicateReservationAttemptService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -16,6 +17,7 @@ final class AdminReservationUpdateService
     public function __construct(
         private BlockReservationAdjustmentValidator $finalValidator,
         private AdminReservationSlotRules $slotRules,
+        private DuplicateReservationAttemptService $duplicateReservationAttemptService,
     ) {}
 
     /**
@@ -47,6 +49,16 @@ final class AdminReservationUpdateService
         $day = Carbon::parse($newDate)->startOfDay();
 
         $this->slotRules->assertPairAllowedForReservation($reservation, $dropSlot, $pickSlot, $day);
+
+        if ($reservation->isTimeSlots()) {
+            $this->duplicateReservationAttemptService->assertNoConflict(
+                $newDate,
+                (string) $data['license_plate'],
+                $newDrop,
+                $newPick,
+                exceptReservationId: (int) $reservation->id,
+            );
+        }
 
         $newVtId = (int) $data['vehicle_type_id'];
         $vt = VehicleType::query()->findOrFail($newVtId);

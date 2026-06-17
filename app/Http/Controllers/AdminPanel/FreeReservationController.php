@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\AdminPanel;
 
 use App\Exceptions\AdminFreeReservationSlotsUnavailableException;
+use App\Exceptions\DuplicateTerminiReservationException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AdminPanel\AdminFreeReservationRequest;
 use App\Http\Requests\AdminPanel\AdminFreeReservationRequestFulfillRequest;
@@ -145,6 +146,14 @@ class FreeReservationController extends Controller
                 'error',
                 'Izabrani termini više nisu dostupni (zauzeti ili blokirani). Svi unosi su sačuvani osim datuma i vremena — izaberite ponovo termine.'
             );
+        } catch (DuplicateTerminiReservationException $e) {
+            return redirect()->to(route('panel_admin.free-reservations', [
+                'name' => $request->input('name'),
+                'country' => $request->input('country'),
+                'license_plate' => $request->input('license_plate'),
+                'email' => $request->input('email'),
+                'vehicle_type_id' => $request->input('vehicle_type_id'),
+            ], false))->with('error', $e->getMessage());
         }
 
         return redirect()->to(route('panel_admin.free-reservations', [], false))
@@ -165,6 +174,8 @@ class FreeReservationController extends Controller
             $result = $service->fulfill($freeReservationRequest);
         } catch (AdminFreeReservationSlotsUnavailableException) {
             return back()->with('error', 'Kapacitet više nije dostupan za traženi datum/termine. Nijedna rezervacija nije kreirana.');
+        } catch (DuplicateTerminiReservationException $e) {
+            return back()->with('error', $e->getMessage());
         }
 
         if (! $result['mail_sent']) {

@@ -98,7 +98,7 @@ Kontroler: **`WarningsController::index`**. Stranica ima tri bloka: **Upozorenja
 | Ruta | Namena |
 |------|--------|
 | `GET /admin/besplatne-rezervacije` | `panel_admin.free-reservations` — forma (korak kao gost + polja za snapshot). |
-| `POST /admin/besplatne-rezervacije` | `panel_admin.free-reservations.store` — kreiranje. |
+| `POST /admin/besplatne-rezervacije` | `panel_admin.free-reservations.store` — kreiranje (isti Termini duplicate check kao checkout). |
 | `GET /admin/besplatne-rezervacije/fzbr/attachments/{attachment}/preview` | `panel_admin.fzbr-attachments.preview` — pregled priloga za **fulfilled/rejected** FZBR (lokalno ili MEGA preview). |
 
 - **Kontroler:** `App\Http\Controllers\AdminPanel\FreeReservationController`; **validacija:** `AdminFreeReservationRequest`.
@@ -137,7 +137,7 @@ Kontroler: **`WarningsController::index`**. Stranica ima tri bloka: **Upozorenja
 - **Limo putnička vozila (4+1–7+1):** admin pretraga/uredi/PDF/analitika **ne mijenjaju** prikaz historijskih rezervacija sa tim kategorijama; nova ograničenja važe samo za **booking** (Termini isključuju tip; dnevna naknada u agenciji ga zadržava) — v. `docs/agency-panel.md`.
 - **Heuristika imena/emaila:** `AdminReservationSearchHeuristic` — jednostavne LIKE varijante (jedno izostavljeno slovo, zamena dva susedna; za ime normalizacija **doo** / **d.o.o.**).
 - **Povratak sa edit strane:** query parametar **`rq`** čuva enkodiran prethodni query string pretrage; **`Odkaži`** i uspešan **`PUT`** vode na `GET /admin/rezervacije?{rq}`.
-- **Izmena termina po tipu:** `AdminReservationSlotRules` — **paid** i **free + `created_by_admin`** mogu na bilo koje validne termine; **free bez admin kreacije** samo u besplatnom prozoru (`FreeReservationRules::isFreeReservation`, npr. 1/41). **Paid** ostaje paid i pri premještaju u free termine; **`invoice_amount` se ne preračunava**. Status, MTID, `reservation_kind` i fiskalno stanje se **ne** mijenjaju.
+- **Izmena termina po tipu:** `AdminReservationSlotRules` — **paid** i **free + `created_by_admin`** mogu na bilo koje validne termine; **free bez admin kreacije** samo u besplatnom prozoru (`FreeReservationRules::isFreeReservation`, npr. 1/41). **Paid** ostaje paid i pri premještaju u free termine; **`invoice_amount` se ne preračunava**. Status, MTID, `reservation_kind` i fiskalno stanje se **ne** mijenjaju. **Termini duplicate check** pri izmjeni datuma/slotova/tablice (`DuplicateReservationAttemptService`, isključuje trenutnu rezervaciju).
 - **Posle prošlog dolaska (isti dan):** `AdminReservationEditPolicy::isPickUpOnlyMode` — dozvoljena je izmjena samo pick-up termina i ostalih polja (ne datuma ni drop-off).
 - **Dnevna naknada:** forma bez termina; `AdminDailyTicketUpdateService` — datum, ime, država, tablica, tip vozila, email; bez konverzije vrste i bez kapaciteta.
 - **Kategorija vozila:** u edit formi samo tipovi sa **`price` ≤** cene trenutnog tipa (`vehicle_types` po postojećem poretku cene).

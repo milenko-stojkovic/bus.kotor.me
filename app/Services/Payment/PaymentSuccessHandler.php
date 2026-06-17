@@ -8,8 +8,10 @@ use App\Models\DailyParkingData;
 use App\Models\Reservation;
 use App\Models\TempData;
 use App\Services\AdminPanel\Blocking\BlockZoneWorklistService;
+use App\Services\Reservation\DuplicateReservationAttemptService;
 use App\Support\QueueMode;
 use App\Support\ReservationInvoiceAmount;
+use App\Support\ReservationKind;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -52,6 +54,32 @@ class PaymentSuccessHandler
                     'raw_callback_payload' => $rawPayload,
                 ]);
                 TempData::logStateTransition($temp->merchant_transaction_id, $from, TempData::STATUS_LATE_SUCCESS, 'SUCCESS but lock no longer valid');
+
+                return;
+            }
+
+            if ($temp->isTimeSlots() && $this->hasTerminiPlateConflict($temp)) {
+                $from = $temp->status;
+                $temp->update([
+                    'status' => TempData::STATUS_LATE_MANUAL_REVIEW,
+                    'raw_callback_payload' => $rawPayload,
+                    'resolution_reason' => 'duplicate_termini_plate_slot',
+                ]);
+                TempData::logStateTransition(
+                    $temp->merchant_transaction_id,
+                    $from,
+                    TempData::STATUS_LATE_MANUAL_REVIEW,
+                    'SUCCESS but duplicate Termini plate/slot conflict',
+                );
+                $this->doReleaseSoftLock($temp, false);
+                Log::channel('payments')->warning('payment_success_duplicate_termini_blocked', [
+                    'merchant_transaction_id' => $temp->merchant_transaction_id,
+                    'temp_data_id' => $temp->id,
+                    'license_plate' => $temp->license_plate,
+                    'reservation_date' => $temp->reservation_date?->toDateString(),
+                    'drop_off_time_slot_id' => $temp->drop_off_time_slot_id,
+                    'pick_up_time_slot_id' => $temp->pick_up_time_slot_id,
+                ]);
 
                 return;
             }
@@ -165,7 +193,7 @@ class PaymentSuccessHandler
             'reservation_date' => $temp->reservation_date,
             'user_name' => $temp->user_name,
             'country' => $temp->country,
-            'license_plate' => $temp->license_plate,
+            'license_plate' => DuplicateReservationAttemptService::normalizeLicensePlate($temp->license_plate),
             'vehicle_type_id' => $temp->vehicle_type_id,
             'email' => $temp->email,
             'preferred_locale' => $temp->preferred_locale,
@@ -174,5 +202,25 @@ class PaymentSuccessHandler
             'email_sent' => Reservation::EMAIL_NOT_SENT,
             'created_by_admin' => false,
         ]);
+    }
+
+    private function hasTerminiPlateConflict(TempData $temp): bool
+    {
+        if ($temp->drop_off_time_slot_id === null || $temp->pick_up_time_slot_id === null) {
+            return false;
+        }
+
+        $date = $temp->reservation_date?->toDateString() ?? '';
+        if ($date === '') {
+            return false;
+        }
+
+        return app(DuplicateReservationAttemptService::class)->existsConflict(
+            $date,
+            (string) $temp->license_plate,
+            (int) $temp->drop_off_time_slot_id,
+            (int) $temp->pick_up_time_slot_id,
+            exceptTempDataId: (int) $temp->id,
+        );
     }
 }

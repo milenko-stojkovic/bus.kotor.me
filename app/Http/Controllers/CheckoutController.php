@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Contracts\PaymentService;
 use App\Contracts\PaymentSessionResult;
+use App\Exceptions\DuplicateTerminiReservationException;
 use App\Exceptions\NoCapacityException;
 use App\Helpers\LocaleHelper;
 use App\Http\Requests\CheckoutReservationRequest;
@@ -73,6 +74,18 @@ class CheckoutController extends Controller
         $panelAuthBooking = $request->user() !== null && $request->boolean('auth_panel_booking');
         $paymentMethod = $panelAuthBooking ? (string) ($request->validated('payment_method') ?? 'card') : 'card';
 
+        $duplicateResponse = $this->duplicateConflictResponse(
+            $request,
+            $duplicateAttemptService,
+            $date,
+            (string) $snapshot['license_plate'],
+            $dropOffSlotId,
+            $pickUpSlotId,
+        );
+        if ($duplicateResponse !== null) {
+            return $duplicateResponse;
+        }
+
         // Agency advance payment (feature-flagged). Only for authenticated panel booking; never for guest.
         if ($panelAuthBooking && $paymentMethod === 'advance' && ! $isFree) {
             if (! (bool) config('features.advance_payments')) {
@@ -90,9 +103,17 @@ class CheckoutController extends Controller
                 : Str::uuid()->toString();
 
             try {
-                $reservation = DB::transaction(function () use ($date, $dropOffSlotId, $pickUpSlotId, $snapshot, $invoiceAmount, $userId, $merchantTransactionId) {
+                $reservation = DB::transaction(function () use ($date, $dropOffSlotId, $pickUpSlotId, $snapshot, $invoiceAmount, $userId, $merchantTransactionId, $duplicateAttemptService, $request) {
                     // Lock agency user row to serialize advance spending (prevents double-spend).
                     User::query()->whereKey($userId)->lockForUpdate()->first();
+
+                    $duplicateAttemptService->assertNoConflict(
+                        $date,
+                        (string) $snapshot['license_plate'],
+                        $dropOffSlotId,
+                        $pickUpSlotId,
+                        locale: $request->user()?->lang ?? app()->getLocale(),
+                    );
 
                     $slotIds = array_values(array_unique([(int) $dropOffSlotId, (int) $pickUpSlotId]));
                     $dailyRows = DailyParkingData::query()
@@ -172,6 +193,8 @@ class CheckoutController extends Controller
                 } else {
                     throw $e;
                 }
+            } catch (DuplicateTerminiReservationException $e) {
+                return back()->withInput()->with('error', $e->getMessage())->withErrors(['reservation' => $e->getMessage()]);
             } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
                 if ($e->getStatusCode() === 422) {
                     return back()->withInput()->with('error', $e->getMessage())->withErrors(['payment_method' => $e->getMessage()]);
@@ -195,16 +218,6 @@ class CheckoutController extends Controller
 
             return redirect()->to(route('panel.reservations', [], false))
                 ->with('checkout_banner', CheckoutResultFlash::forReservationSuccess(false, true, false));
-        }
-
-        // Business validation (pre-payment): prevent duplicate attempts for same date+plate+same drop OR same pick.
-        // NOTE: intentionally does NOT block cross-match (drop=pick / pick=drop).
-        if ($duplicateAttemptService->existsConflict($date, (string) $snapshot['license_plate'], $dropOffSlotId, $pickUpSlotId)) {
-            $message = 'Već postoji rezervacija za ovaj datum, odabrani termin i ovu registarsku tablicu. Proverite podatke ili kontaktirajte podršku.';
-
-            return $request->expectsJson()
-                ? response()->json(['message' => $message], 422)
-                : back()->withInput()->with('error', $message)->withErrors(['reservation' => $message]);
         }
 
         // Već postoji pending za iste slotove + user/email
@@ -237,7 +250,15 @@ class CheckoutController extends Controller
         $retryToken = Str::uuid()->toString();
 
         try {
-            $temp = DB::transaction(function () use ($request, $date, $dropOffSlotId, $pickUpSlotId, $merchantTransactionId, $retryToken, $snapshot, $isFree) {
+            $temp = DB::transaction(function () use ($request, $date, $dropOffSlotId, $pickUpSlotId, $merchantTransactionId, $retryToken, $snapshot, $isFree, $duplicateAttemptService) {
+                $duplicateAttemptService->assertNoConflict(
+                    $date,
+                    (string) $snapshot['license_plate'],
+                    $dropOffSlotId,
+                    $pickUpSlotId,
+                    locale: $request->user()?->lang ?? app()->getLocale(),
+                );
+
                 $slotIds = array_values(array_unique([
                     (int) $dropOffSlotId,
                     $pickUpSlotId,
@@ -308,6 +329,12 @@ class CheckoutController extends Controller
 
                 return $temp;
             });
+        } catch (DuplicateTerminiReservationException $e) {
+            $message = $e->getMessage();
+
+            return $request->expectsJson()
+                ? response()->json(['message' => $message], 422)
+                : back()->withInput()->with('error', $message)->withErrors(['reservation' => $message]);
         } catch (NoCapacityException $e) {
             $message = $e->getMessage();
 
@@ -612,6 +639,26 @@ class CheckoutController extends Controller
         return $this->createSessionFailedResponse($request, $session);
     }
 
+    private function duplicateConflictResponse(
+        CheckoutReservationRequest $request,
+        DuplicateReservationAttemptService $duplicateAttemptService,
+        string $date,
+        string $licensePlate,
+        int $dropOffSlotId,
+        int $pickUpSlotId,
+    ): RedirectResponse|JsonResponse|null {
+        if (! $duplicateAttemptService->existsConflict($date, $licensePlate, $dropOffSlotId, $pickUpSlotId)) {
+            return null;
+        }
+
+        $locale = $request->user()?->lang ?? app()->getLocale();
+        $message = $duplicateAttemptService->conflictMessage($locale);
+
+        return $request->expectsJson()
+            ? response()->json(['message' => $message], 422)
+            : back()->withInput()->with('error', $message)->withErrors(['reservation' => $message]);
+    }
+
     private function resolveSnapshotInput(CheckoutReservationRequest $request): array
     {
         $vehicleId = $request->validated('vehicle_id');
@@ -624,7 +671,7 @@ class CheckoutController extends Controller
                 'vehicle_id' => $vehicle->id,
                 'user_name' => (string) ($request->user()->name ?? ''),
                 'country' => (string) ($request->user()->country ?? ''),
-                'license_plate' => $vehicle->license_plate,
+                'license_plate' => DuplicateReservationAttemptService::normalizeLicensePlate($vehicle->license_plate),
                 'vehicle_type_id' => (int) $vehicle->vehicle_type_id,
                 'email' => (string) ($request->user()->email ?? ''),
             ];
@@ -634,7 +681,7 @@ class CheckoutController extends Controller
             'vehicle_id' => null,
             'user_name' => (string) $request->validated('name'),
             'country' => (string) $request->validated('country'),
-            'license_plate' => (string) $request->validated('license_plate'),
+            'license_plate' => DuplicateReservationAttemptService::normalizeLicensePlate((string) $request->validated('license_plate')),
             'vehicle_type_id' => (int) $request->validated('vehicle_type_id'),
             'email' => (string) $request->validated('email'),
         ];

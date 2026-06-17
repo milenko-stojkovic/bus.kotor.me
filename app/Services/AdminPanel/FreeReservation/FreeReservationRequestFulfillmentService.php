@@ -8,6 +8,7 @@ use App\Models\DailyParkingData;
 use App\Models\FreeReservationRequest;
 use App\Models\Reservation;
 use App\Services\Pdf\FreeReservationPdfGenerator;
+use App\Services\Reservation\DuplicateReservationAttemptService;
 use App\Support\ReservationInvoiceAmount;
 use App\Support\UiText;
 use Illuminate\Support\Facades\DB;
@@ -22,6 +23,7 @@ class FreeReservationRequestFulfillmentService
     public function __construct(
         private FreeReservationPdfGenerator $pdfGenerator,
         private \App\Services\AdminPanel\Blocking\BlockZoneWorklistService $blockZoneWorklistService,
+        private DuplicateReservationAttemptService $duplicateReservationAttemptService,
     ) {}
 
     /**
@@ -82,6 +84,13 @@ class FreeReservationRequestFulfillmentService
                 $pick = (int) $seg->pick_up_time_slot_id;
 
                 foreach ($seg->vehicles as $v) {
+                    $this->duplicateReservationAttemptService->assertNoConflict(
+                        $date,
+                        (string) $v->license_plate,
+                        $drop,
+                        $pick,
+                    );
+
                     $mtid = Str::uuid()->toString();
                     $reservation = Reservation::query()->create([
                         'free_reservation_request_id' => $req->id,

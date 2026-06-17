@@ -106,7 +106,7 @@ Na **`GET /panel/reservations`** agencija bira **Termini** (default) ili **Dnevn
 - Za goste i agencije važe ista poslovna pravila: Dnevna naknada nema slotove, ne koristi `daily_parking_data` i ne podliježe kontroli kapaciteta.
 - Putnička vozila (limo servis, 4+1 do 7+1) dostupna su samo za Dnevnu naknadu i nisu dostupna za Termini rezervacije.
 
-- **Termini:** postojeći tok — obavezni arrival/departure slotovi, kapacitet preko `daily_parking_data`, duplicate check po slotu+tablici.
+- **Termini:** obavezni arrival/departure slotovi, kapacitet preko `daily_parking_data`. **Dupli Termini:** ista normalizovana tablica + isti datum ne može imati drugu rezervaciju sa istim **dolaskom** ili istim **odlaskom** (cross-match dolazak=odlazak druge rezervacije **ne** blokira). Provjera uključuje `paid`/`free` rezervacije i aktivni `temp_data` pending; ne važi za Dnevnu naknadu. Servis: `DuplicateReservationAttemptService`.
 - **Dnevna naknada:** isti iznos po kategoriji vozila kao plaćena slot rezervacija; **bez** slotova, **bez** `daily_parking_data`, **bez** slot duplicate checka; isti plate+datum može imati i slot rezervaciju.
 - Checkout: `POST /checkout` sa `auth_panel_booking=1` i `reservation_kind=daily_ticket` (kartica → `temp_data` + banka; avans → odmah `Reservation` kao za Termini, bez lock-a na slotovima).
 - PDF i email: fiskalni/ne-fiskalni račun i potvrda prikazuju **Dnevna naknada**, datum važenja i lokacije Autoboka/Puč (bez termina).

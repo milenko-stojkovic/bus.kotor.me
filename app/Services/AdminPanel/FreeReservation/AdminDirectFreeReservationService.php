@@ -3,10 +3,12 @@
 namespace App\Services\AdminPanel\FreeReservation;
 
 use App\Exceptions\AdminFreeReservationSlotsUnavailableException;
+use App\Exceptions\DuplicateTerminiReservationException;
 use App\Jobs\SendFreeReservationConfirmationJob;
 use App\Models\DailyParkingData;
 use App\Models\Reservation;
 use App\Services\AdminPanel\Blocking\BlockZoneWorklistService;
+use App\Services\Reservation\DuplicateReservationAttemptService;
 use App\Support\ReservationInvoiceAmount;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -20,6 +22,7 @@ final class AdminDirectFreeReservationService
 {
     public function __construct(
         private BlockZoneWorklistService $blockZoneWorklistService,
+        private DuplicateReservationAttemptService $duplicateReservationAttemptService,
     ) {}
 
     /**
@@ -60,6 +63,13 @@ final class AdminDirectFreeReservationService
                 }
                 $locked[$slotId] = $row;
             }
+
+            $this->duplicateReservationAttemptService->assertNoConflict(
+                $date,
+                (string) $data['license_plate'],
+                $drop,
+                $pick,
+            );
 
             $created = Reservation::query()->create([
                 'user_id' => null,
