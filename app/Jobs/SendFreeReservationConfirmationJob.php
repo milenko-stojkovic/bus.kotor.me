@@ -107,25 +107,9 @@ class SendFreeReservationConfirmationJob implements ShouldQueue
         $fromAddress = config('mail.from.address');
         $fromName = config('mail.from.name');
 
-        $subjectTemplate = UiText::t(
-            'emails',
-            'free_reservation_subject',
-            'Free reservation confirmed #%1$d',
-            $emailLocale
-        );
-        $subject = sprintf($subjectTemplate, $reservation->id);
+        $subject = $this->resolveFreeReservationEmailSubject($emailLocale);
 
-        $bodyTemplate = UiText::t(
-            'emails',
-            'free_reservation_body',
-            "Hello,\n\nYour free parking reservation #%1\$d is confirmed for %2\$s.\nNo payment was required — this email is not a fiscal invoice.\n\nThank you.",
-            $emailLocale
-        );
-        $body = sprintf(
-            $bodyTemplate,
-            $reservation->id,
-            $reservation->reservation_date->format('Y-m-d')
-        );
+        $body = $this->buildConfirmationText($reservation, $emailLocale);
 
         $tmpPath = null;
         try {
@@ -177,5 +161,52 @@ class SendFreeReservationConfirmationJob implements ShouldQueue
             }
             app()->setLocale($previousLocale);
         }
+    }
+
+    private function buildConfirmationText(Reservation $reservation, string $emailLocale): string
+    {
+        $name = trim((string) ($reservation->user_name ?? ''));
+        if ($name === '') {
+            $name = $emailLocale === 'cg' ? 'korisniče' : 'customer';
+        }
+
+        $bodyTemplate = $this->resolveFreeReservationEmailBodyTemplate($emailLocale);
+
+        return str_replace('%1$s', $name, $bodyTemplate);
+    }
+
+    private function resolveFreeReservationEmailSubject(string $emailLocale): string
+    {
+        $fallback = $emailLocale === 'cg'
+            ? 'Potvrda besplatne rezervacije'
+            : 'Free reservation confirmation';
+
+        $subject = UiText::t('emails', 'free_reservation_subject', $fallback, $emailLocale);
+
+        if (str_contains($subject, '%')) {
+            return $fallback;
+        }
+
+        return $subject;
+    }
+
+    private function resolveFreeReservationEmailBodyTemplate(string $emailLocale): string
+    {
+        $fallback = $this->defaultFreeReservationEmailBodyTemplate($emailLocale);
+
+        $bodyTemplate = UiText::t('emails', 'free_reservation_body', $fallback, $emailLocale);
+
+        if (str_contains($bodyTemplate, '%1$d') || str_contains($bodyTemplate, '%2$s')) {
+            return $fallback;
+        }
+
+        return $bodyTemplate;
+    }
+
+    private function defaultFreeReservationEmailBodyTemplate(string $emailLocale): string
+    {
+        return $emailLocale === 'cg'
+            ? "Poštovani %1\$s,\n\nVaša besplatna rezervacija parkinga je uspješno kreirana.\n\nUz ovu poruku u prilogu se nalazi potvrda besplatne rezervacije parkinga.\n\nMolimo Vas da je sačuvate radi evidencije.\n\nS poštovanjem,\nOpština Kotor"
+            : "Dear %1\$s,\n\nYour free parking reservation has been successfully created.\n\nAttached to this email you will find the free parking reservation confirmation.\n\nPlease keep this confirmation for your records.\n\nBest regards,\nMunicipality of Kotor";
     }
 }

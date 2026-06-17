@@ -156,10 +156,10 @@ class UiTranslationsSeeder extends Seeder
             ['group' => 'checkout_result', 'key' => 'back_to_booking', 'locale' => 'cg', 'text' => 'Nazad na rezervaciju'],
             ['group' => 'checkout_result', 'key' => 'back_to_booking', 'locale' => 'en', 'text' => 'Back to booking'],
 
-            ['group' => 'emails', 'key' => 'free_reservation_subject', 'locale' => 'en', 'text' => 'Free reservation confirmed #%1$d'],
-            ['group' => 'emails', 'key' => 'free_reservation_subject', 'locale' => 'cg', 'text' => 'Besplatna rezervacija potvrđena #%1$d'],
-            ['group' => 'emails', 'key' => 'free_reservation_body', 'locale' => 'en', 'text' => "Hello,\n\nYour free parking reservation #%1\$d is confirmed for %2\$s.\nNo payment was required — this email is not a fiscal invoice.\nA PDF confirmation is attached.\n\nThank you."],
-            ['group' => 'emails', 'key' => 'free_reservation_body', 'locale' => 'cg', 'text' => "Zdravo,\n\nVaša besplatna rezervacija parkinga #%1\$d potvrđena je za %2\$s.\nPlaćanje nije bilo potrebno — ovaj email nije fiskalni račun.\nU prilogu je PDF potvrda.\n\nHvala vam."],
+            ['group' => 'emails', 'key' => 'free_reservation_subject', 'locale' => 'en', 'text' => 'Free reservation confirmation'],
+            ['group' => 'emails', 'key' => 'free_reservation_subject', 'locale' => 'cg', 'text' => 'Potvrda besplatne rezervacije'],
+            ['group' => 'emails', 'key' => 'free_reservation_body', 'locale' => 'en', 'text' => "Dear %1\$s,\n\nYour free parking reservation has been successfully created.\n\nAttached to this email you will find the free parking reservation confirmation.\n\nPlease keep this confirmation for your records.\n\nBest regards,\nMunicipality of Kotor"],
+            ['group' => 'emails', 'key' => 'free_reservation_body', 'locale' => 'cg', 'text' => "Poštovani %1\$s,\n\nVaša besplatna rezervacija parkinga je uspješno kreirana.\n\nUz ovu poruku u prilogu se nalazi potvrda besplatne rezervacije parkinga.\n\nMolimo Vas da je sačuvate radi evidencije.\n\nS poštovanjem,\nOpština Kotor"],
 
             // Free reservation request (multi-reservation fulfillment) email
             ['group' => 'emails', 'key' => 'free_request_fulfilled_subject', 'locale' => 'en', 'text' => 'Free reservations request processed (%1$d)'],
