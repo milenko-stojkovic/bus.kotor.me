@@ -11,11 +11,13 @@ use Carbon\Carbon;
  */
 final class ControlArrivalSlots
 {
+    public const PREVIEW_HOURS_BEFORE_START = 1;
+
     /**
-     * @param  int  $hoursBeforeStart  Koliko sati prije početka termina počinje prikaz (default 3).
+     * @param  int  $hoursBeforeStart  Koliko sati prije početka termina počinje prikaz (Control: 1 h).
      * @return list<array{at: Carbon, label: string, reservations: \Illuminate\Database\Eloquent\Collection<int, Reservation>}>
      */
-    public function groupsWithinNextHours(int $hoursBeforeStart = 3): array
+    public function groupsWithinNextHours(int $hoursBeforeStart = self::PREVIEW_HOURS_BEFORE_START): array
     {
         $tz = (string) config('reservations.operations_timezone', 'Europe/Podgorica');
         $now = Carbon::now($tz);

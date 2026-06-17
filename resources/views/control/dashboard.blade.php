@@ -18,7 +18,7 @@
 
     <section class="mb-10 bg-white shadow rounded-lg p-4 sm:p-6">
         <h2 class="text-lg font-semibold text-gray-900 mb-4">Dolasci po terminima</h2>
-        <p class="text-sm text-gray-600 mb-4">Prikaz od 3 sata prije početka termina do njegovog kraja (npr. 20:00–24:00 do ponoći; sutrašnji ranji termin od 21:00 prethodne večeri).</p>
+        <p class="text-sm text-gray-600 mb-4">Prikaz od 1 sat prije početka termina do njegovog kraja. Za starije termine koristite pretragu.</p>
 
         @if(empty($arrivalGroups))
             <p class="text-gray-600">Nema termina u prozoru prikaza.</p>

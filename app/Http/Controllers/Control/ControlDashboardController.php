@@ -28,7 +28,7 @@ class ControlDashboardController extends Controller
                 ->withInput($request->except('search'));
         }
 
-        $arrivalGroups = $arrivals->groupsWithinNextHours(3);
+        $arrivalGroups = $arrivals->groupsWithinNextHours(ControlArrivalSlots::PREVIEW_HOURS_BEFORE_START);
 
         $searchResults = null;
         if ($request->hasSearchCriteria()) {

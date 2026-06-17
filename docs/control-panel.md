@@ -58,7 +58,7 @@ Ako planiraš da u Android “control/staff” aplikaciji postoji ekran “Agenc
 Servis: **`App\Services\Control\ControlArrivalSlots`**.
 
 - Za **danas** i **sutra** (kalendarski dan **`reservation_date`**) prolazi se svaki red **`list_of_time_slots`**.
-- Termin ulazi u listu ako je trenutno vreme u prozoru **`ListOfTimeSlot::isInArrivalControlWindow($now, $day, 3)`**: od **(početak termina − 3 h)** do **kraja termina** (uključujući parsiranje **`24:00`** kao ponoći **sledećeg** dana — v. `getEndTimeForDate`).
+- Termin ulazi u listu ako je trenutno vreme u prozoru **`ListOfTimeSlot::isInArrivalControlWindow($now, $day, 1)`** (`ControlArrivalSlots::PREVIEW_HOURS_BEFORE_START`): od **(početak termina − 1 h)** do **kraja termina** (uključujući parsiranje **`24:00`** kao ponoći **sledećeg** dana — v. `getEndTimeForDate`). Kraći prozor smanjuje listu u špicu; starije termine kontrolor traži pretragom.
 - **`$now`** i dani su u **`config('reservations.operations_timezone')`** (podrazumevano kao `APP_TIMEZONE`, npr. `Europe/Podgorica`).
 
 Za svaki vidljivi termin učitavaju se rezervacije gde je **`reservation_date`** taj dan i gde je termin ili **drop-off** ili **pick-up**:

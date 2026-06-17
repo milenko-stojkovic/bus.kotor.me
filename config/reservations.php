@@ -3,7 +3,7 @@
 return [
     /*
     | Vremenska zona za operativne termine (list_of_time_slots su lokalni sati).
-    | Control „dolasci u naredna 3 sata“ i admin scope nextThreeHours koriste ovo uz Carbon::now().
+    | Control „dolasci po terminima“ koriste 1 h prije početka; admin scope nextThreeHours i dalje 3 h.
     | Podrazumijevano = APP_TIMEZONE (vidi config/app.php).
     */
     'operations_timezone' => env('RESERVATIONS_OPERATIONS_TIMEZONE', env('APP_TIMEZONE', 'Europe/Podgorica')),

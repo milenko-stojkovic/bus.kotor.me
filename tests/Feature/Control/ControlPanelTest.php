@@ -62,7 +62,7 @@ class ControlPanelTest extends TestCase
         $this->assertGuest('control');
     }
 
-    public function test_arrivals_lists_reservation_in_next_three_hour_window(): void
+    public function test_arrivals_lists_reservation_in_next_one_hour_window(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-06-10 12:00:00', 'Europe/Belgrade'));
 
@@ -90,6 +90,33 @@ class ControlPanelTest extends TestCase
         $response->assertSee('13:00 - 13:20', false);
         $response->assertSee('PG AA 123', false);
         $response->assertSee('Van', false);
+    }
+
+    public function test_arrivals_hides_reservation_more_than_one_hour_before_slot_start(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-06-10 11:00:00', 'Europe/Belgrade'));
+
+        $drop = ListOfTimeSlot::query()->create(['time_slot' => '13:00 - 13:20']);
+        $pick = ListOfTimeSlot::query()->create(['time_slot' => '20:00 - 20:20']);
+        $vehicleType = $this->createVehicleType('Van');
+        $this->createControlAdmin();
+
+        Reservation::query()->create([
+            'drop_off_time_slot_id' => $drop->id,
+            'pick_up_time_slot_id' => $pick->id,
+            'reservation_date' => '2026-06-10',
+            'user_name' => 'Too Early',
+            'country' => 'ME',
+            'license_plate' => 'PG EARLY1',
+            'vehicle_type_id' => $vehicleType->id,
+            'email' => 'early@example.test',
+            'status' => 'paid',
+        ]);
+
+        $this->actingAs(Admin::where('email', 'field@example.test')->first(), 'control')
+            ->get('/control')
+            ->assertOk()
+            ->assertDontSee('PG EARLY1', false);
     }
 
     public function test_search_finds_future_reservation_by_email(): void
