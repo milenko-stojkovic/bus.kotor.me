@@ -96,7 +96,31 @@ class ProfileTest extends TestCase
         $response = $this
             ->actingAs($user)
             ->delete('/profile', [
-                'password' => 'password',
+                'delete_password' => 'password',
+            ]);
+
+        $response
+            ->assertSessionHasNoErrors()
+            ->assertRedirect('/');
+
+        $this->assertGuest();
+        $this->assertNull($user->fresh());
+    }
+
+    public function test_user_can_delete_account_from_panel_user_page(): void
+    {
+        $user = User::factory()->create([
+            'password' => 'Kotor321',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('panel.user', [], false))
+            ->assertOk()
+            ->assertSee('name="password"', false);
+
+        $response = $this->from(route('panel.user', [], false))
+            ->delete(route('profile.destroy', [], false), [
+                'delete_password' => 'Kotor321',
             ]);
 
         $response
@@ -115,11 +139,11 @@ class ProfileTest extends TestCase
             ->actingAs($user)
             ->from('/panel/user')
             ->delete('/profile', [
-                'password' => 'wrong-password',
+                'delete_password' => 'wrong-password',
             ]);
 
         $response
-            ->assertSessionHasErrorsIn('userDeletion', 'password')
+            ->assertSessionHasErrorsIn('userDeletion', 'delete_password')
             ->assertRedirect(route('panel.user', absolute: false));
 
         $this->assertNotNull($user->fresh());

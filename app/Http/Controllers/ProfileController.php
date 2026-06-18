@@ -3,11 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Support\UiText;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class ProfileController extends Controller
@@ -60,18 +63,47 @@ class ProfileController extends Controller
 
     /**
      * Delete the user's account.
+     *
+     * Uses delete_password (not password) to avoid clashing with the profile form's
+     * new-password field on the same /panel/user page.
      */
     public function destroy(Request $request): RedirectResponse
     {
         $request->validateWithBag('userDeletion', [
-            'password' => ['required', 'current_password'],
+            'delete_password' => ['required', 'current_password'],
         ]);
 
         $user = $request->user();
 
         Auth::logout();
 
-        $user->delete();
+        try {
+            $deleted = $user->delete();
+        } catch (QueryException $e) {
+            report($e);
+
+            throw ValidationException::withMessages([
+                'delete_password' => [
+                    UiText::t(
+                        'user',
+                        'delete_account_blocked',
+                        'Nalog se trenutno ne može obrisati zbog povezanih podataka. Kontaktirajte podršku.',
+                    ),
+                ],
+            ])->errorBag('userDeletion');
+        }
+
+        if ($deleted === false) {
+            throw ValidationException::withMessages([
+                'delete_password' => [
+                    UiText::t(
+                        'user',
+                        'delete_account_blocked',
+                        'Nalog se trenutno ne može obrisati zbog povezanih podataka. Kontaktirajte podršku.',
+                    ),
+                ],
+            ])->errorBag('userDeletion');
+        }
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

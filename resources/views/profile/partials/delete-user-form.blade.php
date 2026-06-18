@@ -31,17 +31,18 @@
             </p>
 
             <div class="mt-6">
-                <x-input-label for="password" :value="$ud('delete_account_password', 'Password')" class="sr-only" />
+                <x-input-label for="delete_account_password" :value="$ud('delete_account_password', 'Password')" class="sr-only" />
 
                 <x-text-input
-                    id="password"
-                    name="password"
+                    id="delete_account_password"
+                    name="delete_password"
                     type="password"
                     class="mt-1 block w-3/4"
+                    autocomplete="current-password"
                     :placeholder="$ud('delete_account_password', 'Password')"
                 />
 
-                <x-input-error :messages="$errors->userDeletion->get('password')" class="mt-2" />
+                <x-input-error :messages="$errors->userDeletion->get('delete_password')" class="mt-2" />
             </div>
 
             <div class="mt-6 flex justify-end">
