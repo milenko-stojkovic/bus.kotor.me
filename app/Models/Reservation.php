@@ -97,6 +97,18 @@ class Reservation extends Model
     }
 
     /**
+     * Attachment / download filename for paid invoice PDF (V1: invoice-{id}-{reservation_date}.pdf).
+     */
+    public function invoicePdfFilename(): string
+    {
+        $date = $this->reservation_date?->format('Y-m-d')
+            ?? $this->created_at?->format('Y-m-d')
+            ?? now()->format('Y-m-d');
+
+        return sprintf('invoice-%d-%s.pdf', (int) $this->id, $date);
+    }
+
+    /**
      * Status fiskalizacije: 'completed' | 'failed' | 'pending'.
      * completed = fiscal_jir set; failed = post_fiscalization_data postoji (retry pipeline); pending = još nije fiskalizovano.
      */

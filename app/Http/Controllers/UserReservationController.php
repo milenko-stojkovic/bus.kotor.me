@@ -52,7 +52,7 @@ class UserReservationController extends Controller
             static function () use ($binary): void {
                 echo $binary;
             },
-            'invoice-'.$reservation->id.'.pdf',
+            $reservation->invoicePdfFilename(),
             [
                 'Content-Type' => 'application/pdf',
             ]
@@ -74,7 +74,7 @@ class UserReservationController extends Controller
 
         return response($binary, 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="invoice-'.$reservation->id.'.pdf"',
+            'Content-Disposition' => 'inline; filename="'.$reservation->invoicePdfFilename().'"',
         ]);
     }
 

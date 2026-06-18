@@ -150,7 +150,7 @@ class SendInvoiceEmailJob implements ShouldQueue
                         ->from($fromAddress, $fromName)
                         ->subject($subject);
                     $message->attach($tmpPath, [
-                        'as' => 'invoice-'.$reservation->id.'.pdf',
+                        'as' => $reservation->invoicePdfFilename(),
                         'mime' => 'application/pdf',
                     ]);
                 }

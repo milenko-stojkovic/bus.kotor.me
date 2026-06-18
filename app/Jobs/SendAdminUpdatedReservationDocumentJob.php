@@ -126,7 +126,7 @@ class SendAdminUpdatedReservationDocumentJob implements ShouldQueue
             } else {
                 $isFiscal = $reservation->fiscal_jir !== null;
                 $pdfBinary = $paidPdfGenerator->renderBinary($reservation, $isFiscal);
-                $attachmentName = 'invoice-'.$reservation->id.'.pdf';
+                $attachmentName = $reservation->invoicePdfFilename();
             }
 
             if ($pdfBinary === '') {
