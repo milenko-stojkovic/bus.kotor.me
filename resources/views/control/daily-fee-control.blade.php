@@ -11,7 +11,7 @@
 
     <section class="mb-8 rounded-lg border border-red-100 bg-white p-4 shadow sm:p-6">
         <p class="mb-4 text-sm text-gray-600">
-            Provjera plaćene dnevne naknade za današnji datum (Europe/Podgorica). Unesite registarsku tablicu — samo čitanje, bez izmjena podataka.
+            Provjera važeće rezervacije za današnji datum (Europe/Podgorica): plaćena dnevna naknada ili rezervacija/potvrda termina. Unesite registarsku tablicu — samo čitanje, bez izmjena podataka.
         </p>
 
         <form method="POST" action="{{ route('control.daily_fee.check', [], false) }}" class="space-y-4 max-w-md">
@@ -44,7 +44,12 @@
             @if ($result['found'])
                 <div class="mb-4 rounded-md border border-green-200 bg-green-50 p-4">
                     <p class="text-sm font-semibold text-green-900">Status</p>
-                    <p class="mt-1 text-lg font-bold text-green-800">Plaćena dnevna naknada: DA</p>
+                    @if ($result['has_daily_fee'] ?? false)
+                        <p class="mt-1 text-lg font-bold text-green-800">Plaćena dnevna naknada: DA</p>
+                    @endif
+                    @if ($result['has_time_slots'] ?? false)
+                        <p class="{{ ($result['has_daily_fee'] ?? false) ? 'mt-1' : 'mt-1' }} text-lg font-bold text-green-800">Rezervacija termina za danas: DA</p>
+                    @endif
                 </div>
 
                 <p class="mb-4 text-sm text-gray-600">
@@ -59,6 +64,10 @@
                                 <div>
                                     <dt class="text-gray-500">Registarska tablica</dt>
                                     <dd class="font-medium">{{ $match['license_plate'] }}</dd>
+                                </div>
+                                <div>
+                                    <dt class="text-gray-500">Vrsta</dt>
+                                    <dd class="font-medium">{{ $match['coverage_label'] }}</dd>
                                 </div>
                                 <div>
                                     <dt class="text-gray-500">Agencija / korisnik</dt>
@@ -87,7 +96,7 @@
             @else
                 <div class="rounded-md border border-red-200 bg-red-50 p-4">
                     <p class="text-sm font-semibold text-red-900">Status</p>
-                    <p class="mt-1 text-lg font-bold text-red-800">Plaćena dnevna naknada: NE</p>
+                    <p class="mt-1 text-lg font-bold text-red-800">Važeća rezervacija za danas: NE</p>
                     <p class="mt-2 text-sm text-red-900">
                         Tablica: <span class="font-medium">{{ $result['normalized_plate'] }}</span>
                         · Datum: <span class="font-medium">{{ $result['validity_date_display'] }}</span>

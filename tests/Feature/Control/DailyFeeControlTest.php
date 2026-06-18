@@ -105,12 +105,12 @@ final class DailyFeeControlTest extends TestCase
                 'license_plate' => 'PG111AA',
             ])
             ->assertOk()
-            ->assertSee('Plaćena dnevna naknada: NE', false)
+            ->assertSee('Važeća rezervacija za danas: NE', false)
             ->assertSee('PG111AA', false)
             ->assertSee('10.06.2026', false);
     }
 
-    public function test_time_slots_reservation_for_today_returns_ne(): void
+    public function test_paid_time_slots_reservation_for_today_returns_da(): void
     {
         $admin = $this->createControlAdmin();
         $vt = $this->createVehicleType('Bus');
@@ -137,7 +137,78 @@ final class DailyFeeControlTest extends TestCase
                 'license_plate' => 'PGSLOT1',
             ])
             ->assertOk()
-            ->assertSee('Plaćena dnevna naknada: NE', false);
+            ->assertSee('Rezervacija termina za danas: DA', false)
+            ->assertSee('Termini (plaćena rezervacija)', false)
+            ->assertSee('Slot User', false)
+            ->assertDontSee('Plaćena dnevna naknada: DA', false);
+    }
+
+    public function test_free_time_slots_reservation_for_today_returns_da(): void
+    {
+        $admin = $this->createControlAdmin();
+        $vt = $this->createVehicleType('Bus');
+        $drop = ListOfTimeSlot::query()->create(['time_slot' => '10:00 - 10:20']);
+        $pick = ListOfTimeSlot::query()->create(['time_slot' => '18:00 - 18:20']);
+
+        Reservation::query()->create([
+            'reservation_kind' => ReservationKind::TIME_SLOTS,
+            'drop_off_time_slot_id' => $drop->id,
+            'pick_up_time_slot_id' => $pick->id,
+            'reservation_date' => '2026-06-10',
+            'user_name' => 'Free Slot User',
+            'country' => 'ME',
+            'license_plate' => 'PGFREESLOT',
+            'vehicle_type_id' => $vt->id,
+            'email' => 'freeslot@test.local',
+            'status' => 'free',
+            'invoice_amount' => '0.00',
+            'email_sent' => Reservation::EMAIL_NOT_SENT,
+        ]);
+
+        $this->actingAs($admin, 'control')
+            ->post(route('control.daily_fee.check', [], false), [
+                'license_plate' => 'PGFREESLOT',
+            ])
+            ->assertOk()
+            ->assertSee('Rezervacija termina za danas: DA', false)
+            ->assertSee('Termini (besplatna potvrda)', false)
+            ->assertSee('Free Slot User', false);
+    }
+
+    public function test_plate_check_can_return_both_daily_fee_and_time_slots_matches(): void
+    {
+        $admin = $this->createControlAdmin();
+        $vt = $this->createVehicleType('Bus');
+        $drop = ListOfTimeSlot::query()->create(['time_slot' => '10:00 - 10:20']);
+        $pick = ListOfTimeSlot::query()->create(['time_slot' => '18:00 - 18:20']);
+
+        $this->createPaidDailyFee('PGMIXED1', '2026-06-10', $vt, [
+            'user_name' => 'Daily Mixed',
+        ]);
+        Reservation::query()->create([
+            'reservation_kind' => ReservationKind::TIME_SLOTS,
+            'drop_off_time_slot_id' => $drop->id,
+            'pick_up_time_slot_id' => $pick->id,
+            'reservation_date' => '2026-06-10',
+            'user_name' => 'Slot Mixed',
+            'country' => 'ME',
+            'license_plate' => 'PGMIXED1',
+            'vehicle_type_id' => $vt->id,
+            'email' => 'mixed-slot@test.local',
+            'status' => 'paid',
+            'invoice_amount' => '40.00',
+            'email_sent' => Reservation::EMAIL_NOT_SENT,
+        ]);
+
+        $this->actingAs($admin, 'control')
+            ->post(route('control.daily_fee.check', [], false), [
+                'license_plate' => 'PGMIXED1',
+            ])
+            ->assertOk()
+            ->assertSee('Plaćena dnevna naknada: DA', false)
+            ->assertSee('Rezervacija termina za danas: DA', false)
+            ->assertSee('Dnevna naknada (plaćena)', false)
+            ->assertSee('Termini (plaćena rezervacija)', false);
     }
 
     public function test_unpaid_daily_fee_reservation_returns_ne(): void
@@ -165,7 +236,7 @@ final class DailyFeeControlTest extends TestCase
                 'license_plate' => 'PGFREE1',
             ])
             ->assertOk()
-            ->assertSee('Plaćena dnevna naknada: NE', false);
+            ->assertSee('Važeća rezervacija za danas: NE', false);
     }
 
     public function test_multiple_paid_daily_fees_for_same_plate_and_day_are_listed(): void

@@ -23,6 +23,8 @@ final class DailyFeeControlService
     /**
      * @return array{
      *     found: bool,
+     *     has_daily_fee: bool,
+     *     has_time_slots: bool,
      *     normalized_plate: string,
      *     validity_date: string,
      *     validity_date_display: string,
@@ -33,7 +35,8 @@ final class DailyFeeControlService
      *         email: string,
      *         reservation_date: string,
      *         vehicle_type_label: string,
-     *         created_at: string
+     *         created_at: string,
+     *         coverage_label: string
      *     }>
      * }
      */
@@ -44,21 +47,42 @@ final class DailyFeeControlService
 
         /** @var Collection<int, Reservation> $rows */
         $rows = Reservation::query()
-            ->where('reservation_kind', ReservationKind::DAILY_TICKET)
             ->whereDate('reservation_date', $today)
-            ->where('status', 'paid')
             ->where('license_plate', $normalized)
+            ->where(function ($query): void {
+                $query->where(function ($daily): void {
+                    $daily->where('reservation_kind', ReservationKind::DAILY_TICKET)
+                        ->where('status', 'paid');
+                })->orWhere(function ($slots): void {
+                    $slots->whereIn('status', ['paid', 'free'])
+                        ->where(function ($kind): void {
+                            $kind->where('reservation_kind', ReservationKind::TIME_SLOTS)
+                                ->orWhereNull('reservation_kind');
+                        });
+                });
+            })
             ->with(['vehicleType.translations'])
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->get();
 
+        $matches = $rows->map(fn (Reservation $r) => $this->formatCheckRow($r))->values()->all();
+        $hasDailyFee = $rows->contains(
+            fn (Reservation $r): bool => $r->reservation_kind === ReservationKind::DAILY_TICKET && $r->status === 'paid'
+        );
+        $hasTimeSlots = $rows->contains(
+            fn (Reservation $r): bool => ($r->reservation_kind === ReservationKind::TIME_SLOTS || $r->reservation_kind === null)
+                && in_array($r->status, ['paid', 'free'], true)
+        );
+
         return [
             'found' => $rows->isNotEmpty(),
+            'has_daily_fee' => $hasDailyFee,
+            'has_time_slots' => $hasTimeSlots,
             'normalized_plate' => $normalized,
             'validity_date' => $today->toDateString(),
             'validity_date_display' => $today->format('d.m.Y'),
-            'matches' => $rows->map(fn (Reservation $r) => $this->formatRow($r))->values()->all(),
+            'matches' => $matches,
         ];
     }
 
@@ -113,6 +137,36 @@ final class DailyFeeControlService
             'vehicle_type_ids' => $vehicleTypeIds,
             'rows' => $rows->map(fn (Reservation $r) => $this->formatRow($r))->values()->all(),
         ];
+    }
+
+    /**
+     * @return array{
+     *     id: int,
+     *     license_plate: string,
+     *     user_name: string,
+     *     email: string,
+     *     reservation_date: string,
+     *     vehicle_type_label: string,
+     *     created_at: string,
+     *     coverage_label: string
+     * }
+     */
+    private function formatCheckRow(Reservation $reservation): array
+    {
+        return array_merge($this->formatRow($reservation), [
+            'coverage_label' => $this->coverageLabelFor($reservation),
+        ]);
+    }
+
+    private function coverageLabelFor(Reservation $reservation): string
+    {
+        if ($reservation->reservation_kind === ReservationKind::DAILY_TICKET) {
+            return 'Dnevna naknada (plaćena)';
+        }
+
+        return $reservation->status === 'free'
+            ? 'Termini (besplatna potvrda)'
+            : 'Termini (plaćena rezervacija)';
     }
 
     /**
