@@ -2,7 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\FreeReservationRequest;
+use App\Models\ListOfTimeSlot;
 use App\Models\User;
+use App\Models\Vehicle;
+use App\Models\VehicleType;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
@@ -147,5 +151,75 @@ class ProfileTest extends TestCase
             ->assertRedirect(route('panel.user', absolute: false));
 
         $this->assertNotNull($user->fresh());
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_user_with_vehicles_can_delete_account(): void
+    {
+        $user = User::factory()->create([
+            'password' => 'Kotor321',
+            'email_verified_at' => now(),
+        ]);
+
+        $vehicleType = VehicleType::query()->create(['price' => 10]);
+
+        Vehicle::query()->create([
+            'user_id' => $user->id,
+            'license_plate' => 'KO111AA',
+            'vehicle_type_id' => $vehicleType->id,
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->from(route('panel.user', [], false))
+            ->delete(route('profile.destroy', [], false), [
+                'delete_password' => 'Kotor321',
+            ]);
+
+        $response
+            ->assertSessionHasNoErrors()
+            ->assertRedirect('/');
+
+        $this->assertGuest();
+        $this->assertNull($user->fresh());
+    }
+
+    public function test_user_with_free_reservation_request_can_delete_account(): void
+    {
+        $user = User::factory()->create([
+            'password' => 'Kotor321',
+            'email_verified_at' => now(),
+        ]);
+
+        $dropOff = ListOfTimeSlot::query()->create(['time_slot' => '08:00 - 08:20']);
+        $pickUp = ListOfTimeSlot::query()->create(['time_slot' => '09:00 - 09:20']);
+
+        $freeRequest = FreeReservationRequest::query()->create([
+            'user_id' => $user->id,
+            'locale' => 'cg',
+            'institution_name' => 'Test school',
+            'institution_email' => 'school@example.com',
+            'institution_phone' => '+38267123456',
+            'reservation_date' => now()->addWeek()->toDateString(),
+            'drop_off_time_slot_id' => $dropOff->id,
+            'pick_up_time_slot_id' => $pickUp->id,
+            'country' => 'ME',
+            'status' => FreeReservationRequest::STATUS_SUBMITTED,
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->from(route('panel.user', [], false))
+            ->delete(route('profile.destroy', [], false), [
+                'delete_password' => 'Kotor321',
+            ]);
+
+        $response
+            ->assertSessionHasNoErrors()
+            ->assertRedirect('/');
+
+        $this->assertGuest();
+        $this->assertNull($user->fresh());
+        $this->assertNull(FreeReservationRequest::query()->find($freeRequest->id)?->user_id);
     }
 }

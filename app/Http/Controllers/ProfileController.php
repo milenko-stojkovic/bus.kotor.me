@@ -82,32 +82,33 @@ class ProfileController extends Controller
         } catch (QueryException $e) {
             report($e);
 
-            throw ValidationException::withMessages([
-                'delete_password' => [
-                    UiText::t(
-                        'user',
-                        'delete_account_blocked',
-                        'Nalog se trenutno ne može obrisati zbog povezanih podataka. Kontaktirajte podršku.',
-                    ),
-                ],
-            ])->errorBag('userDeletion');
+            Auth::login($user);
+
+            throw $this->deleteAccountBlockedException();
         }
 
         if ($deleted === false) {
-            throw ValidationException::withMessages([
-                'delete_password' => [
-                    UiText::t(
-                        'user',
-                        'delete_account_blocked',
-                        'Nalog se trenutno ne može obrisati zbog povezanih podataka. Kontaktirajte podršku.',
-                    ),
-                ],
-            ])->errorBag('userDeletion');
+            Auth::login($user);
+
+            throw $this->deleteAccountBlockedException();
         }
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
         return redirect()->away($request->root());
+    }
+
+    private function deleteAccountBlockedException(): ValidationException
+    {
+        return ValidationException::withMessages([
+            'delete_password' => [
+                UiText::t(
+                    'user',
+                    'delete_account_blocked',
+                    'Nalog se trenutno ne može obrisati zbog povezanih podataka. Kontaktirajte podršku.',
+                ),
+            ],
+        ])->errorBag('userDeletion');
     }
 }

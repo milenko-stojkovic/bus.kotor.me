@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Autentifikovani korisnik. user_id u reservations/temp_data može biti null (guest rezervacija).
@@ -20,6 +21,19 @@ class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
+
+    protected static function booted(): void
+    {
+        static::deleting(function (User $user): void {
+            if (! Schema::hasTable('free_reservation_requests')) {
+                return;
+            }
+
+            DB::table('free_reservation_requests')
+                ->where('user_id', $user->id)
+                ->update(['user_id' => null]);
+        });
+    }
 
     public function vehicles(): HasMany
     {
