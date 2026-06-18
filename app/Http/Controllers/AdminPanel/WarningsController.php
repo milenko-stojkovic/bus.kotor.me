@@ -6,14 +6,18 @@ use App\Http\Controllers\Controller;
 use App\Models\AdminAlert;
 use App\Services\AdminPanel\Blocking\BlockingService;
 use App\Services\Operations\DailyCapacityChartService;
+use App\Services\Operations\DailyFeeReservationSummaryService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class WarningsController extends Controller
 {
-    public function index(BlockingService $blocking, DailyCapacityChartService $capacityCharts): View
-    {
+    public function index(
+        BlockingService $blocking,
+        DailyCapacityChartService $capacityCharts,
+        DailyFeeReservationSummaryService $dailyFeeSummaries,
+    ): View {
         $alerts = AdminAlert::query()
             ->whereNull('removed_at')
             ->orderByRaw("CASE WHEN status = 'done' THEN 1 ELSE 0 END")
@@ -27,6 +31,7 @@ class WarningsController extends Controller
             'blockedDays' => $blocking->blockedDaySummaries(),
             'unavailableDays' => $blocking->unavailableForPurchaseDaySummaries(),
             'capacityCharts' => $charts,
+            'dailyFeeSummaries' => $dailyFeeSummaries->todayAndTomorrow(),
         ]);
     }
 

@@ -164,5 +164,22 @@
                 ])
             </section>
         @endif
+
+        @php
+            $dailyFees = $dailyFeeSummaries ?? null;
+        @endphp
+        @if (is_array($dailyFees) && isset($dailyFees['today'], $dailyFees['tomorrow']))
+            <section class="space-y-6">
+                @include('partials.daily-fee-reservation-summary', [
+                    'dataset' => $dailyFees['today'],
+                    'title' => 'Ukupan broj rezervacija po dnevnim naknadama — danas',
+                ])
+
+                @include('partials.daily-fee-reservation-summary', [
+                    'dataset' => $dailyFees['tomorrow'],
+                    'title' => 'Ukupan broj rezervacija po dnevnim naknadama — sjutra',
+                ])
+            </section>
+        @endif
     </div>
 </x-admin-panel-layout>

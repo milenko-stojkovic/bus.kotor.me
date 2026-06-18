@@ -46,6 +46,11 @@ Kontroler: **`WarningsController::index`**. Stranica ima tri bloka: **Upozorenja
 - Stubci: **`daily_parking_data`** (`reserved` + `pending` po terminu); kapacitet: **`system_config.available_parking_slots`**.
 - **Ukupno rezervacija** za dan: broj **`reservations`** (`time_slots`, `paid`/`free`) — v. **`docs/control-panel.md`**.
 
+**Dnevne naknade — ukupan broj (danas + sutra)**
+
+- **`DailyFeeReservationSummaryService::todayAndTomorrow()`** + partial `daily-fee-reservation-summary`.
+- Broj **plaćenih** rezervacija (`reservation_kind=daily_ticket`, `status=paid`) za tekući i sutrašnji dan (`Europe/Podgorica`).
+
 **Blokirani dani i termini**
 
 - Izvor: **`daily_parking_data.is_blocked = 1`**.

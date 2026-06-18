@@ -5,7 +5,10 @@ namespace Tests\Feature\AdminPanel;
 use App\Models\Admin;
 use App\Models\DailyParkingData;
 use App\Models\ListOfTimeSlot;
+use App\Models\Reservation;
 use App\Models\SystemConfig;
+use App\Models\VehicleType;
+use App\Support\ReservationKind;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -71,6 +74,61 @@ final class DailyCapacityChartsRenderTest extends TestCase
         $this->assertStringContainsString('"total":6', $html);
         $this->assertStringContainsString('Ukupno rezervacija', $html);
         $this->assertStringContainsString('"reservations_total":0', $html);
+    }
+
+    public function test_admin_warnings_dashboard_renders_daily_fee_reservation_summaries_for_today_and_tomorrow(): void
+    {
+        $vt = VehicleType::query()->create(['price' => 15]);
+
+        $tz = (string) config('reservations.operations_timezone', 'Europe/Podgorica');
+        $today = Carbon::now($tz)->startOfDay()->toDateString();
+        $tomorrow = Carbon::now($tz)->startOfDay()->addDay()->toDateString();
+
+        $base = [
+            'drop_off_time_slot_id' => null,
+            'pick_up_time_slot_id' => null,
+            'user_name' => 'Test',
+            'country' => 'ME',
+            'vehicle_type_id' => $vt->id,
+            'email' => 'daily-fee@example.com',
+            'email_sent' => Reservation::EMAIL_NOT_SENT,
+            'reservation_kind' => ReservationKind::DAILY_TICKET,
+            'status' => 'paid',
+            'invoice_amount' => '15.00',
+        ];
+
+        Reservation::query()->create(array_merge($base, [
+            'merchant_transaction_id' => 'mt-daily-today-1',
+            'license_plate' => 'KO1',
+            'reservation_date' => $today,
+        ]));
+        Reservation::query()->create(array_merge($base, [
+            'merchant_transaction_id' => 'mt-daily-today-2',
+            'license_plate' => 'KO2',
+            'reservation_date' => $today,
+        ]));
+        Reservation::query()->create(array_merge($base, [
+            'merchant_transaction_id' => 'mt-daily-tomorrow-1',
+            'license_plate' => 'KO3',
+            'reservation_date' => $tomorrow,
+        ]));
+
+        $admin = Admin::query()->create([
+            'username' => 'dailyfeeadmin',
+            'email' => 'daily-fee-admin@example.com',
+            'password' => bcrypt('secret-password-df'),
+            'control_access' => false,
+            'admin_access' => true,
+        ]);
+
+        $this->actingAs($admin, 'panel_admin');
+
+        $res = $this->get(route('panel_admin.dashboard', [], false));
+        $res->assertOk();
+        $res->assertSee('Ukupan broj rezervacija po dnevnim naknadama — danas', false);
+        $res->assertSee('Ukupan broj rezervacija po dnevnim naknadama — sjutra', false);
+        $res->assertSee('>2<', false);
+        $res->assertSee('>1<', false);
     }
 }
 
