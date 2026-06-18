@@ -18,7 +18,7 @@ APP_ENV=local
 APP_DEBUG=true
 BANK_DRIVER=fake
 FISCALIZATION_DRIVER=fake
-PAYMENT_PROVIDER=fake
+BANK_DRIVER=fake
 MAIL_MAILER=log
 # Za QA bez workera koristiti sync (v. docs/project-conventions.md):
 QUEUE_CONNECTION=sync

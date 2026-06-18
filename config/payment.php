@@ -2,12 +2,6 @@
 
 return [
     /*
-    | Payment provider: 'fake' (default) | 'real'
-    | Fake = FakePaymentProvider (simulacija). Real = pravi gateway (dodati kasnije).
-    */
-    'provider' => env('PAYMENT_PROVIDER', 'fake'),
-
-    /*
     | Bankart: uključi HTTP status inquiry u cron-u (GET getByMerchantTransactionId). Isključi ako provajder još nije spreman.
     */
     'bankart_status_inquiry_enabled' => filter_var(env('BANKART_STATUS_INQUIRY_ENABLED', true), FILTER_VALIDATE_BOOLEAN),

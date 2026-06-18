@@ -26,7 +26,7 @@ final class QueueMode
             return false;
         }
 
-        $bankFake = (config('services.bank.driver') ?? config('payment.provider', 'fake')) === 'fake';
+        $bankFake = config('services.bank.driver', 'fake') === 'fake';
         $fiscalFake = config('services.fiscalization.driver') === 'fake';
 
         return $bankFake && $fiscalFake;

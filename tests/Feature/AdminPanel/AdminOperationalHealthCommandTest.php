@@ -174,7 +174,6 @@ class AdminOperationalHealthCommandTest extends TestCase
         $this->bindMegaDiagnoseRun($this->megaSkip());
 
         config([
-            'payment.provider' => 'fake',
             'services.bank.driver' => 'bankart',
             'services.fiscalization.driver' => 'real',
             'payment.fake_e2e_sync' => false,

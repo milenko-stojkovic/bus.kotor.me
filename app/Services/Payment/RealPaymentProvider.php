@@ -253,7 +253,7 @@ class RealPaymentProvider implements PaymentService
 
     public function pay(TempData $tempData): PaymentResult
     {
-        throw new RuntimeException('Real payment provider not implemented. Set PAYMENT_PROVIDER=fake or implement gateway call here.');
+        throw new RuntimeException('Real payment provider not implemented. Set BANK_DRIVER=fake or implement gateway call here.');
     }
 
     private function resolveAmount(TempData $tempData): ?string

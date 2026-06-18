@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\URL;
 
 /**
  * Simulacija plaćanja. createSession vraća URL na fake bank page; pay() za webhook flow.
- * Pravi gateway se ubacuje preko config payment.provider = real (RealPaymentProvider).
+ * Pravi gateway: {@see RealPaymentProvider} kada je {@see config('services.bank.driver')} = bankart.
  */
 class FakePaymentProvider implements PaymentService
 {

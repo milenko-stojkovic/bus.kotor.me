@@ -101,7 +101,7 @@ class PaymentSuccessHandler
             TempData::logStateTransition($temp->merchant_transaction_id, $from, TempData::STATUS_PROCESSED, 'SUCCESS');
             $this->doReleaseSoftLock($temp, true);
             if ($runFiscalAndInvoicePipeline) {
-                $bankFake = (config('services.bank.driver') ?? config('payment.provider', 'fake')) === 'fake';
+                $bankFake = config('services.bank.driver', 'fake') === 'fake';
                 $fiscalFake = config('services.fiscalization.driver') === 'fake';
                 if ($bankFake && $fiscalFake) {
                     if (! $deferFakeBankFiscalPipeline) {

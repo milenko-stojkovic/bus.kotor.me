@@ -95,7 +95,7 @@ class FakeBankCompleteController extends Controller
     private function assertFakeBankDriver(): void
     {
         abort_unless(
-            (config('services.bank.driver') ?? config('payment.provider', 'fake')) === 'fake',
+            config('services.bank.driver', 'fake') === 'fake',
             404
         );
     }
@@ -138,7 +138,7 @@ class FakeBankCompleteController extends Controller
             return;
         }
 
-        $bankFake = (config('services.bank.driver') ?? config('payment.provider', 'fake')) === 'fake';
+        $bankFake = config('services.bank.driver', 'fake') === 'fake';
         $fiscalFake = config('services.fiscalization.driver') === 'fake';
         if (! $bankFake || ! $fiscalFake) {
             return;
