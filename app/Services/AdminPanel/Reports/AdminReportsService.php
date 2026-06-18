@@ -144,10 +144,10 @@ final class AdminReportsService
         $locale = 'cg';
 
         $fallback = [
-            1 => 'Putničko vozilo (4+1 do 7+1 sjedišta)',
-            2 => 'Mini bus (8+1 sjedište)',
-            3 => 'Srednji autobus (9–23 sjedišta)',
-            4 => 'Veliki autobus (preko 23 sjedišta)',
+            1 => 'Putničko vozilo (Putničko vozilo (4+1, 5+1, 6+1 i 7+1 mjesta))',
+            2 => 'Mini bus (Mini bus (8+1 mjesta))',
+            3 => 'Srednji autobus (Autobus (9–23 mjesta))',
+            4 => 'Veliki autobus (Autobus (više od 23 mjesta))',
         ];
 
         $labels = [];
