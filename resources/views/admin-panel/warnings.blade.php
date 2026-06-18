@@ -38,13 +38,38 @@
                                         <div><span class="font-medium text-gray-600">Kreirano:</span> {{ $alert->created_at?->timezone(config('app.timezone'))->format('d.m.Y. H:i') }}</div>
                                     </dl>
                                 </div>
-                                <div class="flex flex-col sm:flex-row gap-2 shrink-0">
+                                <div class="flex flex-col sm:flex-row flex-wrap gap-2 shrink-0 items-start">
                                     <button type="button"
                                         class="inline-flex justify-center items-center px-3 py-2 border border-red-200 rounded-md text-xs font-semibold text-gray-700 uppercase tracking-widest hover:bg-red-50"
                                         data-b64="{{ base64_encode($alert->copyDetailsText()) }}"
                                         onclick="(function(btn){var t=atob(btn.dataset.b64);navigator.clipboard.writeText(t).then(function(){btn.replaceWith(Object.assign(document.createElement('span'),{className:'text-xs text-red-800',textContent:'Kopirano'}));}).catch(function(){alert('Kopiranje nije uspelo');});})(this)">
                                         Copy details
                                     </button>
+                                    @if ($alert->status === \App\Models\AdminAlert::STATUS_UNREAD)
+                                        <form method="post" action="{{ route('panel_admin.alerts.transition', $alert, false) }}">
+                                            @csrf
+                                            <input type="hidden" name="action" value="in_progress">
+                                            <button type="submit" class="inline-flex justify-center items-center px-3 py-2 border border-red-300 rounded-md text-xs font-semibold text-red-900 uppercase tracking-widest hover:bg-red-50">
+                                                U obradi
+                                            </button>
+                                        </form>
+                                    @elseif ($alert->status === \App\Models\AdminAlert::STATUS_IN_PROGRESS)
+                                        <form method="post" action="{{ route('panel_admin.alerts.transition', $alert, false) }}">
+                                            @csrf
+                                            <input type="hidden" name="action" value="done">
+                                            <button type="submit" class="inline-flex justify-center items-center px-3 py-2 border border-red-400 rounded-md text-xs font-semibold text-white bg-red-800 uppercase tracking-widest hover:bg-red-900">
+                                                Završeno
+                                            </button>
+                                        </form>
+                                    @elseif ($alert->status === \App\Models\AdminAlert::STATUS_DONE)
+                                        <form method="post" action="{{ route('panel_admin.alerts.transition', $alert, false) }}">
+                                            @csrf
+                                            <input type="hidden" name="action" value="remove">
+                                            <button type="submit" class="inline-flex justify-center items-center px-3 py-2 border border-gray-300 rounded-md text-xs font-semibold text-gray-600 uppercase tracking-widest hover:bg-gray-50">
+                                                Ukloni sa liste
+                                            </button>
+                                        </form>
+                                    @endif
                                 </div>
                             </div>
                         </li>

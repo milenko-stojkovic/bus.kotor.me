@@ -174,7 +174,7 @@ class AdminOperationalHealthCommandTest extends TestCase
         $this->bindMegaDiagnoseRun($this->megaSkip());
 
         config([
-            'payment.provider' => 'bankart',
+            'payment.provider' => 'fake',
             'services.bank.driver' => 'bankart',
             'services.fiscalization.driver' => 'real',
             'payment.fake_e2e_sync' => false,
@@ -183,7 +183,7 @@ class AdminOperationalHealthCommandTest extends TestCase
         $this->artisan('alerts:system-health', ['--assume-production' => true])->assertSuccessful();
         $this->assertSame(0, AdminAlert::query()->where('type', 'system_config_fake_production')->count());
 
-        config(['payment.provider' => 'fake']);
+        config(['services.bank.driver' => 'fake']);
 
         $this->artisan('alerts:system-health', ['--assume-production' => true])->assertSuccessful();
 

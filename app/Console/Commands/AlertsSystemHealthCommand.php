@@ -149,11 +149,10 @@ class AlertsSystemHealthCommand extends Command
     {
         $flags = [];
 
-        if (config('payment.provider') === 'fake') {
-            $flags[] = 'payment.provider=fake';
-        }
+        // Gateway se bira preko BANK_DRIVER (v. AppServiceProvider); PAYMENT_PROVIDER je legacy fallback.
+        $bankDriver = config('services.bank.driver') ?? config('payment.provider', 'fake');
 
-        if (config('services.bank.driver') === 'fake') {
+        if ($bankDriver === 'fake') {
             $flags[] = 'services.bank.driver=fake';
         }
 
