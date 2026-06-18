@@ -24,15 +24,12 @@ final class AgencyController extends Controller
 {
     public function index(): View
     {
-        $q = User::query()
-            ->select('users.*')
-            ->leftJoin('agency_advance_transactions as aat', 'aat.agency_user_id', '=', 'users.id')
-            ->addSelect(DB::raw('COALESCE(SUM(aat.amount), 0) as advance_balance'))
+        $users = User::query()
             ->withCount('reservations')
-            ->groupBy('users.id')
-            ->orderBy('users.name');
-
-        $users = $q->paginate(20)->withQueryString();
+            ->withSum('agencyAdvanceTransactions as advance_balance', 'amount')
+            ->orderBy('users.name')
+            ->paginate(20)
+            ->withQueryString();
 
         return view('admin-panel.agencies.index', [
             'users' => $users,

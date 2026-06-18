@@ -31,6 +31,11 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Reservation::class);
     }
 
+    public function agencyAdvanceTransactions(): HasMany
+    {
+        return $this->hasMany(AgencyAdvanceTransaction::class, 'agency_user_id');
+    }
+
     public function tempData(): HasMany
     {
         return $this->hasMany(TempData::class);
