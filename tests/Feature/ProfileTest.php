@@ -111,6 +111,26 @@ class ProfileTest extends TestCase
         $this->assertNull($user->fresh());
     }
 
+    public function test_user_can_delete_account_via_post_method_spoofing(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->from('/panel/user')
+            ->post('/profile', [
+                '_method' => 'delete',
+                'delete_password' => 'password',
+            ]);
+
+        $response
+            ->assertSessionHasNoErrors()
+            ->assertRedirect('/');
+
+        $this->assertGuest();
+        $this->assertNull($user->fresh());
+    }
+
     public function test_user_can_delete_account_from_panel_user_page(): void
     {
         $user = User::factory()->create([

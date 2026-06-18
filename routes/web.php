@@ -191,7 +191,9 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
-    Route::redirect('/profile', '/panel/user')->name('profile.edit');
+    Route::get('/profile', function () {
+        return redirect()->route('panel.user', absolute: false);
+    })->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
