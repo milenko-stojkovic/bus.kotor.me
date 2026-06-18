@@ -1,10 +1,10 @@
 # Project status — indeks
 
-**Poslednje ažuriranje:** 2026-06-17
+**Poslednje ažuriranje:** 2026-06-19
 
 **Završena tranzicija (2026-06):** Dnevna naknada / Daily fee (korisnički naziv), Limo QR workflow ukinut, Control provjera dnevne naknade, Termini bez limo putničkih kategorija 4+1–7+1, **Promjena tablica** (bivše Predstojeće rezervacije). Sažetak: `project-done.md` sekcija 2026-06.
 
-**Staging (2026-06-17):** V2 deploy na **`https://bus-v2.kotor.me`** — odvojena baza, simulacija Bankart/fiskal, Plesk queue worker. V1 produkcija aktivna. Validacija: `project-todo.md` → STAGING VALIDATION PHASE.
+**Produkcija V2 (2026-06-19):** E2E validacija na **`https://bus-v2.kotor.me`** završena; produkcijski rad na **`https://bus.kotor.me`**. Bankart callback na hostovanom domenu verifikovan. Otvoreno: `project-todo.md`.
 
 Ovaj fajl je **kratak smerač**. Detalji su podeljeni da bi novi chat mogao da učita samo ono što treba. Ako prilažeš samo folder **`docs/`**, počni od **[README.md](./README.md)** pa ovde.
 
@@ -36,9 +36,9 @@ Ovaj fajl je **kratak smerač**. Detalji su podeljeni da bi novi chat mogao da u
 
 ## Real Bankart E2E
 
-Smislen test sa pravim callback-om obično zahteva **hostovan** domen i bankin mod/simulaciju — v. kratku napomenu u [handoff-new-chat.md](./handoff-new-chat.md) i stavke u [project-todo.md](./project-todo.md).
+**Produkcija (2026-06-19):** HMAC callback potpis i header-i verifikovani sa **pravim** Bankart okruženjem na hostovanom domenu — v. `project-done.md`.
 
-**Staging (2026-06):** primarno test okruženje je **`https://bus-v2.kotor.me`** (Bankart simulacija, odvojena baza). V1 produkcija ostaje na `https://bus.kotor.me`.
+**Staging (historija):** E2E validacija na **`https://bus-v2.kotor.me`** (simulacija, odvojena baza) završena prije produkcijskog starta.
 
 **Status inquiry:** implementiran je **GET** `getByMerchantTransactionId` (`RealPaymentStatusInquiryService`) → **`PaymentCallbackJob`**. U produkciji proveriti da **HMAC za GET** (prazno telo / `Content-Type` u potpisu) odgovara Bankart „Signature testing“ alatu ako gateway odbije zahtev.
 

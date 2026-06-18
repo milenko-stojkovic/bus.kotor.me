@@ -23,6 +23,13 @@
 - **Never** generate invoice in en or any other language.
 - **PaidInvoicePdfGenerator** / **FreeReservationPdfGenerator** use **hardcoded Montenegrin strings** for PDF content and set `app()->setLocale('cg')` while rendering. Do not rely on app locale from request/callback for invoice content.
 
+### 3.1 PDF attachment / download filenames
+
+- **Paid invoice:** `Reservation::invoicePdfFilename()` — `invoice-{id}-{reservation_date}.pdf` (datum `Y-m-d`, V1 kompatibilno).
+- **Free confirmation:** `Reservation::freeConfirmationPdfFilename()` — `free-confirmation-{id}-{reservation_date}.pdf`.
+- **Sadržaj PDF-a** je uvijek na cg; **ime fajla** je ASCII i ne zavisi od jezika emaila.
+- Stari format `potvrda-besplatna-rezervacija-{id}.pdf` više se ne koristi.
+
 ## 4. Bank callback
 
 - **API only:** `POST /api/payment/callback` (`routes/api.php`). Machine-to-machine.

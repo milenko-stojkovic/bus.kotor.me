@@ -1,10 +1,12 @@
 # Limo service
 
-**Poslednje ažuriranje:** 2026-06-10
+**Poslednje ažuriranje:** 2026-06-19
 
 **Phase 2 (2026-06):** QR workflow je **deaktiviran** po defaultu (`LIMO_QR_WORKFLOW_ENABLED=false`). Agencijski `/panel/limo` je informativan; operativni mehanizam je **dnevna naknada** kroz Rezervacije. Kod, tabele i admin istorija su očuvani; rollback preko ENV flaga.
 
-**Povezano:** [project-todo.md](./project-todo.md) (preostali Limo TODO), [project-done.md](./project-done.md) (urađeno), [agency-panel.md](./agency-panel.md) (agencijski `/panel/limo`).
+**Produkcija V2 (2026-06-19):** Širi **incident workflow** (statusi reported/closed, admin rešenja), **PWA** instalabilni shell za `/limo` i **native Android** evidentičar — **izbačeni iz operativnog plana**. Terenski model: **dnevna naknada** + **Control** (`/control/dnevna-naknada`). Legacy kod (minimalni incident tok, QR/OCR) ostaje u repou.
+
+**Povezano:** [project-done.md](./project-done.md) (urađeno + odluke), [agency-panel.md](./agency-panel.md) (agencijski `/panel/limo`).
 
 Ovaj dokument opisuje **trenutno implementirano stanje** u kodu i **preostale planirane korake**. Nije više isključivo „pred-implementaciona“ specifikacija.
 
@@ -38,7 +40,7 @@ Model je zavisio od **fizičkog prisustva službenika (evidentičara)** na kontr
 ### Trenutni aktivni model
 
 - Plaćanje vezano za limo operativu ide kroz **Dnevnu naknadu / Daily fee** (agencija: Rezervacije → `reservation_kind=daily_ticket`).
-- Terenska provjera: ručni unos tablice na **`/control/dnevna-naknada`** (Control panel, read-only lookup za današnji datum).
+- Terenska provjera: ručni unos tablice na **`/control/dnevna-naknada`** (Control panel, read-only lookup za današnji datum — plaćena dnevna naknada **ili** rezervacija/potvrda **Termina**; lista na dnu samo dnevne naknade).
 - QR, OCR i evidentičar **nisu aktivni po defaultu** (`LIMO_QR_WORKFLOW_ENABLED=false`).
 
 ### Zašto QR/OCR i dalje postoji u repou
@@ -101,14 +103,19 @@ Brisanje QR/OCR koda ili tabela **nije predviđeno tokom sezone** bez posebne od
 - **Admin pregled Limo događaja (pickup + incidenti):** na **`GET /admin/limo`** parametar **`type=pickup`** (podrazumijevano) ili **`type=incident`**; za pickup sa **`source=plate`** link **„Slika tablice”** otvara server-side preview (uključujući privremeni re-download sa MEGA ako je lokalni fajl obrisan poslije arhive); za incidente linkovi **„Slika tablice”** / **„Slika brendinga”** vode na **`/admin/limo/incidents/{id}/…-photo-preview`** (isti MEGA preview princip, dozvoljen prefiks **`limo_incidents/`**); vidi **[admin-panel.md](./admin-panel.md)** i **`external-file-archive.md`**.
 - **Incident flow (minimalno):** `POST /limo/incident` (`limo.incident.store`) — samo **`limo_access`** evidententeri; **obavezna fotografija tablice** (bez nje nema incidenta); opciona fotografija brendinga; tipovi u bazi (`qr_insufficient_funds`, `plate_insufficient_funds`, `unregistered_vehicle_with_branding`, `invalid_qr_token`, `driver_non_cooperative`); snimanje na **private `local`** (`limo_incidents/{uuid}/…`); kolona **`report_emails.purpose`** je ENUM **`report` \| `limo_incidents`**; email sa servera: primaoci iz **`report_emails`** gdje je **`purpose = limo_incidents`** (sve navedene adrese); ako je ta lista **prazna**, podrazumijevani primalac ostaje **`komunalna.policija@kotor.me`** (log na kanalu **`payments`**: `limo_incident_communal_email_using_fallback_recipient`). **`ReportEmailsSeeder`** idempotentno dodaje **`komunalna.policija@kotor.me`** sa **`purpose=limo_incidents`**. Isti mailable **`LimoCommunalPoliceIncidentMail`** (prilozi: tablica ± brending). **`admin_alerts`** tip `limo_incident`; log kanal **`payments`**: `limo_incident_created`, `limo_incident_communal_email_recipients_from_settings` (kad su adrese iz baze), `limo_incident_communal_email_sent` / `_failed`, `limo_incident_admin_alert_created`. **Sistem ne izriče sankcije**, ne dira avans, fiskal, rezervacije niti kreira `limo_pickup_events`. Ako email ne pošalje, red u `limo_incidents` ostaje, `communal_email_sent_at` ostaje `NULL`, alert i dalje nastaje. UI na **`GET /limo`**: sekcija „Prijavi incident”. **Ne prijavljivati** incident za neregistrovano vozilo bez vidljivog brendinga agencije (uputstvo u UI). Nakon obavještenja, odluka je **ručna** (admin / Komunalna policija). Konfiguracija primalaca incidenta: **`GET /admin/podesavanja`** → sekcija **Incident – email adrese**. Testovi: `tests/Feature/Limo/LimoIncidentFlowTest.php`.
 
-### Još nije / TODO
+### Još nije / opciono (samo legacy QR tok)
 
-- (OCR je **advisory** prijedlog; manualna potvrda ostaje obavezna. Dalje TODO: dodatni jezici, eventualno OpenCV pretprocesiranje ako bude potrebno.)
-- **Incident workflow** — šire od minimalnog: statusi (reported/closed), administrativno rešavanje, integracije; trenutno je samo evidencija + obavještenje
+- (OCR je **advisory** prijedlog; manualna potvrda ostaje obavezna. Opciono: dodatni jezici, eventualno OpenCV pretprocesiranje ako bi se QR tok ponovo uključio.)
 - ~~**Admin analitika** — uključivanje Limo prihoda~~ → **urađeno:** Admin **Analitika** (`/admin/analitika`) ima poseban blok **Limo servis** i KPI za prihod (rezervacije vs Limo vs ukupno); detaljan read-only pregled događaja i incidenta ostaje **`GET /admin/limo`** (`admin.limo.index`, `type=pickup|incident`).
+
+### Izbačeno iz produkcijskog plana V2 (2026-06-19)
+
+Sljedeće **nije** u operativnom modelu produkcije; kod za minimalni incident i legacy QR **ostaje** u repou (istorija, rollback):
+
+- **Širi incident workflow** — statusi (reported/closed), administrativno rešavanje u aplikaciji, integracije (trenutno samo evidencija + email obavještenje)
 - **Offline sync**
-- **PWA polish** (instalabilni shell, napredniji UX) — po potrebi nakon terenskog testa
-- **Native Android** — odluka nakon terenskog testa PWA-e
+- **PWA polish** (instalabilni shell, napredniji UX za `/limo`)
+- **Native Android** evidentičar
 
 ---
 
@@ -329,7 +336,7 @@ Evidencija incidenta (bez finansijskog efekta, bez pickup događaja).
 - **`POST /limo/pickup/plate/ocr`**, **`POST /limo/pickup/plate/confirm`** — na `/limo` UI: **multipart** (`FormData`) na relativni **`/limo/pickup/plate/ocr`** (polja slike + opciono `plate_crop_left|top|width|height` u BP), JSON na **`/limo/pickup/plate/confirm`**; faze statusa (izbor → opcioni izrez na previewu → GPS best-effort → slanje); greške `plate_not_registered`, `insufficient_advance`, `invalid_upload` + HTTP 401/403/404/419/5xx poruke.
 - **`POST /limo/incident`** — multipart; JSON uspjeh `{ status: ok, incident_uuid, communal_email_sent }`; greška validacije `422` sa `code: validation_error`.
 - **`GET /limo/health`** — JSON smoke pod istim middleware-om.
-- Dalje **TODO**: poboljšanje OCR parsiranja/pre-processinga, širi incident/admin workflow, offline sinhronizacija, native Android. (Retencija dugotrajnih foto dokaza — posebna politika ako bude potrebna.)
+- Dalje **opciono (samo ako se ponovo uključi QR tok):** poboljšanje OCR parsiranja/pre-processinga. Retencija dugotrajnih foto dokaza — posebna politika ako bude potrebna.
 
 ---
 
@@ -339,11 +346,13 @@ Evidencija incidenta (bez finansijskog efekta, bez pickup događaja).
 
 ---
 
-## Explicit non-goals / još uvijek out of scope
+## Explicit non-goals / out of scope (produkcija V2, 2026-06-19)
 
-- Native Android (odluka nakon PWA)
-- Automatske **sankcije** ili blokiranje agencija na osnovu incidenta (samo evidencija + obavještenje)
+- Native Android evidentičar
+- PWA instalabilni shell za `/limo`
+- Širi incident/admin workflow (izvan minimalnog email + evidencija)
 - Offline-first sync
+- Automatske **sankcije** ili blokiranje agencija na osnovu incidenta (samo evidencija + obavještenje)
 - Limo za goste kroz isti model kao panel agencije
 
 ---

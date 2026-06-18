@@ -35,8 +35,8 @@
 
 Duga sesija u Cursoru često poveća memoriju i može usporiti odgovore. **Novi chat** je normalan korak; kontekst za zadatak preuzmi iz ovog foldera (`handoff` + TODO/DONE), ne iz starog četa.
 
-**Operativni model (2026-06):** Agencije kupuju **Dnevnu naknadu** kroz Rezervacije; terenska provjera tablice: Control **`/control/dnevna-naknada`**. Limo QR/OCR/evidentičar su legacy (isključeni po defaultu). V. `project-done.md` (2026-06-10).
+**Operativni model (2026-06):** Agencije kupuju **Dnevnu naknadu** kroz Rezervacije; terenska provjera tablice: Control **`/control/dnevna-naknada`** (dnevna naknada ili Termini za danas). Limo QR/OCR/evidentičar su legacy (isključeni po defaultu). V. `project-done.md` (2026-06).
 
-**Staging (2026-06-17):** V2 na **`https://bus-v2.kotor.me`** — primarno test okruženje; V1 produkcija **`https://bus.kotor.me`** nepromijenjena. V. `handoff-new-chat.md`, `project-todo.md` (STAGING VALIDATION PHASE).
+**Produkcija V2 (2026-06-19):** **`https://bus.kotor.me`** — aktivna aplikacija. Staging validacija na **`https://bus-v2.kotor.me`** završena. V. `handoff-new-chat.md`, `project-done.md`.
 
-**Poslednje ažuriranje:** 2026-06-17
+**Poslednje ažuriranje:** 2026-06-19

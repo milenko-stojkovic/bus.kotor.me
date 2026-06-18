@@ -6,16 +6,16 @@
 
 ---
 
-## Trenutno stanje projekta (2026-06-17)
+## Trenutno stanje projekta (2026-06-19)
 
 | Okruženje | URL | Uloga |
 |-----------|-----|--------|
-| **V1 produkcija** | `https://bus.kotor.me` | Aktivna produkcija — plaćanja, fiskalizacija, korisnici; **nepromijenjena** |
-| **V2 staging** | `https://bus-v2.kotor.me` | Primarno test okruženje na serveru — simulacija Bankart + fiskal, odvojena baza |
+| **V2 produkcija** | `https://bus.kotor.me` | **Aktivna produkcija** — V2 kod, pravi Bankart + fiskal |
+| **V2 staging (validacija)** | `https://bus-v2.kotor.me` | E2E validacija **završena** (2026-06-19); odvojena baza |
 | **Lokalno (Laragon)** | npr. `*.test` | Razvoj, PHPUnit, fake driver QA |
 
-- **V2 staging deploy** je uspješan; **validacija u toku** (v. `docs/project-todo.md` → STAGING VALIDATION PHASE).
-- **Production cut-over** V1 → V2 **nije** planiran/izvršen — v. `docs/production-runbook.md` § Planirani cut-over.
+- **STAGING VALIDATION PHASE** završena; **produkcijski rad V2 započet** — v. `docs/project-done.md` (2026-06-19).
+- **Otvoreno:** `docs/project-todo.md` (`late_success`, operativni audit, fiskalni PDF poslije retry-a, mobile plan…).
 
 ### Queue worker (Plesk staging)
 
@@ -37,7 +37,7 @@ Prilagodi putanju ako radni folder nije isti.
 ```
 Radiš na Laravel 12 (PHP 8.3) projektu bus.kotor.me (rezervacije autobusa, plaćanje, fiskalizacija).
 
-Okruženja: V1 produkcija https://bus.kotor.me (aktivna) | V2 staging https://bus-v2.kotor.me (primarno test okruženje, odvojena baza) | lokalno Laragon.
+Okruženja: V2 produkcija https://bus.kotor.me (aktivna) | V2 staging https://bus-v2.kotor.me (E2E validacija završena) | lokalno Laragon.
 
 Možeš priložiti folder docs/ (@docs) ili fajlove pojedinačno. Kratak indeks: docs/README.md
 
@@ -108,4 +108,4 @@ Duga jedna sesija (mnogo alata, terminal, kontekst) često **poveća potrošnju 
 
 ---
 
-Poslednje ažuriranje ovog fajla: 2026-06-17 (V2 staging deploy, Plesk queue worker, status V1/V2)
+Poslednje ažuriranje ovog fajla: 2026-06-19 (produkcija V2, staging validacija završena, Plesk queue worker)

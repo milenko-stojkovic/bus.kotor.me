@@ -1,24 +1,38 @@
 ﻿# Project DONE (urađeno)
 
-**Poslednje ažuriranje:** 2026-06-17  
+**Poslednje ažuriranje:** 2026-06-19  
 
 Hronološki najnovije na vrhu unutar svake sekcije. Pri zatvaranju zadatka dodaj red sa **datumom** (`YYYY-MM-DD`) i kratak opis; istu stavku ukloni iz `docs/project-todo.md`.
 
 ---
 
+## 2026-06 — Produkcija V2
+
+- **2026-06-19** — **Produkcija V2 započeta:** aplikacija u operativnom produkcijskom radu (poslije završene staging validacije na `bus-v2.kotor.me`). Operativni model: **Dnevna naknada**, **Control** (Termini + provjera tablice), **Promjena tablica**; Limo QR/OCR evidentičar ostaje **legacy** (`LIMO_QR_WORKFLOW_ENABLED=false`).
+- **2026-06-19** — **STAGING VALIDATION PHASE završena (E2E na `bus-v2.kotor.me`):** plaćanje (guest/agency, Termini + Dnevna naknada, callback), avans top-up (ako uključen), Bankart simulacija, PDF (račun/potvrda/admin), email (SMTP), FZBR/besplatne, Control panel, admin analitika, queue/scheduler performanse — potvrđeno na serveru prije produkcijskog starta.
+- **2026-06-19** — **Produkcija / Bankart:** operativna verifikacija HMAC callback potpisa i header-a sa **pravim** Bankart okruženjem na **hostovanom** domenu (`RealCallbackSignatureValidator`); E2E sa realnim callback scenarijima na hostovanom okruženju.
+- **2026-06-19** — **Limo roadmap (produkcija V2):** širi incident workflow (statusi reported/closed, admin rešenja), **PWA** instalabilni shell za `/limo` i **native Android** evidentičar — **izbačeni iz plana** operativnog modela V2. Ostaje: informativna stranica agencije, **dnevna naknada**, Control provjera tablice; legacy kod (minimalni incident tok, QR/OCR isključen po defaultu, admin istorija) **očuvan u repou** — v. `limo-service.md` § Operativni model.
+- **2026-06-19** — **Dokumentacija:** usklađeni `control-panel.md`, `project-conventions.md`, `language-and-invoice-rules.md`, `admin-panel.md`, `limo-service.md`, `agency-panel.md` sa Control/ PDF / pretragom promjenama iz istog perioda.
+
 ## 2026-06 — V2 staging deploy (server validacija)
 
-- **2026-06-17** — **V2 deploy na staging (produkcijski server, odvojeno od V1):** aplikacija živi na **`https://bus-v2.kotor.me`** sa **zasebnom bazom** (V1 produkcija na **`https://bus.kotor.me`** ostaje aktivna i nepromijenjena). Prelazak sa isključivo lokalnog razvoja na **primarno test okruženje na serveru** — E2E validacija u toku, **bez production cut-over-a** na V2.
+- **2026-06-17** — **V2 deploy na staging (produkcijski server, odvojeno od V1):** aplikacija na **`https://bus-v2.kotor.me`** sa **zasebnom bazom** — E2E validacija završena **2026-06-19** (v. sekcija Produkcija V2 iznad).
   - **Plaćanje:** Bankart **simulaciono** test okruženje (real driver, test kredencijali).
   - **Fiskalizacija:** Primatech **simulaciono** test okruženje; pun `fiscalReceipt` payload usklađen sa V1; test seller/PIB za sandbox.
   - **Queue:** Plesk scheduled task **`queue-worker.php`** (`* * * * *`, bez `--stop-when-empty`, `--max-time=55`, lock `plesk_queue_worker_bus_v2`) — nema Supervisor/Laravel Toolkit Queue.
   - **UX:** scroll pozicija na rezervacionim formama (`reservationFormScroll.js`) — guest + agency panel.
   - **Poslovni model na stagingu:** **Dnevna naknada / Daily fee** (agency + guest), **Control** provjera tablice, **Promjena tablica**; **Limo QR/OCR/evidentičar** ostaje **legacy** (`LIMO_QR_WORKFLOW_ENABLED=false`, kod i istorija očuvani).
-  - **Dokumentacija:** `handoff-new-chat.md`, `project-todo.md` (STAGING VALIDATION PHASE), `production-runbook.md` (topologija V1/V2), `project-conventions.md` (URL-ovi).
+  - **Dokumentacija:** `handoff-new-chat.md`, `production-runbook.md` (topologija), `project-conventions.md` (URL-ovi); E2E završena 2026-06-19 v. sekcija Produkcija V2 iznad.
 
 ## 2026-06 — UX i operativa
 
-- **2026-06-17** — **Control Termini — kraći prozor liste:** dolasci na **`/control/`** prikazuju se od **1 h** prije početka termina (umjesto 3 h); `ControlArrivalSlots::PREVIEW_HOURS_BEFORE_START`; pretraga nepromijenjena; docs (`control-panel.md`).
+- **2026-06-19** — **Control — provjera tablice uključuje Termine:** na **`POST /control/dnevna-naknada/provjeri`** pogodak i za današnji **`time_slots`** (`paid`/`free`) pored plaćene dnevne naknade; status „Rezervacija termina za danas: DA“ / „Plaćena dnevna naknada: DA“; polje **Vrsta** po pogotku; **lista** na dnu i dalje samo `daily_ticket` + `paid` (bez email kolone); namijenjeno i komunalnoj policiji; testovi **`DailyFeeControlTest`**; docs (`control-panel.md`).
+- **2026-06-19** — **Control — pretraga samo Termini:** `ControlDashboardController::searchReservations()` fiksno isključuje `daily_ticket` (bez nove opcije u formi); test **`ControlPanelTest::test_search_excludes_daily_ticket_reservations`**; docs (`control-panel.md`).
+- **2026-06-19** — **PDF imena priloga (V1 usklađivanje):** `Reservation::invoicePdfFilename()` → `invoice-{id}-{reservation_date}.pdf`; `freeConfirmationPdfFilename()` → `free-confirmation-{id}-{reservation_date}.pdf`; email jobovi, panel download/inline, admin update dokument; test **`ReservationInvoiceFilenameTest`**; docs (`project-conventions.md`, `language-and-invoice-rules.md`).
+- **2026-06-19** — **Control — label tipa vozila:** `VehicleType::formatControlLabel()` na dashboardu (dolasci, pretraga) — bez cijene, bez duplog naziva kad je `description` već puni produkcijski label; `formatLabel()` globalno prepoznaje isti slučaj za ostale UI dropdowne; testovi **`VehicleTypeLabelFormatTest`**, **`ControlPanelTest`**; docs (`control-panel.md`).
+- **2026-06-19** — **Control — filter statusa u pretrazi:** padajući izbor plaćena/besplatna/bilo koja; kolona Status u tabeli rezultata; testovi **`ControlPanelTest`**; docs (`control-panel.md`).
+- **2026-06-19** — **Grafikon kapaciteta — ukupan broj rezervacija:** na Control dashboardu i admin Upozorenja prikaz **„Ukupno rezervacija: X (plaćene + besplatne)“** za Termine taj dan (`DailyCapacityChartService::confirmedTimeSlotsReservationsCount`); stubci i dalje iz `daily_parking_data`; testovi **`DailyCapacityChartServiceTest`**, **`DailyCapacityChartsRenderTest`**; docs (`control-panel.md`, `admin-panel.md`).
+- **2026-06-17** — **Control Termini — kraći prozor liste:** dolasci na **`/control/`** prikazuju se od **1 h** prije početka termina (umjesto 3 h); `ControlArrivalSlots::PREVIEW_HOURS_BEFORE_START`; docs (`control-panel.md`).
 - **2026-06-17** — **Control — lista plaćenih dnevnih naknada:** na dnu **`GET /control/dnevna-naknada`** tabela današnjih `paid` `daily_ticket` rezervacija za putnička vozila 4+1–7+1 i minibus 8+1 (`DailyFeeControlService::paidDailyFeeVehiclesForToday`, `ReservationVehicleEligibilityService::controlDailyFeeListVehicleTypeIds`); ručna provjera tablice nepromijenjena; testovi **`DailyFeeControlTest`**; docs (`control-panel.md`).
 - **2026-06-17** — **Agency Termini — filter vozila u dropdownu:** na **`GET /panel/reservations`** (`reservation_kind=time_slots`), nakon izbora datuma + dolaska + odlaska, padajući meni vozila isključuje tablice sa postojećim istodnevnim Termini konfliktom (`DuplicateReservationAttemptService::filterVehiclesAllowedForTerminiSlots`); napomena `booking.termini_vehicles_hidden_hint` CG/EN samo kad je nešto sakriveno; Dnevna naknada i server-side checkout validacija nepromijenjeni; testovi **`AgencyTerminiVehicleDropdownFilterTest`**; docs (`agency-panel.md`).
 - **2026-06-17** — **Plesk queue worker:** `queue-worker.php` bez `--stop-when-empty` (`--max-time=55`, `--sleep=1`); `Cache::lock` / file lock protiv preklapanja; docs (`cron-commands.md`, `production-runbook.md`, `production-readiness-and-disaster-recovery.md`).

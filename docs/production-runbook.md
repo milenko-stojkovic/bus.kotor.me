@@ -4,19 +4,16 @@ Operativni koraci posle deploy-a ili pri prvom puštanju u produkciju. Detalji t
 
 ---
 
-## Trenutna topologija (2026-06-17)
+## Trenutna topologija (2026-06-19)
 
-| | **V1** | **V2** |
+| | **V2 produkcija** | **V2 staging** |
 |---|--------|--------|
 | **URL** | `https://bus.kotor.me` | `https://bus-v2.kotor.me` |
-| **Uloga** | **Produkcija** — aktivna, ne dirati bez plana | **Staging** — primarno E2E test okruženje |
-| **Baza** | V1 produkcijska | Zasebna staging baza (nema dijeljenja sa V1) |
-| **Plaćanje** | Pravi Bankart (produkcija) | Bankart **simulacija** (test kredencijali) |
-| **Fiskalizacija** | Pravi Primatech (produkcija) | Primatech **simulacija** (test seller/ENU) |
-| **Queue** | Prema V1 operativi | Plesk **`queue-worker.php`** (cron svake minute) |
-| **Cut-over** | — | **Nije** izvršen; V1 ostaje izvor istine za korisnike |
+| **Uloga** | **Aktivna produkcija** — V2 kod, pravi Bankart + fiskal | E2E validacija **završena**; odvojena baza; ranije simulacija |
+| **Baza** | Produkcijska V2 | Staging (nema dijeljenja sa produkcijom) |
+| **Queue** | Plesk **`queue-worker.php`** (cron svake minute) ili ekvivalent | Isto (staging) |
 
-**Staging deploy (V2):** `git pull`, `composer install`, `npm ci && npm run build`, `php artisan migrate --force`, `php artisan config:clear` (ili `config:cache` kad je `.env` finalan). Plesk scheduled tasks: **`schedule-run.php`** + **`queue-worker.php`**.
+**Staging deploy (historija / `bus-v2`):** `git pull`, `composer install`, `npm ci && npm run build`, `php artisan migrate --force`, `php artisan config:clear` (ili `config:cache` kad je `.env` finalan). Plesk: **`schedule-run.php`** + **`queue-worker.php`**.
 
 ---
 
@@ -91,27 +88,14 @@ php artisan event:cache
 
 ---
 
-## Planirani cut-over (V2 staging → V2 produkcija)
+## Produkcija V2 — status (2026-06-19)
 
-**Status:** placeholder — **nije** zakazano. V1 (`bus.kotor.me`) ostaje aktivna dok se ne zatvori staging checklist u **`docs/project-todo.md`** (STAGING VALIDATION PHASE).
+**E2E validacija** na `bus-v2.kotor.me` **završena**; **produkcijski rad V2** na `bus.kotor.me` **započet**. Detalji: `project-done.md` (2026-06-19).
 
-### Preduslovi (prije zamjene V1)
+### Post-deploy / operativa (kontinuirano)
 
-- [ ] Sve stavke STAGING VALIDATION PHASE završene i dokumentovane.
-- [ ] Produkcijski Bankart kredencijali i callback URL na finalnom domenu testirani (ne simulacija).
-- [ ] Produkcijski fiskal: seller PIB, ENU, operator — verifikovan na pravom okruženju.
-- [ ] `APP_URL`, mail, sesije, HTTPS na ciljnom domenu.
-- [ ] Queue: odluka Supervisor vs Plesk `queue-worker.php` za produkcijski saobraćaj.
-- [ ] Backup / rollback plan: V1 baza i kod ostaju dostupni za hitan povratak.
-- [ ] Komunikacija korisnicima (agencije, admin) — maintenance prozor ako je potreban.
-
-### Cut-over koraci (nacrt)
-
-- [ ] Zamrznuti promjene na V1 osim hitnih fixeva.
-- [ ] Finalni deploy V2 koda na produkcijski domen (ili DNS/preusmjeravanje prema arhitekturi hostinga).
-- [ ] Migracije na produkcijskoj V2 bazi; **ne** miješati V1 podatke bez eksplicitnog migration plana.
-- [ ] `.env` produkcija: `BANK_DRIVER=bankart`, `FISCALIZATION_DRIVER=real`, `APP_DEBUG=false`.
-- [ ] Smoke: jedna plaćena rezervacija, fiskal, email, admin pregled.
-- [ ] Monitoring 24–48 h: `payments.log`, `failed_jobs`, `post_fiscalization_data`, `admin_alerts`.
+- [ ] Queue: dugoročna odluka Supervisor vs Plesk `queue-worker.php` po opterećenju (trenutno Plesk cron).
+- [ ] Backup / rollback plan dokumentovan za operativni tim.
+- [ ] Monitoring: `payments.log`, `failed_jobs`, `post_fiscalization_data`, `admin_alerts` (redovna provjera).
 
 Detaljna operativna checklista: **`docs/production-readiness-and-disaster-recovery.md`**.

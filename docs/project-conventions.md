@@ -1,8 +1,10 @@
 ﻿# Konvencije projekta (bus.kotor.me)
 
-**Poslednje ažuriranje:** 2026-06-17  
+**Poslednje ažuriranje:** 2026-06-19  
 
 Za AI i ljude: držati se ovoga pri novim izmenama da ostane konzistentno.
+
+**Otvoreni zadaci:** [project-todo.md](./project-todo.md) · **Urađeno:** [project-done.md](./project-done.md) · **Indeks docs:** [README.md](./README.md)
 
 ---
 
@@ -31,16 +33,16 @@ Preporučeni oblik (naslovi ili bold oznake moraju biti eksplicitni):
 - Kad zastareli opis više niko ne koristi, može se **skratiti** (npr. jedna rečenica + „v. git istoriju“) da doc ne raste bez kontrole.
 - U `project-done.md` često je dovoljna **jedna** rečenica po promeni; duboki „pre/posle“ zapis ostaje u tematskom fajlu gde ima smisla.
 
-### 0.2 Okruženja i URL-ovi (2026-06-17)
+### 0.2 Okruženja i URL-ovi (2026-06-19)
 
 | Okruženje | Javni URL | Napomena |
 |-----------|-----------|----------|
-| **V1 produkcija** | `https://bus.kotor.me` | Aktivna produkcija — ne mijenjati bez cut-over plana |
-| **V2 staging** | `https://bus-v2.kotor.me` | Primarno server test okruženje; odvojena baza; Bankart/fiskal **simulacija** |
+| **V2 produkcija** | `https://bus.kotor.me` | **Aktivna** produkcija (V2 kod); pravi Bankart + fiskal |
+| **V2 staging (validacija)** | `https://bus-v2.kotor.me` | E2E validacija **završena** (2026-06-19); odvojena baza; ranije simulacija Bankart/fiskal |
 | **Lokalno** | npr. `https://bus.kotor.me.test` (Laragon) | Razvoj, PHPUnit, fake driver |
 
-- **`APP_URL`** na svakom okruženju mora odgovarati stvarnom HTTPS originu u browseru. URL-ovi u Bankart return/callback toku, linkovima u mejlovima i generisanim putanjama zavise od **`config('app.url')`** / `APP_URL` — pri testiranju staginga koristiti **`https://bus-v2.kotor.me`**, ne V1 domen.
-- Topologija i cut-over: **`docs/production-runbook.md`**; staging checklist: **`docs/project-todo.md`** (STAGING VALIDATION PHASE).
+- **`APP_URL`** na svakom okruženju mora odgovarati stvarnom HTTPS originu u browseru.
+- Topologija i operativa: **`docs/production-runbook.md`**; završeni zadaci: **`docs/project-done.md`**; otvoreno: **`docs/project-todo.md`**.
 
 ---
 
@@ -68,6 +70,8 @@ Preporučeni oblik (naslovi ili bold oznake moraju biti eksplicitni):
 - **Fiskalni račun** (`pdf/paid-invoice`, `isFiscal`): donji pravni red *„Ovaj račun je generisan automatski i važi kao fiskalni dokument.“*
 - **Nefiskalni račun** (isti šablon, `isFiscal = false`): *„Ova potvrda je automatski generisana od strane sistema Opštine Kotor.“* (nije fiskalni dokument u tom smislu).
 - **Besplatna potvrda** (`pdf/free-reservation-confirmation`): isti potvrdni tekst u podnožju (bez rečenice o fiskalnom dokumentu).
+- **Imena PDF priloga / download (V1):** centralizovano na modelu **`Reservation`** — plaćeni račun **`invoicePdfFilename()`** → `invoice-{id}-{reservation_date}.pdf`; besplatna potvrda **`freeConfirmationPdfFilename()`** → `free-confirmation-{id}-{reservation_date}.pdf` (`Y-m-d` iz `reservation_date`, fallback `created_at`). Koriste: `SendInvoiceEmailJob`, `SendFreeReservationConfirmationJob`, `SendAdminUpdatedReservationDocumentJob`, `FreeReservationRequestFulfillmentService`, `UserReservationController` (download/inline). Admin PDF rezervacije i dalje `reservation-{id}.pdf`.
+- **Control panel — label tipa vozila:** `VehicleType::formatControlLabel($locale)` — samo naziv/opis, **bez** cijene; kada `vehicle_type_translations.description` već sadrži puni label (npr. poslije migracije opisa), ne duplira se naziv. Ostali user-facing prikazi: **`formatLabel($locale, 'EUR')`** (`Naziv (Opis) - Cena`, sa istom zaštitom od duplog naziva). V. **`docs/control-panel.md`**.
 
 ---
 

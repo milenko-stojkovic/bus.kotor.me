@@ -40,6 +40,12 @@ Specifikacija admin funkcionalnosti. Modeli: Reservation, TempData, DailyParking
 
 Kontroler: **`WarningsController::index`**. Stranica ima tri bloka: **Upozorenja**, **Nedostupni dani i termini**, **Blokirani dani i termini** (meta refresh 300 s za operativni pregled).
 
+**Grafikon kapaciteta (danas + sutra)**
+
+- Isti dataset kao na Control dashboardu: **`DailyCapacityChartService::todayAndTomorrow()`** + partial `daily-capacity-chart`.
+- Stubci: **`daily_parking_data`** (`reserved` + `pending` po terminu); kapacitet: **`system_config.available_parking_slots`**.
+- **Ukupno rezervacija** za dan: broj **`reservations`** (`time_slots`, `paid`/`free`) — v. **`docs/control-panel.md`**.
+
 **Blokirani dani i termini**
 
 - Izvor: **`daily_parking_data.is_blocked = 1`**.

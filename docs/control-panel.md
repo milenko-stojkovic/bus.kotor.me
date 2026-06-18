@@ -1,8 +1,8 @@
 # Control panel (operativni dolasci)
 
-**Poslednje ažuriranje:** 2026-06-10  
+**Poslednje ažuriranje:** 2026-06-19  
 
-Lagani panel za šalter / kontrolu ulaska: **login**, **grupe dolazaka po terminu** i **pretraga rezervacija**. Odvojen je od **agency** panela (`/panel`, `User`), od **glavnog admin panela** (`/admin`, guard `panel_admin`, `admins.admin_access`) i od **operativnog staff pregleda** (`/staff`, `User` + `AdminMiddleware` — rezervacije, late-success).
+Lagani panel za šalter / kontrolu ulaska: **login**, **grupe dolazaka po terminu**, **grafikon kapaciteta**, **pretraga rezervacija (Termini)** i zasebno **kontrola dnevne naknade** (uključujući provjeru tablice za komunalnu policiju). Odvojen je od **agency** panela (`/panel`, `User`), od **glavnog admin panela** (`/admin`, guard `panel_admin`, `admins.admin_access`) i od **operativnog staff pregleda** (`/staff`, `User` + `AdminMiddleware` — rezervacije, late-success).
 
 ---
 
@@ -35,7 +35,7 @@ Tekstovi u view-ima su **hardcoded CG stringovi** (nema `UiText` grupe za contro
 - **Servis:** `App\Services\Control\DailyFeeControlService` — normalizacija tablice (`DuplicateReservationAttemptService::normalizeLicensePlate`), ručna provjera za **današnji** `reservation_date` (`Europe/Podgorica`): **plaćena dnevna naknada** (`daily_ticket` + `paid`) **ili** **rezervacija/potvrda termina** (`time_slots` + `paid`/`free`, uklj. legacy `reservation_kind` NULL).
 - **Samo čitanje:** nema plaćanja, fiskalizacije, emaila, OCR-a, GPS-a, QR-a, izmjena rezervacija.
 - **Rezultat:** „Plaćena dnevna naknada: DA“ i/ili „Rezervacija termina za danas: DA“ (ili „Važeća rezervacija za danas: NE“) + detalji po pogotku (vrsta, agencija, datum važenja, tip vozila, email, vrijeme kreiranja). Više pogodaka istog dana/tablice — lista.
-- **Lista za danas (dno stranice):** tabela svih **plaćenih** dnevnih naknada za **današnji** `reservation_date` (`Europe/Podgorica`) čiji je `vehicle_type_id` u kategorijama **putničko/limo 4+1–7+1** ili **minibus 8+1** (`ReservationVehicleEligibilityService::controlDailyFeeListVehicleTypeIds()` — ID-jevi iz `vehicle_type_translations`, ne hardkodirani). Sort: `license_plate` ASC. Prazno stanje: *Nema vozila sa plaćenom dnevnom naknadom za danas.* Ručna provjera tablice ostaje nepromijenjena.
+- **Lista za danas (dno stranice):** tabela svih **plaćenih** dnevnih naknada za **današnji** `reservation_date` (`Europe/Podgorica`) čiji je `vehicle_type_id` u kategorijama **putničko/limo 4+1–7+1** ili **minibus 8+1** (`ReservationVehicleEligibilityService::controlDailyFeeListVehicleTypeIds()` — ID-jevi iz `vehicle_type_translations`, ne hardkodirani). Kolone: tablica, agencija/korisnik, tip vozila, vrijeme kupovine, datum važenja (**bez** kolone email — štednja prostora na terenu). Sort: `license_plate` ASC. Prazno stanje: *Nema vozila sa plaćenom dnevnom naknadom za danas.* **Lista se ne mijenja** kada ručna provjera tablice uključuje i Termine — to su dva odvojena prikaza.
 - **Ne provjerava:** historijske Limo QR tabele, druge datume. Lista na dnu stranice i dalje samo plaćene dnevne naknade (v. ispod).
 - **Testovi:** `tests/Feature/Control/DailyFeeControlTest.php`.
 
@@ -53,7 +53,29 @@ Ako planiraš da u Android “control/staff” aplikaciji postoji ekran “Agenc
 
 ---
 
-## Dolasci po terminu (vidljivost)
+## Dashboard Termini (`GET /control`)
+
+Kontrolor za **Termine** koristi glavni dashboard. **Dnevna naknada** ima poseban ekran **`/control/dnevna-naknada`** (v. gore).
+
+### Grafikon kapaciteta (danas + sutra)
+
+- **Servis:** `App\Services\Operations\DailyCapacityChartService` (`todayAndTomorrow()`).
+- **Stubci po terminu (`reserved`, `pending`, `total`):** iz **`daily_parking_data`** za taj kalendarski dan (`Europe/Podgorica`) — trenutno stanje soft-locka i potvrđenih rezervacija po slotu. **Dnevna naknada ne dira** `daily_parking_data`, pa se u stubcima ne vidi.
+- **Crvena linija kapaciteta:** `SystemConfig::availableParkingSlots()` (ne `daily_parking_data.capacity` na grafikonu).
+- **„Ukupno rezervacija: X (plaćene + besplatne)“:** broj iz tabele **`reservations`** za taj dan — samo **`time_slots`** (ili legacy `reservation_kind` NULL), `status IN (paid, free)`.
+- **Partial:** `resources/views/partials/daily-capacity-chart.blade.php`; isti dataset na admin **Upozorenja** (`WarningsController`).
+- **Testovi:** `tests/Feature/Control/DailyCapacityChartsRenderTest.php`, `tests/Unit/Operations/DailyCapacityChartServiceTest.php`.
+
+### Pretraga rezervacija
+
+- **Kontroler:** `ControlDashboardController::searchReservations()`; validacija `ControlReservationSearchRequest`.
+- **Obavezno:** bar jedan kriterijum (datum, ime, email, tip vozila, tablica, status).
+- **Samo Termini:** u kodu je fiksiran filter `reservation_kind = time_slots` (ili `NULL` za stare redove). **Dnevna naknada** se ne prikazuje — za nju je `/control/dnevna-naknada`.
+- **Datum:** samo `reservation_date >= danas` (kalendarski dan).
+- **Status (opciono u formi):** `paid` / `free` / bilo koji (bez UI za `daily_ticket`).
+- **Tip vozila u rezultatima:** `VehicleType::formatControlLabel('cg')` — bez cijene i bez duplog naziva kada je opis već puni label (v. `VehicleType` u kodu).
+
+### Dolasci po terminu (vidljivost)
 
 Servis: **`App\Services\Control\ControlArrivalSlots`**.
 
@@ -65,7 +87,7 @@ Za svaki vidljivi termin učitavaju se rezervacije gde je **`reservation_date`**
 
 - `drop_off_time_slot_id = slot.id` **ILI** `pick_up_time_slot_id = slot.id`
 
-**Nema filtra po `status`:** isto pravilo važi za **`paid`**, **`free`** i **miješane** parove termina (jedan „besplatan“ prozor, drugi plaćeni) — bitan je samo ID termina i datum.
+**Nema filtra po `status`:** isto pravilo važi za **`paid`**, **`free`** i **miješane** parove termina (jedan „besplatan“ prozor, drugi plaćeni) — bitan je samo ID termina i datum. Prikaz tipa vozila: **`formatControlLabel('cg')`** (npr. `Putničko vozilo (4+1, 5+1, 6+1 i 7+1 mjesta)`), ne `formatLabel` sa cijenom.
 
 Ista rezervacija može da se pojavi u **dve grupe** ako su u prozoru istovremeno i drop-off i pick-up termin (različiti slotovi).
 
@@ -80,7 +102,9 @@ Ista rezervacija može da se pojavi u **dve grupe** ako su u prozoru istovremeno
 ## Testovi
 
 - **`tests/Unit/ListOfTimeSlotArrivalWindowTest.php`** — prozor dolaska i `24:00`.
-- **`tests/Feature/Control/`** — feature testovi za control rute (gde postoje).
+- **`tests/Feature/Control/ControlPanelTest.php`** — login, dolasci, pretraga (ukl. filter statusa i isključenje `daily_ticket`).
+- **`tests/Feature/Control/DailyFeeControlTest.php`** — dnevna naknada, provjera tablice (ukl. Termini), lista za danas.
+- **`tests/Feature/Control/DailyCapacityChartsRenderTest.php`** — grafikon na dashboardu.
 
 ---
 

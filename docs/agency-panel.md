@@ -124,7 +124,7 @@ Ruta **`GET /panel/limo`** dostupna kada su ispunjena **oba** uslova:
 
 Ako je bilo koji uslov false, `/panel/limo` vraća **404**, a navigaciona stavka „Limo” može biti vidljiva ali **disabled** (bez linka) uz tooltip.
 
-- **Informativna stranica:** odobrena mjesta ukrcaja (map linkovi), obaveza važeće **dnevne naknade**, kontrola od strane komunalne policije / ovlašćenih kontrolora (provjera tablice: Control panel `/control/dnevna-naknada`, v. `docs/control-panel.md`).
+- **Informativna stranica:** odobrena mjesta ukrcaja (map linkovi), obaveza važeće **dnevne naknade**, kontrola od strane komunalne policije / ovlašćenih kontrolora (provjera tablice: Control panel `/control/dnevna-naknada` — dnevna naknada ili Termini za danas; v. `docs/control-panel.md`).
 - **Deprecated QR rute** (`panel.limo.qr.*`): ostaju u kodu; middleware **`limo.qr_workflow`** vraća **404** dok je flag isključen. Rollback: `LIMO_QR_WORKFLOW_ENABLED=true`.
 - **Jezik (cg/en):** `nav_limo`, `limo_info_*` u `ui_translations` / `UiText`.
 
