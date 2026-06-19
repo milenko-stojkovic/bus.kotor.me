@@ -23,7 +23,27 @@
                 ></div>
             @endif
             <div class="relative z-10 mb-6 flex w-full flex-1 flex-col items-center pt-6 sm:mb-8 sm:justify-center sm:pt-6">
-                <div class="w-full sm:max-w-lg flex justify-end px-6">
+                <div class="w-full sm:max-w-lg flex items-center px-6 {{ $showHomeLink ? 'justify-between' : 'justify-end' }}">
+                    @if ($showHomeLink)
+                        @php
+                            $homeLabel = \App\Support\UiText::t(
+                                'reservation',
+                                'back_to_home',
+                                app()->getLocale() === 'cg' ? 'Početna stranica' : 'Home',
+                            );
+                        @endphp
+                        <a
+                            href="{{ route('landing', [], false) }}"
+                            class="inline-flex items-center justify-center rounded p-1 text-red-800 transition opacity-90 hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2 focus-visible:ring-offset-red-50"
+                            title="{{ $homeLabel }}"
+                            aria-label="{{ $homeLabel }}"
+                        >
+                            <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                            </svg>
+                            <span class="sr-only">{{ $homeLabel }}</span>
+                        </a>
+                    @endif
                     <div class="flex items-center gap-3">
                         @include('partials.user-guide-pdf-link', ['variant' => 'guest'])
                         <a

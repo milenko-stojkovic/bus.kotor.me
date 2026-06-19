@@ -275,6 +275,8 @@ class UiTranslationsSeeder extends Seeder
             ['group' => 'reservation', 'key' => 'accept_parking_obligation_after', 'locale' => 'en', 'text' => ' parking.'],
             ['group' => 'reservation', 'key' => 'reserve', 'locale' => 'cg', 'text' => 'Rezerviši'],
             ['group' => 'reservation', 'key' => 'reserve', 'locale' => 'en', 'text' => 'Reserve'],
+            ['group' => 'reservation', 'key' => 'back_to_home', 'locale' => 'cg', 'text' => 'Početna stranica'],
+            ['group' => 'reservation', 'key' => 'back_to_home', 'locale' => 'en', 'text' => 'Home'],
             ['group' => 'reservation', 'key' => 'free_reservation', 'locale' => 'cg', 'text' => 'Ova rezervacija je besplatna'],
             ['group' => 'reservation', 'key' => 'free_reservation', 'locale' => 'en', 'text' => 'This reservation is free'],
             ['group' => 'reservation', 'key' => 'total_to_pay', 'locale' => 'cg', 'text' => 'Ukupno za plaćanje'],

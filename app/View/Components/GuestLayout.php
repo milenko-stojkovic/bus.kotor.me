@@ -9,6 +9,7 @@ class GuestLayout extends Component
 {
     public function __construct(
         public bool $landingBackground = false,
+        public bool $showHomeLink = false,
     ) {
     }
 

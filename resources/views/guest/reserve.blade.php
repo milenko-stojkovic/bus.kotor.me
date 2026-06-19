@@ -1,4 +1,4 @@
-<x-guest-layout :landing-background="true">
+<x-guest-layout :landing-background="true" :show-home-link="true">
     @php
         $minDate = now()->toDateString();
         $maxDate = now()->addDays(90)->toDateString();
