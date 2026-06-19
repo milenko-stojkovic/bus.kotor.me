@@ -111,7 +111,12 @@
         $todayRows = is_array($todayList) ? ($todayList['rows'] ?? []) : [];
     @endphp
     <section id="control-daily-fee-today-list" class="mt-10 rounded-lg border border-red-100 bg-white p-4 shadow sm:p-6">
-        <h2 class="text-lg font-semibold text-gray-900">Vozila sa plaćenom dnevnom naknadom za danas</h2>
+        <div class="flex flex-wrap items-start justify-between gap-3">
+            <h2 class="text-lg font-semibold text-gray-900">Vozila sa plaćenom dnevnom naknadom za danas</h2>
+            <div class="text-sm text-gray-600">
+                Ukupno vozila: <span class="font-semibold text-gray-900">{{ (int) ($todayList['total'] ?? count($todayRows)) }}</span>
+            </div>
+        </div>
         <p class="mt-1 text-sm text-gray-600">
             Prikazana su putnička vozila 4+1–7+1 i minibus 8+1.
             @if (! empty($todayList['validity_date_display'] ?? null))

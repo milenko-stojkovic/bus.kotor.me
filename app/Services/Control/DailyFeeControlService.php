@@ -95,6 +95,7 @@ final class DailyFeeControlService
      *     validity_date: string,
      *     validity_date_display: string,
      *     vehicle_type_ids: list<int>,
+     *     total: int,
      *     rows: list<array{
      *         id: int,
      *         license_plate: string,
@@ -116,6 +117,7 @@ final class DailyFeeControlService
                 'validity_date' => $today->toDateString(),
                 'validity_date_display' => $today->format('d.m.Y'),
                 'vehicle_type_ids' => [],
+                'total' => 0,
                 'rows' => [],
             ];
         }
@@ -135,6 +137,7 @@ final class DailyFeeControlService
             'validity_date' => $today->toDateString(),
             'validity_date_display' => $today->format('d.m.Y'),
             'vehicle_type_ids' => $vehicleTypeIds,
+            'total' => $rows->count(),
             'rows' => $rows->map(fn (Reservation $r) => $this->formatRow($r))->values()->all(),
         ];
     }

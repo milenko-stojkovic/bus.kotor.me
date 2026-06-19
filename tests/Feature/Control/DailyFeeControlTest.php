@@ -301,6 +301,8 @@ final class DailyFeeControlTest extends TestCase
             ->get(route('control.daily_fee.index', [], false))
             ->assertOk()
             ->assertSee('Vozila sa plaćenom dnevnom naknadom za danas', false)
+            ->assertSee('Ukupno vozila:', false)
+            ->assertSee('>1<', false)
             ->assertSee('LIMO001', false)
             ->assertSee('Limo Agency', false)
             ->assertSee('Putničko vozilo', false);
@@ -427,6 +429,8 @@ final class DailyFeeControlTest extends TestCase
         $this->assertStringContainsString('AGENCYDN1', $html);
         $this->assertStringContainsString('Guest Driver', $html);
         $this->assertStringContainsString('Agency Driver', $html);
+        $this->assertStringContainsString('Ukupno vozila:', $html);
+        $this->assertStringContainsString('>2<', $html);
     }
 
     public function test_today_list_empty_state_when_no_matching_rows(): void
@@ -436,7 +440,9 @@ final class DailyFeeControlTest extends TestCase
         $this->actingAs($admin, 'control')
             ->get(route('control.daily_fee.index', [], false))
             ->assertOk()
-            ->assertSee('Nema vozila sa plaćenom dnevnom naknadom za danas.', false);
+            ->assertSee('Nema vozila sa plaćenom dnevnom naknadom za danas.', false)
+            ->assertSee('Ukupno vozila:', false)
+            ->assertSee('>0<', false);
     }
 
     public function test_today_list_does_not_include_pending_temp_data(): void
