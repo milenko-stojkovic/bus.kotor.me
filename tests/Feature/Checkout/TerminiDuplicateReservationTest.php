@@ -32,6 +32,15 @@ class TerminiDuplicateReservationTest extends TestCase
         $this->app->instance(PaymentService::class, $mock);
     }
 
+    private function mockPaymentRedirect(): void
+    {
+        $mock = Mockery::mock(PaymentService::class);
+        $mock->shouldReceive('createSession')
+            ->once()
+            ->andReturn(new PaymentSessionResult(true, 'https://bank.test/pay', null));
+        $this->app->instance(PaymentService::class, $mock);
+    }
+
     /**
      * @return array{drop: ListOfTimeSlot, pick: ListOfTimeSlot, other: ListOfTimeSlot}
      */
@@ -177,7 +186,7 @@ class TerminiDuplicateReservationTest extends TestCase
 
     public function test_guest_allows_both_slots_different(): void
     {
-        $this->mockPaymentServiceNotCalled();
+        $this->mockPaymentRedirect();
         ['drop' => $drop, 'pick' => $pick, 'other' => $other] = $this->seedSlots();
         $fourth = ListOfTimeSlot::query()->create(['time_slot' => '13:00 - 13:20']);
         $vt = VehicleType::query()->create(['price' => 10]);
@@ -205,14 +214,13 @@ class TerminiDuplicateReservationTest extends TestCase
                 'accept_terms' => 1,
                 'accept_privacy' => 1,
             ])
+            ->assertRedirect('https://bank.test/pay')
             ->assertSessionMissing('error');
-
-        $this->assertNotSame(self::BLOCKED_EN, session('error'));
     }
 
     public function test_guest_allows_cross_match_only(): void
     {
-        $this->mockPaymentServiceNotCalled();
+        $this->mockPaymentRedirect();
         ['drop' => $drop, 'pick' => $pick, 'other' => $other] = $this->seedSlots();
         $vt = VehicleType::query()->create(['price' => 10]);
         $d = now()->addDays(3)->toDateString();
@@ -239,9 +247,8 @@ class TerminiDuplicateReservationTest extends TestCase
                 'accept_terms' => 1,
                 'accept_privacy' => 1,
             ])
+            ->assertRedirect('https://bank.test/pay')
             ->assertSessionMissing('error');
-
-        $this->assertNotSame(self::BLOCKED_EN, session('error'));
     }
 
     public function test_agency_advance_blocked_for_duplicate_termini(): void
@@ -339,7 +346,7 @@ class TerminiDuplicateReservationTest extends TestCase
 
     public function test_expired_temp_data_does_not_block(): void
     {
-        $this->mockPaymentServiceNotCalled();
+        $this->mockPaymentRedirect();
         ['drop' => $drop, 'pick' => $pick, 'other' => $other] = $this->seedSlots();
         $vt = VehicleType::query()->create(['price' => 10]);
         $d = now()->addDays(3)->toDateString();
@@ -374,6 +381,7 @@ class TerminiDuplicateReservationTest extends TestCase
                 'accept_terms' => 1,
                 'accept_privacy' => 1,
             ])
+            ->assertRedirect('https://bank.test/pay')
             ->assertSessionMissing('error');
     }
 

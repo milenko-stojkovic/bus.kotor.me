@@ -42,7 +42,7 @@ Strukturisani ključevi (gde je moguće: **`merchant_transaction_id`** + **`rese
 - `free_reservation_email_sent` / `free_reservation_email_send_failed` / `free_reservation_email_job_exhausted`
 - `payment_callback_job_exhausted`, `payment_job_exhausted`, `process_reservation_after_payment_job_exhausted`
 - **Bankart init (create session):** `bankart_create_session_request`, `bankart_create_session_response` (uspjeh), `bankart_create_session_failed` (odbijen odgovor, mreža, config, itd.) — uvek sa `merchant_transaction_id` / `amount` / `currency` gde ima smisla; telo odgovora samo kao skraćeni preview.
-- **`checkout_create_session_failed`** — `createSession` pao u checkout-u (`stage`: postojeći pending, posle unique violation, ili posle novog `temp_data` pre decrement-a pending-a).
+- **`payment_init_failed`** — checkout ili inquiry zatvorio pending bez bank session-a: `merchant_transaction_id`, `temp_data_id`, `http_status`, `reason`, `stage` (npr. `checkout_after_temp_created`, `status_inquiry_transaction_not_found`).
 - **`Error classified`** — opciono polje **`stage`**: `create_session` (debit init) ili `payment_callback` (job); v. **`ErrorClassifier`** i `resolution_reason` (npr. **`bank_invalid_amount`** za amount/limit poruke banke).
 - `payment_success_after_canceled_ignored` — bank **SUCCESS** stigao dok je **`temp_data` već `canceled`**; status se **ne** menja u `late_success` (`merchant_transaction_id`, `temp_data_id`); zatim **admin email** istim putem kao fiskal alerti (**`AdminFiscalizationAlertService`**, subject *Contradictory bank outcome…*). Uspeh slanja se i dalje loguje kao **`Admin fiscalization email sent`** sa `alert_type` = `payment_success_after_canceled`.
 - `queue_worker_booted` — jednom po PHP procesu queue workera u **production** (event `WorkerStarting`)
@@ -56,7 +56,7 @@ Callback prima i dalje: `Payment callback received` / `accepted` / itd.
 
 | Scenario | Šta postoji | Napomena |
 |----------|-------------|----------|
-| `temp_data` dugo **pending** | `payment:check-pending-inquiry` → **`payment_pending_too_long`** + opciono **Bankart inquiry** | Upozorenje **ne menja** status. Inquiry (ako uključen) šalje **`PaymentCallbackJob`** na SUCCESS/ERROR banke; throttle po `merchant_transaction_id`. |
+| `temp_data` dugo **pending** | `payment:check-pending-inquiry` → **`payment_pending_too_long`** + opciono **Bankart inquiry** | Upozorenje **ne menja** status. Inquiry SUCCESS/ERROR → **`PaymentCallbackJob`**. **Transaction not found** → **`payment_init_failed`** (release lock). Throttle po `merchant_transaction_id`. |
 | Plaćena rezervacija bez **fiscal_jir** | `post_fiscalization_data` + `post-fiscalization:retry` + admin | Nefiskalni email iz `ProcessReservationAfterPaymentJob`. |
 | Email nije poslat | `invoice_sent_at`, `email_sent`, `invoice_email_*` | Worker + retry; **`failed()`** vraća **`email_sent`** na **`EMAIL_NOT_SENT`** (nema trajnog `EMAIL_SENDING`). |
 | Gomilanje **post_fiscalization_data** | Retry komanda + admin | `next_retry_at`, `resolved_at`. |

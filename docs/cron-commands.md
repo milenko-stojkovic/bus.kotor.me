@@ -41,7 +41,7 @@ Puna tabela rasporeda: **`docs/scheduled-tasks-overview.md`**.
 
 **Komanda:** `payment:check-pending-inquiry`
 
-**Opis:** (1) Za **temp_data** u **pending** starije od **`payment.stale_pending_warn_after_minutes`** (npr. 12) — log **`payment_pending_too_long`** u `payments` (throttle keš po slogu; **bez promene statusa**). (2) Samo ako je **`PaymentStatusInquiryService::isImplemented()`** = true (Bankart + `BANKART_STATUS_INQUIRY_ENABLED` + kompletna konfiguracija): za pending starije od **`payment.pending_inquiry_after_minutes`** poziva **inquire()**; keš **throttle** po **`merchant_transaction_id`** (`payment.status_inquiry_throttle_minutes`). Rezultat **SUCCESS** / **ERROR** (Bankart `transactionStatus`) → **`PaymentCallbackJob`** sa istim payload semantikom kao webhook (**nije** direktan `PaymentSuccessHandler` iz komande).
+**Opis:** (1) Za **temp_data** u **pending** starije od **`payment.stale_pending_warn_after_minutes`** (npr. 12) — log **`payment_pending_too_long`** u `payments` (throttle keš po slogu; **bez promene statusa**). (2) Samo ako je **`PaymentStatusInquiryService::isImplemented()`** = true (Bankart + `BANKART_STATUS_INQUIRY_ENABLED` + kompletna konfiguracija): za pending starije od **`payment.pending_inquiry_after_minutes`** poziva **inquire()**; keš **throttle** po **`merchant_transaction_id`** (`payment.status_inquiry_throttle_minutes`). Rezultat **SUCCESS** / **ERROR** (Bankart `transactionStatus`) → **`PaymentCallbackJob`**. Odgovor **„Transaction not found“** → **`PaymentInitFailureService`** (`canceled`, `resolution_reason=payment_init_failed`, release lock) — **nije** dispatch joba.
 
 **Frekvencija:** svakih 5 minuta (bootstrap/app.php).
 
@@ -55,7 +55,9 @@ Puna tabela rasporeda: **`docs/scheduled-tasks-overview.md`**.
 
 **Komanda:** `reservations:expire-pending`
 
-**Opis:** Proverava temp_data slogove koji su **pending** duže od praga (`config/reservations.php` → `pending_expire_minutes`). Postavlja status **`expired`**, loguje tranziciju i **smanjuje `pending`** na `daily_parking_data` za **oba** time slota (v. `ExpirePendingReservations`).
+**Opis:** Proverava temp_data slogove koji su **pending** duže od praga (`config/reservations.php` → `pending_expire_minutes`). Postavlja status **`expired`**, loguje tranziciju i **smanjuje `pending`** na `daily_parking_data` za **oba** time slota (v. `ExpirePendingReservations`). Namijenjeno **pravim** pending session-ima (korisnik na banci). **Ne** zamjenjuje odmah zatvaranje init failure-a (`payment_init_failed` u checkout-u / inquiry-u).
+
+**Preporuka produkcija:** `RESERVATIONS_PENDING_EXPIRE_MINUTES=15` ili **30** (ne držati globalno **5** osim privremenog workaround-a).
 
 **Frekvencija:** svakih 10 minuta.
 

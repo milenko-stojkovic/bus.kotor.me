@@ -35,8 +35,12 @@ Nikad kreiranje rezervacije ili fiskalizacija u HTTP request-u niti u samoj Arti
 
 - Controller **ne kreira** rezervaciju.
 - Controller vraća **503** sa **generičkom** porukom iz **`UiText`** (grupa `payment`, ključ zavisi od klasifikacije) — **nikad** sirovi tekst banke u odgovoru korisniku.
-- Nakon kreiranja `temp_data` i neuspelog `createSession`: **decrement `pending`** na zauzetim slotovima (hold se vraća). Nema dispatch-a payment jobova.
-- Ako postoji **postojeći pending** za iste slotove/korisnika ili **idempotentna grana** posle unique constraint-a, a `createSession` padne — odmah se vraća **503** **bez** ponovnog ulaska u transakciju kreiranja novog `temp_data` (v. `CheckoutController`).
+- **`PaymentInitFailureService`** (poziv iz **`CheckoutController::createSessionFailedResponse`**) odmah:
+  - **`temp_data.status` → `canceled`**, **`resolution_reason` → `payment_init_failed`**
+  - **`releaseSoftLock`** — decrement `pending` na slotovima (**Termini**)
+  - log **`payment_init_failed`** (`merchant_transaction_id`, `temp_data_id`, `http_status`, `reason`, `stage`)
+- Vrijedi za **novi** pending red, **postojeći** pending (retry createSession), i **daily_ticket** (bez slot lock-a).
+- Ako postoji **postojeći pending** za iste slotove/korisnika ili **idempotentna grana** posle unique constraint-a, a `createSession` padne — isti tretman na tom `temp_data` redu, zatim **503** (v. `CheckoutController`).
 
 ### Bankart `createSession` (`RealPaymentProvider`)
 
@@ -90,7 +94,7 @@ Controller **nikad**:
 ## Provider iza interfejsa
 
 - **PaymentService** (interface): `createSession(TempData): PaymentSessionResult`, `pay(TempData): PaymentResult`.
-- **PaymentSessionResult**: success, payment_url (za redirect), error_message (ako gateway nedostupan).
+- **PaymentSessionResult**: success, payment_url (za redirect), error_message, opciono `httpStatus` / `failureReason` (za init failure log).
 - **FakePaymentProvider**: createSession vraća URL na fake bank stranicu (/payment/fake-bank?tx=...); pay() za test state machine.
 - **RealPaymentProvider**: createSession() poziva Bankart kada je `BANK_DRIVER=bankart` i `.env` kompletan (v. `.env.example`).
 - Config: `config/payment.php` → driver iz `BANK_DRIVER` (npr. `fake` \| `bankart`).
@@ -136,6 +140,7 @@ Pretpostavka: **`BANK_DRIVER=fake`**, **`FISCALIZATION_DRIVER=fake`**.
 | `App\Services\Payment\RealPaymentProvider` | createSession → Bankart (real). |
 | `App\Jobs\PaymentCallbackJob` | Idempotentan po merchant_transaction_id; rezervacija, fiskalizacija, status. |
 | `App\Jobs\ProcessReservationAfterPaymentJob` | Fiskalizacija + PDF/email posle uspešnog plaćanja (v. success-payment-pipeline.md). |
+| `App\Services\Payment\PaymentInitFailureService` | createSession / inquiry not found → `canceled`, `payment_init_failed`, release lock. |
 | `App\Http\Controllers\CheckoutController` | Validacija, dostupnost, temp_data, createSession, redirect ili 503. |
 | `App\Http\Controllers\Api\PaymentCallbackController` | API callback: validacija potpisa + payload, dispatch job, 202/400. |
 | `config/payment.php` | Bankart/fake driver preko `BANK_DRIVER` i povezane env varijable. |

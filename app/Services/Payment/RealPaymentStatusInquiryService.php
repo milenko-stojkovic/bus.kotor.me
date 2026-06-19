@@ -109,6 +109,21 @@ class RealPaymentStatusInquiryService implements PaymentStatusInquiryService
         }
 
         if (($data['success'] ?? null) === false) {
+            $errorMessage = is_string($data['errorMessage'] ?? null) ? $data['errorMessage'] : '';
+            if ($this->isTransactionNotFound($errorMessage, $data)) {
+                Log::channel('payments')->info('payment_status_inquiry_transaction_not_found', [
+                    'merchant_transaction_id' => $merchantTransactionId,
+                    'http_status' => $response->status(),
+                    'error_code' => $data['errorCode'] ?? null,
+                    'error_message' => $errorMessage !== '' ? $errorMessage : null,
+                ]);
+
+                return [
+                    'outcome' => 'not_found',
+                    'raw' => array_merge($data, ['http_status' => $response->status()]),
+                ];
+            }
+
             Log::channel('payments')->info('payment_status_inquiry_pending', [
                 'merchant_transaction_id' => $merchantTransactionId,
                 'http_status' => $response->status(),
@@ -172,5 +187,23 @@ class RealPaymentStatusInquiryService implements PaymentStatusInquiryService
         ]);
 
         return ['outcome' => null, 'raw' => $data];
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function isTransactionNotFound(string $errorMessage, array $data): bool
+    {
+        $msg = strtolower(trim($errorMessage));
+        if ($msg !== '' && str_contains($msg, 'transaction not found')) {
+            return true;
+        }
+
+        $errorCode = $data['errorCode'] ?? null;
+        if (is_string($errorCode) && strtolower(trim($errorCode)) === 'transaction_not_found') {
+            return true;
+        }
+
+        return false;
     }
 }

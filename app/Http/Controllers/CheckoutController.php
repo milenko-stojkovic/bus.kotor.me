@@ -15,6 +15,7 @@ use App\Models\TempData;
 use App\Models\Vehicle;
 use App\Models\User;
 use App\Models\AgencyAdvanceTransaction;
+use App\Services\Payment\PaymentInitFailureService;
 use App\Services\Payment\PaymentSuccessHandler;
 use App\Services\Reservation\DuplicateReservationAttemptService;
 use App\Services\Reservation\FreeReservationRules;
@@ -236,13 +237,7 @@ class CheckoutController extends Controller
                 return redirect()->away($session->paymentUrl);
             }
 
-            Log::channel('payments')->warning('checkout_create_session_failed', [
-                'stage' => 'checkout_existing_pending',
-                'merchant_transaction_id' => $existingBySlot->merchant_transaction_id,
-                'temp_data_id' => $existingBySlot->id,
-            ]);
-
-            return $this->createSessionFailedResponse($request, $session);
+            return $this->createSessionFailedResponse($request, $existingBySlot, $session, 'checkout_existing_pending');
         }
 
         // merchant_transaction_id i retry_token uvek generiše backend (pre job-a i redirect-a)
@@ -261,12 +256,12 @@ class CheckoutController extends Controller
 
                 $slotIds = array_values(array_unique([
                     (int) $dropOffSlotId,
-                    $pickUpSlotId,
+                    (int) $pickUpSlotId,
                 ]));
 
                 // Atomic: lock BOTH selected slots (arrival + departure).
                 $dailyRows = DailyParkingData::query()
-                    ->where('date', $date)
+                    ->whereDate('date', $date)
                     ->whereIn('time_slot_id', $slotIds)
                     ->lockForUpdate()
                     ->get()
@@ -360,13 +355,7 @@ class CheckoutController extends Controller
                     return redirect()->away($session->paymentUrl);
                 }
 
-                Log::channel('payments')->warning('checkout_create_session_failed', [
-                    'stage' => 'checkout_after_unique_violation',
-                    'merchant_transaction_id' => $existingByMtid->merchant_transaction_id,
-                    'temp_data_id' => $existingByMtid->id,
-                ]);
-
-                return $this->createSessionFailedResponse($request, $session);
+                return $this->createSessionFailedResponse($request, $existingByMtid, $session, 'checkout_after_unique_violation');
             }
             throw $e;
         }
@@ -383,29 +372,22 @@ class CheckoutController extends Controller
             return redirect()->away($session->paymentUrl);
         }
 
-        // createSession nije uspeo → vrati hold (decrement pending)
-        $slotIds = array_values(array_unique([
-            (int) $dropOffSlotId,
-            $pickUpSlotId,
-        ]));
-        DailyParkingData::query()
-            ->where('date', $date)
-            ->whereIn('time_slot_id', $slotIds)
-            ->decrement('pending');
-
-        Log::channel('payments')->warning('checkout_create_session_failed', [
-            'stage' => 'checkout_after_temp_created',
-            'merchant_transaction_id' => $temp->merchant_transaction_id,
-            'temp_data_id' => $temp->id,
-        ]);
-
-        return $this->createSessionFailedResponse($request, $session);
+        return $this->createSessionFailedResponse($request, $temp, $session, 'checkout_after_temp_created');
     }
 
     private function createSessionFailedResponse(
         CheckoutReservationRequest $request,
+        TempData $temp,
         ?PaymentSessionResult $session = null,
+        string $stage = 'checkout',
     ): JsonResponse|Response {
+        app(PaymentInitFailureService::class)->failAndRelease(
+            $temp,
+            $stage,
+            $session?->httpStatus,
+            $session?->failureReason,
+        );
+
         $message = $session?->errorMessage
             ?? UiText::t('payment', 'payment_processing_issue', 'Payment temporarily unavailable.');
 
@@ -619,7 +601,7 @@ class CheckoutController extends Controller
                     return redirect()->away($session->paymentUrl);
                 }
 
-                return $this->createSessionFailedResponse($request, $session);
+                return $this->createSessionFailedResponse($request, $existingByMtid, $session, 'checkout_daily_ticket_after_unique_violation');
             }
             throw $e;
         }
@@ -630,13 +612,7 @@ class CheckoutController extends Controller
             return redirect()->away($session->paymentUrl);
         }
 
-        Log::channel('payments')->warning('checkout_create_session_failed', [
-            'stage' => 'checkout_daily_ticket_after_temp_created',
-            'merchant_transaction_id' => $temp->merchant_transaction_id,
-            'temp_data_id' => $temp->id,
-        ]);
-
-        return $this->createSessionFailedResponse($request, $session);
+        return $this->createSessionFailedResponse($request, $temp, $session, 'checkout_daily_ticket_after_temp_created');
     }
 
     private function duplicateConflictResponse(

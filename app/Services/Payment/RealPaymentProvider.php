@@ -43,6 +43,8 @@ class RealPaymentProvider implements PaymentService
 
             return PaymentSessionResult::unavailable(
                 UiText::t('payment', 'payment_processing_issue', 'Payment temporarily unavailable.'),
+                null,
+                'missing_configuration',
             );
         }
 
@@ -58,6 +60,8 @@ class RealPaymentProvider implements PaymentService
 
             return PaymentSessionResult::unavailable(
                 UiText::t('payment', 'payment_processing_issue', 'Payment temporarily unavailable.'),
+                null,
+                'missing_amount',
             );
         }
 
@@ -111,6 +115,8 @@ class RealPaymentProvider implements PaymentService
 
             return PaymentSessionResult::unavailable(
                 UiText::t('payment', 'payment_processing_issue', 'Payment temporarily unavailable.'),
+                null,
+                'payload_encode_failed',
             );
         }
 
@@ -131,6 +137,8 @@ class RealPaymentProvider implements PaymentService
 
                 return PaymentSessionResult::unavailable(
                     UiText::t('payment', 'payment_processing_issue', 'Payment temporarily unavailable.'),
+                    null,
+                    'signing_failed',
                 );
             }
         }
@@ -169,6 +177,8 @@ class RealPaymentProvider implements PaymentService
 
             return PaymentSessionResult::unavailable(
                 UiText::t('payment', 'payment_processing_issue', 'Payment temporarily unavailable.'),
+                null,
+                'http_exception',
             );
         }
 
@@ -189,6 +199,8 @@ class RealPaymentProvider implements PaymentService
 
             return PaymentSessionResult::unavailable(
                 UiText::t('payment', 'payment_processing_issue', 'Payment temporarily unavailable.'),
+                $httpStatus,
+                'invalid_json',
             );
         }
 
@@ -248,7 +260,7 @@ class RealPaymentProvider implements PaymentService
 
         $userLine = UiText::t('payment', $classified['user_message_key'], 'Payment temporarily unavailable.');
 
-        return PaymentSessionResult::unavailable($userLine);
+        return PaymentSessionResult::unavailable($userLine, $httpStatus, 'gateway_rejected');
     }
 
     public function pay(TempData $tempData): PaymentResult

@@ -83,7 +83,9 @@ Glavni tok checkout-a: **`pending` → …** (prelazi ispod).
 | `pending` | `success` (webhook ili inquiry) | `processed` | Kreira se **`reservations`** (jednom po `merchant_transaction_id`), `temp_data` → processed, soft-lock → reserved; **`ProcessReservationAfterPaymentJob`** (fiskal + mejl) po pravilima handlera. |
 | `pending` | `failed` (CANCEL/ERROR/normalizovano) | `canceled` | **`handleCanceled`**: `releaseSoftLock` bez povećanja reserved; **`PaymentFailed`**; nema rezervacije. |
 | `pending` | `timeout` | `late_success` | **`applyLateSuccess(..., releaseLock: true)`** — nema kreiranja rezervacije u ovom koraku. |
-| `pending` | istek (cron `reservations:expire-pending`) | `expired` | Samo cron; smanjenje **`daily_parking_data.pending`** samo za `time_slots`; nema `PaymentCallbackJob`. |
+| `pending` | istek (cron `reservations:expire-pending`) | `expired` | Samo cron; smanjenje **`daily_parking_data.pending`** samo za `time_slots`; nema `PaymentCallbackJob`. Prag: **`pending_expire_minutes`** (preporuka **15–30 min** za prave bank session-e). |
+| `pending` | **`createSession` ne uspe** (checkout, prije redirecta) | `canceled` | **`PaymentInitFailureService`**: `resolution_reason=payment_init_failed`, release lock; HTTP **503** korisniku. |
+| `pending` | inquiry **„Transaction not found“** (`payment:check-pending-inquiry`) | `canceled` | Isti servis kao red iznad (`stage=status_inquiry_transaction_not_found`). |
 | `pending` | `success`, ali rezervacija već postoji | *(nema promene statusa u ovom koraku)* | Job prekida ranije: log „duplicate“, nema duplog kreiranja. |
 | `processed` | bilo koji ponovni callback/inquiry | `processed` | No-op (raniji return); idempotentnost. |
 | `expired` | `success` | `late_success` | **`applyLateSuccess(..., releaseLock: false)`** (lock već pušten pri expire); **nema** automatskog kreiranja rezervacije. |
@@ -108,7 +110,7 @@ Nakon **`applyLateSuccess`**, **`temp_data` ostaje `late_success`** — callback
 
 ## 5. Invarijante
 
-- HTTP checkout **ne** odlučuje konačan ishod plaćanja — samo kreira `pending` + session + redirect.
+- HTTP checkout **ne** odlučuje konačan ishod plaćanja — samo kreira `pending` + session + redirect (ili odmah **`payment_init_failed`** ako session ne postoji).
 - **Jedna rezervacija** po **`merchant_transaction_id`** (job proverava pre kreiranja).
 - **`expired` + kasni `success` → `late_success`** ne sme kreirati rezervaciju kroz **`PaymentSuccessHandler::handle`** (samo **`applyLateSuccess`**).
 - **`canceled` je terminalan** za kasni uspeh banke — nema prelaza u **`late_success`**; šalje se **operativni email** (isti kanal kao fiskal alerti) za ručnu obradu van aplikacije.
@@ -138,7 +140,8 @@ Nakon **`applyLateSuccess`**, **`temp_data` ostaje `late_success`** — callback
 - `app/Services/Payment/PaymentSuccessHandler.php`
 - `app/Services/AdminFiscalizationAlertService.php` (payment + fiskal alerti, `Mail::raw`)
 - `app/Console/Commands/ExpirePendingReservations.php`
-- `app/Console/Commands/CheckPendingPaymentStatus.php` (samo dispatch joba)
+- `app/Services/Payment/PaymentInitFailureService.php`
+- `app/Console/Commands/CheckPendingPaymentStatus.php` (inquiry SUCCESS/ERROR → job; **not found** → init failure)
 - `app/Console/Commands/AssignLateSuccessReservations.php` (no-op stub; nema automatske dodjele)
 - `app/Http/Controllers/Admin/LateSuccessController.php` (`/staff/late-success`)
 

@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Contracts\PaymentStatusInquiryService;
 use App\Jobs\PaymentCallbackJob;
+use App\Services\Payment\PaymentInitFailureService;
 use App\Models\Reservation;
 use App\Models\TempData;
 use Illuminate\Console\Command;
@@ -66,6 +67,7 @@ class CheckPendingPaymentStatus extends Command
         $throttled = 0;
         $dispatchedSuccess = 0;
         $dispatchedFailed = 0;
+        $releasedNotFound = 0;
 
         foreach ($pending as $temp) {
             $throttleKey = 'payment_status_inquiry:'.$temp->merchant_transaction_id;
@@ -82,6 +84,18 @@ class CheckPendingPaymentStatus extends Command
                 'source' => 'status_inquiry',
                 'inquired_at' => now()->toIso8601String(),
             ]);
+
+            if ($outcome === 'not_found') {
+                app(PaymentInitFailureService::class)->failAndRelease(
+                    $temp,
+                    'status_inquiry_transaction_not_found',
+                    is_int($raw['http_status'] ?? null) ? $raw['http_status'] : null,
+                    'transaction_not_found',
+                );
+                $releasedNotFound++;
+
+                continue;
+            }
 
             if ($outcome === 'success') {
                 PaymentCallbackJob::dispatch([
@@ -105,7 +119,7 @@ class CheckPendingPaymentStatus extends Command
             }
         }
 
-        $this->info('Inquiry: checked '.$pending->count().' pending; throttled '.$throttled.'; dispatched success '.$dispatchedSuccess.', failed '.$dispatchedFailed.'.');
+        $this->info('Inquiry: checked '.$pending->count().' pending; throttled '.$throttled.'; dispatched success '.$dispatchedSuccess.', failed '.$dispatchedFailed.', released not_found '.$releasedNotFound.'.');
 
         return self::SUCCESS;
     }

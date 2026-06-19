@@ -4,7 +4,7 @@ Logika mora ostati konzistentna: **temp_data** kao soft lock (samo **Termini**) 
 
 **Povezano:** `docs/payment-states.md`, `docs/payment-callback-handling.md`, `docs/payment-state-machine.md` (canonical), `docs/project-conventions.md`.
 
-**Poslednje ažuriranje:** 2026-06-19 (usklađeno sa produkcijskim kodom; `temp_data.status` nema vrijednost `failed` — bankovni neuspjeh = **`canceled`**).
+**Poslednje ažuriranje:** 2026-06-19 (payment init failure → `canceled` + `payment_init_failed`; `temp_data.status` nema `failed`).
 
 ---
 
@@ -43,6 +43,21 @@ Detalji cijene, PDF i fiskal: `payment-state-machine.md` § snapshot; panel life
   - **`invoice_amount_snapshot`** — iznos poslat banci (v. state machine)
 - **Soft lock:** `daily_parking_data.pending` se povećava za **oba** slota (jednom ako su slotovi isti).
 
+#### 1c. Neuspješan `createSession` (prije redirecta na banku)
+
+Ako **Bankart `createSession`** padne **prije** nego što korisnik stigne na payment page (npr. HTTP 503, ne-JSON, config/mreža):
+
+- **`PaymentInitFailureService`** (iz **`CheckoutController`**) odmah:
+  - postavlja **`temp_data.status` → `canceled`**
+  - **`resolution_reason` → `payment_init_failed`**
+  - **`releaseSoftLock`** — decrement `pending` na oba slota (**Termini**)
+- Korisnik dobija **503** + generičku poruku (`payment_processing_issue` / `UiText`) — **ne** sirovi bankarski tekst.
+- Log: **`payment_init_failed`** (`merchant_transaction_id`, `temp_data_id`, `http_status`, `reason`, `stage`).
+- Provider i dalje loguje **`bankart_create_session_failed`** sa detaljima HTTP odgovora.
+- **Retry** istog slot/tablice odmah moguć — red **nije** blocking `pending`.
+
+Ako je **`createSession` uspješan** i korisnik je preusmjeren na banku, **`temp_data`** ostaje **`pending`** do callbacka / inquiry-ja / cron expire-a (v. § Cron).
+
 #### 1b. Dnevna naknada (`daily_ticket`)
 
 - Nema provjere konflikta po slotovima (nema slotova).
@@ -67,7 +82,8 @@ Detalji cijene, PDF i fiskal: `payment-state-machine.md` § snapshot; panel life
 ### 3. Plaćanje ne uspe / cancel
 
 - Bankovni događaj normalizovan kao **`failed`** u job-u postaje **`temp_data.status` = `canceled`** (ENUM u bazi **nema** `failed`). UI i redirect i dalje govore o „neuspjelom plaćanju“ — v. `PaymentReturnController`, `payment-callback-handling.md`.
-- Ostala terminalna grana po pravilima: npr. **`expired`** (cron), **`late_success`** (kasni SUCCESS posle `expired`).
+- **`createSession` ne uspe prije banke** → odmah **`canceled`** + **`resolution_reason=payment_init_failed`** (v. §1c) — **ne** ostaje `pending`.
+- Ostala terminalna grana po pravilima: npr. **`expired`** (cron za **prave** pending session-e na banci), **`late_success`** (kasni SUCCESS posle `expired`).
 - **Ne oslanjati se na fizičko brisanje** redova za operativni audit.
 - Oslobađanje soft lock-a (**samo Termini**): **decrement `pending`** za oba slota gde je primenjeno.
 
@@ -93,7 +109,8 @@ Ako je `late_success` za **ulogovanu agenciju** i avans je uključen (`config('f
 | **canceled** | Terminalno (bankovni neuspjeh); kasni SUCCESS ne menja status (v. §4). |
 | **expired** | Terminalno (cron istek pending); kasni SUCCESS → `late_success`. Red ostaje za audit; `temp-data:cleanup` briše stare ne-pending redove (default 180 dana). |
 | **late_success** / **late_manual_review** | Samo nakon **`expired`** + kasni SUCCESS; **ručna** obrada preko **`/staff/late-success`** (`LateSuccessController`: force/reject). Komanda **`reservations:assign-late-success`** je **no-op stub** — nema automatske dodjele (v. `payment-state-machine.md` §4b). |
-| **pending → expired (cron)** | Komanda **`reservations:expire-pending`** (svakih **5 min**): pending stariji od **`pending_expire_minutes`** (default **5**, env `RESERVATIONS_PENDING_EXPIRE_MINUTES`) → **`expired`** + decrement `daily_parking_data.pending` (**samo Termini**). Oslobađa dupli-checkout lock ako `createSession` padne a red ostane `pending`. V. `cron-commands.md`. |
+| **pending → expired (cron)** | Komanda **`reservations:expire-pending`** (svakih **5 min**): pending stariji od **`pending_expire_minutes`** (env `RESERVATIONS_PENDING_EXPIRE_MINUTES`; **preporuka produkcija: 15–30 min** za session-e gdje je korisnik **stvarno** na banci) → **`expired`** + decrement `daily_parking_data.pending` (**samo Termini**). Ne zamjenjuje §1c — init failure se zatvara odmah. V. `cron-commands.md`. |
+| **inquiry „Transaction not found“** | Cron **`payment:check-pending-inquiry`**: ako banka vrati da transakcija ne postoji → isti tretman kao §1c (`payment_init_failed`, release lock). |
 
 **Napomena:** `reservations:process-pending` je **no-op stub** — ne mijenja `temp_data` (v. `cron-commands.md` §1).
 
@@ -109,6 +126,7 @@ Ako je `late_success` za **ulogovanu agenciju** i avans je uključen (`config('f
 | drop_off_time_slot_id, pick_up_time_slot_id | NOT NULL za Termini; **NULL** za daily_ticket |
 | user_name | Snapshot imena |
 | invoice_amount_snapshot | Iznos checkout-a (source of truth za downstream) |
-| status | ENUM: `pending`, `processed`, `canceled`, `expired`, `late_success`, `late_manual_review`, `late_rejected`, … (v. `TempData::STATUS_*` — **nema** `failed`) |
+| status | ENUM: `pending`, `processed`, `canceled`, `expired`, `late_success`, … — **nema** `failed` |
+| resolution_reason | Npr. `payment_init_failed` (createSession / inquiry not found), callback greške preko **`ErrorClassifier`**, `converted_to_advance`, … |
 
-Dodatne kolone (callback greške, `resolution_reason`, `raw_callback_payload`, itd.) koriste se za klasifikaciju i audit — v. migracije i `ErrorClassifier`.
+Dodatne kolone (`callback_error_code`, `raw_callback_payload`, itd.) koriste se za klasifikaciju i audit — v. migracije i `ErrorClassifier`.

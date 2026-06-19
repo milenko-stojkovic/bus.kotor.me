@@ -4,6 +4,7 @@ namespace Tests\Feature\Payment;
 
 use App\Contracts\PaymentStatusInquiryService;
 use App\Jobs\PaymentCallbackJob;
+use App\Models\DailyParkingData;
 use App\Models\ListOfTimeSlot;
 use App\Models\TempData;
 use App\Models\VehicleType;
@@ -83,6 +84,62 @@ class CheckPendingPaymentStatusInquiryTest extends TestCase
                 && ($job->payload['status'] ?? null) === 'failed'
                 && ($job->payload['error_code'] ?? null) === '1234';
         });
+    }
+
+    public function test_releases_pending_when_inquiry_returns_transaction_not_found(): void
+    {
+        $temp = $this->createOldPendingTemp('tx-inquiry-not-found-1');
+
+        DailyParkingData::query()->create([
+            'date' => $temp->reservation_date?->toDateString(),
+            'time_slot_id' => $temp->drop_off_time_slot_id,
+            'capacity' => 5,
+            'reserved' => 0,
+            'pending' => 1,
+            'is_blocked' => false,
+        ]);
+        DailyParkingData::query()->create([
+            'date' => $temp->reservation_date?->toDateString(),
+            'time_slot_id' => $temp->pick_up_time_slot_id,
+            'capacity' => 5,
+            'reserved' => 0,
+            'pending' => 1,
+            'is_blocked' => false,
+        ]);
+
+        $inquiry = new class implements PaymentStatusInquiryService
+        {
+            public function isImplemented(): bool
+            {
+                return true;
+            }
+
+            public function inquire(string $merchantTransactionId): array
+            {
+                return [
+                    'outcome' => 'not_found',
+                    'raw' => [
+                        'success' => false,
+                        'errorMessage' => 'Transaction not found',
+                        'http_status' => 404,
+                    ],
+                ];
+            }
+        };
+
+        $this->app->instance(PaymentStatusInquiryService::class, $inquiry);
+
+        $this->artisan('payment:check-pending-inquiry')->assertSuccessful();
+
+        $temp->refresh();
+        $this->assertSame(TempData::STATUS_CANCELED, (string) $temp->status);
+        $this->assertSame('payment_init_failed', (string) $temp->resolution_reason);
+
+        $dropPending = (int) DailyParkingData::query()
+            ->where('date', $temp->reservation_date?->toDateString())
+            ->where('time_slot_id', $temp->drop_off_time_slot_id)
+            ->value('pending');
+        $this->assertSame(0, $dropPending);
     }
 
     public function test_throttle_skips_second_inquiry_for_same_merchant_transaction(): void
