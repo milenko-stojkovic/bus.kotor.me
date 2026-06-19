@@ -83,7 +83,8 @@ class AdminPanelReservationTest extends TestCase
 
         $this->get(route('panel_admin.reservations', [], false))
             ->assertOk()
-            ->assertSee('Rezervacije', false);
+            ->assertSee('Rezervacije', false)
+            ->assertSee('oninput="this.value=this.value.toUpperCase()"', false);
     }
 
     public function test_search_by_merchant_transaction_id_returns_reservation(): void
