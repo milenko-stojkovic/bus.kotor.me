@@ -59,6 +59,56 @@ final class AdminAgenciesTest extends TestCase
             ->assertSee('55.00 EUR', false);
     }
 
+    public function test_agencies_list_search_filters_by_name_or_email(): void
+    {
+        config(['features.advance_payments' => false]);
+
+        $admin = $this->seedAdmin();
+        $this->actingAs($admin, 'panel_admin');
+
+        User::factory()->create(['name' => 'Alpha Tours DOO', 'email' => 'alpha@example.com']);
+        User::factory()->create(['name' => 'Beta Transport', 'email' => 'beta@other.test']);
+
+        $this->get(route('panel_admin.agencies.index', ['q' => 'alpha@example'], false))
+            ->assertOk()
+            ->assertSee('Alpha Tours DOO', false)
+            ->assertDontSee('Beta Transport', false);
+
+        $this->get(route('panel_admin.agencies.index', ['q' => 'Beta Trans'], false))
+            ->assertOk()
+            ->assertSee('Beta Transport', false)
+            ->assertDontSee('Alpha Tours DOO', false);
+    }
+
+    public function test_agencies_list_heuristic_search_ignores_doo_in_name(): void
+    {
+        config(['features.advance_payments' => false]);
+
+        $admin = $this->seedAdmin();
+        $this->actingAs($admin, 'panel_admin');
+
+        User::factory()->create(['name' => 'Alpha Tours DOO', 'email' => 'alpha@example.com']);
+        User::factory()->create(['name' => 'Other Agency', 'email' => 'other@example.com']);
+
+        $this->get(route('panel_admin.agencies.index', ['q' => 'Alpha Tours'], false))
+            ->assertOk()
+            ->assertSee('Alpha Tours DOO', false)
+            ->assertDontSee('Other Agency', false);
+    }
+
+    public function test_agencies_list_search_shows_empty_state_message(): void
+    {
+        $admin = $this->seedAdmin();
+        $this->actingAs($admin, 'panel_admin');
+
+        User::factory()->create(['name' => 'Only One', 'email' => 'only@example.com']);
+
+        $this->get(route('panel_admin.agencies.index', ['q' => 'nema-takve-agencije-xyz'], false))
+            ->assertOk()
+            ->assertSee('Nema rezultata pretrage.', false)
+            ->assertDontSee('Only One', false);
+    }
+
     public function test_agency_detail_renders_basic_and_ledger_and_topups_when_flag_on(): void
     {
         config(['features.advance_payments' => true]);

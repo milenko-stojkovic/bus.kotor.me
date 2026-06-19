@@ -12,6 +12,30 @@
         </header>
 
         <section class="bg-white shadow rounded-lg p-4 sm:p-6">
+            <form method="get" action="{{ route('panel_admin.agencies.index', [], false) }}" class="mb-6 flex flex-wrap gap-2 items-end">
+                <div class="flex-1 min-w-[220px]">
+                    <label for="agency-search-q" class="block text-sm font-medium text-gray-700 mb-1">Pretraga agencija (ime ili email)</label>
+                    <input
+                        type="search"
+                        name="q"
+                        id="agency-search-q"
+                        value="{{ old('q', $search ?? '') }}"
+                        class="block w-full rounded-md border-red-200 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
+                        placeholder="Npr. naziv agencije ili dio email adrese…"
+                        autocomplete="off"
+                    />
+                    <p class="mt-1 text-xs text-gray-500">Heuristička pretraga — dopušteni su djelimični podudarnosti i blage greške u kucanju.</p>
+                </div>
+                <button type="submit" class="inline-flex items-center px-4 py-2 bg-red-700 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-800 focus:bg-red-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                    Pretraži
+                </button>
+                @if (($search ?? '') !== '')
+                    <a href="{{ route('panel_admin.agencies.index', [], false) }}" class="inline-flex items-center px-4 py-2 border border-red-200 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-red-50 focus:outline-none transition">
+                        Obriši filter
+                    </a>
+                @endif
+            </form>
+
             <div class="overflow-x-auto">
                 <table class="min-w-full text-left text-sm">
                     <thead>
@@ -50,7 +74,13 @@
                         @endforeach
                         @if ($users->isEmpty())
                             <tr>
-                                <td class="py-4 text-gray-600" colspan="6">Nema agencija.</td>
+                                <td class="py-4 text-gray-600" colspan="6">
+                                    @if (($search ?? '') !== '')
+                                        Nema rezultata pretrage.
+                                    @else
+                                        Nema agencija.
+                                    @endif
+                                </td>
                             </tr>
                         @endif
                     </tbody>

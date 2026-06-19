@@ -12,8 +12,10 @@ use App\Models\Vehicle;
 use App\Models\VehicleCategoryChangeRequest;
 use App\Services\AgencyAdvance\AdvanceTopupConfirmationService;
 use App\Services\AgencyAdvance\AgencyAdvanceService;
+use App\Services\AdminPanel\Agency\AdminAgencySearchService;
 use Illuminate\Http\Response;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -22,9 +24,16 @@ use Illuminate\View\View;
 
 final class AgencyController extends Controller
 {
-    public function index(): View
+    public function index(Request $request, AdminAgencySearchService $search): View
     {
+        $validated = $request->validate([
+            'q' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        $searchTerm = isset($validated['q']) ? trim((string) $validated['q']) : '';
+
         $users = User::query()
+            ->when($searchTerm !== '', fn ($query) => $search->applySearch($query, $searchTerm))
             ->withCount('reservations')
             ->withSum('agencyAdvanceTransactions as advance_balance', 'amount')
             ->orderBy('users.name')
@@ -34,6 +43,7 @@ final class AgencyController extends Controller
         return view('admin-panel.agencies.index', [
             'users' => $users,
             'advanceEnabled' => (bool) config('features.advance_payments'),
+            'search' => $searchTerm,
         ]);
     }
 

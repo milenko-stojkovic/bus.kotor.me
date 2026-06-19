@@ -360,6 +360,8 @@ Stranice su read-only za većinu avans podataka; napredne akcije su iza feature 
 
 ### 9.1 Lista agencija
 
+Iznad tabele: **pretraga** (`GET ?q=`) po **imenu** ili **emailu** — heuristika ista kao kod admin pretrage rezervacija (`AdminReservationSearchHeuristic` preko `AdminAgencySearchService`: djelimični LIKE, jedno izostavljeno slovo, permutacija susjednih slova; kod imena ignoriše varijante DOO).
+
 Kolone (izbor):
 - ime, email, datum registracije
 - broj rezervacija
