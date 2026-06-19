@@ -25,6 +25,7 @@
             <div class="relative z-10 mb-6 flex w-full flex-1 flex-col items-center pt-6 sm:mb-8 sm:justify-center sm:pt-6">
                 <div class="w-full sm:max-w-lg flex justify-end px-6">
                     <div class="flex items-center gap-3">
+                        @include('partials.user-guide-pdf-link', ['variant' => 'guest'])
                         <a
                             href="{{ url('/locale/cg') }}"
                             class="inline-flex rounded transition focus:outline-none focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2 {{ app()->getLocale() === 'cg' ? 'ring-2 ring-red-700 ring-offset-2 ring-offset-red-50' : 'opacity-60 hover:opacity-100' }}"

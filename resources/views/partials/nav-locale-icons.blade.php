@@ -1,4 +1,5 @@
 <div class="flex items-center gap-2">
+    @include('partials.user-guide-pdf-link', ['variant' => 'panel'])
     <a
         href="{{ url('/locale/cg') }}"
         class="inline-flex rounded transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#9e1321] {{ app()->getLocale() === 'cg' ? 'ring-2 ring-white ring-offset-2 ring-offset-[#9e1321]' : 'opacity-60 hover:opacity-100' }}"

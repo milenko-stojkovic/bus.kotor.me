@@ -231,6 +231,8 @@ class UiTranslationsSeeder extends Seeder
             ['group' => 'landing', 'key' => 'agency_description', 'locale' => 'en', 'text' => 'For registered users, faster booking and reservation history.'],
             ['group' => 'landing', 'key' => 'agency_cta', 'locale' => 'cg', 'text' => 'Prijava za agencije'],
             ['group' => 'landing', 'key' => 'agency_cta', 'locale' => 'en', 'text' => 'Agency sign in'],
+            ['group' => 'landing', 'key' => 'user_guide_pdf', 'locale' => 'cg', 'text' => 'Uputstvo (PDF)'],
+            ['group' => 'landing', 'key' => 'user_guide_pdf', 'locale' => 'en', 'text' => 'User guide (PDF)'],
 
             // reservation (V2 guest reserve)
             ['group' => 'reservation', 'key' => 'title', 'locale' => 'cg', 'text' => 'Rezervacija (guest)'],
@@ -383,6 +385,8 @@ class UiTranslationsSeeder extends Seeder
             // agency panel (top navigation + placeholder pages)
             ['group' => 'panel', 'key' => 'nav_reservations', 'locale' => 'en', 'text' => 'Reservations'],
             ['group' => 'panel', 'key' => 'nav_reservations', 'locale' => 'cg', 'text' => 'Rezervacije'],
+            ['group' => 'panel', 'key' => 'user_guide_pdf', 'locale' => 'cg', 'text' => 'Uputstvo (PDF)'],
+            ['group' => 'panel', 'key' => 'user_guide_pdf', 'locale' => 'en', 'text' => 'User guide (PDF)'],
             ['group' => 'panel', 'key' => 'nav_advance', 'locale' => 'en', 'text' => 'Advance'],
             ['group' => 'panel', 'key' => 'nav_advance', 'locale' => 'cg', 'text' => 'Avans'],
             ['group' => 'panel', 'key' => 'advance_disabled_hint', 'locale' => 'en', 'text' => 'This feature is currently unavailable'],
