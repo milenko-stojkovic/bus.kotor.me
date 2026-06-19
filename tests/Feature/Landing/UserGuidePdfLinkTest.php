@@ -39,7 +39,10 @@ final class UserGuidePdfLinkTest extends TestCase
         $this->withSession(['locale' => 'cg'])
             ->get(route('landing', [], false))
             ->assertOk()
-            ->assertSee('docs/cgbuskotor.pdf', false);
+            ->assertSee('docs/cgbuskotor.pdf', false)
+            ->assertSee('target="_blank"', false)
+            ->assertSee('rel="noopener noreferrer"', false)
+            ->assertDontSee('download', false);
     }
 
     public function test_landing_hides_pdf_link_when_file_missing(): void

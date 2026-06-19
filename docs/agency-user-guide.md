@@ -24,7 +24,7 @@ Javno uputstvo za agencije (rezervacije, dnevna naknada, panel, avans, FZBR, itd
 | Dio | Detalj |
 |-----|--------|
 | **Konfiguracija** | `config/user-guides.php` — relativne putanje `docs/cgbuskotor.pdf` / `docs/engbuskotor.pdf` (ispod `public/`) |
-| **Partial** | `resources/views/partials/user-guide-pdf-link.blade.php` |
+| **Partial** | `resources/views/partials/user-guide-pdf-link.blade.php` — link otvara PDF u **novom tabu** (`target="_blank"`); korisnik može pregledati u browseru ili preuzeti iz viewer-a |
 | **Prikaz linka** | Samo ako PDF **postoji** na disku (`is_file(public_path(...))`) |
 | **Landing / gost** | `resources/views/layouts/guest.blade.php` |
 | **Agencijski panel** | `resources/views/partials/nav-locale-icons.blade.php` (pored jezičkih zastavica) |

@@ -12,7 +12,8 @@
 @if ($relativePath !== '' && is_file($absolutePath))
     <a
         href="{{ asset($relativePath) }}"
-        download
+        target="_blank"
+        rel="noopener noreferrer"
         class="inline-flex items-center justify-center rounded p-1 text-white transition opacity-90 hover:opacity-100 focus:outline-none {{ $focusRing }} {{ $variant === 'panel' ? '' : 'text-red-800' }}"
         title="{{ $label }}"
         aria-label="{{ $label }}"
