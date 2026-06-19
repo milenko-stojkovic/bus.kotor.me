@@ -39,4 +39,6 @@ Duga sesija u Cursoru često poveća memoriju i može usporiti odgovore. **Novi 
 
 **Produkcija V2 (2026-06-19):** **`https://bus.kotor.me`** (app `bus-v2.kotor.me`, baza `bus`). V1 rezerva: **`https://bus-v1.kotor.me`**. Cut-over detalji: `production-runbook.md`, `project-done.md`.
 
+**Docs ↔ kod:** audit usklađenosti završen **2026-06-19** (samo dokumentacija; v. `project-done.md` § Admin/UX). Canonical payment: **`payment-state-machine.md`**.
+
 **Poslednje ažuriranje:** 2026-06-19

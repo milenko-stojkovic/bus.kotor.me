@@ -195,7 +195,7 @@ Rute (admin panel):
 
 | Funkcionalnost | Opis | Modeli / tabele |
 |----------------|------|------------------|
-| **Promena statusa temp_data** | Izmena `status`: `pending`, `failed`, `late_success`. | `TempData.status` (`TempData::STATUS_*`) |
+| **Promena statusa temp_data** | Izmena `status` (npr. `pending`, `canceled`, `expired`, `late_success`, `late_manual_review`, …). U bazi **nema** `failed` — bankovni neuspjeh = **`canceled`**. | `TempData.status` (`TempData::STATUS_*`) |
 | **Promena statusa reservations** | Izmena `Reservation->status` (paid / free). | `Reservation.status` |
 
 ---

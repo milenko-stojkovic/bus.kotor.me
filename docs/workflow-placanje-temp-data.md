@@ -1,14 +1,29 @@
 # Workflow plaćanja i temp_data
 
-Logika mora ostati konzistentna: **temp_data** kao soft lock i audit, zatim upis u **reservations**; `temp_data` se **ne briše** na uspehu (status → `processed`).
+Logika mora ostati konzistentna: **temp_data** kao soft lock (samo **Termini**) i audit, zatim upis u **reservations**; `temp_data` se **ne briše** na uspehu (status → `processed`).
 
-**Povezano:** `docs/payment-states.md`, `docs/payment-callback-handling.md`, `docs/project-conventions.md`.
+**Povezano:** `docs/payment-states.md`, `docs/payment-callback-handling.md`, `docs/payment-state-machine.md` (canonical), `docs/project-conventions.md`.
+
+**Poslednje ažuriranje:** 2026-06-19 (usklađeno sa produkcijskim kodom; `temp_data.status` nema vrijednost `failed` — bankovni neuspjeh = **`canceled`**).
+
+---
+
+## Vrste rezervacije (`reservation_kind`)
+
+| Vrijednost | Checkout | Slotovi u `temp_data` | `daily_parking_data` |
+|------------|----------|----------------------|----------------------|
+| **`time_slots`** (default) | Gost `/guest/reserve` ili agencija `/panel/reservations` | `drop_off_time_slot_id`, `pick_up_time_slot_id` — NOT NULL | **Soft lock:** `pending` +1 na oba slota pri kreiranju `temp_data`; na uspjehu `reserved`; na cancel/expire decrement `pending` |
+| **`daily_ticket`** | Agencija `/panel/reservations` **ili** gost `/guest/reserve` (samo kartica) | Oba slot FK = **NULL** | **Ne dira se** — nema `pending`/`reserved` na slotovima; expire/cancel/success handler preskače soft-lock |
+
+Detalji cijene, PDF i fiskal: `payment-state-machine.md` § snapshot; panel lifecycle: `agency-panel.md`, `auth-and-guests.md`.
 
 ---
 
 ## Flow
 
 ### 1. Korisnik (ulogovan ili anoniman) krene plaćanje
+
+#### 1a. Termini (`time_slots`)
 
 - **Pre payment/session dela (business validacija rezervacije):** pre bilo kakvog kreiranja `temp_data` ili `createSession`, checkout proverava da li već postoji konfliktna rezervacija u tabeli **`reservations`** za:
   - isti `reservation_date`
@@ -19,13 +34,20 @@ Logika mora ostati konzistentna: **temp_data** kao soft lock i audit, zatim upis
   - Ako je konflikt detektovan, checkout prekida tok i vraća korisnika na formu sa porukom, bez `temp_data` i bez `createSession`.
 
 - Upis u **temp_data**:
-  - `merchant_transaction_id`
+  - `merchant_transaction_id`, `reservation_kind` = `time_slots`
   - termini: `drop_off_time_slot_id`, `pick_up_time_slot_id`, `reservation_date`
   - vozilo / tip: `vehicle_type_id`, `license_plate`
   - podaci: **`user_name`** (iz forme **`name`** za gosta, ili `users.name` za ulogovanog), `country`, `email`
   - **user_id** → `NULL` (guest) ili konkretan `id` (ulogovan)
   - `status` → `pending`
+  - **`invoice_amount_snapshot`** — iznos poslat banci (v. state machine)
 - **Soft lock:** `daily_parking_data.pending` se povećava za **oba** slota (jednom ako su slotovi isti).
+
+#### 1b. Dnevna naknada (`daily_ticket`)
+
+- Nema provjere konflikta po slotovima (nema slotova).
+- Upis u **temp_data** sa `reservation_kind` = `daily_ticket`, slot FK = **NULL**, ostala polja kao gore.
+- **Bez** incrementa `daily_parking_data.pending`.
 
 ### 2. Plaćanje uspe
 
@@ -33,8 +55,9 @@ Logika mora ostati konzistentna: **temp_data** kao soft lock i audit, zatim upis
 
 1. Čita slog iz **temp_data** (po `merchant_transaction_id`).
 2. Pravi slog u **reservations** (u transakciji sa zaključavanjem).
-3. Ažurira **temp_data.status** → npr. **`processed`**; red **ostaje** u bazi (audit trail, retry token kontekst).
-4. Dispatch **ProcessReservationAfterPaymentJob** (fiskalizacija, PDF, email).
+3. Ažurira **temp_data.status** → **`processed`**; red **ostaje** u bazi (audit trail, retry token kontekst).
+4. Za **Termini:** soft-lock → `reserved` na slotovima. Za **daily_ticket:** bez promjene `daily_parking_data`.
+5. Dispatch **ProcessReservationAfterPaymentJob** (fiskalizacija, PDF, email).
 
 **Rezultat:**
 
@@ -43,8 +66,10 @@ Logika mora ostati konzistentna: **temp_data** kao soft lock i audit, zatim upis
 
 ### 3. Plaćanje ne uspe / cancel
 
-- Ažurira se **temp_data** (`failed`, `canceled`, `expired`, itd. prema `ErrorClassifier` / pravilima job-a); **ne oslanjati se na fizičko brisanje** redova za operativni audit.
-- Oslobađanje soft lock-a: **decrement `pending`** za oba slota gde je primenjeno.
+- Bankovni događaj normalizovan kao **`failed`** u job-u postaje **`temp_data.status` = `canceled`** (ENUM u bazi **nema** `failed`). UI i redirect i dalje govore o „neuspjelom plaćanju“ — v. `PaymentReturnController`, `payment-callback-handling.md`.
+- Ostala terminalna grana po pravilima: npr. **`expired`** (cron), **`late_success`** (kasni SUCCESS posle `expired`).
+- **Ne oslanjati se na fizičko brisanje** redova za operativni audit.
+- Oslobađanje soft lock-a (**samo Termini**): **decrement `pending`** za oba slota gde je primenjeno.
 
 ### 4. Kasni odgovor banke posle terminalnog `temp_data`
 
@@ -65,10 +90,12 @@ Ako je `late_success` za **ulogovanu agenciju** i avans je uključen (`config('f
 | Status / scenario | Napomena |
 |-------------------|----------|
 | **processed** | Red u `temp_data` ostaje; rezervacija u `reservations`. |
-| **canceled** | Terminalno; kasni SUCCESS ne menja status (v. §4). |
-| **late_success** / **late_manual_review** | Samo nakon **`expired`** + kasni SUCCESS; admin ili cron stub (`reservations:assign-late-success`) — v. `AssignLateSuccessReservations`, `LateSuccessController`. |
-| **failed** / **expired** | Red ostaje za audit (Admin “Uvid”); `temp-data:cleanup` briše samo **stare ne-pending** redove po retention pravilu (default 180 dana). |
-| **pending → expired (cron)** | Komanda **`reservations:expire-pending`** (svakih **5 min**): pending stariji od **`pending_expire_minutes`** (default **5**, env `RESERVATIONS_PENDING_EXPIRE_MINUTES`) → **`expired`** + decrement `daily_parking_data.pending` (Termini). Oslobađa dupli-checkout lock ako `createSession` padne a red ostane `pending`. V. `cron-commands.md`. |
+| **canceled** | Terminalno (bankovni neuspjeh); kasni SUCCESS ne menja status (v. §4). |
+| **expired** | Terminalno (cron istek pending); kasni SUCCESS → `late_success`. Red ostaje za audit; `temp-data:cleanup` briše stare ne-pending redove (default 180 dana). |
+| **late_success** / **late_manual_review** | Samo nakon **`expired`** + kasni SUCCESS; admin (`LateSuccessController`, `/staff/late-success`) ili cron stub (`reservations:assign-late-success`). |
+| **pending → expired (cron)** | Komanda **`reservations:expire-pending`** (svakih **5 min**): pending stariji od **`pending_expire_minutes`** (default **5**, env `RESERVATIONS_PENDING_EXPIRE_MINUTES`) → **`expired`** + decrement `daily_parking_data.pending` (**samo Termini**). Oslobađa dupli-checkout lock ako `createSession` padne a red ostane `pending`. V. `cron-commands.md`. |
+
+**Napomena:** `reservations:process-pending` je **no-op stub** — ne mijenja `temp_data` (v. `cron-commands.md` §1).
 
 ---
 
@@ -78,8 +105,10 @@ Ako je `late_success` za **ulogovanu agenciju** i avans je uključen (`config('f
 |--------|----------|
 | merchant_transaction_id | UNIQUE |
 | user_id | NULL = guest |
-| drop_off_time_slot_id, pick_up_time_slot_id | Oba učestvuju u `daily_parking_data` |
+| reservation_kind | `time_slots` (default) \| `daily_ticket` |
+| drop_off_time_slot_id, pick_up_time_slot_id | NOT NULL za Termini; **NULL** za daily_ticket |
 | user_name | Snapshot imena |
-| status | ENUM uključuje pending, processed, canceled, expired, late_success, late_manual_review, … (v. `TempData::STATUS_*`) |
+| invoice_amount_snapshot | Iznos checkout-a (source of truth za downstream) |
+| status | ENUM: `pending`, `processed`, `canceled`, `expired`, `late_success`, `late_manual_review`, `late_rejected`, … (v. `TempData::STATUS_*` — **nema** `failed`) |
 
 Dodatne kolone (callback greške, `resolution_reason`, `raw_callback_payload`, itd.) koriste se za klasifikaciju i audit — v. migracije i `ErrorClassifier`.

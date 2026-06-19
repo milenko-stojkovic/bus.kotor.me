@@ -2,6 +2,8 @@
 
 Pregled u skladu sa specifikacijom. Model **TimeSlot** u kodu = **ListOfTimeSlot** (tabela `list_of_time_slots`).
 
+**Poslednje ažuriranje:** 2026-06-19
+
 ---
 
 ## Users
@@ -53,8 +55,9 @@ Pregled u skladu sa specifikacijom. Model **TimeSlot** u kodu = **ListOfTimeSlot
 
 | Zahtev | Status |
 |--------|--------|
-| Polja: id, user_id (nullable), vehicle_id (nullable), merchant_transaction_id, drop_off/pick_up_time_slot_id, reservation_date, snapshot (user_name, country, license_plate, vehicle_type_id, email), fiscal_*, status, email_sent, created_at, updated_at | ✅ |
-| belongsTo(User, withDefault), belongsTo(Vehicle, withDefault), belongsTo(VehicleType), belongsTo(TimeSlot) drop_off/pick_up | ✅ (TimeSlot = ListOfTimeSlot) |
+| Polja: id, user_id (nullable), vehicle_id (nullable), merchant_transaction_id, drop_off/pick_up_time_slot_id (nullable za `daily_ticket`), reservation_date, snapshot (user_name, country, license_plate, vehicle_type_id, email), fiscal_*, status, email_sent, **`reservation_kind`** (`time_slots` \| `daily_ticket`), **`payment_method`**, **`created_by_admin`**, **`free_reservation_request_id`**, **`invoice_amount`**, created_at, updated_at | ✅ |
+| belongsTo(User, withDefault), belongsTo(Vehicle, withDefault), belongsTo(VehicleType), belongsTo(TimeSlot) drop_off/pick_up, belongsTo(FreeReservationRequest) | ✅ (TimeSlot = ListOfTimeSlot) |
+| Invariant: `time_slots` → oba slot ID NOT NULL; `daily_ticket` → oba NULL | ✅ `isTimeSlots()` / `isDailyTicket()` |
 | Fillable: sve snapshot + FK + merchant_transaction_id + status itd. | ✅ |
 | Casts: reservation_date → date, fiscal_date → datetime | ✅ |
 
@@ -64,9 +67,9 @@ Pregled u skladu sa specifikacijom. Model **TimeSlot** u kodu = **ListOfTimeSlot
 
 | Zahtev | Status |
 |--------|--------|
-| Polja: id, merchant_transaction_id, user_id (nullable), drop_off/pick_up_time_slot_id, reservation_date, user_name, country, license_plate, vehicle_type_id, email, status ENUM, created_at, updated_at | ✅ |
+| Polja: id, merchant_transaction_id, user_id (nullable), drop_off/pick_up_time_slot_id (nullable za `daily_ticket`), reservation_date, user_name, country, license_plate, vehicle_type_id, email, **`reservation_kind`**, **`invoice_amount_snapshot`**, status ENUM, callback/audit polja, created_at, updated_at | ✅ |
 | belongsTo(User, withDefault), belongsTo(VehicleType), belongsTo(TimeSlot) drop_off/pick_up | ✅ |
-| Status: pending, failed, late_success | ✅ konstante u modelu |
+| Status ENUM (produkcija): `pending`, `processed`, `canceled`, `expired`, `late_success`, `late_manual_review`, `late_rejected` — **nema** `failed` | ✅ `TempData::STATUS_*`, `TERMINAL_STATES` |
 | Fillable: sva polja osim id/created_at/updated_at | ✅ |
 
 ---
@@ -117,6 +120,36 @@ Pregled u skladu sa specifikacijom. Model **TimeSlot** u kodu = **ListOfTimeSlot
 | Polja: id, email, **purpose** (ENUM u bazi: **`report`**, **`limo_incidents`**; podrazumijevano `report`), created_at (nema updated_at) | ✅ UPDATED_AT = null |
 | Fillable: email, purpose (u kodu modela) | ✅ |
 | Namena po **purpose**: `report` — primaoci zakazanih admin PDF izvještaja; `limo_incidents` — primaoci emaila za Limo incidente (v. `docs/admin-panel.md`, `docs/limo-service.md`) | ✅ |
+
+---
+
+## ExternalFileArchive (2026)
+
+| Zahtev | Status |
+|--------|--------|
+| Tabela `external_file_archives`; status `pending` \| `uploaded` \| `failed` | ✅ |
+| Polimorfna veza: `source_table`, `source_id`, `source_column`; MEGA polja; preview restore kolone | ✅ v. `docs/external-file-archive.md` |
+
+---
+
+## AgencyAdvanceTopup / AgencyAdvanceTransaction (2026)
+
+| Zahtev | Status |
+|--------|--------|
+| Topup: `agency_user_id`, `merchant_transaction_id`, `amount`, status (`pending`/`paid`/`failed`/`expired`), `bank_payload`, … | ✅ |
+| Ledger: `agency_advance_transactions` po agenciji | ✅ |
+| Relacija topup → `User` (`agencyUser`) | ✅ |
+| Zaseban lifecycle od `temp_data`; admin Uvid `/admin/uvid/avans` | ✅ |
+
+---
+
+## FreeReservationRequest (2026, FZBR)
+
+| Zahtev | Status |
+|--------|--------|
+| Glavna tabela + vehicles, segments, attachments | ✅ |
+| Status: `submitted`, `updated`, `fulfilled`, `rejected` | ✅ |
+| Fulfill → `reservations.free_reservation_request_id` | ✅ migracija + model relacija |
 
 ---
 

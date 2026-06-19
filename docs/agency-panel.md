@@ -1,6 +1,6 @@
 ﻿# Agency panel (ulogovani korisnik, `/panel`)
 
-**Poslednje ažuriranje:** 2026-06-17
+**Poslednje ažuriranje:** 2026-06-19
 
 Prefiks ruta: **`/panel`**, middleware **`auth`** + **`verified`**. Gornja navigacija: `resources/views/layouts/navigation.blade.php`.
 

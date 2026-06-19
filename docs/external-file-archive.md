@@ -1,6 +1,6 @@
 # External file archive (MEGA)
 
-**Poslednje ažuriranje:** 2026-05-15
+**Poslednje ažuriranje:** 2026-06-19 (ponovna provjera usklađenosti sa kodom; ponašanje neizmijenjeno od 2026-05)
 
 Privatni fajlovi ispod `storage/app/private/` (npr. `limo_plate_uploads`, `limo_pickup_evidence`, `limo_pickup_photos` (tabela + zastarjeli prefiks putanje), **`limo_incidents/`** (fotografije incidenta), **`free-reservation-requests/`** (prilozi FZBR)) mogu se **arhivirati na MEGA** nakon što više nisu potrebni na produkcijskom disku. **Kredencijali za MEGA idu samo u `.env`** i koriste se **isključivo server-side** (PHP poziva Node skriptu); **nikakav browser** ne vidi lozinku.
 

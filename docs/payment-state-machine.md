@@ -32,7 +32,7 @@ mora biti **isti iznos koji je poslat banci u trenutku checkout-a**.
 
 ### Snapshot (temp_data)
 
-- **`reservation_kind`:** `time_slots` (default) ili `daily_ticket` (samo agency checkout sa `auth_panel_booking`). Za `daily_ticket` slot FK su `NULL` i **ne** dira se `daily_parking_data` (nema `pending`/`reserved` na slotovima; expire/cancel/success handler preskače soft-lock). Fiskalni PDF (`pdf/paid-invoice`) i email potvrda prikazuju vrstu/datum važenja/lokacije umjesto termina dolaska/odlaska.
+- **`reservation_kind`:** `time_slots` (default) ili `daily_ticket` (agencija `/panel/reservations` ili gost `/guest/reserve` — samo kartica, bez avansa). Za `daily_ticket` slot FK su `NULL` i **ne** dira se `daily_parking_data` (nema `pending`/`reserved` na slotovima; expire/cancel/success handler preskače soft-lock). Fiskalni PDF (`pdf/paid-invoice`) i email potvrda prikazuju vrstu/datum važenja/lokacije umjesto termina dolaska/odlaska.
 - Taj iznos se čuva kao snapshot u `temp_data` (npr. `invoice_amount_snapshot`).
 - Nakon kreiranja `temp_data` taj iznos se **više nikada ne računa ponovo iz cjenovnika**.
 - Promjene cijena **ne utiču** na već započete ili završene payment pokušaje.

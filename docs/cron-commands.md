@@ -143,7 +143,7 @@ Puna tabela rasporeda: **`docs/scheduled-tasks-overview.md`**.
 ## Napomene
 
 - **`reservations:process-pending`** je trenutno **intencionalno no-op** (v. §1 ispod) — ostale komande u ovom fajlu opisuju stvarno ponašanje kada `handle()` radi posao.
-- Ostale komande koriste tipično Eloquent za statuse (`pending`, `failed`, `late_success`, …) i snapshot polja gde je primenjivo.
+- Ostale komande koriste tipično Eloquent za statuse u **`temp_data`** (`pending`, `canceled`, `expired`, `late_success`, …) i snapshot polja gde je primenjivo. Za **`agency_advance_topups`** postoji zaseban status **`failed`** — to **nije** `temp_data.status`.
 - Za pokretanje scheduler-a na serveru: `* * * * * php /path/to/artisan schedule:run` (cron entry).
 - Lokalno: `php artisan schedule:work` ili `php artisan schedule:list`.
 - Komande su u `app/Console/Commands/`.

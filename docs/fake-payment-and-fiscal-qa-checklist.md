@@ -124,7 +124,7 @@ Scenariji:
 ### Očekivanja za sve “fail/cancel” scenarije
 
 - **Expected DB**
-  - `temp_data.status` prelazi iz `pending` u **ne-success status** (npr. `canceled/expired/failed` zavisno od implementacije u grani)
+  - `temp_data.status` prelazi iz `pending` u **ne-success status**: tipično **`canceled`** (bankovni neuspjeh; ENUM nema `failed`), ili **`expired`** (cron), ili **`late_success`** (kasni SUCCESS posle `expired`)
   - `callback_error_code`, `callback_error_reason`, `resolution_reason` se popunjavaju (ako payload to ima)
   - `reservations` se **ne kreira**
   - `daily_parking_data.pending` se **vrati nazad** (pending -1) za oba slota

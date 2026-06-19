@@ -16,6 +16,7 @@
 | **Lokalno** | npr. `*.test` | Laragon, PHPUnit |
 
 - **Cut-over završen** — 21.342 rezervacija migrirana iz V1; detalji: `docs/production-runbook.md`, `docs/project-done.md`.
+- **Dokumentacija = izvor istine:** produkcijski audit docs↔kod završen **2026-06-19** (`project-done.md`); canonical payment: `payment-state-machine.md`.
 - **Otvoreno:** `docs/project-todo.md` (`late_success`, operativni audit, fiskalni PDF poslije retry-a, mobile plan…).
 
 ### Nedavno u `main` (2026-06-19, detalji u `project-done.md` § Admin / UX)
@@ -34,6 +35,18 @@ Plesk cron na **`bus-v2.kotor.me/`**:
 
 Repozitorijumska `queue-worker.php` za staging koristi drugačiju politiku (`--max-time=55`, bez `--stop-when-empty`) — v. `cron-commands.md`.
 
+### Laragon / `php artisan` (Windows — obavezno za agente)
+
+U Cursor terminalu **`php` često nije u PATH-u**; PowerShell starije verzije **ne podržavaju** `&&` za lančanje komandi.
+
+- **Ne koristiti** gol `php artisan ...` osim ako je `php` eksplicitno u PATH-u.
+- **Koristiti** iz korena repoa: **`.\laragon-artisan.cmd <arg>...`** (preferirano — radi i uz strogu Execution Policy) ili **`.\laragon-artisan.ps1 <arg>...`**.
+- Primjeri: `.\laragon-artisan.cmd test`, `.\laragon-artisan.cmd migrate`, `.\laragon-artisan.cmd queue:work --tries=1`.
+- Sintaksa fajla: **`.\laragon-php.cmd -l putanja\do\fajla.php`** (ne gol `php -l`).
+- Lančanje u PS: `Set-Location c:\laragon\www\bus.kotor.me; .\laragon-artisan.cmd test` (koristi **`;`**, ne `&&`).
+
+Detalji, Execution Policy i MySQL test suite: **`docs/project-conventions.md` § 3**.
+
 ---
 
 ## 1) Tekst za prvu poruku u novom chatu (kopiraj–nalepi)
@@ -51,7 +64,7 @@ Obavezno prvo pročitaj (redosled):
 - docs/handoff-new-chat.md (ovaj fajl — kontekst)
 - docs/project-todo.md (šta je otvoreno)
 - docs/project-done.md (šta je već urađeno — ne ponavljaj)
-- docs/project-conventions.md (pravila + §0: dokumentacija kao izvor istine, ne zabune)
+- docs/project-conventions.md (pravila + §0: dokumentacija kao izvor istine, ne zabune; §3: Laragon — .\laragon-artisan.cmd, ne php artisan u Cursoru)
 
 Kratki indeks svih docs: docs/project-status-next-steps.md
 
@@ -97,6 +110,7 @@ Tematski fajlovi (payment-states, callback, concurrency, cron, auth/guest, admin
 |------|----------|
 | QA fake plaćanje / fiskal | `docs/fake-payment-and-fiscal-qa-checklist.md` |
 | Konvencije (prevod, mail, queue) | `docs/project-conventions.md` |
+| **Laragon / artisan (Windows)** | `docs/project-conventions.md` **§ 3** — `.\laragon-artisan.cmd`, ne `php artisan` |
 | Usklađenost fake vs real API | `docs/fake-vs-real-contract-parity.md` |
 | Zakazani zadaci | `docs/scheduled-tasks-overview.md` |
 | Payment / temp_data tok | **`docs/payment-state-machine.md` (canonical)**, `docs/payment-states.md`, `docs/workflow-placanje-temp-data.md` |
@@ -114,4 +128,4 @@ Duga jedna sesija (mnogo alata, terminal, kontekst) često **poveća potrošnju 
 
 ---
 
-Poslednje ažuriranje ovog fajla: 2026-06-19 (Uvid avans, user guide PDF, pending expire 5 min, admin/control UX)
+Poslednje ažuriranje ovog fajla: 2026-06-19 (Uvid avans, user guide PDF, pending expire 5 min, admin/control UX, Laragon §3 upozorenje za agente)

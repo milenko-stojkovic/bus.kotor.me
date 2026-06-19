@@ -2,6 +2,8 @@
 
 Pregled FK iz baze i preporučene relacije za modele.
 
+**Poslednje ažuriranje:** 2026-06-19 — dopunjeno `reservation_kind`, `daily_ticket`, MEGA arhiva, FZBR, avans.
+
 ---
 
 ## 1. User
@@ -156,9 +158,12 @@ public function timeSlot(): BelongsTo
 **FK:**
 - `user_id` → `users` (nullable)
 - `vehicle_id` → `vehicles` (nullable)
-- `drop_off_time_slot_id` → `list_of_time_slots`
-- `pick_up_time_slot_id` → `list_of_time_slots`
+- `drop_off_time_slot_id` → `list_of_time_slots` (nullable za `reservation_kind = daily_ticket`)
+- `pick_up_time_slot_id` → `list_of_time_slots` (nullable za `daily_ticket`)
 - `vehicle_type_id` → `vehicle_types`
+- `free_reservation_request_id` → `free_reservation_requests` (nullable; povezani FZBR fulfill)
+
+**Invariant `reservation_kind`:** `time_slots` (default) → oba slot ID NOT NULL; `daily_ticket` → oba slot ID NULL. Helperi: `Reservation::isTimeSlots()`, `isDailyTicket()`.
 
 **Referencira ga:** `post_fiscalization_data.reservation_id`
 
@@ -193,9 +198,14 @@ public function postFiscalizationData(): HasOne
 {
     return $this->hasOne(PostFiscalizationData::class, 'reservation_id');
 }
+
+public function freeReservationRequest(): BelongsTo
+{
+    return $this->belongsTo(FreeReservationRequest::class, 'free_reservation_request_id');
+}
 ```
 
-**Fillable:** sva polja koja se mass-assign-uju (bez id, created_at, updated_at).  
+**Fillable:** sva polja koja se mass-assign-uju (uključujući `reservation_kind`, `payment_method`, `created_by_admin`, `invoice_amount`, …).  
 **Casts:** `reservation_date` => `date`, `fiscal_date` => `datetime`, `email_sent` => `integer` — semantika: **`Reservation::EMAIL_NOT_SENT`**, **`EMAIL_SENT`**, **`EMAIL_SENDING`** (v. model).
 
 ---
@@ -223,9 +233,11 @@ public function reservation(): BelongsTo
 
 **FK:**
 - `user_id` → `users` (nullable)
-- `drop_off_time_slot_id` → `list_of_time_slots`
-- `pick_up_time_slot_id` → `list_of_time_slots`
+- `drop_off_time_slot_id` → `list_of_time_slots` (nullable za `daily_ticket`)
+- `pick_up_time_slot_id` → `list_of_time_slots` (nullable za `daily_ticket`)
 - `vehicle_type_id` → `vehicle_types`
+
+**Status ENUM (produkcija):** `pending`, `processed`, `canceled`, `expired`, `late_success`, `late_manual_review`, `late_rejected` — **nema** `failed`. Konstante: `TempData::STATUS_*`, terminalna: `TempData::TERMINAL_STATES`.
 
 **Relacije:**
 ```php
@@ -250,8 +262,58 @@ public function vehicleType(): BelongsTo
 }
 ```
 
-**Fillable:** sva polja koja se setuju pri kreiranju (bez id, created_at, updated_at).  
+**Fillable:** sva polja koja se setuju pri kreiranju (uključujući `reservation_kind`, `invoice_amount_snapshot`, callback/audit polja).  
 **Casts:** `reservation_date` => `date`, `status` => enum/string.
+
+---
+
+## 11. ExternalFileArchive (external_file_archives)
+
+**Tabela:** `external_file_archives` — MEGA arhiva privatnih fajlova (Limo, FZBR prilozi, …). V. `docs/external-file-archive.md`.
+
+**Nema klasičnih FK** — polimorfna veza preko `source_table`, `source_id`, `source_column`.
+
+**Status:** `pending` | `uploaded` | `failed` (status **arhivnog reda**, ne `temp_data`).
+
+**Model:** `App\Models\ExternalFileArchive` — bez Eloquent relacija ka izvoru (lookup u servisu).
+
+---
+
+## 12. AgencyAdvanceTopup / AgencyAdvanceTransaction
+
+**Tabele:** `agency_advance_topups`, `agency_advance_transactions` (avansne uplate agencija).
+
+**FK:**
+- `agency_advance_topups.agency_user_id` → `users`
+- `agency_advance_transactions.agency_user_id` → `users` (ledger)
+
+**Relacije (Topup):**
+```php
+public function agencyUser(): BelongsTo
+{
+    return $this->belongsTo(User::class, 'agency_user_id');
+}
+```
+
+**Status topup-a:** `pending`, `paid`, `failed`, `expired` — ovo je **zaseban** lifecycle od `temp_data` (admin Uvid: `/admin/uvid/avans`).
+
+---
+
+## 13. FreeReservationRequest (FZBR / besplatne rezervacije)
+
+**Tabela:** `free_reservation_requests` + djeca: `free_reservation_request_vehicles`, `free_reservation_request_segments`, `free_reservation_request_attachments`.
+
+**FK:** `user_id` → `users`; slotovi → `list_of_time_slots`; fulfill postavlja `reservations.free_reservation_request_id`.
+
+**Relacije:**
+```php
+public function vehicles(): HasMany
+public function segments(): HasMany
+public function attachments(): HasMany
+public function reservations(): HasMany // reverse: Reservation::freeReservationRequest()
+```
+
+**Status:** `submitted`, `updated`, `fulfilled`, `rejected`. V. `docs/agency-panel.md`, `docs/admin-panel.md` § Besplatne rezervacije.
 
 ---
 
@@ -290,7 +352,7 @@ public function reservations(): HasMany
 
 ## Tabele bez modela (po želji)
 
-- **report_emails**, **system_config**, **ui_translations** — nema FK; ako ih koristiš u relacijama ili po imenu, možeš napraviti jednostavan model bez relacija.
+- **report_emails**, **system_config**, **ui_translations** — nema FK; ako ih koristiš u relacijama ili po imenu, možeš napraviti jednostavan model bez relacija. **`report_emails.purpose`:** ENUM `report` | `limo_incidents`.
 - **cache**, **jobs**, **sessions**, **password_reset_tokens**, **migrations** — sistemske; obično bez Eloquent modela.
 
 ---
