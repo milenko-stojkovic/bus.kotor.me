@@ -60,7 +60,7 @@ Provjera prije/po puštanju u rad (checklist). Prilagoditi hosting (Plesk, syste
 
 | Komanda | Kad (otprilike) | Kratak cilj |
 |---------|-----------------|-------------|
-| `reservations:expire-pending` | svakih ~10 min | Istek pending rezervacija, oslobađanje lockova |
+| `reservations:expire-pending` | svakih ~5 min | Istek pending rezervacija (prag default 5 min), oslobađanje lockova |
 | `parking:sync-days` | dnevno 00:05 | Sinhronizacija `daily_parking_data` |
 | `limo:cleanup-temporary-data` | dnevno 00:10 (Podgorica) | Čišćenje privremenih Limo entiteta |
 | `files:cleanup-preview-cache` | dnevno 00:15 (Podgorica) | Brisanje isteklih privremenih MEGA preview fajlova |

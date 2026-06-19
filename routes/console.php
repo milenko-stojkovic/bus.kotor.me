@@ -76,7 +76,7 @@ Schedule::command('advance:send-yearly-statements')
     ->yearlyOn(1, 1, '10:00');
 
 // SAFE local scheduled jobs (no real bank/fiscal calls)
-Schedule::command('reservations:expire-pending')->everyTenMinutes();
+Schedule::command('reservations:expire-pending')->everyFiveMinutes();
 Schedule::command('parking:sync-days')->dailyAt('00:05');
 Schedule::command('limo:cleanup-temporary-data')
     ->dailyAt('00:10')
