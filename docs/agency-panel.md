@@ -196,7 +196,7 @@ Korisnički naziv menija: **Promjena tablica** (EN: **Plate change**). Ruta i kl
 ## Promena vozila / tablice (samo predstojeće Termini)
 
 - Dozvoljeno samo vozilo istog korisnika koje ispunjava oba uslova:
-  - **kategorija**: **`vehicle_types.price` ≤** cene kategorije na rezervaciji (snapshot **`vehicle_type_id`** se **ne** menja)
+  - **kategorija**: **`vehicle_types.price` ≤** cene kategorije **plaćene na rezervaciji** (`reservations.vehicle_type_id` snapshot — **ne** trenutno dodijeljeno vozilo); pri promjeni tablice **`vehicle_type_id`** i **`invoice_amount`** se **ne** mijenjaju
   - **dostupnost**: kandidat vozilo nema konflikt za isti datum po pravilu:
     - konflikt je samo ako je **`drop_off_time_slot_id` isti** (drop=drop) **ili** je **`pick_up_time_slot_id` isti** (pick=pick)
     - nema konflikta za cross-match (**drop=pick** / **pick=drop**)
@@ -205,7 +205,7 @@ Korisnički naziv menija: **Promjena tablica** (EN: **Plate change**). Ruta i kl
 
 **UI (label tipa vozila):** u panelu i na korisničkim formama tip vozila se prikazuje kao **`Naziv (Opis) - Cena`** (opis je lokalizovan iz `vehicle_type_translations.description`, ako postoji). Formatiranje je centralizovano u `VehicleType::formatLabel($locale, 'EUR')`. Ako opis nedostaje, prikaz je `Naziv - Cena`.
 
-Validacija: **`App\Http\Requests\UpdateReservationVehicleRequest`**.
+Validacija: **`App\Http\Requests\UpdateReservationVehicleRequest`**. Kandidati (UI + server): **`VehicleReplacementCandidateService`** (`paidCategoryMaxPrice`, `candidatesForReservation`). Isto pravilo važi za **uklanjanje vozila** (`GET/POST /panel/vehicles/{id}/remove`).
 
 ---
 

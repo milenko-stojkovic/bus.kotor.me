@@ -68,10 +68,7 @@ class PanelController extends Controller
 
         $allowedByReservationId = [];
         foreach ($upcoming as $r) {
-            $categoryMaxPrice = (float) ($r->vehicleType?->price ?? 0);
-            $allowedByReservationId[(int) $r->id] = $candidates->candidatesForReservation($user, $r, [
-                'max_price' => $categoryMaxPrice,
-            ]);
+            $allowedByReservationId[(int) $r->id] = $candidates->candidatesForReservation($user, $r);
         }
 
         return view('panel.upcoming', [

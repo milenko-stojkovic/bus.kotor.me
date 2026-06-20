@@ -259,14 +259,12 @@ class VehicleController extends Controller
         $locale = app()->getLocale();
 
         $upcoming = $lists->upcomingFor($user)->filter(fn ($r) => (int) ($r->vehicle_id ?? 0) === (int) $target->id)->values();
-        $maxPrice = (float) ($target->vehicleType?->price ?? 0);
 
         $candidateMap = [];
         $missingAny = false;
         foreach ($upcoming as $r) {
             $candidateMap[(int) $r->id] = $candidates->candidatesForReservation($user, $r, [
                 'exclude_vehicle_id' => (int) $target->id,
-                'max_price' => $maxPrice,
             ]);
             if ($candidateMap[(int) $r->id]->isEmpty()) {
                 $missingAny = true;
@@ -321,10 +319,8 @@ class VehicleController extends Controller
             }
         }
 
-        $maxPrice = (float) ($target->vehicleType?->price ?? 0);
-
         try {
-            DB::transaction(function () use ($user, $target, $replacementMap, $maxPrice, $candidates): void {
+            DB::transaction(function () use ($user, $target, $replacementMap, $candidates): void {
                 // Lock target vehicle row (exists + owned).
                 $lockedTarget = Vehicle::query()
                     ->where('user_id', $user->id)
@@ -383,15 +379,13 @@ class VehicleController extends Controller
                         abort(422);
                     }
 
-                    $p = (float) ($newVehicle->vehicleType?->price ?? 0);
-                    if ($p > $maxPrice + 0.000001) {
+                    if (! $candidates->isVehicleCategoryAllowed($res, $newVehicle)) {
                         abort(422);
                     }
 
                     // Hard membership check: ensure selected vehicle is an actual candidate for this reservation.
                     $candidateList = $candidates->candidatesForReservation($user, $res, [
                         'exclude_vehicle_id' => (int) $lockedTarget->id,
-                        'max_price' => $maxPrice,
                     ]);
                     $isMember = $candidateList->contains(fn (Vehicle $v) => (int) $v->id === (int) $newVehicle->id);
                     if (! $isMember) {
@@ -422,7 +416,6 @@ class VehicleController extends Controller
                     $res->update([
                         'vehicle_id' => $newVehicle->id,
                         'license_plate' => $newVehicle->license_plate,
-                        'vehicle_type_id' => $newVehicle->vehicle_type_id,
                     ]);
                 }
 

@@ -83,10 +83,9 @@ class UpdateReservationVehicleRequest extends FormRequest
                 return;
             }
 
-            $categoryPrice = (float) ($reservation->vehicleType?->price ?? 0);
-            $newPrice = (float) ($vehicle->vehicleType?->price ?? 0);
+            $svc = app(VehicleReplacementCandidateService::class);
 
-            if ($newPrice > $categoryPrice + 0.000001) {
+            if (! $svc->isVehicleCategoryAllowed($reservation, $vehicle)) {
                 $locale = app()->getLocale();
                 $validator->errors()->add(
                     'vehicle_id',
@@ -101,10 +100,7 @@ class UpdateReservationVehicleRequest extends FormRequest
             }
 
             // Hard membership check: chosen vehicle must be an actual candidate for this reservation.
-            $svc = app(VehicleReplacementCandidateService::class);
-            $candidates = $svc->candidatesForReservation($this->user(), $reservation, [
-                'max_price' => $categoryPrice,
-            ]);
+            $candidates = $svc->candidatesForReservation($this->user(), $reservation);
             $isMember = $candidates->contains(fn (Vehicle $v) => (int) $v->id === (int) $vehicle->id);
             if (! $isMember) {
                 $locale = app()->getLocale();

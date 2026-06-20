@@ -141,9 +141,7 @@ class UserReservationController extends Controller
                 abort(422);
             }
 
-            $categoryPrice = (float) ($lockedReservation->vehicleType?->price ?? 0);
-            $newPrice = (float) ($vehicle->vehicleType?->price ?? 0);
-            if ($newPrice > $categoryPrice + 0.000001) {
+            if (! $svc->isVehicleCategoryAllowed($lockedReservation, $vehicle)) {
                 abort(422);
             }
 
@@ -163,7 +161,6 @@ class UserReservationController extends Controller
             $lockedReservation->update([
                 'vehicle_id' => $vehicle->id,
                 'license_plate' => $vehicle->license_plate,
-                'vehicle_type_id' => $vehicle->vehicle_type_id,
             ]);
         });
 

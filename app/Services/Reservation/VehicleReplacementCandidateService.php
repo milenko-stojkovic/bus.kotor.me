@@ -11,18 +11,35 @@ use Illuminate\Support\Collection;
  * Shared candidate engine for agency vehicle replacement.
  *
  * Conflict rule: same date AND (drop=drop OR pick=pick). Cross-match drop=pick / pick=drop is NOT a conflict.
- * Category rule: candidate vehicle type price must be <= maxPrice (same or lower category).
+ * Category rule: candidate vehicle type price must be <= paid reservation category price
+ * (reservations.vehicle_type_id snapshot), not the currently assigned vehicle's category.
  */
 final class VehicleReplacementCandidateService
 {
+    /** Max allowed vehicle_types.price for replacement (paid category snapshot on reservation). */
+    public function paidCategoryMaxPrice(Reservation $reservation): float
+    {
+        $reservation->loadMissing('vehicleType');
+
+        return (float) ($reservation->vehicleType?->price ?? 0);
+    }
+
+    public function isVehicleCategoryAllowed(Reservation $reservation, Vehicle $vehicle): bool
+    {
+        $vehicle->loadMissing('vehicleType');
+        $newPrice = (float) ($vehicle->vehicleType?->price ?? 0);
+
+        return $newPrice <= $this->paidCategoryMaxPrice($reservation) + 0.000001;
+    }
+
     /**
-     * @param  array{exclude_vehicle_id?: int, max_price?: float}  $opts
+     * @param  array{exclude_vehicle_id?: int}  $opts
      * @return Collection<int, Vehicle>
      */
     public function candidatesForReservation(User $user, Reservation $reservation, array $opts = []): Collection
     {
         $excludeVehicleId = (int) ($opts['exclude_vehicle_id'] ?? 0);
-        $maxPrice = $opts['max_price'] ?? null;
+        $maxPrice = $this->paidCategoryMaxPrice($reservation);
 
         $vehicles = $user->vehicles()
             ->where('status', Vehicle::STATUS_ACTIVE)
@@ -35,11 +52,9 @@ final class VehicleReplacementCandidateService
                 if ($excludeVehicleId > 0 && (int) $v->id === $excludeVehicleId) {
                     return false;
                 }
-                if ($maxPrice !== null) {
-                    $p = (float) ($v->vehicleType?->price ?? 0);
-                    if ($p > (float) $maxPrice + 0.000001) {
-                        return false;
-                    }
+                $p = (float) ($v->vehicleType?->price ?? 0);
+                if ($p > $maxPrice + 0.000001) {
+                    return false;
                 }
                 return true;
             })
