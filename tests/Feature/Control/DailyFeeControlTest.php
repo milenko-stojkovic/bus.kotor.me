@@ -56,7 +56,10 @@ final class DailyFeeControlTest extends TestCase
             ->assertOk()
             ->assertSee('Kontrola dnevne naknade', false)
             ->assertSee('Registarska tablica', false)
-            ->assertSee('Provjeri', false);
+            ->assertSee('Provjeri', false)
+            ->assertSee('Posljednje osvježavanje', false)
+            ->assertSee('Osvježi sada', false)
+            ->assertSee('id="btn-refresh-now"', false);
     }
 
     public function test_plate_input_is_normalized_to_uppercase(): void

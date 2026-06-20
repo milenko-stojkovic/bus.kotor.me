@@ -1,7 +1,14 @@
 <x-control-layout :page-title="$pageTitle ?? 'Kontrola dnevne naknade'">
     <header class="mb-8 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <h1 class="text-2xl font-semibold text-gray-900">Kontrola dnevne naknade</h1>
-        <div class="flex flex-wrap items-center gap-4 text-sm">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4 text-sm">
+            <span class="text-gray-600">
+                Posljednje osvježavanje:
+                <time id="last-refresh-time" datetime=""></time>
+            </span>
+            <button type="button" id="btn-refresh-now" class="inline-flex justify-center rounded-md bg-red-700 px-4 py-2 font-medium text-white hover:bg-red-800">
+                Osvježi sada
+            </button>
             <form method="POST" action="{{ route('control.logout', [], false) }}" class="inline">
                 @csrf
                 <button type="submit" class="font-medium text-red-700 underline">Odjava</button>
@@ -153,4 +160,20 @@
             </div>
         @endif
     </section>
+
+    <script>
+        (function () {
+            var el = document.getElementById('last-refresh-time');
+            function stamp() {
+                if (!el) return;
+                var d = new Date();
+                el.dateTime = d.toISOString();
+                el.textContent = d.toLocaleString('sr-Latn-ME');
+            }
+            stamp();
+            var btn = document.getElementById('btn-refresh-now');
+            if (btn) btn.addEventListener('click', function () { window.location.reload(); });
+            window.setInterval(function () { window.location.reload(); }, 5 * 60 * 1000);
+        })();
+    </script>
 </x-control-layout>

@@ -36,6 +36,7 @@ Tekstovi u view-ima su **hardcoded CG stringovi** (nema `UiText` grupe za contro
 - **Samo čitanje:** nema plaćanja, fiskalizacije, emaila, OCR-a, GPS-a, QR-a, izmjena rezervacija.
 - **Rezultat:** „Plaćena dnevna naknada: DA“ i/ili „Rezervacija termina za danas: DA“ (ili „Važeća rezervacija za danas: NE“) + detalji po pogotku (vrsta, agencija, datum važenja, tip vozila, email, vrijeme kreiranja). Više pogodaka istog dana/tablice — lista.
 - **Lista za danas (dno stranice):** tabela svih **plaćenih** dnevnih naknada za **današnji** `reservation_date` (`Europe/Podgorica`) čiji je `vehicle_type_id` u kategorijama **putničko/limo 4+1–7+1** ili **minibus 8+1** (`ReservationVehicleEligibilityService::controlDailyFeeListVehicleTypeIds()` — ID-jevi iz `vehicle_type_translations`, ne hardkodirani). Kolone: tablica, agencija/korisnik, tip vozila, vrijeme kupovine, datum važenja (**bez** kolone email — štednja prostora na terenu). Naslov sekcije prikazuje **Ukupno vozila** (broj redova na listi). Sort: `license_plate` ASC. Prazno stanje: *Nema vozila sa plaćenom dnevnom naknadom za danas.* **Lista se ne mijenja** kada ručna provjera tablice uključuje i Termine — to su dva odvojena prikaza.
+- **Osvježavanje:** isto kao dashboard Termini — prikaz **Posljednje osvježavanje**, dugme **Osvježi sada** (`window.location.reload()`), automatski reload svakih **5 minuta** (`resources/views/control/daily-fee-control.blade.php`).
 - **Ne provjerava:** historijske Limo QR tabele, druge datume. Lista na dnu stranice i dalje samo plaćene dnevne naknade (v. ispod).
 - **Testovi:** `tests/Feature/Control/DailyFeeControlTest.php`.
 
@@ -57,9 +58,9 @@ Ako planiraš da u Android “control/staff” aplikaciji postoji ekran “Agenc
 
 Kontrolor za **Termine** koristi glavni dashboard. **Dnevna naknada** ima poseban ekran **`/control/dnevna-naknada`** (v. gore).
 
-### Grafikon kapaciteta (danas + sutra)
+- **Osvježavanje (Termini dashboard):** **Posljednje osvježavanje**, dugme **Osvježi sada**, automatski reload svakih **5 minuta** (`resources/views/control/dashboard.blade.php`).
 
-- **Servis:** `App\Services\Operations\DailyCapacityChartService` (`todayAndTomorrow()`).
+### Grafikon kapaciteta (danas + sutra)
 - **Stubci po terminu (`reserved`, `pending`, `total`):** iz **`daily_parking_data`** za taj kalendarski dan (`Europe/Podgorica`) — trenutno stanje soft-locka i potvrđenih rezervacija po slotu. **Dnevna naknada ne dira** `daily_parking_data`, pa se u stubcima ne vidi.
 - **Crvena linija kapaciteta:** `SystemConfig::availableParkingSlots()` (ne `daily_parking_data.capacity` na grafikonu).
 - **„Ukupno rezervacija: X (plaćene + besplatne)“:** broj iz tabele **`reservations`** za taj dan — samo **`time_slots`** (ili legacy `reservation_kind` NULL), `status IN (paid, free)`.
