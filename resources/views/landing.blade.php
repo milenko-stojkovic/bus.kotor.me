@@ -4,9 +4,10 @@
     @endphp
 
     <div class="space-y-4">
-        <div class="space-y-1">
+        <div class="space-y-1 text-center">
             <h1 class="text-lg font-semibold text-gray-900">
-                {{ $ui('title') }}
+                <span class="block">{{ $ui('title_line1') }}</span>
+                <span class="block">{{ $ui('title_line2') }}</span>
             </h1>
             <p class="text-sm text-gray-600">
                 {{ $ui('subtitle') }}

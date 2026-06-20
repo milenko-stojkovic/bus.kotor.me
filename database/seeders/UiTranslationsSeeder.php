@@ -217,6 +217,10 @@ class UiTranslationsSeeder extends Seeder
             // landing (V2 predsoblje)
             ['group' => 'landing', 'key' => 'title', 'locale' => 'cg', 'text' => 'Plaćanje naknade za ekonomsko iskorišćavanje kulturnih dobara'],
             ['group' => 'landing', 'key' => 'title', 'locale' => 'en', 'text' => 'Payment of the fee for the economic use of cultural assets'],
+            ['group' => 'landing', 'key' => 'title_line1', 'locale' => 'cg', 'text' => 'Plaćanje naknade'],
+            ['group' => 'landing', 'key' => 'title_line1', 'locale' => 'en', 'text' => 'Payment of the fee'],
+            ['group' => 'landing', 'key' => 'title_line2', 'locale' => 'cg', 'text' => 'za ekonomsko iskorišćavanje kulturnih dobara'],
+            ['group' => 'landing', 'key' => 'title_line2', 'locale' => 'en', 'text' => 'for the economic use of cultural assets'],
             ['group' => 'landing', 'key' => 'subtitle', 'locale' => 'cg', 'text' => 'Izaberite način nastavka.'],
             ['group' => 'landing', 'key' => 'subtitle', 'locale' => 'en', 'text' => 'Choose how you want to continue.'],
             ['group' => 'landing', 'key' => 'guest_title', 'locale' => 'cg', 'text' => 'Guest'],
