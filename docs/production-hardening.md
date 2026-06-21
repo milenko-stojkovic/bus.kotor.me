@@ -45,6 +45,7 @@ Strukturisani ključevi (gde je moguće: **`merchant_transaction_id`** + **`rese
 - **`payment_init_failed`** — checkout ili inquiry zatvorio pending bez bank session-a: `merchant_transaction_id`, `temp_data_id`, `http_status`, `reason`, `stage` (npr. `checkout_after_temp_created`, `status_inquiry_transaction_not_found`).
 - **`Error classified`** — opciono polje **`stage`**: `create_session` (debit init) ili `payment_callback` (job); v. **`ErrorClassifier`** i `resolution_reason` (npr. **`bank_invalid_amount`** za amount/limit poruke banke).
 - `payment_success_after_canceled_ignored` — bank **SUCCESS** stigao dok je **`temp_data` već `canceled`**; status se **ne** menja u `late_success` (`merchant_transaction_id`, `temp_data_id`); zatim **admin email** istim putem kao fiskal alerti (**`AdminFiscalizationAlertService`**, subject *Contradictory bank outcome…*). Uspeh slanja se i dalje loguje kao **`Admin fiscalization email sent`** sa `alert_type` = `payment_success_after_canceled`.
+- **`guest_paid_lower_category_alert`** — guest **`paid`** rezervacija kreirana sa nižom **`vehicle_types.price`** od najnovije starije **`paid`** rezervacije iste tablice; informativno (`reservation_id`, `historical_reservation_id`, cijene); ne blokira tok.
 - `queue_worker_booted` — jednom po PHP procesu queue workera u **production** (event `WorkerStarting`)
 - `production_fake_driver_active` — fake bank/fiscal u production (throttle keš)
 

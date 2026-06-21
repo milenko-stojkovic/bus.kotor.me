@@ -9,6 +9,7 @@ use App\Models\Reservation;
 use App\Models\TempData;
 use App\Services\AdminPanel\Blocking\BlockZoneWorklistService;
 use App\Services\Reservation\DuplicateReservationAttemptService;
+use App\Services\Reservation\GuestPaidLowerCategoryAlertService;
 use App\Support\QueueMode;
 use App\Support\ReservationInvoiceAmount;
 use App\Support\ReservationKind;
@@ -42,7 +43,8 @@ class PaymentSuccessHandler
         }
 
         $created = false;
-        DB::transaction(function () use ($temp, $rawPayload, $runFiscalAndInvoicePipeline, $deferFakeBankFiscalPipeline, &$created): void {
+        $createdReservation = null;
+        DB::transaction(function () use ($temp, $rawPayload, $runFiscalAndInvoicePipeline, $deferFakeBankFiscalPipeline, &$created, &$createdReservation): void {
             $temp = TempData::where('merchant_transaction_id', $temp->merchant_transaction_id)->lockForUpdate()->first();
             if (! $temp || Reservation::where('merchant_transaction_id', $temp->merchant_transaction_id)->exists()) {
                 return;
@@ -86,6 +88,7 @@ class PaymentSuccessHandler
 
             $reservationStatus = $runFiscalAndInvoicePipeline ? 'paid' : 'free';
             $reservation = $this->createReservationFromTempData($temp, $reservationStatus);
+            $createdReservation = $reservation;
             Log::channel('payments')->info('payment_reservation_created', [
                 'reservation_id' => $reservation->id,
                 'merchant_transaction_id' => $reservation->merchant_transaction_id,
@@ -116,6 +119,10 @@ class PaymentSuccessHandler
             }
             $created = true;
         });
+
+        if ($created && $createdReservation !== null) {
+            app(GuestPaidLowerCategoryAlertService::class)->evaluate($createdReservation);
+        }
 
         return $created;
     }

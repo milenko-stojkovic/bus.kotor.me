@@ -19,7 +19,8 @@ Ne idu na banku i **ne** pokreću **ProcessReservationAfterPaymentJob** / fiskal
 
 1. **pending → processed** nakon **`PaymentCallbackJob`** na **SUCCESS** — bilo iz **webhooka** (`POST /api/payment/callback`), bilo iz **cron Bankart status inquiry** (isti job i isti `PaymentSuccessHandler` tok).
 2. Kreira se **reservation** (bez fiscal polja).
-3. Dispatch **ProcessReservationAfterPaymentJob(reservation_id)** (opciono sa **`fakeFiscalScenario`** kad fiskal driver šalje scenario iz kombinovane fake QA forme).
+3. **Informativni admin alert (guest, ne blokira tok):** odmah poslije uspješne transakcije, **`GuestPaidLowerCategoryAlertService::evaluate`** — ako nova guest **`paid`** rezervacija ima **`vehicle_types.price`** nižu od najnovije starije **`paid`** rezervacije iste normalizovane tablice u **`reservations`**, upis u **`admin_alerts`** (`guest_paid_lower_category_than_history`) + email operateru. V. **`admin-panel.md`**.
+4. Dispatch **ProcessReservationAfterPaymentJob(reservation_id)** (opciono sa **`fakeFiscalScenario`** kad fiskal driver šalje scenario iz kombinovane fake QA forme).
    - **Izuzetak:** ako su **`BANK_DRIVER=fake`** i **`FISCALIZATION_DRIVER=fake`**, job se **ne** šalje iz **`PaymentSuccessHandler`** — isti zahtev ga pokreće **`FakeBankCompleteController`** odmah poslije **`PaymentCallbackJob`**, sa scenarijem sa forme (jedan submit = bank + fiskal ishod).
    - **`dispatchSync`** za **`SendInvoiceEmailJob`** i dalje zavisi od **`FAKE_PAYMENT_E2E_SYNC`** i fake banke (v. job).
 
