@@ -210,11 +210,13 @@ final class VehicleCategoryChangeApprovalWorkflowTest extends TestCase
             'license_plate' => 'KO111',
             'old_vehicle_type_id' => $a->id,
             'requested_vehicle_type_id' => $b->id,
-            'document' => $file,
+            'documents' => [$file],
         ])->assertRedirect(route('panel.vehicles', [], false));
 
         $req = VehicleCategoryChangeRequest::query()->firstOrFail();
         $this->assertSame(VehicleCategoryChangeRequest::STATUS_PENDING, (string) $req->status);
+        $this->assertSame(1, $req->attachments()->count());
+        Storage::disk('local')->assertExists($req->attachments()->first()->path);
         Storage::disk('local')->assertExists($req->document_path);
 
         Mail::assertSent(VehicleCategoryChangeRequestMail::class, 1);
@@ -229,7 +231,7 @@ final class VehicleCategoryChangeApprovalWorkflowTest extends TestCase
             'license_plate' => 'KO111',
             'old_vehicle_type_id' => $a->id,
             'requested_vehicle_type_id' => $b->id,
-            'document' => $file,
+            'documents' => [$file],
         ])->assertRedirect(route('panel.vehicles', [], false));
 
         $this->assertSame(1, VehicleCategoryChangeRequest::query()->count());

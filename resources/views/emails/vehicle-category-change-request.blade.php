@@ -6,7 +6,11 @@
     <li>Registarska tablica: <strong>{{ $licensePlate }}</strong></li>
     <li>Stara kategorija: <strong>{{ $oldCategory }}</strong></li>
     <li>Tražena kategorija: <strong>{{ $requestedCategory }}</strong></li>
+    <li>Broj priloga: <strong>{{ $attachmentCount }}</strong></li>
 </ul>
 
-<p>Molimo provjerite priloženi dokument i donesite odluku u Admin → Agencije.</p>
-
+@if ($adminReviewUrl !== '')
+    <p>Pregled svih priloga i odluka: <a href="{{ $adminReviewUrl }}">{{ $adminReviewUrl }}</a></p>
+@else
+    <p>Molimo provjerite priložene dokumente i donesite odluku u Admin → Agencije.</p>
+@endif

@@ -67,13 +67,9 @@
                     </div>
                 @endif
                 <div class="sm:col-span-2">
-                    <dt class="font-medium text-gray-600">Dokument</dt>
+                    <dt class="font-medium text-gray-600">Prilozi</dt>
                     <dd class="mt-1">
-                        <a class="text-red-700 underline font-medium"
-                           href="{{ route('panel_admin.agencies.vehicle_category_change_requests.document', ['user' => $user->id, 'request' => $req->id], false) }}"
-                           target="_blank" rel="noopener">
-                            Preview ({{ $req->document_original_name ?: 'document' }})
-                        </a>
+                        @include('admin-panel.agencies.partials.category-change-attachments', ['user' => $user, 'req' => $req])
                     </dd>
                 </div>
             </dl>

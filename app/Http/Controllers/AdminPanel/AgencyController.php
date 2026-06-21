@@ -10,6 +10,7 @@ use App\Models\AgencyAdvanceTransaction;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehicleCategoryChangeRequest;
+use App\Models\VehicleCategoryChangeRequestAttachment;
 use App\Services\AgencyAdvance\AdvanceTopupConfirmationService;
 use App\Services\AgencyAdvance\AgencyAdvanceService;
 use App\Services\AdminPanel\Agency\AdminAgencySearchService;
@@ -74,7 +75,7 @@ final class AgencyController extends Controller
         $pendingCategoryRequests = VehicleCategoryChangeRequest::query()
             ->where('user_id', $user->id)
             ->where('status', VehicleCategoryChangeRequest::STATUS_PENDING)
-            ->with(['oldVehicle', 'oldVehicleType.translations', 'requestedVehicleType.translations'])
+            ->with(['oldVehicle', 'oldVehicleType.translations', 'requestedVehicleType.translations', 'attachments'])
             ->orderByDesc('created_at')
             ->get();
 
@@ -94,7 +95,7 @@ final class AgencyController extends Controller
             abort(404);
         }
 
-        $request->load(['oldVehicleType.translations', 'requestedVehicleType.translations']);
+        $request->load(['oldVehicleType.translations', 'requestedVehicleType.translations', 'attachments']);
 
         return view('admin-panel.agencies.vehicle-category-change-request', [
             'user' => $user,
@@ -122,6 +123,38 @@ final class AgencyController extends Controller
         $mime = $request->document_mime_type ?: 'application/octet-stream';
 
         return Storage::disk('local')->response($path, $name, [
+            'Content-Type' => $mime,
+            'Content-Disposition' => 'inline; filename="'.$name.'"',
+        ]);
+    }
+
+    public function previewVehicleCategoryChangeAttachment(
+        User $user,
+        VehicleCategoryChangeRequest $request,
+        VehicleCategoryChangeRequestAttachment $attachment,
+    ): StreamedResponse {
+        if ((int) $request->user_id !== (int) $user->id
+            || (int) $attachment->vehicle_category_change_request_id !== (int) $request->id) {
+            abort(404);
+        }
+
+        $disk = $attachment->disk ?: 'local';
+        $path = (string) $attachment->path;
+
+        if ($path === '' || ! Storage::disk($disk)->exists($path)) {
+            Log::channel('payments')->warning('vehicle_category_change_attachment_missing', [
+                'request_id' => (int) $request->id,
+                'attachment_id' => (int) $attachment->id,
+                'agency_user_id' => (int) $user->id,
+                'document_path' => $path !== '' ? $path : null,
+            ]);
+            abort(404, 'Prilog zahtjeva nije pronađen.');
+        }
+
+        $name = $attachment->original_name ?: 'document';
+        $mime = $attachment->mime_type ?: 'application/octet-stream';
+
+        return Storage::disk($disk)->response($path, $name, [
             'Content-Type' => $mime,
             'Content-Disposition' => 'inline; filename="'.$name.'"',
         ]);

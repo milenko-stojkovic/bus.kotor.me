@@ -47,7 +47,7 @@
                                     <th class="py-2 pr-4">Tablica</th>
                                     <th class="py-2 pr-4">Stara kategorija</th>
                                     <th class="py-2 pr-4">Tražena kategorija</th>
-                                    <th class="py-2 pr-4">Dokument</th>
+                                    <th class="py-2 pr-4">Prilozi</th>
                                     <th class="py-2 pr-4">Status</th>
                                     <th class="py-2 pr-4 text-right"></th>
                                 </tr>
@@ -60,11 +60,7 @@
                                         <td class="py-2 pr-4">{{ $req->oldVehicleType?->formatLabel('cg', 'EUR') ?? ('#'.$req->old_vehicle_type_id) }}</td>
                                         <td class="py-2 pr-4">{{ $req->requestedVehicleType?->formatLabel('cg', 'EUR') ?? ('#'.$req->requested_vehicle_type_id) }}</td>
                                         <td class="py-2 pr-4 whitespace-nowrap">
-                                            <a class="text-red-700 underline font-medium"
-                                               href="{{ route('panel_admin.agencies.vehicle_category_change_requests.document', ['user' => $user->id, 'request' => $req->id], false) }}"
-                                               target="_blank" rel="noopener">
-                                                Preview
-                                            </a>
+                                            @include('admin-panel.agencies.partials.category-change-attachments', ['user' => $user, 'req' => $req])
                                         </td>
                                         <td class="py-2 pr-4 whitespace-nowrap">{{ $req->status }}</td>
                                         <td class="py-2 pr-0 whitespace-nowrap text-right">

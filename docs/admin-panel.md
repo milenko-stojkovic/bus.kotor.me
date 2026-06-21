@@ -437,11 +437,16 @@ Ovaj workflow postoji da bi se sprečila zloupotreba ponovnog unosa iste regista
 **Source of truth:**
 
 - tabela **`vehicle_category_change_requests`**
+- prilozi u **`vehicle_category_change_request_attachments`** (1–5 fajlova po zahtjevu; legacy **`document_path`** ostaje za kompatibilnost)
 - dokumenti su u **private/local storage** (nisu public)
 
 **Dokument preview:**
 
-- admin-only ruta streamuje dokument inline (image/PDF) iz private storage-a.
+- admin-only rute streamuju priloge inline (image/PDF) iz private storage-a:
+  - **`panel_admin.agencies.vehicle_category_change_requests.attachments.preview`** — pojedinačni prilog
+  - **`panel_admin.agencies.vehicle_category_change_requests.document`** — legacy jedan fajl (`document_path`)
+- pregled zahtjeva i tabela pending na agenciji prikazuju listu **Prilozi** sa Preview linkom po fajlu
+- admin email navodi broj priloga i link na stranicu pregleda (bez prilaganja svih fajlova)
 
 **Approve (Prihvati):**
 

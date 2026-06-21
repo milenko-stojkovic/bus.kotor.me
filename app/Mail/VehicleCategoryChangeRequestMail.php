@@ -7,7 +7,6 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Storage;
 
 final class VehicleCategoryChangeRequestMail extends Mailable
 {
@@ -19,9 +18,8 @@ final class VehicleCategoryChangeRequestMail extends Mailable
         public readonly string $licensePlate,
         public readonly string $oldCategory,
         public readonly string $requestedCategory,
-        public readonly string $attachmentPath,
-        public readonly string $attachmentName,
-        public readonly string $attachmentMime,
+        public readonly int $attachmentCount,
+        public readonly string $adminReviewUrl,
     ) {}
 
     public function envelope(): Envelope
@@ -37,20 +35,4 @@ final class VehicleCategoryChangeRequestMail extends Mailable
             view: 'emails.vehicle-category-change-request',
         );
     }
-
-    public function build(): static
-    {
-        $this->view('emails.vehicle-category-change-request');
-
-        if ($this->attachmentPath !== '' && Storage::disk('local')->exists($this->attachmentPath)) {
-            $this->attachData(
-                Storage::disk('local')->get($this->attachmentPath),
-                $this->attachmentName,
-                ['mime' => $this->attachmentMime],
-            );
-        }
-
-        return $this;
-    }
 }
-

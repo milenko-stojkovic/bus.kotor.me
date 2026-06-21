@@ -1,6 +1,6 @@
 ﻿# Project DONE (urađeno)
 
-**Poslednje ažuriranje:** 2026-06-19  
+**Poslednje ažuriranje:** 2026-06-21  
 
 Hronološki najnovije na vrhu unutar svake sekcije. Pri zatvaranju zadatka dodaj red sa **datumom** (`YYYY-MM-DD`) i kratak opis; istu stavku ukloni iz `docs/project-todo.md`.
 
@@ -8,6 +8,7 @@ Hronološki najnovije na vrhu unutar svake sekcije. Pri zatvaranju zadatka dodaj
 
 ## 2026-06 — Admin / UX (post cut-over)
 
+- **2026-06-21** — **Zahtjev za promjenu kategorije — više priloga:** agencija može uploadovati **1–5** dokumenata/slika (jpg, png, pdf; max 10 MB po fajlu); tabela **`vehicle_category_change_request_attachments`** + backfill legacy **`document_path`**; admin pregled i preview po prilogu; email sa linkom na pregled umjesto svih attachmenta. Testovi: **`VehicleCategoryChangeMultiAttachmentTest`**. Docs: **`agency-panel.md`**, **`admin-panel.md`** §9.5.
 - **2026-06-19** — **Guest plaćena rezervacija — niža kategorija od historije:** nakon uspješnog kreiranja guest **`paid`** rezervacije, **`GuestPaidLowerCategoryAlertService`** upoređuje **`vehicle_types.price`** sa najnovijom starijom **`paid`** rezervacijom iste normalizovane tablice (samo **`reservations`**); ako je nova cijena niža → **`admin_alerts`** tip **`guest_paid_lower_category_than_history`** + email (**`AdminFiscalizationAlertService`**). Rezervacija se **ne** blokira. Testovi: **`GuestPaidLowerCategoryAlertTest`**. Docs: **`admin-panel.md`**, **`success-payment-pipeline.md`**, **`production-hardening.md`**.
 - **2026-06-19** — **Control — osvježavanje dnevne naknade:** ekran **`/control/dnevna-naknada`** ima **Posljednje osvježavanje**, **Osvježi sada** i auto-reload svakih **5 min** (isto kao Termini dashboard). Docs: **`control-panel.md`**; test: **`DailyFeeControlTest`**.
 - **2026-06-19** — **Agency panel — promjena tablice vs plaćena kategorija:** kandidati za zamjenu vozila (Promjena tablice, `PATCH /panel/reservations/{id}/vehicle`, uklanjanje vozila) porede **`vehicle_types.price`** kandidata sa snapshot-om **`reservations.vehicle_type_id`**, ne sa kategorijom trenutno dodijeljenog vozila; **`vehicle_type_id`** i **`invoice_amount`** ostaju nepromijenjeni pri promjeni tablice. Servis: **`VehicleReplacementCandidateService::paidCategoryMaxPrice`**. Testovi: **`ReservationVehicleChangePaidCategoryTest`**. Docs: **`agency-panel.md`**, **`provera-modela.md`**.

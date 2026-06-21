@@ -302,7 +302,8 @@ Ako agencija ponovo unese **istu registarsku tablicu**:
   - vozilo se **reaktivira** (`status = active`).
 - Ako je izabrana **druga kategorija**:
   - direktan unos se **blokira**,
-  - prikazuje se objašnjenje i forma za **upload dokumenta** (slika ili PDF),
+  - prikazuje se objašnjenje i forma za **upload dokumenata** (slika ili PDF),
+  - agencija može priložiti **1–5 fajlova** (npr. obje strane saobraćajne dozvole); najmanje **jedan** dokument je obavezan,
   - agencija šalje **zahtjev za promjenu kategorije** koji ide administratoru na odobrenje.
 
 Dok zahtjev ne bude odobren, vozilo se ne može koristiti sa novom kategorijom.

@@ -83,10 +83,11 @@
                                 <input type="hidden" name="requested_vehicle_type_id" value="{{ (int) $change['requested_vehicle_type_id'] }}">
 
                                 <div>
-                                    <x-input-label for="change_document" :value="$pn('vehicle_category_change_document', 'Dokument (slika ili PDF)')" />
-                                    <input id="change_document" name="document" type="file" required accept="image/*,application/pdf"
+                                    <x-input-label for="change_documents" :value="$pn('vehicle_category_change_document', 'Dokumenti (slika ili PDF)')" />
+                                    <input id="change_documents" name="documents[]" type="file" required multiple
+                                           accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
                                            class="mt-1 block w-full text-sm text-gray-700" />
-                                    <div class="mt-1 text-xs text-gray-700">{{ $pn('vehicle_category_change_document_hint', 'Max 10MB. Obavezno.') }}</div>
+                                    <div class="mt-1 text-xs text-gray-700">{{ $pn('vehicle_category_change_document_hint', 'Možete priložiti više dokumenata ili slika, npr. obje strane saobraćajne dozvole. Najmanje jedan dokument je obavezan.') }}</div>
                                 </div>
 
                                 <div class="flex flex-wrap gap-3">

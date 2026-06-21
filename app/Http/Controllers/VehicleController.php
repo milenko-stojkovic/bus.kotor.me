@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreVehicleCategoryChangeRequestRequest;
 use App\Http\Requests\StoreVehicleRequest;
 use App\Http\Requests\UpdateVehicleRequest;
 use App\Models\AdminAlert;
 use App\Models\Vehicle;
 use App\Models\VehicleCategoryChangeRequest;
+use App\Models\VehicleCategoryChangeRequestAttachment;
 use App\Models\VehicleType;
 use App\Services\Reservation\PanelReservationListService;
 use App\Services\Reservation\VehicleReplacementCandidateService;
@@ -93,18 +95,12 @@ class VehicleController extends Controller
         );
     }
 
-    public function storeCategoryChangeRequest(Request $request): RedirectResponse
+    public function storeCategoryChangeRequest(StoreVehicleCategoryChangeRequestRequest $request): RedirectResponse
     {
         $user = $request->user();
         $locale = app()->getLocale();
 
-        $data = $request->validate([
-            'old_vehicle_id' => ['required', 'integer'],
-            'license_plate' => ['required', 'string', 'max:50', 'regex:/^[A-Z0-9]+$/'],
-            'old_vehicle_type_id' => ['required', 'integer', 'exists:vehicle_types,id'],
-            'requested_vehicle_type_id' => ['required', 'integer', 'exists:vehicle_types,id'],
-            'document' => ['required', 'file', 'max:10240', 'mimetypes:application/pdf,image/jpeg,image/png,image/webp'],
-        ]);
+        $data = $request->validated();
 
         $plate = (string) $data['license_plate'];
         $requestedTypeId = (int) $data['requested_vehicle_type_id'];
@@ -138,15 +134,17 @@ class VehicleController extends Controller
             );
         }
 
-        $file = $request->file('document');
-        if (! $file) {
+        /** @var array<int, \Illuminate\Http\UploadedFile> $files */
+        $files = array_values($request->file('documents', []));
+        if ($files === []) {
             abort(422);
         }
 
-        $path = '';
         $req = null;
 
-        DB::transaction(function () use ($user, $locale, $oldVehicle, $plate, $requestedTypeId, $file, &$path, &$req): void {
+        DB::transaction(function () use ($user, $locale, $oldVehicle, $plate, $requestedTypeId, $files, &$req): void {
+            $firstFile = $files[0];
+
             $req = VehicleCategoryChangeRequest::query()->create([
                 'user_id' => $user->id,
                 'old_vehicle_id' => $oldVehicle->id,
@@ -154,21 +152,38 @@ class VehicleController extends Controller
                 'old_vehicle_type_id' => $oldVehicle->vehicle_type_id,
                 'requested_vehicle_type_id' => $requestedTypeId,
                 'status' => VehicleCategoryChangeRequest::STATUS_PENDING,
-                'document_original_name' => $file->getClientOriginalName(),
+                'document_original_name' => $firstFile->getClientOriginalName(),
                 'document_path' => 'tmp',
-                'document_mime_type' => (string) ($file->getClientMimeType() ?? 'application/octet-stream'),
-                'document_size_bytes' => (int) $file->getSize(),
+                'document_mime_type' => (string) ($firstFile->getClientMimeType() ?? 'application/octet-stream'),
+                'document_size_bytes' => (int) $firstFile->getSize(),
                 'locale' => (string) $locale,
                 'reviewed_by_admin_id' => null,
                 'reviewed_at' => null,
             ]);
 
-            $path = 'vehicle-category-change-requests/'.$req->id.'/document';
-            Storage::disk('local')->putFileAs(dirname($path), $file, basename($path));
+            $firstPath = null;
 
-            $req->update([
-                'document_path' => $path,
-            ]);
+            foreach ($files as $file) {
+                $attachment = VehicleCategoryChangeRequestAttachment::query()->create([
+                    'vehicle_category_change_request_id' => $req->id,
+                    'disk' => 'local',
+                    'path' => 'tmp',
+                    'original_name' => $file->getClientOriginalName(),
+                    'mime_type' => (string) ($file->getClientMimeType() ?? 'application/octet-stream'),
+                    'size' => (int) $file->getSize(),
+                ]);
+
+                $path = 'vehicle-category-change-requests/'.$req->id.'/attachments/'.$attachment->id.'/file';
+                Storage::disk('local')->putFileAs(dirname($path), $file, basename($path));
+
+                $attachment->update(['path' => $path]);
+
+                $firstPath ??= $path;
+            }
+
+            if ($firstPath !== null) {
+                $req->update(['document_path' => $firstPath]);
+            }
 
             AdminAlert::query()->create([
                 'type' => 'vehicle_category_change_request',
@@ -183,7 +198,7 @@ class VehicleController extends Controller
             ]);
         });
 
-        // Mail admin (cg) + attachment.
+        // Mail admin (cg) — link to review page; do not attach all files.
         try {
             $mailTo = 'bus@kotor.me';
             $oldType = VehicleType::query()->with('translations')->find((int) $oldVehicle->vehicle_type_id);
@@ -192,15 +207,22 @@ class VehicleController extends Controller
             $oldLabel = $oldType?->formatLabel('cg', 'EUR') ?? ('#'.$oldVehicle->vehicle_type_id);
             $reqLabel = $reqType?->formatLabel('cg', 'EUR') ?? ('#'.$requestedTypeId);
 
+            $attachmentCount = $req ? $req->attachments()->count() : count($files);
+            $adminReviewUrl = $req
+                ? route('panel_admin.agencies.vehicle_category_change_requests.show', [
+                    'user' => $user->id,
+                    'request' => $req->id,
+                ], true)
+                : '';
+
             $mailable = new \App\Mail\VehicleCategoryChangeRequestMail(
                 agencyName: (string) $user->name,
                 agencyEmail: (string) $user->email,
                 licensePlate: $plate,
                 oldCategory: $oldLabel,
                 requestedCategory: $reqLabel,
-                attachmentPath: (string) ($req?->document_path ?? ''),
-                attachmentName: (string) ($req?->document_original_name ?? 'document'),
-                attachmentMime: (string) ($req?->document_mime_type ?? 'application/octet-stream'),
+                attachmentCount: $attachmentCount,
+                adminReviewUrl: $adminReviewUrl,
             );
 
             Mail::to($mailTo)->send($mailable);

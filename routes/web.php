@@ -80,6 +80,8 @@ Route::prefix('admin')->name('panel_admin.')->group(function () {
             ->name('agencies.vehicle_category_change_requests.show');
         Route::get('agencije/{user}/vehicle-category-change-requests/{request}/document', [AdminPanelAgencyController::class, 'previewVehicleCategoryChangeDocument'])
             ->name('agencies.vehicle_category_change_requests.document');
+        Route::get('agencije/{user}/vehicle-category-change-requests/{request}/attachments/{attachment}', [AdminPanelAgencyController::class, 'previewVehicleCategoryChangeAttachment'])
+            ->name('agencies.vehicle_category_change_requests.attachments.preview');
         Route::post('agencije/{user}/vehicle-category-change-requests/{request}/approve', [AdminPanelAgencyController::class, 'approveVehicleCategoryChangeRequest'])
             ->name('agencies.vehicle_category_change_requests.approve');
         Route::post('agencije/{user}/vehicle-category-change-requests/{request}/reject', [AdminPanelAgencyController::class, 'rejectVehicleCategoryChangeRequest'])
