@@ -49,9 +49,26 @@ async function ensureBaseFolder(storage) {
     return { folder, name };
 }
 
+async function ensureFolderPath(baseFolder, relativePath) {
+    const parts = String(relativePath || '')
+        .split('/')
+        .map((p) => p.trim())
+        .filter(Boolean);
+    let current = baseFolder;
+    for (const part of parts) {
+        let child = (current.children || []).find((c) => c.directory && c.name === part);
+        if (!child) {
+            child = await current.mkdir(part);
+        }
+        current = child;
+    }
+    return current;
+}
+
 async function upload(payload) {
     const localPath = payload.localPath;
     const targetName = payload.targetName;
+    const targetRelativeDir = payload.targetRelativeDir || '';
     if (!localPath || !targetName) {
         return { ok: false, error: 'localPath and targetName required' };
     }
@@ -60,9 +77,13 @@ async function upload(payload) {
     }
     const storage = await getStorage();
     const { folder, name: baseName } = await ensureBaseFolder(storage);
+    const targetFolder =
+        targetRelativeDir && String(targetRelativeDir).trim() !== ''
+            ? await ensureFolderPath(folder, targetRelativeDir)
+            : folder;
     const st = statSync(localPath);
     const stream = createReadStream(localPath);
-    const uploadTask = folder.upload({ name: targetName, size: st.size }, stream);
+    const uploadTask = targetFolder.upload({ name: targetName, size: st.size }, stream);
     const file = await uploadTask.complete;
     const nodeId =
         file?.node?.hash ||
@@ -70,7 +91,11 @@ async function upload(payload) {
         file?.node?.k ||
         (typeof file?.node === 'string' ? file.node : null) ||
         null;
-    const megaPath = `${baseName}/${targetName}`;
+    const dirPart =
+        targetRelativeDir && String(targetRelativeDir).trim() !== ''
+            ? String(targetRelativeDir).replace(/^\/+|\/+$/g, '') + '/'
+            : '';
+    const megaPath = `${baseName}/${dirPart}${targetName}`;
     return {
         ok: true,
         mega_node_id: nodeId != null ? String(nodeId) : null,

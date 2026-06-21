@@ -468,7 +468,10 @@ Ovaj workflow postoji da bi se sprečila zloupotreba ponovnog unosa iste regista
 **Retention:**
 
 - zahtjevi se ne brišu (ostaju `approved/rejected`)
-- dokumenti ostaju u storage-u
+- **pending:** prilozi ostaju u **private/local** storage-u; admin preview radi normalno
+- **approved/rejected:** nakon odluke asinhrono se pokreće **`ArchiveVehicleCategoryChangeRequestAttachmentsJob`** (queue) — prilozi se uploaduju na **MEGA** u `vehicle-category-changes/{approved|rejected}/{Y}/{m}/request-{id}/`, lokalni fajl se briše **samo** nakon uspješnog uploada; metadata na **`vehicle_category_change_request_attachments`**: `archived_at`, `archive_provider`, `archive_path`, `archive_error`, `local_deleted_at` (DB redovi se **ne** brišu)
+- approve/reject **ne čeka** MEGA; ako arhiva padne, lokalni fajl ostaje i job se može ponoviti (queue retry ili ručno ponovno dispatch)
+- admin pregled prikazuje status po prilogu: lokalno dostupan / arhivirano na MEGA / arhiva neuspješna; Preview link samo dok lokalni fajl postoji; za arhivirane prikazuje se `archive_path` (nema MEGA preview linka u v1)
 
 Guest rezervacije (`user_id` = null) nemaju “istoriju po korisniku”; mogu se pretraživati po email-u, tablici, datumu itd.
 

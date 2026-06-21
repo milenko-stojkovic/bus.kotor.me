@@ -11,9 +11,18 @@ final class MegaArchiveService implements MegaArchiveClient
 {
     public function uploadLocalFile(string $absoluteLocalPath, string $generatedFileName): MegaUploadResult
     {
+        return $this->uploadLocalFileToRelativePath($absoluteLocalPath, '', $generatedFileName);
+    }
+
+    public function uploadLocalFileToRelativePath(
+        string $absoluteLocalPath,
+        string $relativeDirectory,
+        string $targetFileName,
+    ): MegaUploadResult {
         return $this->runNode('upload', [
             'localPath' => $absoluteLocalPath,
-            'targetName' => $generatedFileName,
+            'targetName' => $targetFileName,
+            'targetRelativeDir' => $relativeDirectory !== '' ? $relativeDirectory : null,
         ]);
     }
 

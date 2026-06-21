@@ -165,10 +165,10 @@ final class VehicleCategoryChangeMultiAttachmentTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('Dokument 1', $html);
-        $this->assertStringContainsString('Dokument 2', $html);
         $this->assertStringContainsString('a.pdf', $html);
         $this->assertStringContainsString('b.jpg', $html);
+        $this->assertStringContainsString('Lokalni dokument dostupan', $html);
+        $this->assertStringContainsString('Preview', $html);
     }
 
     public function test_attachment_preview_returns_200_for_existing_file(): void

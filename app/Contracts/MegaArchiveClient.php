@@ -13,6 +13,15 @@ interface MegaArchiveClient
     public function uploadLocalFile(string $absoluteLocalPath, string $generatedFileName): MegaUploadResult;
 
     /**
+     * Upload under base folder + relative directory path (creates nested folders as needed).
+     */
+    public function uploadLocalFileToRelativePath(
+        string $absoluteLocalPath,
+        string $relativeDirectory,
+        string $targetFileName,
+    ): MegaUploadResult;
+
+    /**
      * Download an archived file from MEGA into an absolute local path (parent dirs must exist).
      *
      * @param  string|null  $generatedFileName  Passed to the Node helper when mega path lookup needs a name fallback.

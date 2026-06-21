@@ -60,7 +60,9 @@ Ekstenzija se uzima iz lokalne putanje (lower-case), osim kod **Limo plate deriv
 - `node_binary` ← `MEGA_NODE_BINARY` (opciono, inače `node`)
 - `user_agent` ← `MEGA_USER_AGENT` (default **`BusKotorArchive/1.0`**) — eksplicitni **User-Agent** za megajs `Storage` (MEGA koristi ga za identifikaciju klijenta; preporučeno za server-side login).
 
-Svi fajlovi idu **direktno u bazni folder** na MEGA — **bez podfoldera**.
+Svi fajlovi iz **`files:archive-private`** (FZBR, Limo plate/pickup) idu **direktno u bazni folder** na MEGA — **bez podfoldera**.
+
+**Izuzetak — zahtjevi za promjenu kategorije vozila:** nakon admin **approve/reject**, queue job **`ArchiveVehicleCategoryChangeRequestAttachmentsJob`** koristi **`MegaArchiveClient::uploadLocalFileToRelativePath`** i strukturu `vehicle-category-changes/{approved|rejected}/{Y}/{m}/request-{id}/attachment-{id}-{original_name}`. Metadata je na **`vehicle_category_change_request_attachments`** (ne u **`external_file_archives`**). Dok je zahtjev **pending**, prilozi ostaju samo lokalno.
 
 ---
 
@@ -109,7 +111,7 @@ Razmotriti **migraciju** ka **S3-kompatibilnom** objektnom skladištu (ili drugo
 
 ## Servisi
 
-- `App\Services\ExternalArchive\MegaArchiveService` — implementacija `MegaArchiveClient` (Node `scripts/mega-archive.js`, paket `megajs`). Login koristi fiksni **`userAgent`** iz `MEGA_USER_AGENT` / `services.mega.user_agent` (default `BusKotorArchive/1.0`). **Download:** megajs `File.prototype.download(opts)` vraća **Readable** stream; callback (ako se koristi) dobija **`(err, Buffer)`**, ne stream — skripta koristi `const rs = file.download({}); rs.pipe(writeStream)`.
+- `App\Services\ExternalArchive\MegaArchiveService` — implementacija `MegaArchiveClient` (Node `scripts/mega-archive.js`, paket `megajs`). Login koristi fiksni **`userAgent`** iz `MEGA_USER_AGENT` / `services.mega.user_agent` (default `BusKotorArchive/1.0`). **Upload:** podržava **`uploadLocalFileToRelativePath`** (ugneždeni folderi ispod baznog foldera) pored flat uploada u bazni folder. **Download:** megajs `File.prototype.download(opts)` vraća **Readable** stream; callback (ako se koristi) dobija **`(err, Buffer)`**, ne stream — skripta koristi `const rs = file.download({}); rs.pipe(writeStream)`.
 - **`App\Services\ExternalArchive\MegaArchiveFailureClassifier`** — konzervativno: da li je tekst greške **transijentan** (retry) ili ne (fail fast).
 - `App\Services\ExternalArchive\ExternalFileArchiveService::archiveLocalPrivateFile(...)` — pending red → upload (do 3 pokušaja za transijentne greške) → `uploaded` → brisanje **originalnog** lokalnog fajla na `original_local_path`. Opcioni argument **`ArchiveDerivativeUpload`**: upload sa privremenog JPEG-a (`LimoPlateArchiveDerivativeBuilder`), metadata na redu; privremeni derivat se briše nakon Node poziva.
 - **`App\Services\Limo\LimoPlateArchiveDerivativeBuilder`** — samo za arhivu (ne dira OCR niti upload tok): korisnički izrez `plate_crop_*_bp` + **~12,5%** margine, inače cijela slika; max duža strana **1600 px**; **JPEG Q80**; bez grayscale. Zahtijeva PHP **GD**.
@@ -117,6 +119,7 @@ Razmotriti **migraciju** ka **S3-kompatibilnom** objektnom skladištu (ili drugo
 - `ExternalFileArchiveService::restoreFromMega(...)` — trajni restore: preuzimanje na `original_local_path`, **`local_deleted_at = null`**.
 - **`ExternalFileArchiveService::restoreFromMegaForPreview(...)`** — preuzimanje na istu putanju za **admin preview**; **`local_deleted_at` ostaje postavljen** (izvor istine za „kanonski” primjerak ostaje MEGA); postavljaju se **`preview_restored_at`** i **`preview_expires_at`** (TTL).
 - **`ExternalFileArchiveService::ensureLocalPreviewForSource(...)`** — ako fajl postoji lokalno, vraća putanju; ako ne postoji i postoji odgovarajući **`uploaded`** MEGA red sa **`local_deleted_at`**, poziva `restoreFromMegaForPreview`. Putanja u arhivi mora se poklapati sa proslijeđenom relativnom putanjom.
+- **`App\Services\VehicleCategoryChange\VehicleCategoryChangeAttachmentArchiveService`** + job **`ArchiveVehicleCategoryChangeRequestAttachmentsJob`** — arhiva priloga zahtjeva za promjenu kategorije **nakon** `approved`/`rejected` (ne za `pending`); metadata na **`vehicle_category_change_request_attachments`**; logovi `payments`: `vehicle_category_change_attachment_archived`, `vehicle_category_change_attachment_archive_failed`, `vehicle_category_change_attachment_archive_local_missing`.
 
 ### Admin — pregled slike tablice (Limo pickup)
 

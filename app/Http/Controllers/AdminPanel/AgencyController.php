@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\AdminPanel;
 
+use App\Jobs\ArchiveVehicleCategoryChangeRequestAttachmentsJob;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AdminPanel\AdminAgencyAdvanceCorrectionRequest;
 use App\Models\AdminAlert;
@@ -218,6 +219,8 @@ final class AgencyController extends Controller
             ]);
         });
 
+        ArchiveVehicleCategoryChangeRequestAttachmentsJob::dispatch((int) $request->id);
+
         return redirect()
             ->to(route('panel_admin.agencies.show', $user, false))
             ->with('status', 'Zahtjev je prihvaćen i vozilo je reaktivirano.');
@@ -271,6 +274,8 @@ final class AgencyController extends Controller
                 'admin_id' => request()->user('panel_admin')?->id,
             ]);
         });
+
+        ArchiveVehicleCategoryChangeRequestAttachmentsJob::dispatch((int) $request->id);
 
         return redirect()
             ->to(route('panel_admin.agencies.show', $user, false))

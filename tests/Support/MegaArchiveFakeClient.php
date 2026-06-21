@@ -35,11 +35,25 @@ final class MegaArchiveFakeClient implements MegaArchiveClient
      */
     public ?array $downloadResultsQueue = null;
 
+    public ?string $lastUploadRelativeDirectory = null;
+
+    public ?string $lastUploadTargetName = null;
+
     public function uploadLocalFile(string $absoluteLocalPath, string $generatedFileName): MegaUploadResult
     {
+        return $this->uploadLocalFileToRelativePath($absoluteLocalPath, '', $generatedFileName);
+    }
+
+    public function uploadLocalFileToRelativePath(
+        string $absoluteLocalPath,
+        string $relativeDirectory,
+        string $targetFileName,
+    ): MegaUploadResult {
         if ($this->uploadResultsQueue !== null && $this->uploadResultsQueue !== []) {
             $this->uploadCalls++;
             $this->lastUploadAbsolutePath = $absoluteLocalPath;
+            $this->lastUploadRelativeDirectory = $relativeDirectory;
+            $this->lastUploadTargetName = $targetFileName;
             $this->lastUploadedBytes = is_file($absoluteLocalPath) ? (int) filesize($absoluteLocalPath) : null;
             /** @var MegaUploadResult */
             $next = array_shift($this->uploadResultsQueue);
@@ -49,12 +63,16 @@ final class MegaArchiveFakeClient implements MegaArchiveClient
 
         $this->uploadCalls++;
         $this->lastUploadAbsolutePath = $absoluteLocalPath;
+        $this->lastUploadRelativeDirectory = $relativeDirectory;
+        $this->lastUploadTargetName = $targetFileName;
         $this->lastUploadedBytes = is_file($absoluteLocalPath) ? (int) filesize($absoluteLocalPath) : null;
         if ($this->uploadShouldFail) {
             return new MegaUploadResult(false, null, null, 'fake_upload_failed');
         }
 
-        return new MegaUploadResult(true, 'fake-node-'.$this->uploadCalls, 'bus.kotor/'.$generatedFileName, null);
+        $dirPart = $relativeDirectory !== '' ? rtrim($relativeDirectory, '/').'/' : '';
+
+        return new MegaUploadResult(true, 'fake-node-'.$this->uploadCalls, 'bus.kotor/'.$dirPart.$targetFileName, null);
     }
 
     public function downloadToAbsolutePath(string $megaPathOrName, string $absoluteDestPath, ?string $generatedFileName = null): MegaUploadResult

@@ -308,6 +308,8 @@ Ako agencija ponovo unese **istu registarsku tablicu**:
 
 Dok zahtjev ne bude odobren, vozilo se ne može koristiti sa novom kategorijom.
 
+**Nakon odluke administratora** (odobren ili odbijen), prilozi se **asinhrono** arhiviraju na MEGA i uklanjaju sa produkcijskog diska; agencija i dalje vidi status zahtjeva, ali ne mora ništa raditi — arhiva je interni admin/operativni proces.
+
 ### Napomena (anti-abuse razlog)
 
 Workflow postoji da bi se sprečilo da se ista registarska tablica ponovo unese sa drugom (npr. jeftinijom) kategorijom bez provjere dokumentacije.
