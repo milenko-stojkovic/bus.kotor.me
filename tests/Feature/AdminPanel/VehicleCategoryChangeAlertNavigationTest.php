@@ -100,6 +100,10 @@ final class VehicleCategoryChangeAlertNavigationTest extends TestCase
     public function test_pending_request_review_page_shows_approve_and_reject(): void
     {
         $fixtures = $this->seedPendingRequest();
+        $documentUrl = route('panel_admin.agencies.vehicle_category_change_requests.document', [
+            'user' => $fixtures['user']->id,
+            'request' => $fixtures['request']->id,
+        ], false);
 
         $this->actingAs($this->seedAdmin(), 'panel_admin')
             ->get(route('panel_admin.agencies.vehicle_category_change_requests.show', [
@@ -110,7 +114,34 @@ final class VehicleCategoryChangeAlertNavigationTest extends TestCase
             ->assertSee('PGNAV1', false)
             ->assertSee('Na čekanju', false)
             ->assertSee('Prihvati', false)
-            ->assertSee('Odbij', false);
+            ->assertSee('Odbij', false)
+            ->assertSee($documentUrl, false);
+    }
+
+    public function test_document_preview_route_returns_file_for_local_document(): void
+    {
+        $fixtures = $this->seedPendingRequest();
+
+        $this->actingAs($this->seedAdmin(), 'panel_admin')
+            ->get(route('panel_admin.agencies.vehicle_category_change_requests.document', [
+                'user' => $fixtures['user']->id,
+                'request' => $fixtures['request']->id,
+            ], false))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+    }
+
+    public function test_document_preview_returns_404_when_file_missing(): void
+    {
+        $fixtures = $this->seedPendingRequest();
+        Storage::disk('local')->delete($fixtures['request']->document_path);
+
+        $this->actingAs($this->seedAdmin(), 'panel_admin')
+            ->get(route('panel_admin.agencies.vehicle_category_change_requests.document', [
+                'user' => $fixtures['user']->id,
+                'request' => $fixtures['request']->id,
+            ], false))
+            ->assertNotFound();
     }
 
     public function test_processed_request_review_page_is_read_only(): void
@@ -121,6 +152,11 @@ final class VehicleCategoryChangeAlertNavigationTest extends TestCase
             'reviewed_at' => now(),
         ]);
 
+        $documentUrl = route('panel_admin.agencies.vehicle_category_change_requests.document', [
+            'user' => $fixtures['user']->id,
+            'request' => $fixtures['request']->id,
+        ], false);
+
         $this->actingAs($this->seedAdmin(), 'panel_admin')
             ->get(route('panel_admin.agencies.vehicle_category_change_requests.show', [
                 'user' => $fixtures['user']->id,
@@ -129,6 +165,7 @@ final class VehicleCategoryChangeAlertNavigationTest extends TestCase
             ->assertOk()
             ->assertSee('Prihvaćen', false)
             ->assertSee('Prikaz je samo za pregled', false)
+            ->assertSee($documentUrl, false)
             ->assertDontSee('>Prihvati<', false)
             ->assertDontSee('>Odbij<', false);
     }

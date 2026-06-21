@@ -13,7 +13,6 @@ use App\Models\VehicleCategoryChangeRequest;
 use App\Services\AgencyAdvance\AdvanceTopupConfirmationService;
 use App\Services\AgencyAdvance\AgencyAdvanceService;
 use App\Services\AdminPanel\Agency\AdminAgencySearchService;
-use Illuminate\Http\Response;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -21,6 +20,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class AgencyController extends Controller
 {
@@ -102,7 +102,7 @@ final class AgencyController extends Controller
         ]);
     }
 
-    public function previewVehicleCategoryChangeDocument(User $user, VehicleCategoryChangeRequest $request): Response
+    public function previewVehicleCategoryChangeDocument(User $user, VehicleCategoryChangeRequest $request): StreamedResponse
     {
         if ((int) $request->user_id !== (int) $user->id) {
             abort(404);
@@ -110,7 +110,12 @@ final class AgencyController extends Controller
 
         $path = (string) $request->document_path;
         if ($path === '' || ! Storage::disk('local')->exists($path)) {
-            abort(404);
+            Log::channel('payments')->warning('vehicle_category_change_document_missing', [
+                'request_id' => (int) $request->id,
+                'agency_user_id' => (int) $user->id,
+                'document_path' => $path !== '' ? $path : null,
+            ]);
+            abort(404, 'Dokument zahtjeva nije pronađen.');
         }
 
         $name = $request->document_original_name ?: 'document';
