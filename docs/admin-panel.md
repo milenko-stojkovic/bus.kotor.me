@@ -235,6 +235,8 @@ Rute (admin panel):
 
 **Po tipu vozila:** koristi realizovane rezervacije (bez obzira na status), opseg po `reservation_date`, prikaz 4 fiksna reda + `Ukupno` (naziv na `cg`: name + (description), bez cijene). I bez podataka redovi ostaju sa nulama.
 
+**Po tipu rezervacije (`by_reservation_type`):** samo `paid` rezervacije, opseg po `reservations.reservation_date`. Broj vozila = broj rezervacija (redova). Prihod = `sum(invoice_amount)`. Redovi: **Termini** (`reservation_kind = time_slots`), **Dnevna naknada — Limo** i **Dnevna naknada — Autobusi** (`daily_ticket`, Limo = `vehicle_type_id` iz `ReservationVehicleEligibilityService::controlDailyFeeListVehicleTypeIds()` — putničko 4+1–7+1 + mini bus 8+1; Autobusi = ostale kategorije), podzbroj **Dnevna naknada ukupno**, **Ukupno**. PDF naslov/podnaslov: *Prihodi po tipu rezervacije*.
+
 ### 4.1.1 Izvještaj: Obaveze po avansima (snapshot) — implementirano (feature-flag)
 
 **Svrha:** formalni snapshot izvještaj “stanje obaveza po avansima” na izabrani dan (npr. kraj fiskalne godine).

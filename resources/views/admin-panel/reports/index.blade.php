@@ -62,6 +62,10 @@
                             <input type="radio" name="kind" value="by_vehicle_type" class="rounded border-red-200" x-model="kind">
                             <span>Po tipu vozila</span>
                         </label>
+                        <label class="flex items-center gap-2">
+                            <input type="radio" name="kind" value="by_reservation_type" class="rounded border-red-200" x-model="kind">
+                            <span>Po tipu rezervacije</span>
+                        </label>
                         @if ((bool) config('features.advance_payments'))
                             <label class="flex items-center gap-2">
                                 <input type="radio" name="kind" value="advance_obligations" class="rounded border-red-200" x-model="kind" @change="when = 'daily'">
@@ -84,7 +88,8 @@
 
         <div class="bg-white shadow rounded-lg p-6 border border-red-100" x-show="step === 2" x-cloak>
             <div class="text-sm font-semibold text-gray-900">Izbor opsega</div>
-            <p class="text-sm text-gray-600 mt-1" x-show="kind !== 'advance_obligations'">Opseg je ograničen na datume kreiranja rezervacija (created_at).</p>
+            <p class="text-sm text-gray-600 mt-1" x-show="kind === 'by_reservation_type'">Opseg po datumu rezervacije (reservation_date); samo plaćene rezervacije.</p>
+            <p class="text-sm text-gray-600 mt-1" x-show="kind !== 'advance_obligations' && kind !== 'by_reservation_type'">Opseg je ograničen na datume kreiranja rezervacija (created_at).</p>
             <p class="text-sm text-gray-600 mt-1" x-show="kind === 'advance_obligations'">Snapshot izvještaj: stanje se računa po ledger transakcijama (created_at) zaključno sa krajem izabranog dana.</p>
 
             <form method="get"

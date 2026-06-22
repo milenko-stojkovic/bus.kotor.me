@@ -58,9 +58,10 @@ class SendScheduledAdminReportsTest extends TestCase
 
             return $m->hasTo('a@example.com')
                 && str_contains($m->subjectLine, 'Dnevni izvještaji')
-                && count($names) === 3
+                && count($names) === 4
                 && in_array('dnevni-po-uplati-2026-05-01.pdf', $names, true)
                 && in_array('dnevni-obaveze-po-avansu-2026-05-01.pdf', $names, true)
+                && in_array('dnevni-po-tipu-rezervacije-2026-05-01.pdf', $names, true)
                 && in_array('dnevni-po-tipu-vozila-2026-05-01.pdf', $names, true);
         });
 
@@ -90,6 +91,7 @@ class SendScheduledAdminReportsTest extends TestCase
                 && str_contains($m->subjectLine, 'Mjesečni izvještaji')
                 && in_array('mjesečni-po-uplati-2026-05.pdf', $names, true)
                 && in_array('mjesečni-obaveze-po-avansu-2026-05.pdf', $names, true)
+                && in_array('mjesečni-po-tipu-rezervacije-2026-05.pdf', $names, true)
                 && in_array('mjesečni-po-tipu-vozila-2026-05.pdf', $names, true);
         });
 
@@ -119,6 +121,7 @@ class SendScheduledAdminReportsTest extends TestCase
                 && str_contains($m->subjectLine, 'Godišnji izvještaji')
                 && in_array('godišnji-po-uplati-2026.pdf', $names, true)
                 && in_array('godišnji-obaveze-po-avansu-2026.pdf', $names, true)
+                && in_array('godišnji-po-tipu-rezervacije-2026.pdf', $names, true)
                 && in_array('godišnji-po-tipu-vozila-2026.pdf', $names, true);
         });
 
@@ -185,8 +188,9 @@ class SendScheduledAdminReportsTest extends TestCase
         Mail::assertSent(ScheduledAdminReportsMail::class, function (ScheduledAdminReportsMail $m): bool {
             $names = $m->attachmentNames();
             return $m->hasTo('a@example.com')
-                && count($names) === 2
+                && count($names) === 3
                 && in_array('dnevni-po-uplati-2026-05-01.pdf', $names, true)
+                && in_array('dnevni-po-tipu-rezervacije-2026-05-01.pdf', $names, true)
                 && in_array('dnevni-po-tipu-vozila-2026-05-01.pdf', $names, true);
         });
     }

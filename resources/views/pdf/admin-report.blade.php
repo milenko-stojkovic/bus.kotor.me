@@ -77,6 +77,49 @@
                 </tbody>
             </table>
         </div>
+    @elseif ($kind === 'by_reservation_type')
+        <div class="card">
+            <table>
+                <thead>
+                <tr>
+                    <th>Tip rezervacije</th>
+                    <th class="right">Broj vozila</th>
+                    <th class="right">Prihod</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach ((array)($data['rows'] ?? []) as $row)
+                    @php
+                        $isSubtotal = ! empty($row['is_subtotal']);
+                        $isTotal = ! empty($row['is_total']);
+                    @endphp
+                    <tr>
+                        <td>
+                            @if ($isSubtotal || $isTotal)
+                                <strong>{{ (string)($row['label'] ?? '') }}</strong>
+                            @else
+                                {{ (string)($row['label'] ?? '') }}
+                            @endif
+                        </td>
+                        <td class="right">
+                            @if ($isSubtotal || $isTotal)
+                                <strong>{{ (int)($row['count'] ?? 0) }}</strong>
+                            @else
+                                {{ (int)($row['count'] ?? 0) }}
+                            @endif
+                        </td>
+                        <td class="right">
+                            @if ($isSubtotal || $isTotal)
+                                <strong>{{ $fmtMoney((float)($row['revenue_eur'] ?? 0)) }}</strong>
+                            @else
+                                {{ $fmtMoney((float)($row['revenue_eur'] ?? 0)) }}
+                            @endif
+                        </td>
+                    </tr>
+                @endforeach
+                </tbody>
+            </table>
+        </div>
     @elseif ($kind === 'advance_obligations')
         @php
             $rows = (array)($data['rows'] ?? []);

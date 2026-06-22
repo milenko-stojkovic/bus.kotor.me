@@ -26,7 +26,7 @@ class AdminPanelReportPdfRequest extends FormRequest
 
         return [
             'when' => ['required', Rule::in(['daily', 'monthly', 'yearly', 'period'])],
-            'kind' => ['required', Rule::in(['by_payment', 'by_realization', 'by_vehicle_type', 'advance_obligations'])],
+            'kind' => ['required', Rule::in(['by_payment', 'by_realization', 'by_vehicle_type', 'by_reservation_type', 'advance_obligations'])],
 
             // Daily
             'date' => ['nullable', 'date', 'after_or_equal:'.$min, 'before_or_equal:'.$max],

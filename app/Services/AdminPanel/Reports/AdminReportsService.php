@@ -6,11 +6,17 @@ use Carbon\Carbon;
 use App\Models\Reservation;
 use App\Models\VehicleType;
 use App\Services\Reservation\PanelReservationListService;
+use App\Services\Reservation\ReservationVehicleEligibilityService;
+use App\Support\ReservationKind;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 final class AdminReportsService
 {
+    public function __construct(
+        private ReservationVehicleEligibilityService $vehicleEligibility,
+    ) {}
+
     /**
      * @return array{revenue_eur:float,transactions:int}
      */
@@ -84,6 +90,74 @@ final class AdminReportsService
         return [
             'rows' => $out,
             'total' => $total,
+        ];
+    }
+
+    /**
+     * Paid reservations grouped by reservation kind; daily_ticket split into Limo vs Autobusi.
+     * Date range: reservations.reservation_date. Broj vozila = broj rezervacija (redova).
+     *
+     * Limo: daily_ticket + vehicle_type_id in {@see ReservationVehicleEligibilityService::controlDailyFeeListVehicleTypeIds()}.
+     *
+     * @return array{
+     *   rows: list<array{label:string,count:int,revenue_eur:float,is_subtotal?:bool,is_total?:bool}>,
+     *   total_count: int,
+     *   total_revenue_eur: float
+     * }
+     */
+    public function byReservationType(Carbon $from, Carbon $to): array
+    {
+        $limoTypeIds = $this->vehicleEligibility->controlDailyFeeListVehicleTypeIds();
+
+        $reservations = Reservation::query()
+            ->where('status', 'paid')
+            ->whereDate('reservation_date', '>=', $from->toDateString())
+            ->whereDate('reservation_date', '<=', $to->toDateString())
+            ->get(['id', 'reservation_kind', 'vehicle_type_id', 'invoice_amount']);
+
+        $timeSlots = ['count' => 0, 'revenue' => 0.0];
+        $limo = ['count' => 0, 'revenue' => 0.0];
+        $buses = ['count' => 0, 'revenue' => 0.0];
+
+        foreach ($reservations as $reservation) {
+            $amount = (float) ($reservation->invoice_amount ?? 0);
+            $kind = $reservation->reservation_kind ?? ReservationKind::TIME_SLOTS;
+
+            if ($kind === ReservationKind::TIME_SLOTS) {
+                $timeSlots['count']++;
+                $timeSlots['revenue'] += $amount;
+
+                continue;
+            }
+
+            if ($kind !== ReservationKind::DAILY_TICKET) {
+                continue;
+            }
+
+            if (in_array((int) $reservation->vehicle_type_id, $limoTypeIds, true)) {
+                $limo['count']++;
+                $limo['revenue'] += $amount;
+            } else {
+                $buses['count']++;
+                $buses['revenue'] += $amount;
+            }
+        }
+
+        $dailyCount = $limo['count'] + $buses['count'];
+        $dailyRevenue = $limo['revenue'] + $buses['revenue'];
+        $totalCount = $timeSlots['count'] + $dailyCount;
+        $totalRevenue = $timeSlots['revenue'] + $dailyRevenue;
+
+        return [
+            'rows' => [
+                ['label' => 'Termini', 'count' => $timeSlots['count'], 'revenue_eur' => $timeSlots['revenue']],
+                ['label' => 'Dnevna naknada — Limo', 'count' => $limo['count'], 'revenue_eur' => $limo['revenue']],
+                ['label' => 'Dnevna naknada — Autobusi', 'count' => $buses['count'], 'revenue_eur' => $buses['revenue']],
+                ['label' => 'Dnevna naknada ukupno', 'count' => $dailyCount, 'revenue_eur' => $dailyRevenue, 'is_subtotal' => true],
+                ['label' => 'Ukupno', 'count' => $totalCount, 'revenue_eur' => $totalRevenue, 'is_total' => true],
+            ],
+            'total_count' => $totalCount,
+            'total_revenue_eur' => $totalRevenue,
         ];
     }
 

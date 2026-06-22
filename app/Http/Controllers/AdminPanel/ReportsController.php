@@ -69,6 +69,15 @@ class ReportsController extends Controller
                 'to' => $to->toDateString(),
                 'data' => $reports->byVehicleType($from, $to),
             ],
+            'by_reservation_type' => [
+                'title' => 'Izvještaj po tipu rezervacije za '.$periodLabel,
+                'subtitle' => 'Prihodi po tipu rezervacije',
+                'kind' => $kind,
+                'period' => $periodLabel,
+                'from' => $from->toDateString(),
+                'to' => $to->toDateString(),
+                'data' => $reports->byReservationType($from, $to),
+            ],
             'advance_obligations' => (function () use ($v, $reports): array {
                 if (! (bool) config('features.advance_payments')) {
                     abort(404);

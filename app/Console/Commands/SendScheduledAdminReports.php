@@ -226,7 +226,22 @@ class SendScheduledAdminReports extends Command
             ]);
         }
 
-        // 3) Po tipu vozila
+        // 3) Po tipu rezervacije
+        $dataset = [
+            'title' => 'Izvještaj po tipu rezervacije za '.$subjectLabel,
+            'subtitle' => 'Prihodi po tipu rezervacije',
+            'kind' => 'by_reservation_type',
+            'period' => $subjectLabel,
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+            'data' => $reports->byReservationType($from, $to),
+        ];
+        $attachments[] = [
+            'filename' => "{$prefix}-po-tipu-rezervacije-{$fileLabel}.pdf",
+            'binary' => $pdf->renderBinary($dataset),
+        ];
+
+        // 4) Po tipu vozila
         $dataset = [
             'title' => 'Izvještaj po tipu vozila za '.$subjectLabel,
             'subtitle' => 'Realizovane rezervacije po tipu vozila',
