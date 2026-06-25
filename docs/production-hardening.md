@@ -40,6 +40,7 @@ Strukturisani ključevi (gde je moguće: **`merchant_transaction_id`** + **`rese
 - `payment_pending_too_long` — `temp_data` u **pending** duže od `payment.stale_pending_warn_after_minutes` (npr. 12); **nema promene statusa**; throttle keš po `temp_data_id` (6h)
 - `invoice_email_sent` / `invoice_email_send_failed` / `invoice_email_job_exhausted`
 - `free_reservation_email_sent` / `free_reservation_email_send_failed` / `free_reservation_email_job_exhausted`
+- `free_reservation_request_multi_email_sent` / `free_reservation_request_multi_email_failed` / `free_reservation_request_multi_email_skipped_already_sent` — admin **fulfill** / repair; polja `free_reservation_request_id`, `reservation_ids[]`, `email`
 - `payment_callback_job_exhausted`, `payment_job_exhausted`, `process_reservation_after_payment_job_exhausted`
 - **Bankart init (create session):** `bankart_create_session_request`, `bankart_create_session_response` (uspjeh), `bankart_create_session_failed` (odbijen odgovor, mreža, config, itd.) — uvek sa `merchant_transaction_id` / `amount` / `currency` gde ima smisla; telo odgovora samo kao skraćeni preview.
 - **`payment_init_failed`** — checkout ili inquiry zatvorio pending bez bank session-a: `merchant_transaction_id`, `temp_data_id`, `http_status`, `reason`, `stage` (npr. `checkout_after_temp_created`, `status_inquiry_transaction_not_found`).
@@ -60,6 +61,7 @@ Callback prima i dalje: `Payment callback received` / `accepted` / itd.
 | `temp_data` dugo **pending** | `payment:check-pending-inquiry` → **`payment_pending_too_long`** + opciono **Bankart inquiry** | Upozorenje **ne menja** status. Inquiry SUCCESS/ERROR → **`PaymentCallbackJob`**. **Transaction not found** → **`payment_init_failed`** (release lock). Throttle po `merchant_transaction_id`. |
 | Plaćena rezervacija bez **fiscal_jir** | `post_fiscalization_data` + `post-fiscalization:retry` + admin | Nefiskalni email iz `ProcessReservationAfterPaymentJob`. |
 | Email nije poslat | `invoice_sent_at`, `email_sent`, `invoice_email_*` | Worker + retry; **`failed()`** vraća **`email_sent`** na **`EMAIL_NOT_SENT`** (nema trajnog `EMAIL_SENDING`). |
+| FZBR **fulfilled**, agencija nema potvrdu | `free_reservation_request_multi_email_*`, `reservations.email_sent` | `php artisan free-reservation-requests:repair-fulfilled --id=`; ako su rezervacije već `email_sent=1` a mejl nije stigao — **`--resend-email`**. Fulfill **ne** vraća zahtjev u `submitted`. |
 | Gomilanje **post_fiscalization_data** | Retry komanda + admin | `next_retry_at`, `resolved_at`. |
 | Job pao posle delimične obrade | Idempotentni koraci | Retry; `failed()` za ručnu proveru. |
 

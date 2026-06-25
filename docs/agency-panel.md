@@ -159,6 +159,21 @@ Na vrhu stranice prikazuje se:
 - **instrukcija korisniku** u odvojenom info-bloku (ključ `free_request.fzbr_instruction`)
 - **pomoć za priloge** (`free_request.documents_hint` + `documents_limit`)
 
+### Email obavještenja (FZBR)
+
+Razlikovati **dva** mejla u životnom ciklusu zahtjeva:
+
+| Faza | Mailable | Primalac | Sadržaj |
+|------|----------|----------|---------|
+| **Podnošenje zahtjeva** (`POST /panel/fzbr`) | `AgencyFreeReservationRequestSubmittedMail` | **`bus@kotor.me`** (operater) | Obavještenje da je stigao novi zahtjev + prilozi iz forme |
+| **Admin odobri / fulfill** | `FreeReservationRequestFulfilledMail` | **`free_reservation_requests.institution_email`** (agencija/ustanova) | Tekst *zahtjev obrađen* (`emails.free_request_fulfilled_*`) + **jedan PDF po rezervaciji** (`freeConfirmationPdfFilename()`) |
+
+- Agencija **ne** dobija potvrdu besplatnih rezervacija pri podnošenju — samo admin na `bus@kotor.me`.
+- Potvrda agenciji šalje se **sinhrono** posle DB commit-a fulfill-a (`FreeReservationRequestFulfillmentService`); nije queue job.
+- **`reservations.email_sent`** na povezanim rezervacijama postaje **`EMAIL_SENT` (1)** tek posle uspješnog slanja; pad mejla **ne** poništava `fulfilled` status.
+- **Odbijanje** (`reject`) trenutno **ne** šalje email agenciji (nema polja za razlog u bazi).
+- Ako potvrda nije stigla a zahtjev je `fulfilled`: operater pokreće `php artisan free-reservation-requests:repair-fulfilled --id={id}` (ili `--resend-email` ako su rezervacije pogrešno već `email_sent=1`) — v. **`docs/cron-commands.md`** §12 i **`docs/admin-panel.md`** § Fulfill.
+
 **Arhiva privatnih priloga (MEGA):** kada je zahtjev u terminalnom statusu (`fulfilled` / `rejected`), operativno se mogu arhivirati fajlovi sa privatnog diska na MEGA (`files:archive-private --source=fzbr`); detalji u **[external-file-archive.md](./external-file-archive.md)**. Kredencijali ostaju u `.env`; nema uploada iz browsera. **Admin pregled arhiviranih priloga:** na **`GET /admin/besplatne-rezervacije`** sekcija **„Pregled besplatnih rezervacija”** (filter odobreni/odbijeni + datum po `updated_at`) — link **„Dokument”** otvara privatnu preview rutu sa istim TTL / `files:cleanup-preview-cache` ponašanjem kao ostali admin preview-i iz arhive.
 
 ### Moji poslati zahtjevi (2026-06)
