@@ -68,7 +68,9 @@ class PanelController extends Controller
 
         $allowedByReservationId = [];
         foreach ($upcoming as $r) {
-            $allowedByReservationId[(int) $r->id] = $candidates->candidatesForReservation($user, $r);
+            $allowedByReservationId[(int) $r->id] = PanelReservationListService::allowsPlateChange($r)
+                ? $candidates->candidatesForReservation($user, $r)
+                : collect();
         }
 
         return view('panel.upcoming', [

@@ -13,7 +13,7 @@ Prefiks ruta: **`/panel`**, middleware **`auth`** + **`verified`**. Gornja navig
 | Ruta | Naziv rute (izbor) | Opis |
 |------|-------------------|------|
 | `GET /panel/reservations` | `panel.reservations` | Nova rezervacija (`ReservationBookingPageData`) — **Termini** (slotovi) ili **Dnevna naknada** (bez slotova; agencija kartica/avans). GET auto-refresh pri izboru datuma/vrste/vozila/termina; scroll pozicija se čuva u **`sessionStorage`** (v. **`project-conventions.md`** § Rezervacije — step forma). |
-| `GET /panel/upcoming` | `panel.upcoming` | **Promjena tablica** — promjena registarske tablice na budućim rezervacijama (samo Termini) |
+| `GET /panel/upcoming` | `panel.upcoming` | **Promjena tablica** — promjena registarske tablice na predstojećim rezervacijama (Termini; dnevna naknada samo za buduće datume) |
 | `GET /panel/realized` | `panel.realized` | Realizovane, link na PDF u novom tabu |
 | `GET /panel/vehicles` | `panel.vehicles` | Vozila |
 | `GET /panel/fzbr` | `panel.fzbr.create` | **Besplatne rezervacije** — podnošenje zahtjeva |
@@ -27,7 +27,7 @@ Prefiks ruta: **`/panel`**, middleware **`auth`** + **`verified`**. Gornja navig
 | `GET /panel/limo/qr/{limoQrToken}/pdf` | `panel.limo.qr.pdf` | **Deprecated** — 404 (isti flag) |
 | `GET /panel/user` | `panel.user` | Korisnik: ime, jezik, email, lozinka |
 | `PATCH /profile` | `profile.update` | Čuva profil (uključujući lozinku ako je uneta) |
-| `PATCH /panel/reservations/{id}/vehicle` | `panel.reservations.vehicle` | Promjena tablice/vozila na predstojećoj **Termini** rezervaciji |
+| `PATCH /panel/reservations/{id}/vehicle` | `panel.reservations.vehicle` | Promjena tablice/vozila na predstojećoj rezervaciji (Termini; dnevna naknada samo kad je `reservation_date` **posle** danas, Podgorica) |
 | `GET /panel/reservations/{id}/invoice/view` | `panel.reservations.invoice.view` | PDF **inline** (browser tab) |
 | `GET /panel/reservations/{id}/invoice` | `panel.reservations.invoice` | PDF **download** |
 
@@ -205,10 +205,13 @@ Servis: **`App\Services\Reservation\PanelReservationListService`**.
 
 Korisnički naziv menija: **Promjena tablica** (EN: **Plate change**). Ruta i klasa ostaju `panel.upcoming`. Stranica i dalje učitava predstojeće rezervacije (`PanelReservationListService::upcomingFor`), ali je poslovno usmjerena na promjenu tablice/vozila.
 
-- **Dnevna naknada** (`reservation_kind=daily_ticket`): **nema** akcije promjene; prikazuje se poruka da promjena tablice nije dostupna. `PATCH /panel/reservations/{id}/vehicle` odbija daily fee (`UpdateReservationVehicleRequest` + `PanelReservationListService::allowsPlateChange`).
+- **Dnevna naknada** (`reservation_kind=daily_ticket`): promjena tablice **dozvoljena samo za buduće datume** (`reservation_date > danas`, Europe/Podgorica). Za **današnji** dan prikazuje se poruka *„Promjena tablice za dnevnu naknadu nije dostupna za tekući dan.”*; za prošle datume rezervacija nije na listi predstojećih. `PATCH /panel/reservations/{id}/vehicle` i `PanelReservationListService::allowsPlateChange` primjenjuju isto pravilo. Konflikt termina (drop/pick) **ne** važi za dnevnu naknadu.
 - **Termini** (`time_slots`): postojeća pravila (kategorija, konflikt termina, upcoming prozor).
 
-## Promena vozila / tablice (samo predstojeće Termini)
+## Promena vozila / tablice (predstojeće rezervacije)
+
+- **Termini** (`time_slots`): ista pravila kao ranije (upcoming prozor po pick-up terminu).
+- **Dnevna naknada** (`daily_ticket`): promjena tablice samo kad je datum rezervacije **striktno posle** današnjeg dana (Podgorica); isti dan i prošlost su blokirani radi sprečavanja zloupotrebe.
 
 - Dozvoljeno samo vozilo istog korisnika koje ispunjava oba uslova:
   - **kategorija**: **`vehicle_types.price` ≤** cene kategorije **plaćene na rezervaciji** (`reservations.vehicle_type_id` snapshot — **ne** trenutno dodijeljeno vozilo); pri promjeni tablice **`vehicle_type_id`** i **`invoice_amount`** se **ne** mijenjaju

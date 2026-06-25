@@ -102,9 +102,13 @@
                                             <td class="px-3 py-2 text-gray-700">{{ $r->vehicleType?->formatLabel($locale, 'EUR') ?? '—' }}</td>
                                             <td class="px-3 py-2 text-right whitespace-nowrap">
                                                 <div x-show="! editing" class="flex justify-end">
-                                                    @if ($r->isDailyTicket())
+                                                    @if (! \App\Services\Reservation\PanelReservationListService::allowsPlateChange($r))
                                                         <span class="text-gray-500 text-xs max-w-[12rem] text-right">
-                                                            {{ $p('upcoming_plate_change_unavailable_daily_fee', $locale === 'cg' ? 'Promjena tablice nije dostupna za dnevnu naknadu.' : 'Plate change is not available for Daily fee reservations.') }}
+                                                            @if ($r->isDailyTicket())
+                                                                {{ $p('upcoming_plate_change_unavailable_daily_fee_today', $locale === 'cg' ? 'Promjena tablice za dnevnu naknadu nije dostupna za tekući dan.' : 'Plate change for Daily fee is not available on the current day.') }}
+                                                            @else
+                                                                <span class="text-gray-400 text-xs">—</span>
+                                                            @endif
                                                         </span>
                                                     @elseif ($allowed->isNotEmpty())
                                                         <button

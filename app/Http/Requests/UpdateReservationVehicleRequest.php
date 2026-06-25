@@ -57,16 +57,16 @@ class UpdateReservationVehicleRequest extends FormRequest
                 return;
             }
 
-            if ($reservation->isDailyTicket()) {
+            if (! PanelReservationListService::allowsPlateChange($reservation)) {
                 $locale = app()->getLocale();
                 $validator->errors()->add(
                     'vehicle_id',
                     UiText::t(
                         'panel',
-                        'upcoming_plate_change_unavailable_daily_fee',
+                        'upcoming_plate_change_unavailable_daily_fee_today',
                         $locale === 'cg'
-                            ? 'Promjena tablice nije dostupna za dnevnu naknadu.'
-                            : 'Plate change is not available for Daily fee reservations.',
+                            ? 'Promjena tablice za dnevnu naknadu nije dostupna za tekući dan.'
+                            : 'Plate change for Daily fee is not available on the current day.',
                         $locale
                     )
                 );
@@ -116,14 +116,13 @@ class UpdateReservationVehicleRequest extends FormRequest
                 return;
             }
 
-            // Conflict check (drop=drop OR pick=pick on same date). Cross-match is allowed.
-            $conflict = $svc->hasConflictWithUpcoming(
+            // Termini only: conflict check (drop=drop OR pick=pick on same date). Daily fee skips slots.
+            if (! $reservation->isDailyTicket() && $svc->hasConflictWithUpcoming(
                 $this->user(),
                 $vehicle->id,
                 $reservation,
                 ignoreReservationIds: [$resId]
-            );
-            if ($conflict) {
+            )) {
                 $locale = app()->getLocale();
                 $validator->errors()->add(
                     'vehicle_id',

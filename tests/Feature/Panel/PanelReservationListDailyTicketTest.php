@@ -30,6 +30,16 @@ final class PanelReservationListDailyTicketTest extends TestCase
         $r = $this->dailyReservation('2026-07-10');
         $this->assertTrue(PanelReservationListService::isUpcoming($r));
         $this->assertFalse(PanelReservationListService::isRealized($r));
+        $this->assertFalse(PanelReservationListService::allowsPlateChange($r));
+    }
+
+    public function test_daily_ticket_for_future_date_allows_plate_change_when_upcoming(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-07-10 10:00:00', 'Europe/Podgorica'));
+
+        $r = $this->dailyReservation('2026-07-15');
+        $this->assertTrue(PanelReservationListService::isUpcoming($r));
+        $this->assertTrue(PanelReservationListService::allowsPlateChange($r));
     }
 
     public function test_daily_ticket_for_future_date_is_upcoming(): void

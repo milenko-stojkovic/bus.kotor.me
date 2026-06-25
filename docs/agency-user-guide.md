@@ -1,6 +1,6 @@
 # Korisničko uputstvo za agencije (PDF)
 
-**Poslednje ažuriranje:** 2026-06-19
+**Poslednje ažuriranje:** 2026-06-25
 
 Javno uputstvo za agencije (rezervacije, dnevna naknada, panel, avans, FZBR, itd.) distribuira se kao **PDF**, ne kao tekst u `docs/`.
 
@@ -36,7 +36,7 @@ Jezik linka prati `app()->getLocale()` (`cg` → CG PDF, inače EN).
 
 ## Povezana dokumentacija
 
-- Panel (funkcionalnost): **[agency-panel.md](./agency-panel.md)**
+- Panel (funkcionalnost): **[agency-panel.md](./agency-panel.md)** — npr. **Promjena tablica**: dnevna naknada samo za **buduće** datume (isti dan blokiran); Termini po postojećim pravilima.
 - Testovi: `tests/Feature/Landing/UserGuidePdfLinkTest.php`
 
 ---

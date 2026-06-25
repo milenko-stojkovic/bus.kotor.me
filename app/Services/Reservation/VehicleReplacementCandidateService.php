@@ -79,6 +79,10 @@ final class VehicleReplacementCandidateService
         Reservation $targetReservation,
         array $ignoreReservationIds,
     ): bool {
+        if ($targetReservation->isDailyTicket()) {
+            return false;
+        }
+
         $date = $targetReservation->reservation_date?->toDateString();
         if (! is_string($date) || $date === '') {
             return true;
@@ -96,6 +100,10 @@ final class VehicleReplacementCandidateService
                 continue;
             }
             if (in_array((int) $r->id, $ignoreReservationIds, true)) {
+                continue;
+            }
+
+            if ($r->isDailyTicket()) {
                 continue;
             }
 

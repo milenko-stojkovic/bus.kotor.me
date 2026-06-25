@@ -76,10 +76,26 @@ final class PanelReservationListService
         return ! self::isUpcoming($r);
     }
 
-    /** Plate change on upcoming list: Termini only (not daily fee). */
+    /** Plate change: Termini upcoming rules; Daily fee only when reservation_date is after today (Podgorica). */
     public static function allowsPlateChange(Reservation $r): bool
     {
-        return self::isUpcoming($r) && ! $r->isDailyTicket();
+        if (! self::isUpcoming($r)) {
+            return false;
+        }
+
+        if ($r->isDailyTicket()) {
+            return self::isFutureReservationDate($r);
+        }
+
+        return true;
+    }
+
+    /** Strictly after today in operations timezone (not today, not past). */
+    public static function isFutureReservationDate(Reservation $r): bool
+    {
+        $day = $r->reservation_date->copy()->timezone(self::OPERATIONS_TIMEZONE)->startOfDay();
+
+        return $day->gt(self::operationsToday());
     }
 
     /** Kraj departure (pick-up) termina za sortiranje realizovanih (najnovije prvo). */
