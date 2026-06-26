@@ -4,6 +4,7 @@ namespace Tests\Unit\Models;
 
 use App\Models\Reservation;
 use App\Models\VehicleType;
+use App\Support\ReservationPdfFilename;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -29,6 +30,14 @@ class ReservationInvoiceFilenameTest extends TestCase
             'invoice-'.$reservation->id.'-2026-06-10.pdf',
             $reservation->invoicePdfFilename()
         );
+        $this->assertSame(
+            ReservationPdfFilename::invoice($reservation),
+            $reservation->invoicePdfFilename()
+        );
+        $this->assertSame(
+            ReservationPdfFilename::forReservation($reservation),
+            $reservation->invoicePdfFilename()
+        );
     }
 
     public function test_free_confirmation_pdf_filename_uses_reservation_id_and_date(): void
@@ -47,6 +56,10 @@ class ReservationInvoiceFilenameTest extends TestCase
 
         $this->assertSame(
             'free-confirmation-'.$reservation->id.'-2026-06-13.pdf',
+            $reservation->freeConfirmationPdfFilename()
+        );
+        $this->assertSame(
+            ReservationPdfFilename::forReservation($reservation),
             $reservation->freeConfirmationPdfFilename()
         );
     }

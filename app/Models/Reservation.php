@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Support\ReservationPdfFilename;
+
 use App\Support\ReservationKind;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -101,7 +103,7 @@ class Reservation extends Model
      */
     public function invoicePdfFilename(): string
     {
-        return sprintf('invoice-%d-%s.pdf', (int) $this->id, $this->pdfFilenameDateSegment());
+        return ReservationPdfFilename::invoice($this);
     }
 
     /**
@@ -109,14 +111,7 @@ class Reservation extends Model
      */
     public function freeConfirmationPdfFilename(): string
     {
-        return sprintf('free-confirmation-%d-%s.pdf', (int) $this->id, $this->pdfFilenameDateSegment());
-    }
-
-    private function pdfFilenameDateSegment(): string
-    {
-        return $this->reservation_date?->format('Y-m-d')
-            ?? $this->created_at?->format('Y-m-d')
-            ?? now()->format('Y-m-d');
+        return ReservationPdfFilename::freeConfirmation($this);
     }
 
     /**

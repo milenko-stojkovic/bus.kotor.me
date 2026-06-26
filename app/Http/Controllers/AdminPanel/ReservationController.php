@@ -20,6 +20,7 @@ use App\Services\AdminPanel\Reservation\AdminReservationUpdateService;
 use App\Services\Pdf\FreeReservationPdfGenerator;
 use App\Services\Pdf\PaidInvoicePdfGenerator;
 use App\Services\Reservation\PanelReservationListService;
+use App\Support\ReservationPdfFilename;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -226,7 +227,7 @@ class ReservationController extends Controller
             static function () use ($binary): void {
                 echo $binary;
             },
-            'reservation-'.$reservation->id.'.pdf',
+            ReservationPdfFilename::forReservation($reservation),
             ['Content-Type' => 'application/pdf'],
         );
     }

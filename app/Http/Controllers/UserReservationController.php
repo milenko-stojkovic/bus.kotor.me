@@ -11,6 +11,7 @@ use App\Services\Pdf\FreeReservationPdfGenerator;
 use App\Services\Pdf\PaidInvoicePdfGenerator;
 use App\Services\Reservation\ReservationBookingPageData;
 use App\Services\AgencyAdvance\AgencyAdvanceService;
+use App\Support\ReservationPdfFilename;
 use App\Support\UiText;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\RedirectResponse;
@@ -103,9 +104,7 @@ class UserReservationController extends Controller
 
     private function pdfFilenameForReservation(Reservation $reservation): string
     {
-        return $reservation->status === 'free'
-            ? $reservation->freeConfirmationPdfFilename()
-            : $reservation->invoicePdfFilename();
+        return ReservationPdfFilename::forReservation($reservation);
     }
 
     public function updateVehicle(UpdateReservationVehicleRequest $request, int $id): RedirectResponse

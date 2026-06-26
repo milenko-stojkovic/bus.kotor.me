@@ -25,8 +25,9 @@
 
 ### 3.1 PDF attachment / download filenames
 
-- **Paid invoice:** `Reservation::invoicePdfFilename()` — `invoice-{id}-{reservation_date}.pdf` (datum `Y-m-d`, V1 kompatibilno).
-- **Free confirmation:** `Reservation::freeConfirmationPdfFilename()` — `free-confirmation-{id}-{reservation_date}.pdf`.
+- **Paid invoice:** `ReservationPdfFilename::invoice()` / `Reservation::invoicePdfFilename()` — `invoice-{id}-{reservation_date}.pdf` (datum `Y-m-d`, V1 kompatibilno).
+- **Free confirmation:** `ReservationPdfFilename::freeConfirmation()` / `Reservation::freeConfirmationPdfFilename()` — `free-confirmation-{id}-{reservation_date}.pdf`.
+- **Sve putanje** (email, admin PDF, agency PDF, FZBR fulfill): `ReservationPdfFilename::forReservation($reservation)` po `status`.
 - **Sadržaj PDF-a** je uvijek na cg; **ime fajla** je ASCII i ne zavisi od jezika emaila.
 - Stari format `potvrda-besplatna-rezervacija-{id}.pdf` više se ne koristi.
 
