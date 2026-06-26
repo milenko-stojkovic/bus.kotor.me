@@ -1,6 +1,6 @@
 # Control panel (operativni dolasci)
 
-**Poslednje ažuriranje:** 2026-06-19  
+**Poslednje ažuriranje:** 2026-06-25  
 
 Lagani panel za šalter / kontrolu ulaska: **login**, **grupe dolazaka po terminu**, **grafikon kapaciteta**, **pretraga rezervacija (Termini)** i zasebno **kontrola dnevne naknade** (uključujući provjeru tablice za komunalnu policiju). Odvojen je od **agency** panela (`/panel`, `User`), od **glavnog admin panela** (`/admin`, guard `panel_admin`, `admins.admin_access`) i od **operativnog staff pregleda** (`/staff`, `User` + `AdminMiddleware` — rezervacije, late-success).
 
@@ -72,7 +72,7 @@ Kontrolor za **Termine** koristi glavni dashboard. **Dnevna naknada** ima poseba
 - **Kontroler:** `ControlDashboardController::searchReservations()`; validacija `ControlReservationSearchRequest`.
 - **Obavezno:** bar jedan kriterijum (datum, ime, email, tip vozila, tablica, status).
 - **Samo Termini:** u kodu je fiksiran filter `reservation_kind = time_slots` (ili `NULL` za stare redove). **Dnevna naknada** se ne prikazuje — za nju je `/control/dnevna-naknada`.
-- **Datum:** samo `reservation_date >= danas` (kalendarski dan).
+- **Datum:** samo `reservation_date >= danas` (kalendarski dan). Polje u formi: native **`input type="date"`** (`name="date"`, submit **`Y-m-d`**) — namjerno **ne** `iso-date-input` zbog pouzdanosti na iPhone/Safari (v. **`project-conventions.md`** §1).
 - **Status (opciono u formi):** `paid` / `free` / bilo koji (bez UI za `daily_ticket`).
 - **Tip vozila u rezultatima:** `VehicleType::formatControlLabel('cg')` — bez cijene i bez duplog naziva kada je opis već puni label (v. `VehicleType` u kodu).
 

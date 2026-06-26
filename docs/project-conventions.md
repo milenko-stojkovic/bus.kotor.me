@@ -55,7 +55,8 @@ Preporučeni oblik (naslovi ili bold oznake moraju biti eksplicitni):
 - Pristup u Blade-u: **`App\Support\UiText::t('group', 'key', $fallback)`**; novi ključevi kroz **`UiTranslationsSeeder`** sa `upsert` (bez dupliranja redova).
 - **Korisnik / mail locale:** za auth mailove koristiti **`$user->lang`** (`cg` / `en`); verify-email ekran treba da prati isti princip gde je korisnik ulogovan.
 - **Agencijski unos datuma (FZBR, Statistika):** hibrid preko **`iso-date-input`**: vidljivo **`dd/mm/yyyy`**, submit **`Y-m-d`** (skriveno `name`), kalendar preko skrivenog `input[type=date]` + dugmeta (native picker, bez vidljivog mm/dd/yyyy u polju). **`isoDateInput.js`** sinhronizuje tipkanje, picker i canonical. **Rezervacije** koriste mesečni grid **`partials/reservation-date-calendar`** (isto `Y-m-d`).
-- **Admin / Control / staff filteri i forme (osim guest/agency rezervacija):** isti **`<x-iso-date-input>`** — npr. Admin Rezervacije, Besplatne rezervacije (FZBR pregled), Izvještaji, Analitika, Uvid, blokiranje, Control dashboard.
+- **Admin / staff filteri i forme (osim guest/agency rezervacija):** **`<x-iso-date-input>`** — npr. Admin Rezervacije, Besplatne rezervacije (FZBR pregled), Izvještaji, Analitika, Uvid, blokiranje. **Izuzetak — Control Termini (`/control`, pretraga):** vidljivi native **`input type="date"`** (`name="date"`) zbog pouzdanosti na **Safari iOS** (hibridni `iso-date-input` na terenu nije pouzdan).
+- **Pre-release provjera (Control, Admin):** sve izmjene koje utiču na **unos datuma** ili **JavaScript interakcije** na operativnim ekranima (**Control**, **Admin**) moraju biti **ručno provjerene na Safari iOS** prije produkcionog puštanja — uključujući otvaranje kalendara, submit forme i da backend dobije ispravan **`Y-m-d`**. Desktop/Android nisu dovoljni.
 
 ### 1.1 Registarska tablica — unos i normalizacija
 
