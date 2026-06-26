@@ -21,16 +21,10 @@
 
         <form method="GET" action="{{ route('panel_admin.free-reservations', [], false) }}" class="space-y-4" id="adminFreeStepForm">
             <div>
-                <x-input-label for="reservation_date" :value="$ui('date')" />
-                <input
-                    id="reservation_date"
-                    name="reservation_date"
-                    type="date"
-                    min="{{ $minDate }}"
-                    max="{{ $maxDate }}"
-                    value="{{ $selected_date ?? '' }}"
-                    class="mt-1 block w-full rounded-md border-red-200 shadow-sm focus:border-red-500 focus:ring-red-500"
-                />
+                <x-input-label for="reservation_date_display" :value="$ui('date')" />
+                <x-iso-date-input id="reservation_date" name="reservation_date"
+                    :value="$selected_date ?? ''"
+                    :min="$minDate" :max="$maxDate" />
                 <x-input-error class="mt-2" :messages="$errors->get('reservation_date')" />
             </div>
 
@@ -299,8 +293,12 @@
                                     @csrf
                                     @method('PUT')
                                     <div>
-                                        <label class="block text-xs font-medium text-gray-600">Datum</label>
-                                        <input type="date" name="reservation_date" value="{{ $req->reservation_date?->toDateString() }}" min="{{ now()->toDateString() }}" max="{{ now()->addDays(90)->toDateString() }}" class="mt-1 block w-full rounded-md border-red-200 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+                                        <label for="fzbr_req_date_{{ $req->id }}_display" class="block text-xs font-medium text-gray-600">Datum</label>
+                                        <x-iso-date-input id="fzbr_req_date_{{ $req->id }}" name="reservation_date"
+                                            :value="$req->reservation_date?->toDateString() ?? ''"
+                                            :min="now()->toDateString()"
+                                            :max="now()->addDays(90)->toDateString()"
+                                            required />
                                     </div>
                                     <div class="sm:col-span-2">
                                         <div class="text-xs font-medium text-gray-600">Segmenti</div>
@@ -408,16 +406,14 @@
                 </fieldset>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                     <div>
-                        <x-input-label for="fzbr_date_from" value="Datum od" />
-                        <input type="date" id="fzbr_date_from" name="fzbr_date_from"
-                               value="{{ old('fzbr_date_from', $fzbrDateFrom ?: '') }}"
-                               class="mt-1 block w-full rounded-md border-red-200 shadow-sm" />
+                        <x-input-label for="fzbr_date_from_display" value="Datum od" />
+                        <x-iso-date-input id="fzbr_date_from" name="fzbr_date_from"
+                            :value="old('fzbr_date_from', $fzbrDateFrom ?: '')" />
                     </div>
                     <div>
-                        <x-input-label for="fzbr_date_to" value="Datum do" />
-                        <input type="date" id="fzbr_date_to" name="fzbr_date_to"
-                               value="{{ old('fzbr_date_to', $fzbrDateTo ?: '') }}"
-                               class="mt-1 block w-full rounded-md border-red-200 shadow-sm" />
+                        <x-input-label for="fzbr_date_to_display" value="Datum do" />
+                        <x-iso-date-input id="fzbr_date_to" name="fzbr_date_to"
+                            :value="old('fzbr_date_to', $fzbrDateTo ?: '')" />
                     </div>
                     <div class="flex gap-2 justify-start md:justify-end">
                         <button type="submit" class="inline-flex items-center px-4 py-2 bg-red-700 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-800">

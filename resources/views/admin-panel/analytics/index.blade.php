@@ -26,16 +26,16 @@
             <input type="hidden" name="show" value="1">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                 <div>
-                    <x-input-label for="date_from" value="Datum od" />
-                    <input type="date" id="date_from" name="date_from" min="{{ $minDate }}" max="{{ $maxDate }}"
-                           value="{{ $dateFrom }}"
-                           class="mt-1 block w-full rounded-md border-red-200 shadow-sm" />
+                    <x-input-label for="date_from_display" value="Datum od" />
+                    <x-iso-date-input id="date_from" name="date_from"
+                        :value="$dateFrom"
+                        :min="$minDate" :max="$maxDate" />
                 </div>
                 <div>
-                    <x-input-label for="date_to" value="Datum do" />
-                    <input type="date" id="date_to" name="date_to" min="{{ $minDate }}" max="{{ $maxDate }}"
-                           value="{{ $dateTo }}"
-                           class="mt-1 block w-full rounded-md border-red-200 shadow-sm" />
+                    <x-input-label for="date_to_display" value="Datum do" />
+                    <x-iso-date-input id="date_to" name="date_to"
+                        :value="$dateTo"
+                        :min="$minDate" :max="$maxDate" />
                 </div>
                 <div class="flex items-center gap-2">
                     <input type="checkbox" id="include_free" name="include_free" value="1" class="rounded border-red-200"

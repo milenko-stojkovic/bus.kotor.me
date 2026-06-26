@@ -55,6 +55,7 @@ Preporučeni oblik (naslovi ili bold oznake moraju biti eksplicitni):
 - Pristup u Blade-u: **`App\Support\UiText::t('group', 'key', $fallback)`**; novi ključevi kroz **`UiTranslationsSeeder`** sa `upsert` (bez dupliranja redova).
 - **Korisnik / mail locale:** za auth mailove koristiti **`$user->lang`** (`cg` / `en`); verify-email ekran treba da prati isti princip gde je korisnik ulogovan.
 - **Agencijski unos datuma (FZBR, Statistika):** hibrid preko **`iso-date-input`**: vidljivo **`dd/mm/yyyy`**, submit **`Y-m-d`** (skriveno `name`), kalendar preko skrivenog `input[type=date]` + dugmeta (native picker, bez vidljivog mm/dd/yyyy u polju). **`isoDateInput.js`** sinhronizuje tipkanje, picker i canonical. **Rezervacije** koriste mesečni grid **`partials/reservation-date-calendar`** (isto `Y-m-d`).
+- **Admin / Control / staff filteri i forme (osim guest/agency rezervacija):** isti **`<x-iso-date-input>`** — npr. Admin Rezervacije, Besplatne rezervacije (FZBR pregled), Izvještaji, Analitika, Uvid, blokiranje, Control dashboard.
 
 ### 1.1 Registarska tablica — unos i normalizacija
 

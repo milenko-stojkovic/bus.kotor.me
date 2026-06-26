@@ -35,14 +35,14 @@
                            class="mt-1 block w-full rounded-md border-red-200 shadow-sm" />
                 </div>
                 <div>
-                    <x-input-label for="date_from" value="Datum od (created_at)" />
-                    <input type="date" id="date_from" name="date_from" value="{{ $c['date_from'] ?? '' }}"
-                           class="mt-1 block w-full rounded-md border-red-200 shadow-sm" />
+                    <x-input-label for="date_from_display" value="Datum od (created_at)" />
+                    <x-iso-date-input id="date_from" name="date_from"
+                        :value="$c['date_from'] ?? ''" />
                 </div>
                 <div>
-                    <x-input-label for="date_to" value="Datum do (created_at)" />
-                    <input type="date" id="date_to" name="date_to" value="{{ $c['date_to'] ?? '' }}"
-                           class="mt-1 block w-full rounded-md border-red-200 shadow-sm" />
+                    <x-input-label for="date_to_display" value="Datum do (created_at)" />
+                    <x-iso-date-input id="date_to" name="date_to"
+                        :value="$c['date_to'] ?? ''" />
                 </div>
                 <div class="md:col-span-2">
                     <x-input-label for="user_name" value="Ime" />

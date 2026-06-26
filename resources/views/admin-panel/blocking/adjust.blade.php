@@ -57,7 +57,9 @@
                             @endforeach
                         </select>
                     @else
-                        <x-text-input id="new_date" type="date" name="new_date" class="mt-1 w-full" :value="$defaultDate" min="{{ now()->toDateString() }}" required />
+                        <x-iso-date-input id="new_date" name="new_date" required
+                            :value="$defaultDate"
+                            :min="now()->toDateString()" />
                         <p class="mt-1 text-xs text-gray-500">Nema predloženih dana iz prefilta (npr. nema daily_parking_data). Ručno izaberite budući datum.</p>
                     @endif
                 </div>

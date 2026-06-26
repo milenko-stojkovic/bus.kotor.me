@@ -99,19 +99,13 @@
                 <input type="hidden" name="when" :value="when">
                 <input type="hidden" name="kind" :value="kind">
 
-                <template x-if="when === 'daily'">
-                    <div class="max-w-sm">
-                        <label for="date" class="block text-sm font-medium text-gray-700" x-show="kind !== 'advance_obligations'">Datum</label>
-                        <label for="date" class="block text-sm font-medium text-gray-700" x-show="kind === 'advance_obligations'">Stanje na dan</label>
-                        <input type="date"
-                               id="date"
-                               name="date"
-                               min="{{ $minDate }}"
-                               max="{{ $maxDate }}"
-                               x-model="dailyDate"
-                               class="mt-1 block w-full rounded-md border-red-200 shadow-sm" />
+                <div class="max-w-sm" x-show="when === 'daily'" x-cloak>
+                        <label for="date_display" class="block text-sm font-medium text-gray-700" x-show="kind !== 'advance_obligations'">Datum</label>
+                        <label for="date_display" class="block text-sm font-medium text-gray-700" x-show="kind === 'advance_obligations'">Stanje na dan</label>
+                        <x-iso-date-input id="date" name="date"
+                            x-model="dailyDate"
+                            :min="$minDate" :max="$maxDate" />
                     </div>
-                </template>
 
                 <template x-if="when === 'monthly'">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-md">
@@ -158,30 +152,20 @@
                     </div>
                 </template>
 
-                <template x-if="when === 'period'">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-md">
+                <div x-show="when === 'period'" x-cloak class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-md">
                         <div>
-                            <x-input-label for="date_from" value="Od" />
-                            <input type="date"
-                                   id="date_from"
-                                   name="date_from"
-                                   min="{{ $minDate }}"
-                                   max="{{ $maxDate }}"
-                                   x-model="dateFrom"
-                                   class="mt-1 block w-full rounded-md border-red-200 shadow-sm" />
+                            <x-input-label for="date_from_display" value="Od" />
+                            <x-iso-date-input id="date_from" name="date_from"
+                                x-model="dateFrom"
+                                :min="$minDate" :max="$maxDate" />
                         </div>
                         <div>
-                            <x-input-label for="date_to" value="Do" />
-                            <input type="date"
-                                   id="date_to"
-                                   name="date_to"
-                                   :min="dateFrom || '{{ $minDate }}'"
-                                   max="{{ $maxDate }}"
-                                   x-model="dateTo"
-                                   class="mt-1 block w-full rounded-md border-red-200 shadow-sm" />
+                            <x-input-label for="date_to_display" value="Do" />
+                            <x-iso-date-input id="date_to" name="date_to"
+                                x-model="dateTo"
+                                :min="$minDate" :max="$maxDate" />
                         </div>
                     </div>
-                </template>
 
                 <div class="flex justify-end gap-2 pt-2">
                     <a href="{{ route('panel_admin.reports', [], false) }}"

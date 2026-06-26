@@ -162,3 +162,4 @@ export function initIsoDateInputs(root = document) {
 }
 
 document.addEventListener('DOMContentLoaded', () => initIsoDateInputs());
+document.addEventListener('alpine:initialized', () => initIsoDateInputs());

@@ -38,11 +38,10 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="md:col-span-2">
-                    <x-input-label for="reservation_date" value="Datum važenja" />
-                    <input type="date" name="reservation_date" id="reservation_date" required
-                        min="{{ $dateMin }}" max="{{ $dateMax }}"
-                        value="{{ old('reservation_date', $reservation->reservation_date->toDateString()) }}"
-                        class="mt-1 block w-full rounded-md border-red-200 shadow-sm focus:border-red-500 focus:ring-red-500" />
+                    <x-input-label for="reservation_date_display" value="Datum važenja" />
+                    <x-iso-date-input id="reservation_date" name="reservation_date" required
+                        :value="old('reservation_date', $reservation->reservation_date->toDateString())"
+                        :min="$dateMin" :max="$dateMax" />
                     <x-input-error class="mt-2" :messages="$errors->get('reservation_date')" />
                 </div>
 

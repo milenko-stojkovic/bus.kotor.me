@@ -87,18 +87,18 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="md:col-span-2">
-                    <x-input-label for="reservation_date" value="Datum" />
+                    <x-input-label for="reservation_date_display" value="Datum" />
                     @if (! empty($pickUpOnly))
                         <p class="mt-1 text-sm text-gray-900">{{ $reservation->reservation_date->format('d.m.Y.') }}</p>
                         <input type="hidden" name="reservation_date" value="{{ $reservation->reservation_date->toDateString() }}" />
                     @else
-                        <input type="date" name="reservation_date" id="reservation_date" required
-                            min="{{ $dateMin }}" max="{{ $dateMax }}"
-                            value="{{ $fd }}"
-                            class="mt-1 block w-full rounded-md border-red-200 shadow-sm focus:border-red-500 focus:ring-red-500"
+                        <x-iso-date-input id="reservation_date" name="reservation_date" required
+                            :value="$fd"
+                            :min="$dateMin" :max="$dateMax"
                             @change="
+                                const iso = $event.target.value;
                                 const u = new URL(@json($editBase), window.location.origin);
-                                u.searchParams.set('form_date', $event.target.value);
+                                u.searchParams.set('form_date', iso);
                                 @if ($returnQuery !== '')
                                     u.searchParams.set('rq', @json($returnQuery));
                                 @endif

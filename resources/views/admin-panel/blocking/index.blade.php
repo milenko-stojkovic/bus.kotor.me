@@ -51,8 +51,8 @@
 
             <form method="GET" action="{{ route('panel_admin.blocking', [], false) }}" class="flex flex-wrap items-end gap-3 mb-4">
                 <div>
-                    <x-input-label for="date" value="Datum" />
-                    <x-text-input id="date" type="date" name="date" class="mt-1" :value="$selectedDate" />
+                    <x-input-label for="date_display" value="Datum" />
+                    <x-iso-date-input id="date" name="date" :value="$selectedDate" />
                 </div>
                 <x-secondary-button type="submit">Prikaži</x-secondary-button>
             </form>

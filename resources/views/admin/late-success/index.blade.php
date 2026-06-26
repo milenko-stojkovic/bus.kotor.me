@@ -18,9 +18,8 @@
                 <div class="p-6">
                     <form method="get" action="{{ route('staff.late-success.index') }}" class="mb-6 grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
                         <div>
-                            <label for="date" class="block text-sm font-medium text-gray-700 mb-1">Datum</label>
-                            <input id="date" name="date" type="date" value="{{ $filters['date'] }}"
-                                   class="block w-full rounded-md border-red-200 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm">
+                            <x-input-label for="date_display" value="Datum" />
+                            <x-iso-date-input id="date" name="date" :value="$filters['date']" />
                         </div>
                         <div>
                             <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>

@@ -74,30 +74,27 @@
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4" x-show="!useInterval">
                 <div>
-                    <x-input-label for="date_single" value="Datum" />
-                    <input type="date" name="date_single" id="date_single" x-ref="dateSingle"
-                        min="{{ $dateMin }}" max="{{ $dateMax }}"
-                        value="{{ old('date_single', $filters['date_single'] ?? '') }}"
-                        class="mt-1 block w-full rounded-md border-red-200 shadow-sm focus:border-red-500 focus:ring-red-500" />
+                    <x-input-label for="date_single_display" value="Datum" />
+                    <x-iso-date-input id="date_single" name="date_single" x-ref="dateSingle"
+                        :value="old('date_single', $filters['date_single'] ?? '')"
+                        :min="$dateMin" :max="$dateMax" />
                     <x-input-error class="mt-2" :messages="$errors->get('date_single')" />
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4" x-show="useInterval" x-cloak>
                 <div>
-                    <x-input-label for="date_from" value="Od datuma" />
-                    <input type="date" name="date_from" id="date_from" x-ref="dateFrom"
-                        min="{{ $dateMin }}" max="{{ $dateMax }}"
-                        value="{{ old('date_from', $filters['date_from'] ?? '') }}"
-                        class="mt-1 block w-full rounded-md border-red-200 shadow-sm" />
+                    <x-input-label for="date_from_display" value="Od datuma" />
+                    <x-iso-date-input id="date_from" name="date_from" x-ref="dateFrom"
+                        :value="old('date_from', $filters['date_from'] ?? '')"
+                        :min="$dateMin" :max="$dateMax" />
                     <x-input-error class="mt-2" :messages="$errors->get('date_from')" />
                 </div>
                 <div>
-                    <x-input-label for="date_to" value="Do datuma" />
-                    <input type="date" name="date_to" id="date_to" x-ref="dateTo"
-                        min="{{ $dateMin }}" max="{{ $dateMax }}"
-                        value="{{ old('date_to', $filters['date_to'] ?? '') }}"
-                        class="mt-1 block w-full rounded-md border-red-200 shadow-sm" />
+                    <x-input-label for="date_to_display" value="Do datuma" />
+                    <x-iso-date-input id="date_to" name="date_to" x-ref="dateTo"
+                        :value="old('date_to', $filters['date_to'] ?? '')"
+                        :min="$dateMin" :max="$dateMax" />
                     <x-input-error class="mt-2" :messages="$errors->get('date_to')" />
                 </div>
             </div>

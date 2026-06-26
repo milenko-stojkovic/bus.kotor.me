@@ -22,9 +22,11 @@
     $pickerValue = is_string($value) && $value !== '' ? $value : '';
     $inputClass = 'block w-full min-w-0 flex-1 rounded-md border-red-200 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm';
     $calendarLabel = $calendarAriaLabel ?? (app()->getLocale() === 'en' ? 'Open calendar' : 'Otvori kalendar');
+    $wrapperClass = $attributes->get('class', '');
+    $fieldAttrs = $attributes->except('class');
 @endphp
 
-<div data-iso-date-input {{ $attributes->only('class')->merge(['class' => '']) }}>
+<div data-iso-date-input @if ($wrapperClass !== '') class="{{ $wrapperClass }}" @endif>
     @if ($label)
         <x-input-label :for="$id.'_display'" :value="$label" />
     @endif
@@ -72,5 +74,6 @@
         @if ($min) data-min="{{ $min }}" @endif
         @if ($max) data-max="{{ $max }}" @endif
         @if ($form) form="{{ $form }}" @endif
+        {{ $fieldAttrs }}
     />
 </div>
