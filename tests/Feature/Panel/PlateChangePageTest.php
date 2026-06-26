@@ -8,6 +8,8 @@ use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehicleType;
 use App\Models\VehicleTypeTranslation;
+use App\Services\Pdf\FreeReservationPdfGenerator;
+use App\Services\Pdf\PaidInvoicePdfGenerator;
 use App\Services\Reservation\PanelReservationListService;
 use App\Support\ReservationKind;
 use Carbon\Carbon;
@@ -186,6 +188,155 @@ final class PlateChangePageTest extends TestCase
         $reservation->refresh();
         $this->assertSame($replacement->license_plate, $reservation->license_plate);
         $this->assertSame((int) $replacement->id, (int) $reservation->vehicle_id);
+    }
+
+    public function test_upcoming_paid_reservation_shows_pdf_link_to_agency_invoice_route(): void
+    {
+        [$user, $reservation] = $this->upcomingTimeSlotsReservationWithSpareVehicle();
+
+        $this->actingAs($user)
+            ->get('/locale/cg')
+            ->assertRedirect();
+
+        $this->get(route('panel.upcoming', [], false))
+            ->assertOk()
+            ->assertSee(route('panel.reservations.invoice.view', ['id' => $reservation->id], false), false)
+            ->assertSee('PDF', false)
+            ->assertSee('Promijeni tablicu', false);
+    }
+
+    public function test_upcoming_free_reservation_shows_pdf_link(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-07-10 10:00:00', PanelReservationListService::OPERATIONS_TIMEZONE));
+
+        $user = User::factory()->create();
+        $vt = $this->busType();
+        $slotA = ListOfTimeSlot::query()->create(['time_slot' => '10:00 - 10:20']);
+        $slotB = ListOfTimeSlot::query()->create(['time_slot' => '11:00 - 11:20']);
+
+        $reservation = Reservation::query()->create([
+            'user_id' => $user->id,
+            'reservation_kind' => ReservationKind::TIME_SLOTS,
+            'drop_off_time_slot_id' => $slotA->id,
+            'pick_up_time_slot_id' => $slotB->id,
+            'reservation_date' => '2026-07-15',
+            'user_name' => 'Agency',
+            'country' => 'ME',
+            'license_plate' => 'FR100',
+            'vehicle_type_id' => $vt->id,
+            'email' => $user->email,
+            'status' => 'free',
+            'invoice_amount' => 0,
+        ]);
+
+        $html = $this->actingAs($user)
+            ->get(route('panel.upcoming', [], false))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString(
+            route('panel.reservations.invoice.view', ['id' => $reservation->id], false),
+            $html,
+        );
+    }
+
+    public function test_upcoming_paid_pdf_download_uses_invoice_filename(): void
+    {
+        $this->mockPaidPdf();
+        [$user, $reservation] = $this->upcomingTimeSlotsReservationWithSpareVehicle();
+
+        $response = $this->actingAs($user)
+            ->get(route('panel.reservations.invoice.view', ['id' => $reservation->id], false));
+
+        $response->assertOk();
+        $this->assertStringContainsString(
+            'invoice-'.$reservation->id.'-'.$reservation->reservation_date->format('Y-m-d').'.pdf',
+            (string) $response->headers->get('Content-Disposition'),
+        );
+    }
+
+    public function test_upcoming_free_pdf_download_uses_free_confirmation_filename(): void
+    {
+        $this->mockFreePdf();
+        Carbon::setTestNow(Carbon::parse('2026-07-10 10:00:00', PanelReservationListService::OPERATIONS_TIMEZONE));
+
+        $user = User::factory()->create();
+        $vt = $this->busType();
+        $slotA = ListOfTimeSlot::query()->create(['time_slot' => '10:00 - 10:20']);
+        $slotB = ListOfTimeSlot::query()->create(['time_slot' => '11:00 - 11:20']);
+
+        $reservation = Reservation::query()->create([
+            'user_id' => $user->id,
+            'reservation_kind' => ReservationKind::TIME_SLOTS,
+            'drop_off_time_slot_id' => $slotA->id,
+            'pick_up_time_slot_id' => $slotB->id,
+            'reservation_date' => '2026-07-15',
+            'user_name' => 'Agency',
+            'country' => 'ME',
+            'license_plate' => 'FR200',
+            'vehicle_type_id' => $vt->id,
+            'email' => $user->email,
+            'status' => 'free',
+            'invoice_amount' => 0,
+        ]);
+
+        $response = $this->actingAs($user)
+            ->get(route('panel.reservations.invoice.view', ['id' => $reservation->id], false));
+
+        $response->assertOk();
+        $this->assertStringContainsString(
+            'free-confirmation-'.$reservation->id.'-2026-07-15.pdf',
+            (string) $response->headers->get('Content-Disposition'),
+        );
+    }
+
+    public function test_agency_cannot_download_another_agencys_reservation_pdf_from_upcoming_context(): void
+    {
+        [$owner] = $this->upcomingTimeSlotsReservationWithSpareVehicle();
+        $other = User::factory()->create();
+
+        $reservation = Reservation::query()->where('user_id', $owner->id)->firstOrFail();
+
+        $this->actingAs($other)
+            ->get(route('panel.reservations.invoice.view', ['id' => $reservation->id], false))
+            ->assertNotFound();
+    }
+
+    public function test_daily_fee_today_still_shows_pdf_even_when_plate_change_hidden(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-07-10 14:00:00', PanelReservationListService::OPERATIONS_TIMEZONE));
+
+        [$user, $reservation] = $this->dailyFeeReservationWithSpareVehicle('2026-07-10');
+
+        $this->actingAs($user)
+            ->get('/locale/cg')
+            ->assertRedirect();
+
+        $this->get(route('panel.upcoming', [], false))
+            ->assertOk()
+            ->assertSee(route('panel.reservations.invoice.view', ['id' => $reservation->id], false), false)
+            ->assertSee('Promjena tablice za dnevnu naknadu nije dostupna za tekući dan.', false)
+            ->assertDontSee('Promijeni tablicu', false);
+    }
+
+    private function mockPaidPdf(): void
+    {
+        $this->app->instance(PaidInvoicePdfGenerator::class, new class extends PaidInvoicePdfGenerator {
+            public function renderBinary(Reservation $reservation, bool $isFiscal): string
+            {
+                return '%PDF-1.4';
+            }
+        });
+    }
+
+    private function mockFreePdf(): void
+    {
+        $this->app->instance(FreeReservationPdfGenerator::class, new class extends FreeReservationPdfGenerator {
+            public function renderBinary(Reservation $reservation): string
+            {
+                return '%PDF-1.4';
+            }
+        });
     }
 
     /**
