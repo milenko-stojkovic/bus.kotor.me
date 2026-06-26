@@ -140,7 +140,8 @@ Svako polje za **registarsku tablicu** (booking, panel, admin pretraga, Control,
   - prije submita upisuje **`sessionStorage`** (Y koordinatu, opciono anchor `id`/`name` kontrole, offset ~80px iznad);
   - poslije reloada na **`DOMContentLoaded`** vraća scroll i **briše** ključ;
   - ako Blade postavi **`data-skip-scroll-restore`** (npr. `$errors->any()`), restore se preskače da validacione greške ostanu vidljive.
-- **Obuhvat:** samo ove dvije step forme; admin, FZBR i ostale stranice **ne** koriste isti helper.
+- **Guest — scroll na grešku poslije checkout POST-a (2026-06-25):** na **`/guest/reserve`**, kad se prikaže validacija ili blokirani checkout (npr. niža kategorija), kontejner **`#guest-reservation-feedback`** dobija **`data-guest-reservation-feedback`**. Isti modul **`reservationFormScroll.js`** na **`DOMContentLoaded`** poziva **`scrollToGuestReservationFeedback()`**: `scrollIntoView({ behavior: 'smooth' })`, offset ~80px za header, kratki ring highlight. **Ne** radi bez markera; **ne** utiče na agency panel, admin ni uspješan redirect na plaćanje. Testovi: **`GuestReservationFeedbackScrollTest`**.
+- **Obuhvat:** GET scroll restore — guest + agency step forme; feedback scroll — **samo** guest `/guest/reserve`.
 - **Deploy:** nakon izmjene JS pokrenuti **`npm run build`** na okruženju gdje se servira **`public/build`** (folder je u **`.gitignore`**).
 
 ---
