@@ -13,7 +13,7 @@ Prefiks ruta: **`/panel`**, middleware **`auth`** + **`verified`**. Gornja navig
 | Ruta | Naziv rute (izbor) | Opis |
 |------|-------------------|------|
 | `GET /panel/reservations` | `panel.reservations` | Nova rezervacija (`ReservationBookingPageData`) — **Termini** (slotovi) ili **Dnevna naknada** (bez slotova; agencija kartica/avans). GET auto-refresh pri izboru datuma/vrste/vozila/termina; scroll pozicija se čuva u **`sessionStorage`** (v. **`project-conventions.md`** § Rezervacije — step forma). |
-| `GET /panel/upcoming` | `panel.upcoming` | **Promjena tablica** — promjena registarske tablice na predstojećim rezervacijama (Termini; dnevna naknada samo za buduće datume) |
+| `GET /panel/upcoming` | `panel.upcoming` | **Promjena tablica** — promjena registarske tablice na predstojećim rezervacijama (Termini; dnevna naknada samo za buduće datume); po redu **PDF** link (`panel.reservations.invoice.view`) za `paid`/`free` |
 | `GET /panel/realized` | `panel.realized` | Realizovane, link na PDF u novom tabu |
 | `GET /panel/vehicles` | `panel.vehicles` | Vozila |
 | `GET /panel/fzbr` | `panel.fzbr.create` | **Besplatne rezervacije** — podnošenje zahtjeva |
@@ -217,11 +217,13 @@ Korisnički naziv menija: **Promjena tablica** (EN: **Plate change**). Ruta i kl
   - **kategorija**: **`vehicle_types.price` ≤** cene kategorije **plaćene na rezervaciji** (`reservations.vehicle_type_id` snapshot — **ne** trenutno dodijeljeno vozilo); pri promjeni tablice **`vehicle_type_id`** i **`invoice_amount`** se **ne** mijenjaju
   - **dostupnost (samo Termini)**: kandidat nema konflikt za isti datum ako je **`drop_off_time_slot_id` isti** (drop=drop) **ili** **`pick_up_time_slot_id` isti** (pick=pick); cross-match (**drop=pick** / **pick=drop**) nije konflikt
 - **Plaćena** rezervacija: reset **`invoice_sent_at`** / **`email_sent`**, zatim **`SendInvoiceEmailJob`** (PDF se generiše u jobu, bez trajnog skladišta).
-- **Besplatna** (`reservations.status = free`): samo **`license_plate`** / **`vehicle_id`**, bez fiskal/PDF mejla.
+- **Besplatna** (`reservations.status = free`): ažurira se samo **`license_plate`** / **`vehicle_id`** (bez fiskalizacije, bez računa). Reset **`invoice_sent_at`** / **`email_sent`**, zatim **`SendAdminUpdatedReservationDocumentJob`** — isti job kao poslije admin izmjene rezervacije: predmet/tijelo **`free_reservation_updated_email_*`** (`ui_translations`), prilog **`free-confirmation-{id}-{Y-m-d}.pdf`** (`ReservationPdfFilename` / `FreeReservationPdfGenerator::renderBinary`), referenca u tijelu **`Broj rezervacije: {id}`** ili **`Referenca transakcije`** ako postoji MTID (`ReservationEmailReferenceLine`). Pad slanja **ne** poništava promjenu tablice; agencija može ručno preuzeti PDF sa **Promjena tablica** ili **Realizovane** (`GET /panel/reservations/{id}/invoice/view`).
 
-**UI tekstovi** (`ui_translations`, grupa `panel`): `upcoming_plate_change_unavailable_daily_fee_today` (isti dan); `upcoming_plate_change_unavailable_daily_fee` (opšta napomena — samo budući datumi).
+**PDF na listi (2026-06):** svaka predstojeća **`paid`** / **`free`** rezervacija na **Promjena tablica** ima dugme **PDF** desno od akcija (otvara isti inline PDF kao na **Realizovane**); prikazuje se i kad promjena tablice nije dozvoljena (npr. dnevna naknada za danas). Ime fajla: **`ReservationPdfFilename::forReservation()`**.
 
-**Testovi:** `tests/Feature/Panel/PlateChangePageTest.php`, `PanelReservationListDailyTicketTest.php`, `ReservationVehicleChangePaidCategoryTest.php`.
+**UI tekstovi** (`ui_translations`, grupa `panel`): `upcoming_plate_change_unavailable_daily_fee_today` (isti dan); `upcoming_plate_change_unavailable_daily_fee` (opšta napomena — samo budući datumi); `vehicle_change_success_free` (poruka nakon besplatne promjene — uključuje obavještenje o emailu).
+
+**Testovi:** `tests/Feature/Panel/PlateChangePageTest.php`, `FreeReservationPlateChangeEmailTest.php`, `PanelReservationListDailyTicketTest.php`, `ReservationVehicleChangePaidCategoryTest.php`; email: `tests/Feature/Email/FreeReservationPlateChangeEmailTest.php`.
 
 **UI (label tipa vozila):** u panelu i na korisničkim formama tip vozila se prikazuje kao **`Naziv (Opis) - Cena`** (opis je lokalizovan iz `vehicle_type_translations.description`, ako postoji). Formatiranje je centralizovano u `VehicleType::formatLabel($locale, 'EUR')`. Ako opis nedostaje, prikaz je `Naziv - Cena`.
 
