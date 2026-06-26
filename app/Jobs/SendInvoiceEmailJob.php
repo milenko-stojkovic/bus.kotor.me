@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Reservation;
 use App\Services\Pdf\PaidInvoicePdfGenerator;
+use App\Support\ReservationEmailReferenceLine;
 use App\Support\UiText;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -199,10 +200,13 @@ class SendInvoiceEmailJob implements ShouldQueue
 
         $bodyTemplate = $this->resolvePaidInvoiceEmailBodyTemplate($emailLocale);
 
-        return str_replace(
-            ['%1$s', '%2$s'],
-            [$name, $generatedAt],
-            $bodyTemplate,
+        return ReservationEmailReferenceLine::appendBeforeClosing(
+            str_replace(
+                ['%1$s', '%2$s'],
+                [$name, $generatedAt],
+                $bodyTemplate,
+            ),
+            ReservationEmailReferenceLine::forReservation($reservation, $emailLocale),
         );
     }
 

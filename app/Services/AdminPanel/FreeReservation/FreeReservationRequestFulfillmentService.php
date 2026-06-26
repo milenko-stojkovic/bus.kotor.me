@@ -13,6 +13,7 @@ use App\Models\FreeReservationRequest;
 use App\Models\Reservation;
 use App\Services\Pdf\FreeReservationPdfGenerator;
 use App\Services\Reservation\DuplicateReservationAttemptService;
+use App\Support\ReservationEmailReferenceLine;
 use App\Support\ReservationInvoiceAmount;
 use App\Support\UiText;
 use Illuminate\Support\Facades\DB;
@@ -460,6 +461,10 @@ class FreeReservationRequestFulfillmentService
             $bodyTemplate,
             count($reservations),
             $req->reservation_date?->format('d.m.Y.') ?? ''
+        );
+        $body = ReservationEmailReferenceLine::appendBeforeClosing(
+            $body,
+            ReservationEmailReferenceLine::forReservations($reservations, $emailLocale),
         );
 
         $tmpPaths = [];

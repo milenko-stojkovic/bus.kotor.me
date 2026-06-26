@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\Reservation;
 use App\Services\Pdf\FreeReservationPdfGenerator;
 use App\Services\Pdf\PaidInvoicePdfGenerator;
+use App\Support\ReservationEmailReferenceLine;
 use App\Support\UiText;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -205,11 +206,16 @@ class SendAdminUpdatedReservationDocumentJob implements ShouldQueue
     private function buildBody(Reservation $reservation, string $emailLocale): string
     {
         if ($reservation->status === 'free') {
-            return UiText::t(
+            $body = UiText::t(
                 'emails',
                 'free_reservation_updated_email_body',
                 "Hello,\n\nYour free reservation details have been updated. The updated confirmation PDF is attached.\n\nThank you.",
                 $emailLocale
+            );
+
+            return ReservationEmailReferenceLine::appendBeforeClosing(
+                $body,
+                ReservationEmailReferenceLine::forReservation($reservation, $emailLocale),
             );
         }
 
@@ -231,6 +237,9 @@ class SendAdminUpdatedReservationDocumentJob implements ShouldQueue
 
         $template = UiText::t('emails', $bodyKey, $fallback, $emailLocale);
 
-        return sprintf($template, $jirSuffix);
+        return ReservationEmailReferenceLine::appendBeforeClosing(
+            sprintf($template, $jirSuffix),
+            ReservationEmailReferenceLine::forReservation($reservation, $emailLocale),
+        );
     }
 }

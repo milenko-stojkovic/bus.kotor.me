@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Reservation;
 use App\Services\Pdf\FreeReservationPdfGenerator;
+use App\Support\ReservationEmailReferenceLine;
 use App\Support\UiText;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -172,7 +173,10 @@ class SendFreeReservationConfirmationJob implements ShouldQueue
 
         $bodyTemplate = $this->resolveFreeReservationEmailBodyTemplate($emailLocale);
 
-        return str_replace('%1$s', $name, $bodyTemplate);
+        return ReservationEmailReferenceLine::appendBeforeClosing(
+            str_replace('%1$s', $name, $bodyTemplate),
+            ReservationEmailReferenceLine::forReservation($reservation, $emailLocale),
+        );
     }
 
     private function resolveFreeReservationEmailSubject(string $emailLocale): string
