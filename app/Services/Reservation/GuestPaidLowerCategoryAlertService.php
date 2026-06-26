@@ -7,12 +7,16 @@ use App\Services\AdminFiscalizationAlertService;
 use App\Services\AdminPanel\AdminAlertService;
 
 /**
- * After a guest paid reservation is created, compare its vehicle category price
- * against the most recent older paid reservation for the same normalized plate.
- * Informational only — does not block checkout, payment, or fiscalization.
+ * Safety net after a guest paid reservation is created: alert if category price is
+ * lower than the most recent paid guest reservation for the same plate.
+ * Normal flow is blocked at checkout by GuestPaidLowerCategoryCheckoutGuard.
  */
 final class GuestPaidLowerCategoryAlertService
 {
+    public function __construct(
+        private readonly GuestPaidLowerCategoryHistoryService $history,
+    ) {}
+
     public function evaluate(Reservation $reservation): void
     {
         if ($reservation->status !== 'paid' || $reservation->user_id !== null) {
@@ -24,8 +28,15 @@ final class GuestPaidLowerCategoryAlertService
             return;
         }
 
-        $historical = $this->findMostRecentHistoricalPaidReservation($reservation, $normalizedPlate);
+        $historical = $this->history->findMostRecentPaidGuestReservation(
+            $normalizedPlate,
+            (int) $reservation->id,
+        );
         if ($historical === null) {
+            return;
+        }
+
+        if (! $this->history->historicalPriceExceedsSubmitted((int) $reservation->vehicle_type_id, $historical)) {
             return;
         }
 
@@ -35,25 +46,7 @@ final class GuestPaidLowerCategoryAlertService
         $newPrice = (float) ($reservation->vehicleType?->price ?? 0);
         $historicalPrice = (float) ($historical->vehicleType?->price ?? 0);
 
-        if ($newPrice >= $historicalPrice - 0.000001) {
-            return;
-        }
-
         $this->notifyAdmin($reservation, $historical, $normalizedPlate, $newPrice, $historicalPrice);
-    }
-
-    private function findMostRecentHistoricalPaidReservation(
-        Reservation $reservation,
-        string $normalizedPlate,
-    ): ?Reservation {
-        return Reservation::query()
-            ->where('status', 'paid')
-            ->whereKeyNot($reservation->id)
-            ->where('license_plate', $normalizedPlate)
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
-            ->with('vehicleType')
-            ->first();
     }
 
     private function notifyAdmin(
@@ -68,14 +61,14 @@ final class GuestPaidLowerCategoryAlertService
         $subject = '[Kotor Bus] Guest paid reservation: lower vehicle category than historical paid';
 
         $body = implode("\n", [
-            'A new guest paid reservation uses a lower vehicle category price than the most recent historical paid reservation for the same license plate.',
-            'The reservation was NOT blocked; this is informational for manual review.',
+            'A new guest paid reservation uses a lower vehicle category price than the most recent historical paid guest reservation for the same license plate.',
+            'Checkout should normally block this case; treat as safety-net review.',
             '',
             '--- new reservation ---',
             $fiscalAlerts->buildReservationContext($reservation),
             'vehicle_type.price: '.number_format($newPrice, 2, '.', ''),
             '',
-            '--- historical paid reservation ---',
+            '--- historical paid guest reservation ---',
             $fiscalAlerts->buildReservationContext($historical),
             'vehicle_type.price: '.number_format($historicalPrice, 2, '.', ''),
             '',

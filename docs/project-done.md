@@ -4,6 +4,8 @@
 
 Hronološki najnovije na vrhu unutar svake sekcije. Pri zatvaranju zadatka dodaj red sa **datumom** (`YYYY-MM-DD`) i kratak opis; istu stavku ukloni iz `docs/project-todo.md`.
 
+- **2026-06-25** — **Guest checkout — blokada niže kategorije od historije:** **`GuestPaidLowerCategoryCheckoutGuard`** blokira guest checkout (Termini + dnevna naknada) prije `temp_data`/Bankart ako ista tablica ima stariju **guest** **`paid`** rezervaciju u **višoj** kategoriji (`reservations.vehicle_type_id` → `vehicle_types.price`; samo `user_id IS NULL`; bez agencija/free/temp_data). Poruka sa potrebnom kategorijom, PDF uputstvom za agencije i **`bus@kotor.me`**; **`admin_alerts`** `guest_lower_category_checkout_blocked` + email. Agencijski checkout isključen. Testovi: **`GuestPaidLowerCategoryCheckoutBlockTest`**. Docs: **`auth-and-guests.md`**, **`admin-panel.md`**.
+
 ---
 
 ## 2026-06 — Admin / UX (post cut-over)

@@ -56,10 +56,12 @@
 
         @include('partials.checkout-result-banner')
 
+        @include('partials.guest-lower-category-block')
+
         @if (session('message'))
             <div class="rounded-md bg-red-50 p-3 text-sm text-red-900">{{ session('message') }}</div>
         @endif
-        @if (session('error'))
+        @if (session('error') && ! session('guest_lower_category_block'))
             <div class="rounded-md bg-red-50 p-3 text-sm text-red-800">{{ session('error') }}</div>
         @endif
 

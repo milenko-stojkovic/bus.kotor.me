@@ -70,6 +70,7 @@ Svako polje za **registarsku tablicu** (booking, panel, admin pretraga, Control,
 
 - **Nova polja u Blade-u:** preferirati **`<x-license-plate-input>`** umjesto kopiranja `oninput` po fajlovima. Stariji ekrani (guest reserve, agency vozila, FZBR, admin Insight) još mogu imati inline JS — pri izmjeni prebaciti na komponentu.
 - **Admin pretraga rezervacija:** `AdminReservationSearchRequest::applyInputNormalization()` (poziv u `ReservationController::index` **prije** provjere kriterijuma i validacije) + `<x-license-plate-input>` u formi. V. **`docs/admin-panel.md`** § Rezervacije.
+- **Guest plaćena rezervacija — kategorija vozila:** guest checkout (bez naloga) **ne smije** platiti **nižu** kategoriju od najnovije starije **guest** **`paid`** rezervacije iste tablice; blokada u **`CheckoutController`** prije plaćanja. Agencije (`user_id` not null) i upravljanje vozilima/kategorijama — kroz agency panel; ovo pravilo se na njih ne primjenjuje. V. **`auth-and-guests.md`**, **`admin-panel.md`**.
 
 ---
 

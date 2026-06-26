@@ -19,6 +19,7 @@ use App\Services\Payment\PaymentInitFailureService;
 use App\Services\Payment\PaymentSuccessHandler;
 use App\Services\Reservation\DuplicateReservationAttemptService;
 use App\Services\Reservation\FreeReservationRules;
+use App\Services\Reservation\GuestPaidLowerCategoryCheckoutGuard;
 use App\Support\CheckoutResultFlash;
 use App\Support\QueueMode;
 use App\Support\ReservationInvoiceAmount;
@@ -85,6 +86,17 @@ class CheckoutController extends Controller
         );
         if ($duplicateResponse !== null) {
             return $duplicateResponse;
+        }
+
+        $lowerCategoryBlock = $this->guestLowerCategoryBlockResponse(
+            $request,
+            $snapshot,
+            $date,
+            ReservationKind::TIME_SLOTS,
+            $isFree,
+        );
+        if ($lowerCategoryBlock !== null) {
+            return $lowerCategoryBlock;
         }
 
         // Agency advance payment (feature-flagged). Only for authenticated panel booking; never for guest.
@@ -456,6 +468,17 @@ class CheckoutController extends Controller
         $panelAuthBooking = $request->isPanelAuthBooking();
         $paymentMethod = $panelAuthBooking ? (string) ($request->validated('payment_method') ?? 'card') : 'card';
 
+        $lowerCategoryBlock = $this->guestLowerCategoryBlockResponse(
+            $request,
+            $snapshot,
+            $date,
+            ReservationKind::DAILY_TICKET,
+            false,
+        );
+        if ($lowerCategoryBlock !== null) {
+            return $lowerCategoryBlock;
+        }
+
         if ($panelAuthBooking && $paymentMethod === 'advance') {
             if (! (bool) config('features.advance_payments')) {
                 $msg = 'Avansno plaćanje trenutno nije dostupno.';
@@ -661,5 +684,46 @@ class CheckoutController extends Controller
             'vehicle_type_id' => (int) $request->validated('vehicle_type_id'),
             'email' => (string) $request->validated('email'),
         ];
+    }
+
+    /**
+     * @param  array{vehicle_id:int|null,user_name:string,country:string,license_plate:string,vehicle_type_id:int,email:string}  $snapshot
+     */
+    private function guestLowerCategoryBlockResponse(
+        CheckoutReservationRequest $request,
+        array $snapshot,
+        string $reservationDate,
+        string $reservationKind,
+        bool $isFreeReservation,
+    ): RedirectResponse|JsonResponse|null {
+        if ($request->user() !== null || $isFreeReservation) {
+            return null;
+        }
+
+        $guard = app(GuestPaidLowerCategoryCheckoutGuard::class);
+        $block = $guard->evaluateForGuestCheckout(
+            (string) $snapshot['license_plate'],
+            (int) $snapshot['vehicle_type_id'],
+        );
+        if ($block === null) {
+            return null;
+        }
+
+        $guard->notifyBlocked(
+            $block,
+            (string) $snapshot['user_name'],
+            (string) $snapshot['email'],
+            $reservationDate,
+            $reservationKind,
+        );
+
+        $message = $block['plain_message'];
+
+        return $request->expectsJson()
+            ? response()->json(['message' => $message], 422)
+            : back()->withInput()
+                ->with('guest_lower_category_block', $block)
+                ->with('error', $message)
+                ->withErrors(['vehicle_type_id' => $message]);
     }
 }
