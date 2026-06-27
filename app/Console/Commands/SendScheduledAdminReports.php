@@ -51,6 +51,11 @@ class SendScheduledAdminReports extends Command
         try {
             $attachments = $this->buildAllPdfs($reports, $pdf, $periodType, $from, $to, $fileLabel, $subjectLabel);
         } catch (Throwable $e) {
+            $this->error(sprintf(
+                'Fatal PDF generation failed before any recipient could be attempted: %s: %s',
+                $e::class,
+                mb_substr($e->getMessage(), 0, 500),
+            ));
             $this->onPackageFailure(
                 stage: 'generation',
                 periodType: $periodType,
@@ -59,6 +64,7 @@ class SendScheduledAdminReports extends Command
                 error: $e->getMessage(),
                 exceptionClass: $e::class
             );
+
             return self::FAILURE;
         }
 
@@ -67,78 +73,55 @@ class SendScheduledAdminReports extends Command
         $failed = 0;
         $failedRecipients = [];
         $skippedRecipients = [];
+        $sentRecipients = [];
+        $attachmentCount = count($attachments);
 
         foreach ($recipientEmails as $email) {
-            $claim = $this->claimDelivery($periodType, $periodStart, $periodEnd, $email);
-            if ($claim['delivery'] === null) {
-                $skipped++;
-                $skippedRecipients[] = [
-                    'email' => $email,
-                    'reason' => $claim['skip_reason'] ?? 'already_sent',
-                    'sent_at' => $claim['sent_at'] ?? null,
-                ];
-                Log::channel('payments')->info('scheduled_reports_delivery_skipped', [
-                    'period_type' => $periodType,
-                    'period_start' => $periodStart,
-                    'period_end' => $periodEnd,
-                    'recipient_email' => $email,
-                    'reason' => $claim['skip_reason'] ?? 'already_sent',
-                    'sent_at' => $claim['sent_at'] ?? null,
-                ]);
-                continue;
-            }
-
-            $delivery = $claim['delivery'];
-
-            $subject = $this->subjectFor($periodType, $subjectLabel);
-            $body = $this->bodyFor($periodType, $subjectLabel);
-
             try {
-                Mail::to($email)->send(new ScheduledAdminReportsMail(
-                    subjectLine: $subject,
-                    bodyText: $body,
-                    pdfAttachments: $attachments,
-                ));
+                $result = $this->processRecipient(
+                    email: $email,
+                    periodType: $periodType,
+                    periodStart: $periodStart,
+                    periodEnd: $periodEnd,
+                    subjectLabel: $subjectLabel,
+                    attachments: $attachments,
+                    attachmentCount: $attachmentCount,
+                );
 
-                $delivery->update([
-                    'status' => ScheduledReportDelivery::STATUS_SENT,
-                    'sent_at' => now(),
-                    'error_message' => null,
-                ]);
-
-                $sent++;
-                Log::channel('payments')->info('scheduled_reports_delivery_sent', [
-                    'period_type' => $periodType,
-                    'period_start' => $from->toDateString(),
-                    'period_end' => $to->toDateString(),
-                    'recipient_email' => $email,
-                    'attachments' => array_map(fn (array $a) => $a['filename'], $attachments),
-                ]);
+                match ($result['outcome']) {
+                    'sent' => (function () use (&$sent, &$sentRecipients, $result): void {
+                        $sent++;
+                        $sentRecipients[] = $result;
+                    })(),
+                    'skipped' => (function () use (&$skipped, &$skippedRecipients, $result): void {
+                        $skipped++;
+                        $skippedRecipients[] = $result;
+                    })(),
+                    'failed' => (function () use (&$failed, &$failedRecipients, $result): void {
+                        $failed++;
+                        $failedRecipients[] = $result;
+                    })(),
+                    default => null,
+                };
             } catch (Throwable $e) {
-                $delivery->update([
-                    'status' => ScheduledReportDelivery::STATUS_FAILED,
-                    'sent_at' => null,
-                    'error_message' => mb_substr($e->getMessage(), 0, 2000),
-                ]);
-
                 $failed++;
                 $failedRecipients[] = [
                     'email' => $email,
                     'error' => $e->getMessage(),
                     'exception' => $e::class,
                 ];
-                Log::channel('payments')->warning('scheduled_reports_delivery_failed', [
-                    'period_type' => $periodType,
-                    'period_start' => $periodStart,
-                    'period_end' => $periodEnd,
-                    'recipient_email' => $email,
-                    'message' => $e->getMessage(),
-                    'exception' => $e::class,
-                ]);
+                $this->logRecipientFailed(
+                    periodType: $periodType,
+                    periodStart: $periodStart,
+                    periodEnd: $periodEnd,
+                    email: $email,
+                    attachmentCount: $attachmentCount,
+                    exception: $e,
+                );
             }
         }
 
-        if ($failed > 0) {
+        if ($failed > 0 && $sent === 0 && $skipped === 0) {
             $this->onPackageFailure(
                 stage: 'delivery',
                 periodType: $periodType,
@@ -154,6 +137,15 @@ class SendScheduledAdminReports extends Command
                     ->implode('; '),
                 exceptionClass: 'ScheduledReportDeliveryFailure'
             );
+        } elseif ($failed > 0) {
+            $this->onPartialDeliveryFailure(
+                periodType: $periodType,
+                from: $from,
+                to: $to,
+                failedRecipients: $failedRecipients,
+                sentCount: $sent,
+                skippedCount: $skipped,
+            );
         }
 
         $this->info(sprintf(
@@ -163,6 +155,10 @@ class SendScheduledAdminReports extends Command
             $failed,
             $recipientEmails->count(),
         ));
+
+        foreach ($sentRecipients as $row) {
+            $this->line(sprintf('  sent: %s', $row['email']));
+        }
 
         foreach ($skippedRecipients as $row) {
             $sentAt = $row['sent_at'] ? ' sent_at='.$row['sent_at'] : '';
@@ -183,7 +179,225 @@ class SendScheduledAdminReports extends Command
             ));
         }
 
-        return $failed > 0 ? self::FAILURE : self::SUCCESS;
+        if ($failed > 0 && $sent === 0 && $skipped === 0) {
+            return self::FAILURE;
+        }
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * @param  array<int, array{filename:string,binary:string}>  $attachments
+     * @return array{outcome: string, email: string, reason?: string, sent_at?: ?string, error?: string, exception?: string}
+     */
+    private function processRecipient(
+        string $email,
+        string $periodType,
+        string $periodStart,
+        string $periodEnd,
+        string $subjectLabel,
+        array $attachments,
+        int $attachmentCount,
+    ): array {
+        $claim = $this->claimDelivery($periodType, $periodStart, $periodEnd, $email);
+        if ($claim['delivery'] === null) {
+            $this->logRecipientSkipped(
+                periodType: $periodType,
+                periodStart: $periodStart,
+                periodEnd: $periodEnd,
+                email: $email,
+                reason: $claim['skip_reason'] ?? 'already_sent',
+                sentAt: $claim['sent_at'] ?? null,
+                attachmentCount: $attachmentCount,
+            );
+
+            return [
+                'outcome' => 'skipped',
+                'email' => $email,
+                'reason' => $claim['skip_reason'] ?? 'already_sent',
+                'sent_at' => $claim['sent_at'] ?? null,
+            ];
+        }
+
+        $delivery = $claim['delivery'];
+        $subject = $this->subjectFor($periodType, $subjectLabel);
+        $body = $this->bodyFor($periodType, $subjectLabel);
+
+        try {
+            Mail::to($email)->send(new ScheduledAdminReportsMail(
+                subjectLine: $subject,
+                bodyText: $body,
+                pdfAttachments: $attachments,
+            ));
+
+            $delivery->update([
+                'status' => ScheduledReportDelivery::STATUS_SENT,
+                'sent_at' => now(),
+                'error_message' => null,
+            ]);
+
+            $this->logRecipientSent(
+                periodType: $periodType,
+                periodStart: $periodStart,
+                periodEnd: $periodEnd,
+                email: $email,
+                attachmentCount: $attachmentCount,
+                attachments: $attachments,
+            );
+
+            return [
+                'outcome' => 'sent',
+                'email' => $email,
+            ];
+        } catch (Throwable $e) {
+            $delivery->update([
+                'status' => ScheduledReportDelivery::STATUS_FAILED,
+                'sent_at' => null,
+                'error_message' => mb_substr($e->getMessage(), 0, 2000),
+            ]);
+
+            $this->logRecipientFailed(
+                periodType: $periodType,
+                periodStart: $periodStart,
+                periodEnd: $periodEnd,
+                email: $email,
+                attachmentCount: $attachmentCount,
+                exception: $e,
+            );
+
+            return [
+                'outcome' => 'failed',
+                'email' => $email,
+                'error' => $e->getMessage(),
+                'exception' => $e::class,
+            ];
+        }
+    }
+
+    private function logRecipientSent(
+        string $periodType,
+        string $periodStart,
+        string $periodEnd,
+        string $email,
+        int $attachmentCount,
+        array $attachments,
+    ): void {
+        Log::channel('payments')->info('scheduled_report_recipient_sent', [
+            'period_type' => $periodType,
+            'period_start' => $periodStart,
+            'period_end' => $periodEnd,
+            'recipient_email' => $email,
+            'attachment_count' => $attachmentCount,
+            'attachments' => array_map(fn (array $a) => $a['filename'], $attachments),
+        ]);
+    }
+
+    private function logRecipientSkipped(
+        string $periodType,
+        string $periodStart,
+        string $periodEnd,
+        string $email,
+        string $reason,
+        ?string $sentAt,
+        int $attachmentCount,
+    ): void {
+        Log::channel('payments')->info('scheduled_report_recipient_skipped', [
+            'period_type' => $periodType,
+            'period_start' => $periodStart,
+            'period_end' => $periodEnd,
+            'recipient_email' => $email,
+            'reason' => $reason,
+            'sent_at' => $sentAt,
+            'attachment_count' => $attachmentCount,
+        ]);
+    }
+
+    private function logRecipientFailed(
+        string $periodType,
+        string $periodStart,
+        string $periodEnd,
+        string $email,
+        int $attachmentCount,
+        Throwable $exception,
+    ): void {
+        Log::channel('payments')->warning('scheduled_report_recipient_failed', [
+            'period_type' => $periodType,
+            'period_start' => $periodStart,
+            'period_end' => $periodEnd,
+            'recipient_email' => $email,
+            'attachment_count' => $attachmentCount,
+            'message' => $exception->getMessage(),
+            'exception' => $exception::class,
+        ]);
+    }
+
+    /**
+     * @param  list<array{email: string, error?: string, exception?: string}>  $failedRecipients
+     */
+    private function onPartialDeliveryFailure(
+        string $periodType,
+        Carbon $from,
+        Carbon $to,
+        array $failedRecipients,
+        int $sentCount,
+        int $skippedCount,
+    ): void {
+        $failedSummary = collect($failedRecipients)
+            ->map(fn (array $row): string => sprintf(
+                '%s (%s: %s)',
+                $row['email'],
+                $row['exception'] ?? 'Exception',
+                mb_substr((string) ($row['error'] ?? ''), 0, 200),
+            ))
+            ->implode('; ');
+
+        $title = sprintf(
+            'Scheduled admin reports partial failure (delivery): %s – %s',
+            $periodType,
+            $from->toDateString(),
+        );
+        $message = sprintf(
+            'Djelimičan neuspjeh slanja zakazanih izvještaja za period %s .. %s. Poslato: %d, preskočeno: %d, neuspjelo: %d. Neuspjeli: %s',
+            $from->toDateString(),
+            $to->toDateString(),
+            $sentCount,
+            $skippedCount,
+            count($failedRecipients),
+            mb_substr($failedSummary, 0, 500),
+        );
+
+        $exists = AdminAlert::query()
+            ->where('type', 'scheduled_admin_reports_failed')
+            ->where('title', $title)
+            ->whereNull('removed_at')
+            ->exists();
+
+        if (! $exists) {
+            AdminAlert::query()->create([
+                'type' => 'scheduled_admin_reports_failed',
+                'status' => AdminAlert::STATUS_UNREAD,
+                'title' => $title,
+                'message' => $message,
+                'payload_json' => [
+                    'stage' => 'partial_delivery',
+                    'period_type' => $periodType,
+                    'period_start' => $from->toDateString(),
+                    'period_end' => $to->toDateString(),
+                    'sent_count' => $sentCount,
+                    'skipped_count' => $skippedCount,
+                    'failed_recipients' => $failedRecipients,
+                ],
+            ]);
+        }
+
+        Log::channel('payments')->error('scheduled_reports_partial_delivery_failed', [
+            'period_type' => $periodType,
+            'period_start' => $from->toDateString(),
+            'period_end' => $to->toDateString(),
+            'sent_count' => $sentCount,
+            'skipped_count' => $skippedCount,
+            'failed_recipients' => $failedRecipients,
+        ]);
     }
 
     /**
@@ -250,37 +464,43 @@ class SendScheduledAdminReports extends Command
 
         $attachments = [];
 
-        // 1) Po uplati
-        $dataset = [
-            'title' => 'Finansijski izvještaj po uplati za '.$subjectLabel,
-            'subtitle' => 'Uplate za rezervacije',
-            'kind' => 'by_payment',
-            'period' => $subjectLabel,
-            'from' => $from->toDateString(),
-            'to' => $to->toDateString(),
-            'data' => $reports->byPayment($from, $to),
-        ];
-        $attachments[] = [
-            'filename' => "{$prefix}-po-uplati-{$fileLabel}.pdf",
-            'binary' => $pdf->renderBinary($dataset),
-        ];
-
-        // 2) Obaveze po avansu (feature-flag)
-        if ((bool) config('features.advance_payments')) {
-            $snapshot = $to->copy()->setTimezone('Europe/Podgorica')->endOfDay();
+        try {
             $dataset = [
-                'title' => 'Izvještaj o obavezama po osnovu avansnih uplata na dan '.$this->fmtDateCg($to),
-                'subtitle' => 'Prikaz predstavlja stanje neiskorišćenih avansnih sredstava po agencijama na izabrani dan.',
-                'kind' => 'advance_obligations',
-                'period' => $this->fmtDateCg($to),
-                'from' => $to->toDateString(),
+                'title' => 'Finansijski izvještaj po uplati za '.$subjectLabel,
+                'subtitle' => 'Uplate za rezervacije',
+                'kind' => 'by_payment',
+                'period' => $subjectLabel,
+                'from' => $from->toDateString(),
                 'to' => $to->toDateString(),
-                'data' => $reports->advanceObligationsSnapshot($snapshot),
+                'data' => $reports->byPayment($from, $to),
             ];
             $attachments[] = [
-                'filename' => "{$prefix}-obaveze-po-avansu-{$fileLabel}.pdf",
+                'filename' => "{$prefix}-po-uplati-{$fileLabel}.pdf",
                 'binary' => $pdf->renderBinary($dataset),
             ];
+        } catch (Throwable $e) {
+            throw new \RuntimeException('PDF generation failed for report kind by_payment: '.$e->getMessage(), 0, $e);
+        }
+
+        if ((bool) config('features.advance_payments')) {
+            try {
+                $snapshot = $to->copy()->setTimezone('Europe/Podgorica')->endOfDay();
+                $dataset = [
+                    'title' => 'Izvještaj o obavezama po osnovu avansnih uplata na dan '.$this->fmtDateCg($to),
+                    'subtitle' => 'Prikaz predstavlja stanje neiskorišćenih avansnih sredstava po agencijama na izabrani dan.',
+                    'kind' => 'advance_obligations',
+                    'period' => $this->fmtDateCg($to),
+                    'from' => $to->toDateString(),
+                    'to' => $to->toDateString(),
+                    'data' => $reports->advanceObligationsSnapshot($snapshot),
+                ];
+                $attachments[] = [
+                    'filename' => "{$prefix}-obaveze-po-avansu-{$fileLabel}.pdf",
+                    'binary' => $pdf->renderBinary($dataset),
+                ];
+            } catch (Throwable $e) {
+                throw new \RuntimeException('PDF generation failed for report kind advance_obligations: '.$e->getMessage(), 0, $e);
+            }
         } else {
             Log::channel('payments')->info('scheduled_reports_advance_obligations_skipped_feature_off', [
                 'period_type' => $periodType,
@@ -289,35 +509,41 @@ class SendScheduledAdminReports extends Command
             ]);
         }
 
-        // 3) Po tipu rezervacije
-        $dataset = [
-            'title' => 'Izvještaj po tipu rezervacije za '.$subjectLabel,
-            'subtitle' => 'Prihodi po tipu rezervacije',
-            'kind' => 'by_reservation_type',
-            'period' => $subjectLabel,
-            'from' => $from->toDateString(),
-            'to' => $to->toDateString(),
-            'data' => $reports->byReservationType($from, $to),
-        ];
-        $attachments[] = [
-            'filename' => "{$prefix}-po-tipu-rezervacije-{$fileLabel}.pdf",
-            'binary' => $pdf->renderBinary($dataset),
-        ];
+        try {
+            $dataset = [
+                'title' => 'Izvještaj po tipu rezervacije za '.$subjectLabel,
+                'subtitle' => 'Prihodi po tipu rezervacije',
+                'kind' => 'by_reservation_type',
+                'period' => $subjectLabel,
+                'from' => $from->toDateString(),
+                'to' => $to->toDateString(),
+                'data' => $reports->byReservationType($from, $to),
+            ];
+            $attachments[] = [
+                'filename' => "{$prefix}-po-tipu-rezervacije-{$fileLabel}.pdf",
+                'binary' => $pdf->renderBinary($dataset),
+            ];
+        } catch (Throwable $e) {
+            throw new \RuntimeException('PDF generation failed for report kind by_reservation_type: '.$e->getMessage(), 0, $e);
+        }
 
-        // 4) Po tipu vozila
-        $dataset = [
-            'title' => 'Izvještaj po tipu vozila za '.$subjectLabel,
-            'subtitle' => 'Realizovane rezervacije po tipu vozila',
-            'kind' => 'by_vehicle_type',
-            'period' => $subjectLabel,
-            'from' => $from->toDateString(),
-            'to' => $to->toDateString(),
-            'data' => $reports->byVehicleType($from, $to),
-        ];
-        $attachments[] = [
-            'filename' => "{$prefix}-po-tipu-vozila-{$fileLabel}.pdf",
-            'binary' => $pdf->renderBinary($dataset),
-        ];
+        try {
+            $dataset = [
+                'title' => 'Izvještaj po tipu vozila za '.$subjectLabel,
+                'subtitle' => 'Realizovane rezervacije po tipu vozila',
+                'kind' => 'by_vehicle_type',
+                'period' => $subjectLabel,
+                'from' => $from->toDateString(),
+                'to' => $to->toDateString(),
+                'data' => $reports->byVehicleType($from, $to),
+            ];
+            $attachments[] = [
+                'filename' => "{$prefix}-po-tipu-vozila-{$fileLabel}.pdf",
+                'binary' => $pdf->renderBinary($dataset),
+            ];
+        } catch (Throwable $e) {
+            throw new \RuntimeException('PDF generation failed for report kind by_vehicle_type: '.$e->getMessage(), 0, $e);
+        }
 
         return $attachments;
     }

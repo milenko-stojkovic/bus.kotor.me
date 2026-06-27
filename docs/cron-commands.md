@@ -236,8 +236,11 @@ Ovi job-ovi su dodati u `routes/console.php` i smatraju se bezbednim za lokalni 
   - **yearly**: `yearlyOn(1, 1, '07:10')` — period = prethodna godina
   - Primalac(i): tabela `report_emails` gdje je **`purpose=report`**; adrese se normalizuju (trim + lowercase) i **deduplikuju** prije slanja (duplikati u tabeli ne smiju uzrokovati `sent=1 skipped=2` za isti email)
   - PDF paketi: “po uplati”, “po tipu vozila” i (kada je `advance_payments` ON) “obaveze po avansu”
-  - Idempotency: tabela `scheduled_report_deliveries` (unique: `period_type` + `period_start` + `period_end` + `recipient_email`); skip samo za primaoca koji već ima `status=sent`
-  - CLI output: `skipped: email (already_sent sent_at=...)` po preskočenom primaocu; `failed: email (Exception: message)` po grešci
+  - Idempotency: tabela `scheduled_report_deliveries` (unique: `period_type` + `period_start` + `period_end` + `recipient_email`); skip samo za primaoca koji već ima `status=sent`; `status=failed` se ponovo pokušava pri rerun-u
+  - Exit code: **0** kad su svi primaoci poslati/preskočeni ili je djelimičan neuspjeh (neki poslati, neki failed); **1** samo za fatal PDF generation prije loop-a ili kad **svi** pokušaji završe failed (nijedan sent/skipped)
+  - Djelimičan delivery failure: `admin_alerts` + log `scheduled_reports_partial_delivery_failed` (idempotentno po periodu); scheduler ne vidi exit 1
+  - CLI output: `scheduled reports done: sent=N, skipped=N, failed=N, recipients=N` + linije `sent:` / `skipped:` / `failed:` po primaocu
+  - Log po primaocu: `scheduled_report_recipient_sent|skipped|failed`
   - Failure: bez parcijalnih emailova ako PDF generisanje padne; admin email `bus@kotor.me` + `admin_alerts` zapis (idempotentno po periodu)
 - `alerts:system-health` — **`dailyAt('07:30')`** (`Europe/Podgorica`)
   - Kreira **`admin_alerts`** samo kada je potrebno; **v1** — nije pun monitoring, nema posebnog email kanala za ove tipove.

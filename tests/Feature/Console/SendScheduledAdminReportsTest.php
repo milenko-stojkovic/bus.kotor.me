@@ -11,6 +11,7 @@ use App\Models\ScheduledReportDelivery;
 use App\Models\VehicleType;
 use App\Models\VehicleTypeTranslation;
 use App\Services\AdminPanel\Reports\AdminReportsService;
+use App\Services\Pdf\AdminReportsPdfGenerator;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
@@ -39,6 +40,22 @@ class SendScheduledAdminReportsTest extends TestCase
     {
         Carbon::setTestNow(Carbon::parse($iso, $tz));
         date_default_timezone_set($tz);
+    }
+
+    private function mockMailToFailOnAttempt(int $failOnAttempt): void
+    {
+        Mail::fake();
+        $attempt = 0;
+        Mail::shouldReceive('to')->andReturnUsing(function ($users) use (&$attempt, $failOnAttempt) {
+            $attempt++;
+            if ($attempt === $failOnAttempt) {
+                throw new \RuntimeException('SMTP down');
+            }
+            $pending = \Mockery::mock(\Illuminate\Mail\PendingMail::class);
+            $pending->shouldReceive('send')->once()->andReturn(null);
+
+            return $pending;
+        });
     }
 
     public function test_a_daily_sends_previous_day_and_creates_delivery_and_attaches_three_when_advance_on(): void
@@ -376,19 +393,168 @@ class SendScheduledAdminReportsTest extends TestCase
         Config::set('features.advance_payments', true);
         ReportEmail::query()->create(['email' => 'a@example.com']);
 
-        // First recipient send throws, so command should fail and create alert + admin email.
-        Mail::fake();
-        Mail::shouldReceive('to')->once()->andThrow(new \RuntimeException('SMTP down'));
+        $this->mockMailToFailOnAttempt(1);
         Mail::shouldReceive('raw')->once();
 
         $this->artisan('reports:send-scheduled daily')
             ->assertExitCode(1)
             ->expectsOutputToContain('failed: a@example.com (RuntimeException: SMTP down');
 
+        $this->assertDatabaseHas('scheduled_report_deliveries', [
+            'recipient_email' => 'a@example.com',
+            'status' => ScheduledReportDelivery::STATUS_FAILED,
+        ]);
         $this->assertDatabaseHas('admin_alerts', [
             'type' => 'scheduled_admin_reports_failed',
         ]);
         $this->assertGreaterThanOrEqual(1, AdminAlert::query()->where('type', 'scheduled_admin_reports_failed')->count());
+    }
+
+    public function test_partial_recipient_failure_continues_and_returns_exit_zero(): void
+    {
+        $this->setNow('2026-05-02 08:00:00');
+        Config::set('features.advance_payments', true);
+
+        ReportEmail::query()->create(['email' => 'a@example.com']);
+        ReportEmail::query()->create(['email' => 'b@example.com']);
+        ReportEmail::query()->create(['email' => 'c@example.com']);
+
+        $this->mockMailToFailOnAttempt(2);
+
+        $this->artisan('reports:send-scheduled daily')
+            ->assertExitCode(0)
+            ->expectsOutputToContain('sent=2, skipped=0, failed=1, recipients=3')
+            ->expectsOutputToContain('  sent: a@example.com')
+            ->expectsOutputToContain('  sent: c@example.com')
+            ->expectsOutputToContain('failed: b@example.com (RuntimeException: SMTP down');
+
+        $this->assertDatabaseHas('scheduled_report_deliveries', [
+            'recipient_email' => 'a@example.com',
+            'status' => ScheduledReportDelivery::STATUS_SENT,
+        ]);
+        $this->assertDatabaseHas('scheduled_report_deliveries', [
+            'recipient_email' => 'b@example.com',
+            'status' => ScheduledReportDelivery::STATUS_FAILED,
+        ]);
+        $this->assertDatabaseHas('scheduled_report_deliveries', [
+            'recipient_email' => 'c@example.com',
+            'status' => ScheduledReportDelivery::STATUS_SENT,
+        ]);
+        $this->assertDatabaseHas('admin_alerts', [
+            'type' => 'scheduled_admin_reports_failed',
+        ]);
+        $this->assertStringContainsString(
+            'partial failure',
+            (string) AdminAlert::query()->where('type', 'scheduled_admin_reports_failed')->value('title'),
+        );
+    }
+
+    public function test_rerun_after_partial_failure_retries_only_failed_recipient(): void
+    {
+        $this->setNow('2026-05-02 08:00:00');
+        Config::set('features.advance_payments', true);
+
+        ReportEmail::query()->create(['email' => 'a@example.com']);
+        ReportEmail::query()->create(['email' => 'b@example.com']);
+        ReportEmail::query()->create(['email' => 'c@example.com']);
+
+        ScheduledReportDelivery::query()->create([
+            'period_type' => 'daily',
+            'period_start' => '2026-05-01',
+            'period_end' => '2026-05-01',
+            'recipient_email' => 'a@example.com',
+            'status' => ScheduledReportDelivery::STATUS_SENT,
+            'sent_at' => now(),
+        ]);
+        ScheduledReportDelivery::query()->create([
+            'period_type' => 'daily',
+            'period_start' => '2026-05-01',
+            'period_end' => '2026-05-01',
+            'recipient_email' => 'b@example.com',
+            'status' => ScheduledReportDelivery::STATUS_FAILED,
+            'sent_at' => null,
+            'error_message' => 'SMTP down',
+        ]);
+        ScheduledReportDelivery::query()->create([
+            'period_type' => 'daily',
+            'period_start' => '2026-05-01',
+            'period_end' => '2026-05-01',
+            'recipient_email' => 'c@example.com',
+            'status' => ScheduledReportDelivery::STATUS_SENT,
+            'sent_at' => now(),
+        ]);
+
+        Mail::fake();
+
+        $this->artisan('reports:send-scheduled daily')
+            ->assertExitCode(0)
+            ->expectsOutputToContain('sent=1, skipped=2, failed=0, recipients=3')
+            ->expectsOutputToContain('skipped: a@example.com (already_sent')
+            ->expectsOutputToContain('skipped: c@example.com (already_sent')
+            ->expectsOutputToContain('  sent: b@example.com');
+
+        Mail::assertSent(ScheduledAdminReportsMail::class, 1);
+        Mail::assertSent(ScheduledAdminReportsMail::class, fn (ScheduledAdminReportsMail $m): bool => $m->hasTo('b@example.com'));
+        $this->assertDatabaseHas('scheduled_report_deliveries', [
+            'recipient_email' => 'b@example.com',
+            'status' => ScheduledReportDelivery::STATUS_SENT,
+        ]);
+    }
+
+    public function test_failed_recipient_does_not_mark_sent_status(): void
+    {
+        $this->setNow('2026-05-02 08:00:00');
+        Config::set('features.advance_payments', true);
+        ReportEmail::query()->create(['email' => 'fail@example.com']);
+
+        $this->mockMailToFailOnAttempt(1);
+
+        $this->artisan('reports:send-scheduled daily')->assertExitCode(1);
+
+        $row = ScheduledReportDelivery::query()->where('recipient_email', 'fail@example.com')->firstOrFail();
+        $this->assertSame(ScheduledReportDelivery::STATUS_FAILED, $row->status);
+        $this->assertNull($row->sent_at);
+        $this->assertStringContainsString('SMTP down', (string) $row->error_message);
+    }
+
+    public function test_fatal_pdf_generation_returns_exit_one_with_clear_output(): void
+    {
+        $this->setNow('2026-05-02 08:00:00');
+        Config::set('features.advance_payments', true);
+        ReportEmail::query()->create(['email' => 'a@example.com']);
+
+        $this->mock(AdminReportsPdfGenerator::class, function ($mock): void {
+            $mock->shouldReceive('renderBinary')->andThrow(new \RuntimeException('DomPDF exploded'));
+        });
+
+        Mail::fake();
+
+        $this->artisan('reports:send-scheduled daily')
+            ->assertExitCode(1)
+            ->expectsOutputToContain('Fatal PDF generation failed before any recipient could be attempted');
+
+        $this->assertDatabaseHas('admin_alerts', [
+            'type' => 'scheduled_admin_reports_failed',
+        ]);
+        Mail::assertNotSent(ScheduledAdminReportsMail::class);
+        $this->assertDatabaseCount('scheduled_report_deliveries', 0);
+    }
+
+    public function test_monthly_partial_failure_uses_same_per_recipient_behavior(): void
+    {
+        $this->setNow('2026-06-01 08:00:00');
+        Config::set('features.advance_payments', true);
+
+        ReportEmail::query()->create(['email' => 'a@example.com']);
+        ReportEmail::query()->create(['email' => 'b@example.com']);
+
+        $this->mockMailToFailOnAttempt(2);
+
+        $this->artisan('reports:send-scheduled monthly')
+            ->assertExitCode(0)
+            ->expectsOutputToContain('sent=1, skipped=0, failed=1, recipients=2')
+            ->expectsOutputToContain('  sent: a@example.com')
+            ->expectsOutputToContain('failed: b@example.com (RuntimeException: SMTP down');
     }
 
     public function test_i_by_payment_includes_paid_reservation_created_at_1530_for_daily_previous_day(): void
