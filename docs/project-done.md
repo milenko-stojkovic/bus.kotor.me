@@ -1,9 +1,10 @@
 ﻿# Project DONE (urađeno)
 
-**Poslednje ažuriranje:** 2026-06-25  
+**Poslednje ažuriranje:** 2026-06-27  
 
 Hronološki najnovije na vrhu unutar svake sekcije. Pri zatvaranju zadatka dodaj red sa **datumom** (`YYYY-MM-DD`) i kratak opis; istu stavku ukloni iz `docs/project-todo.md`.
 
+- **2026-06-27** — **Email pipeline — audit, resend, logging:** strukturisani logovi `{event}_started|_sent|_failed` na kanalu **`payments`** (`ReservationDocumentEmailLogger`); **`ReservationEmailSendClaimService`** (stale **`EMAIL_SENDING`** >15 min); ispravljen **`reservations:send-emails`** (više ne poziva `markConfirmationEmailSent` bez slanja); komande **`mail:audit-reservation-documents`**, **`mail:resend-reservation-document`**. Testovi: **`ReservationDocumentEmailHardeningTest`**. Docs: **`cron-commands.md`**, **`project-conventions.md`**, **`production-hardening.md`**, **`success-payment-pipeline.md`**, **`production-runbook.md`**.
 - **2026-06-25** — **Agency Promjena tablica — email poslije promjene tablice (besplatne):** **`UserReservationController::updateVehicle`** za `status=free` resetuje **`invoice_sent_at`** / **`email_sent`** i dispatch **`SendAdminUpdatedReservationDocumentJob`** (ažurirana potvrda + PDF; predmet/tijelo `free_reservation_updated_email_*`; referenca `Broj rezervacije` / MTID). Plaćene i dalje **`SendInvoiceEmailJob`**. Pad emaila ne rollback-uje promjenu tablice. Testovi: **`FreeReservationPlateChangeEmailTest`** (Panel + Email). Docs: **`agency-panel.md`**, **`project-conventions.md`**.
 - **2026-06-25** — **Agency Promjena tablica — PDF po redu:** dugme **PDF** na **`GET /panel/upcoming`** za svaku predstojeću `paid`/`free` rezervaciju (`panel.reservations.invoice.view`; ista ruta/generator kao **Realizovane**; `ReservationPdfFilename`). Testovi: **`PlateChangePageTest`**. Docs: **`agency-panel.md`**, **`project-conventions.md`**.
 - **2026-06-25** — **PDF imena rezervacija — jedinstveni format svuda:** **`ReservationPdfFilename`** (`forReservation`, `invoice`, `freeConfirmation`); admin **`GET /admin/rezervacije/{id}/pdf`** više ne koristi `reservation-{id}.pdf`. Testovi: **`ReservationPdfFilenamePathsTest`**. Docs: **`project-conventions.md`**, **`language-and-invoice-rules.md`**.

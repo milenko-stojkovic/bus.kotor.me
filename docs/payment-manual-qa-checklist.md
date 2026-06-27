@@ -300,10 +300,12 @@ Napomena: za QA obavezno evidentirati da li u trenutnoj grani koda postoji autom
 
 ## 4.5 Email nije poslat
 
-- Proveri `SendInvoiceEmailJob`.
-- Proveri `MAIL_MAILER`, `MAIL_FROM_ADDRESS`.
-- Proveri `reservations.invoice_sent_at` i mail log (`MAIL_MAILER=log`).
-- Napomena: `SendInvoiceEmailJob` / `SendFreeReservationConfirmationJob` **ne šalju** mail bez uspešnog PDF-a; **`renderBinary`** baca ili job fail-uje → **queue retry**; u logu **`reservation_id`**.
+- Proveri da **`queue:work`** radi (`QUEUE_CONNECTION` ≠ `sync`).
+- `php artisan mail:audit-reservation-documents --date=YYYY-MM-DD --missing-only`
+- U **`storage/logs/payments.log`**: `paid_invoice_email_started` / `_sent` / `_failed` (ili `free_reservation_email_*`) po `merchant_transaction_id` / `reservation_id`.
+- Resend: `php artisan mail:resend-reservation-document --id=<reservation_id>` ili admin **Ponovo pošalji račun**.
+- Proveri `MAIL_MAILER`, `MAIL_FROM_ADDRESS`; `reservations.invoice_sent_at`, `email_sent`.
+- Napomena: jobovi **ne šalju** mail bez uspešnog PDF-a; **`renderBinary`** baca ili job fail-uje → **queue retry**; **`invoice_sent_at`** samo poslije uspješnog `Mail::send`.
 
 ## 4.6 Late success ne ulazi u admin review
 

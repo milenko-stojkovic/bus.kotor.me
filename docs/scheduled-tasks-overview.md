@@ -59,7 +59,9 @@ Možeš ih pokrenuti pojedinačno. Na **Windowsu** u Cursor terminalu često **`
 - `php artisan reservations:assign-late-success`
 - `php artisan parking:sync-days`
 - `php artisan parking:update-availability`
-- `php artisan reservations:send-emails`
+- `php artisan reservations:send-emails` — fallback: queue job za redove sa `email_sent=0` i `invoice_sent_at` null
+- `php artisan mail:audit-reservation-documents --date=YYYY-MM-DD [--missing-only]` — dijagnostika nedostajućih dokumenata
+- `php artisan mail:resend-reservation-document --id=<reservation_id>` — ponovno slanje po ID-u
 - `php artisan temp-data:cleanup`
 - `php artisan limo:cleanup-temporary-data`
 - `php artisan advance:send-yearly-statements`

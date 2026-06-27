@@ -165,7 +165,14 @@ php artisan event:cache
 - [ ] Pokrenuti worker sa istim `APP_ENV` / `.env` kao web.
 - [ ] Posle **deploy-a:** **`php artisan queue:restart`**
 - [ ] Timeout workera ≥ **130s** (npr. `ProcessReservationAfterPaymentJob`)
-- [ ] **Email `EMAIL_SENDING`:** ako job padne, `email_sent` se vraća na **`EMAIL_NOT_SENT`**
+- [ ] **Email `EMAIL_SENDING`:** ako job padne, `email_sent` se vraća na **`EMAIL_NOT_SENT`**; zaglavljeno **`EMAIL_SENDING`** (>15 min) se automatski reclaim-uje pri sljedećem pokušaju
+
+### Nedostaje račun / potvrda (incident)
+
+1. `php artisan mail:audit-reservation-documents --date=YYYY-MM-DD --missing-only`
+2. U `payments.log` tražiti `paid_invoice_email_started` / `_sent` / `_failed` (ili `free_reservation_email_*`) po **`merchant_transaction_id`** / **`reservation_id`**
+3. Proveriti da **`queue:work`** radi (v. gore)
+4. Resend: `php artisan mail:resend-reservation-document --id=<reservation_id>` ili admin panel **Ponovo pošalji račun**
 
 ### Kako proveriti da worker radi
 
@@ -179,7 +186,7 @@ php artisan event:cache
 
 - [ ] **`GET /up`** (health) — 200.
 - [ ] Jedan test checkout (staging ili mali iznos): callback → rezervacija u bazi → `payments.log` bez greške.
-- [ ] **`storage/logs/payments.log`** — proveriti `payment_reservation_created`, po potrebi `payment_fiscal_success` / `invoice_email_sent`.
+- [ ] **`storage/logs/payments.log`** — proveriti `payment_reservation_created`, po potrebi `payment_fiscal_success` / `paid_invoice_email_sent` (ili `paid_invoice_email_started` → `_sent`).
 - [ ] **Uputstvo za agencije (PDF):** `GET /docs/cgbuskotor.pdf` i `/docs/engbuskotor.pdf` vraćaju 200 (fajlovi u `public/docs/`, v. **`docs/agency-user-guide.md`**).
 
 ---
@@ -188,7 +195,7 @@ php artisan event:cache
 
 | Simptom | Provera |
 |--------|---------|
-| Mejl ne stiže | `QUEUE_CONNECTION`, da li worker radi; `invoice_sent_at` / log `invoice_email_*` |
+| Mejl ne stiže | `QUEUE_CONNECTION`, da li worker radi; `invoice_sent_at` / `email_sent`; `mail:audit-reservation-documents`; log `paid_invoice_email_*` / `free_reservation_email_*` |
 | Fiskal ne prolazi | `post_fiscalization_data`, komanda `post-fiscalization:retry`, `payments.log` |
 | Callback ne radi | URL banke → `POST /api/payment/callback`, potpis, `APP_URL` |
 

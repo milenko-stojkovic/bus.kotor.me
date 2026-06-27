@@ -293,7 +293,8 @@ Sledeće komande su **nezakazane** jer frekvencija u dokumentu nije striktno def
 
 - `reservations:assign-late-success` — **Reason**: no-op stub; **`late_success`** se rješava ručno preko **`/staff/late-success`**, ne automatskim cron-om (v. `payment-state-machine.md` §4b)
 - `parking:update-availability` — **Reason**: “svakih 5–10 minuta” (nije striktna frekvencija)
-- `reservations:send-emails` — **Reason**: “svakih 5–10 minuta” (nije striktna frekvencija)
+- `reservations:send-emails` — **Reason**: fallback cron ako queue job nije poslat; **dispatch** jobova (ne postavlja `email_sent=1` bez slanja)
+- `mail:audit-reservation-documents` / `mail:resend-reservation-document` — **Reason**: ručna dijagnostika i recovery (incident)
 
 ---
 

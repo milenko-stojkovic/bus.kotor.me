@@ -66,7 +66,9 @@ Napomena (PDF + email robustnost):
 
 - PDF se **ne** drži u **`storage/app`**; **`SendInvoiceEmailJob`** / **`SendFreeReservationConfirmationJob`** generišu binarni PDF pa ga privremeno snime za `attach`.
 - **`renderBinary`** mora uspeti iz baze (DomPDF): vraća neprazan **`string`** ili **baca izuzetak** — nema tihog `null` fallback-a.
-- **Email bez validnog PDF-a se ne šalje:** na grešku PDF-a / `tempnam` / slanja job postavlja **`email_sent`** na **`Reservation::EMAIL_NOT_SENT`** (0), loguje sa **`reservation_id`**, **baca izuzetak** da **Laravel queue** uradi **retry** (`tries` na jobu); nema „regeneriši u istom handle-u“. Paralelno: **`EMAIL_SENDING`** (2) + lock sprječavaju dupli mail; **`failed()`** posle istrošenih pokušaja vraća **`email_sent`** na **NOT_SENT**.
+- **Email bez validnog PDF-a se ne šalje:** na grešku PDF-a / `tempnam` / slanja job postavlja **`email_sent`** na **`Reservation::EMAIL_NOT_SENT`** (0), loguje sa **`reservation_id`**, **baca izuzetak** da **Laravel queue** uradi **retry** (`tries` na jobu); nema „regeneriši u istom handle-u“. Paralelno: **`EMAIL_SENDING`** (2) + lock sprječavaju dupli mail; **`failed()`** posle istrošenih pokušaja vraća **`email_sent`** na **NOT_SENT**. **`invoice_sent_at`** i **`email_sent=1`** samo poslije uspješnog **`Mail::send`**.
+- **Logovi (kanal `payments`):** `{event}_started` → `{event}_sent` ili `_failed` sa `merchant_transaction_id`, `recipient_email`, `attachment_filename` (`paid_invoice_email`, `free_reservation_email`, `admin_panel_reservation_update_email`).
+- **Recovery:** `php artisan mail:audit-reservation-documents --date=Y-m-d [--missing-only]`; `php artisan mail:resend-reservation-document --id=`. V. **`cron-commands.md`** §5a–5b, **`production-hardening.md`** §4.
 
 ---
 
