@@ -196,7 +196,7 @@ php artisan event:cache
 | Simptom | Provera |
 |--------|---------|
 | Mejl ne stiže | `QUEUE_CONNECTION`, da li worker radi; `invoice_sent_at` / `email_sent`; `mail:audit-reservation-documents`; log `paid_invoice_email_*` / `free_reservation_email_*` |
-| Fiskal ne prolazi | `post_fiscalization_data`, komanda `post-fiscalization:retry`, `payments.log` |
+| Fiskal ne prolazi odmah | `post_fiscalization_data`, komanda `post-fiscalization:retry`, `payments.log`, info alert `post_fiscalization_started` na dashboardu; **>24 h** → email `FISCAL ALERT`. Odgođena fiskalizacija u produkciji do sada se **automatski** završavala retry-em (v. **`success-payment-pipeline.md`**) |
 | Callback ne radi | URL banke → `POST /api/payment/callback`, potpis, `APP_URL` |
 
 ---

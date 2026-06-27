@@ -65,10 +65,10 @@ Callback prima i dalje: `Payment callback received` / `accepted` / itd.
 | Scenario | Šta postoji | Napomena |
 |----------|-------------|----------|
 | `temp_data` dugo **pending** | `payment:check-pending-inquiry` → **`payment_pending_too_long`** + opciono **Bankart inquiry** | Upozorenje **ne menja** status. Inquiry SUCCESS/ERROR → **`PaymentCallbackJob`**. **Transaction not found** → **`payment_init_failed`** (release lock). Throttle po `merchant_transaction_id`. |
-| Plaćena rezervacija bez **fiscal_jir** | `post_fiscalization_data` + `post-fiscalization:retry` + admin | Nefiskalni email iz `ProcessReservationAfterPaymentJob`. |
+| Plaćena rezervacija bez **fiscal_jir** | `post_fiscalization_data` + `post-fiscalization:retry` + admin | Nefiskalni email iz `ProcessReservationAfterPaymentJob`. Info **`admin_alerts`** `post_fiscalization_started` odmah pri ulasku; email eskalacija **`FISCAL ALERT`** tek **>24 h**. **Produkcija (2026-06):** svi odgođeni slučajevi uspješno fiskalizovani naknadno — pipeline potvrđen u praksi. |
 | Email nije poslat | `invoice_sent_at`, `email_sent`, `paid_invoice_email_*` / `free_reservation_email_*` | Worker + retry; **`failed()`** vraća **`email_sent`** na **`EMAIL_NOT_SENT`**. Zaglavljeno **`EMAIL_SENDING`** (>15 min) → **`reservation_email_sending_lock_stale_reclaimed`**. Dijagnostika: **`php artisan mail:audit-reservation-documents --date=Y-m-d --missing-only`**. Resend: **`mail:resend-reservation-document --id=`** ili admin **Resend invoice**. Fallback cron: **`reservations:send-emails`** (samo **dispatch** jobova, ne lažno `email_sent=1`). |
 | FZBR **fulfilled**, agencija nema potvrdu | `free_reservation_request_multi_email_*`, `reservations.email_sent` | `php artisan free-reservation-requests:repair-fulfilled --id=`; ako su rezervacije već `email_sent=1` a mejl nije stigao — **`--resend-email`**. Fulfill **ne** vraća zahtjev u `submitted`. |
-| Gomilanje **post_fiscalization_data** | Retry komanda + admin | `next_retry_at`, `resolved_at`. |
+| Gomilanje **post_fiscalization_data** | Retry komanda + admin | `next_retry_at`, brisanje sloga poslije uspjeha; info alert **`done`**; >24 h email. Ako redovi ostaju — provjeri fiskal API, worker i scheduler. |
 | Job pao posle delimične obrade | Idempotentni koraci | Retry; `failed()` za ručnu proveru. |
 
 ---

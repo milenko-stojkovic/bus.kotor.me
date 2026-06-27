@@ -30,6 +30,7 @@ Stanja plaćanja i fiskalizacije. Rezervacija se **uvek** kreira na **success**;
   - upis u **post_fiscalization_data** (reservation_id, error, attempts, next_retry_at);
   - **račun se i dalje generiše** – nefiskalni PDF sa napomenom + email (ne blokira se invoice).
 - Retry fiskalizacije (cron post-fiscalization:retry) pri uspehu ažurira reservation i šalje fiskalni PDF.
+- **Admin:** pri **prvom** ulasku u post-fiskal — info alert **`post_fiscalization_started`** (`admin_alerts`); email operateru na inicijalni pad samo kad **`notify_admin`**; eskalacija emailom **>24 h** nerešeno. Detalji: **`success-payment-pipeline.md`**, **`admin-panel.md`**.
 
 ---
 

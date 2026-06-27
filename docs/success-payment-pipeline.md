@@ -77,11 +77,32 @@ Napomena (PDF + email robustnost):
 - **Rezervacija je validna** bez obzira na status fiskalizacije.
 - **Kupac uvek dobija račun** odmah posle uspešnog plaćanja (fiskalni ili nefiskalni).
 - **Retry fiskalizacije** vodi se preko tabele **post_fiscalization_data** (error, attempts, next_retry_at).
+- **Produkcija (2026-06):** svi slučajevi plaćenih rezervacija koje **nisu odmah fiskalizovane** (privremena nedostupnost fiskalnog servisa) **uspješno su završeni naknadnom fiskalizacijom** — cron **`post-fiscalization:retry`** + idempotentni koraci u jobu. To je najbolja potvrda da post-fiskal pipeline radi u praksi; rezervacija i nefiskalni račun ostaju validni dok se JIR ne upiše.
 - Callback-i **samo preko API rute** `POST /api/payment/callback`.
 - Idempotentnost po **merchant_transaction_id**; dupli callback-i ne kreiraju duple rezervacije.
 - Podrška za **guest i auth** (user_id nullable).
 - Mail se šalje sa **bus@kotor.me** (MAIL_FROM_ADDRESS).
 - **Guest i auth:** mail ide na **reservation.email** (snapshot na rezervaciji).
+
+---
+
+## Naknadna fiskalizacija (`post_fiscalization_data`)
+
+Kad **`ProcessReservationAfterPaymentJob`** ne dobije JIR (timeout, provider down, greška API-ja, ili **`failed()`** marker **`job_failed_before_fiscal_completion`**), upisuje se nerešen slog u **`post_fiscalization_data`**. Kupac odmah dobija **nefiskalni** PDF + email; rezervacija ostaje **`paid`**.
+
+**Automatski retry:** scheduler **`post-fiscalization:retry`** (svakih **10 min**) — **`RetryPostFiscalization`**: redovi sa **`next_retry_at <= now()`**, poziv **`FiscalizationService::tryFiscalize`**. Uspeh → **`applyFiscalDataAndDelete`** (upis **`fiscal_*`**, brisanje sloga, dispatch **fiskalnog** **`SendInvoiceEmailJob`**). Neuspeh → **`attempts++`**, novi **`next_retry_at`** (backoff ~15 min × attempts).
+
+**Admin obaveštenja (tri nivoa — ne dupliraju istu ulogu):**
+
+| Kada | Kanal | Težina |
+|------|--------|--------|
+| **Prvi ulazak** u post-fiskal (novi slog) | **`admin_alerts`**, tip **`post_fiscalization_started`** | **info** — dedupe `post_fiscalization_started:{reservation_id}`; CG tekst da sistem **24 h** automatski pokušava fiskalizaciju; payload: reservation_id, MTID, email, datum, iznos, razlog/greška. Servis: **`PostFiscalizationAdminAlertService`**. |
+| Inicijalni pad sa **`notify_admin=true`** (npr. **`provider_down`**) | Email **`AdminFiscalizationAlertService::notify`** | Operativni email (postojeće ponašanje); **`post_fiscalization_data.admin_notified_at`**. |
+| Nerešeno **>24 h** | Email **`AdminFiscalizationAlertService::notify`** (retry loop / „stale“ grana u **`RetryPostFiscalization`**) | Upozorenje za ručni pregled; najviše jednom dnevno po slogu. |
+
+**Razrješenje info alerta:** kad naknadna fiskalizacija uspije, **`applyFiscalDataAndDelete`** poziva **`PostFiscalizationAdminAlertService::resolveStarted`** — otvoreni **`post_fiscalization_started`** alert prelazi u **`status=done`**, **`resolved_at=now()`**.
+
+**Ponovni pokušaji joba** na istom nerešenom slogu **ne** prave dupli info alert (samo prvi ulazak). Testovi: **`PostFiscalizationInfoAdminAlertTest`**.
 
 ---
 
@@ -91,7 +112,9 @@ Napomena (PDF + email robustnost):
 |----------|----------------|
 | Payment SUCCESS + fiskal OK | ProcessReservationAfterPaymentJob: callFiscalService → fiscal_jir set → dispatch fiscal PDF + email. |
 | Payment SUCCESS + fiskal FAIL | ProcessReservationAfterPaymentJob: insert post_fiscalization_data, dispatch non-fiscal PDF + email. |
-| Retry fiskalizacije uspe | Cron post-fiscalization:retry: čita post_fiscalization_data (next_retry_at <= now), tryFiscalize → success → applyFiscalDataAndDelete, dispatch fiscal PDF + email. |
+| Retry fiskalizacije uspe | Cron post-fiscalization:retry: čita post_fiscalization_data (next_retry_at <= now), tryFiscalize → success → applyFiscalDataAndDelete, resolve info admin alert, dispatch fiscal PDF + email. |
+| Prvi ulazak u post-fiskal | Info **`admin_alerts`** `post_fiscalization_started` + nefiskalni email kupcu; email operateru samo kad **`notify_admin`**. |
+| Post-fiskal nerešen >24 h | Email **`FISCAL ALERT`** (postojeća eskalacija); info alert ostaje otvoren dok fiskal ne uspije. |
 | Dupli callback od banke | PaymentCallbackJob: temp terminal (processed) ili Reservation već postoji → return; nema duple rezervacije. ProcessReservationAfterPaymentJob: ako fiscal_jir već set → return (nema duplog PDF/email). |
 | Guest korisnik | SendInvoiceEmailJob: user_id null → šalje na reservation.email (snapshot). |
 | Auth korisnik | SendInvoiceEmailJob: šalje na reservation.email (snapshot; isto kao guest). |

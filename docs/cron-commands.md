@@ -29,11 +29,17 @@ Puna tabela rasporeda: **`docs/scheduled-tasks-overview.md`**.
 
 **Komanda:** `post-fiscalization:retry`
 
-**Opis:** Retry fiskalizacije za rezervacije iz **post_fiscalization_data** gde je **next_retry_at <= now**. Poziva fiskalni API; pri uspehu ažurira reservation fiscal_*, briše slog iz post_fiscalization_data i šalje kupcu **novi fiskalni PDF** i email. Pri neuspehu poveća attempts i postavi next_retry_at.
+**Opis:** Retry fiskalizacije za rezervacije iz **post_fiscalization_data** gde je **next_retry_at <= now**. Poziva fiskalni API; pri uspehu ažurira reservation fiscal_*, briše slog iz post_fiscalization_data, **razrješava info admin alert** `post_fiscalization_started` i šalje kupcu **novi fiskalni PDF** i email. Pri neuspehu poveća attempts i postavi next_retry_at.
+
+**Admin obaveštenja (povezano, ne duplo):**
+- **Ulazak u post-fiskal** (u **`ProcessReservationAfterPaymentJob`**, ne u ovoj komandi): odmah **`admin_alerts`** tip **`post_fiscalization_started`**, severity **info** — dedupe po rezervaciji; v. **`PostFiscalizationAdminAlertService`**, **`admin-panel.md`**.
+- **>24 h nerešeno** (u ovoj komandi): email **`AdminFiscalizationAlertService::notify`** (`FISCAL ALERT: retry failing > 1 day` / `unresolved > 1 day`), **`admin_notified_at`** na slogu — postojeće ponašanje, bez info alerta kao zamjene.
+
+**Produkcija:** do **2026-06** svi slučajevi odgođene fiskalizacije u produkciji završeni su uspješnim retry-em (v. **`success-payment-pipeline.md`**).
 
 **Frekvencija:** svakih 10 minuta (bootstrap/app.php).
 
-**Tabele:** post_fiscalization_data, reservations.
+**Tabele:** post_fiscalization_data, reservations, admin_alerts (info pri ulasku / resolve pri uspehu).
 
 ---
 

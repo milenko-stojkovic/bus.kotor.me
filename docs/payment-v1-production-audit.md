@@ -71,6 +71,8 @@ Datum provjere: prema checklisti. Cilj: potvrditi da je implementacija stabilna,
 | Račun se generiše i šalje bez obzira na fiskalizaciju | ✅ | `ProcessReservationAfterPaymentJob`: on failure fiskalizacije → `PostFiscalizationData`, zatim `dispatchPdfAndEmail($reservationId, false)` |
 | Ako fiskalizacija padne: post_fiscalization_data, nefiskalizovani račun, napomena | ✅ | `PostFiscalizationData::create`; PDF + email s `isFiscal = false` |
 | Naknadna fiskalizacija → fiskalizovani račun na mail | ✅ | `post-fiscalization:retry` cron + pipeline za ponovni mail |
+| Info admin alert pri ulasku u post-fiskal + auto-done poslije uspjeha | ✅ | `PostFiscalizationAdminAlertService`; eskalacija email **>24 h** nepromijenjena |
+| Produkcija: svi odgođeni slučajevi fiskalizovani naknadno (2026-06) | ✅ (operativa) | Potvrda u praksi — v. **`success-payment-pipeline.md`** |
 | Email s bus@kotor.me | ✅ | `config/mail.php`: `MAIL_FROM_ADDRESS` default `bus@kotor.me` |
 | Jezik maila: auth = users.lang; guest = preferred_locale (browser) | ✅ | `SendInvoiceEmailJob`: auth → `user->lang`, guest → `reservation->preferred_locale` (postavljeno pri checkoutu) |
 
