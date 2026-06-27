@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\PostFiscalizationData;
 use App\Models\Reservation;
 use App\Services\AdminFiscalizationAlertService;
+use App\Services\AdminPanel\PostFiscalizationAdminAlertService;
 use App\Services\FiscalizationService;
 use App\Support\QueueMode;
 use Illuminate\Bus\Queueable;
@@ -151,11 +152,13 @@ class ProcessReservationAfterPaymentJob implements ShouldQueue
             ->unresolved()
             ->first();
 
+        $isNewPostEntry = false;
         if (! $post) {
             $post = new PostFiscalizationData;
             $post->reservation_id = $reservation->id;
             $post->merchant_transaction_id = $reservation->merchant_transaction_id;
             $post->attempts = 1;
+            $isNewPostEntry = true;
         } else {
             $post->attempts = (int) ($post->attempts ?? 0) + 1;
         }
@@ -185,6 +188,15 @@ class ProcessReservationAfterPaymentJob implements ShouldQueue
         }
 
         $post->save();
+
+        if ($isNewPostEntry) {
+            app(PostFiscalizationAdminAlertService::class)->notifyStarted(
+                $reservation,
+                $post,
+                $resolutionReason,
+            );
+        }
+
         Log::channel('payments')->info('post_fiscalization_enqueued', [
             'reservation_id' => $reservation->id,
             'merchant_transaction_id' => $reservation->merchant_transaction_id,
@@ -218,13 +230,19 @@ class ProcessReservationAfterPaymentJob implements ShouldQueue
             $detail = $e !== null ? $e::class.': '.($e->getMessage() !== '' ? $e->getMessage() : '(no message)') : 'unknown';
             $error = self::RESOLUTION_JOB_FAILED_BEFORE_FISCAL.' | '.$detail;
 
-            PostFiscalizationData::create([
+            $post = PostFiscalizationData::create([
                 'reservation_id' => $reservation->id,
                 'merchant_transaction_id' => $reservation->merchant_transaction_id,
                 'error' => $error,
                 'attempts' => $this->tries,
                 'next_retry_at' => now(),
             ]);
+
+            app(PostFiscalizationAdminAlertService::class)->notifyStarted(
+                $reservation,
+                $post,
+                self::RESOLUTION_JOB_FAILED_BEFORE_FISCAL,
+            );
 
             Log::channel('payments')->warning('process_reservation_failed_marked_delayed', [
                 'reservation_id' => $reservation->id,

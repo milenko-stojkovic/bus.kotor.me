@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\AdminPanel\PostFiscalizationAdminAlertService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -58,6 +59,8 @@ class PostFiscalizationData extends Model
             $this->delete();
             return;
         }
+
+        app(PostFiscalizationAdminAlertService::class)->resolveStarted((int) $this->reservation_id);
 
         $reservation->update(array_filter([
             'fiscal_jir' => $fiscalData['fiscal_jir'] ?? null,
