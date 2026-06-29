@@ -15,8 +15,24 @@
 - **Termini — dupli pokušaj:** checkout odbija istu normalizovanu tablicu + isti datum ako se poklapa **dolazak** ili **odlazak** sa postojećom `paid`/`free` rezervacijom ili aktivnim `temp_data` pending (isti smjer; cross-match ne blokira). Dnevna naknada nije obuhvaćena.
 - **Niža kategorija od historije (guest, plaćeno):** prije kreiranja `temp_data` / Bankart sesije, **`GuestPaidLowerCategoryCheckoutGuard`** blokira checkout ako ista normalizovana tablica ima **najnoviju stariju guest** rezervaciju (`status=paid`, `user_id IS NULL`) čija je **`vehicle_types.price`** (preko snapshot **`reservations.vehicle_type_id`**) **viša** od izabrane kategorije. Agencijske rezervacije (`user_id` not null), `free`, `temp_data` i pending plaćanja **ne** ulaze u historiju. Korisnik vidi poruku sa **potrebnom kategorijom**, linkom na **PDF uputstvo za agencije** (`config/user-guides.php`) i **`bus@kotor.me`**. Blokirani pokušaj → **`admin_alerts`** tip **`guest_lower_category_checkout_blocked`** + email. Agencije koriste panel za upravljanje vozilima/kategorijama — ovo pravilo se **ne** primjenjuje na ulogovan checkout. Safety-net poslije plaćanja: **`GuestPaidLowerCategoryAlertService`** (v. **`admin-panel.md`**).
 - Za guest rezervacije svi podaci koji se inače vežu za korisnika ostaju **snapshot** u rezervaciji / `temp_data`:
-  - **`user_name`** (kolona u bazi — ime sa forme; u V2 guest formi polje se šalje kao **`name`**, backend mapira u snapshot `user_name`), **`country`** (ISO alpha-2 **država naplatne adrese kartice** za Bankart — ne država kompanije/vozila), `email`, `license_plate`, `vehicle_type_id`
-- **`country`** na guest formi, agencijskoj registraciji i profilu: label **„Država naplatne adrese kartice“** / **„Card billing country“**; lista iz **`config/countries.php`** (puni ISO 3166-1 alpha-2 + XK); **`OTHER`** nije dozvoljen; nema fallback države pri slanju u Bankart.
+  - **`user_name`** (kolona u bazi — ime sa forme; u V2 guest formi polje se šalje kao **`name`**, backend mapira u snapshot `user_name`), **`country`** (ISO alpha-2 **država platne kartice** za Bankart `billingCountry` — ne država kompanije/vozila), `email`, `license_plate`, `vehicle_type_id`
+
+### Država platne kartice (`country`)
+
+Polje označava **državu izdavanja platne kartice** kojom se plaća (Bankart `customer.billingCountry`), ne sjedište agencije niti registraciju vozila.
+
+| | CG | EN |
+|---|----|-----|
+| **Label** | Država naplatne adrese kartice | Card billing country |
+| **Pomoćni tekst** | Odaberite državu u kojoj je izdata platna kartica kojom će biti izvršeno plaćanje. | Select the billing country of the payment card you will use. |
+
+- **Gde se prikazuje:** guest **`/guest/reserve`**, agencijska **registracija**, **profil** (`/panel/user`, Breeze profile), **admin pretraga/izmena rezervacija** (`/admin/rezervacije`).
+- **Izvor liste:** `config/countries.php` — kanonski ISO 3166-1 alpha-2 (+ **XK**); fajl se **ne** reorder-uje ručno.
+- **Redosled u dropdown-u:** `App\Support\BankartBillingCountry::selectableCountries($locale)` — prvo fiksni prioritet (**ME, RS, HR, MK, BA, AL, HU, GR, TR, SI, UA, LT, BG, PL, RO, MD, DE, FR, XK, SE, CZ, NL, SK**; nedostajući kodovi se preskaču), zatim ostale države **A–Z** po lokalizovanom nazivu (`cg` / `en`).
+- **Validacija:** samo kodovi iz `config/countries.php`; **`OTHER`** nije dozvoljen; checkout blokira nevažeće vrednosti **prije** `temp_data` / Bankart sesije (`BankartBillingCountryAlertService`).
+- **Bankart payload:** `BankartBillingCountry::resolveForPayload()` — **nema** fallback države; prazan ili nevažeći kod → blokada.
+- **Prevodi:** `ui_translations` grupe **`reservation`** (guest), **`auth`** (registracija), **`user`** (panel profil); ključevi `country`, `country_help`, `country_select_required` / `country_invalid_stored` gde je primjenjivo. Blade fallback stringovi moraju ostati usklađeni sa seederom.
+- **Testovi:** `CardBillingCountryWordingTest`, `BankartBillingCountryCheckoutTest`, `BankartBillingCountryOrderTest`, `AgencyCountryRegistrationTest`, `AgencyCountryProfileTest`, `AdminPanelReservationCountryOrderTest`.
 - Kada guest plati, podaci se čuvaju u tabeli, ali **nema veze sa `users`**.
 
 ## Besplatne rezervacije — ulogovani korisnik (panel)

@@ -1,6 +1,6 @@
 ﻿# Konvencije projekta (bus.kotor.me)
 
-**Poslednje ažuriranje:** 2026-06-25  
+**Poslednje ažuriranje:** 2026-06-27  
 
 Za AI i ljude: držati se ovoga pri novim izmenama da ostane konzistentno.
 
@@ -71,6 +71,12 @@ Svako polje za **registarsku tablicu** (booking, panel, admin pretraga, Control,
 - **Nova polja u Blade-u:** preferirati **`<x-license-plate-input>`** umjesto kopiranja `oninput` po fajlovima. Stariji ekrani (guest reserve, agency vozila, FZBR, admin Insight) još mogu imati inline JS — pri izmjeni prebaciti na komponentu.
 - **Admin pretraga rezervacija:** `AdminReservationSearchRequest::applyInputNormalization()` (poziv u `ReservationController::index` **prije** provjere kriterijuma i validacije) + `<x-license-plate-input>` u formi. V. **`docs/admin-panel.md`** § Rezervacije.
 - **Guest plaćena rezervacija — kategorija vozila:** guest checkout (bez naloga) **ne smije** platiti **nižu** kategoriju od najnovije starije **guest** **`paid`** rezervacije iste tablice; blokada u **`CheckoutController`** prije plaćanja. Agencije (`user_id` not null) i upravljanje vozilima/kategorijama — kroz agency panel; ovo pravilo se na njih ne primjenjuje. V. **`auth-and-guests.md`**, **`admin-panel.md`**.
+
+### 1.2 Država platne kartice (Bankart `billingCountry`)
+
+- Semantika, labeli, pomoćni tekst i lista država: **`auth-and-guests.md`** § *Država platne kartice*.
+- **Dropdown:** uvek **`BankartBillingCountry::selectableCountries($locale)`** — guest, registracija, profil, admin Rezervacije; **`config/countries.php`** samo kao kanonski ISO izvor (bez ručnog reorder-a u config-u).
+- **Validacija / Bankart:** `selectableCountryCodes()`, `resolveForPayload()` — bez fallback-a; **`OTHER`** zabranjen.
 
 ---
 

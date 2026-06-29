@@ -166,6 +166,7 @@ Kontroler: **`WarningsController::index`**. Stranica ima tri bloka: **Upozorenja
 - **Limo putnička vozila (4+1–7+1):** admin pretraga/uredi/PDF/analitika **ne mijenjaju** prikaz historijskih rezervacija sa tim kategorijama; nova ograničenja važe samo za **booking** (Termini isključuju tip; dnevna naknada u agenciji ga zadržava) — v. `docs/agency-panel.md`.
 - **Heuristika imena/emaila:** `AdminReservationSearchHeuristic` — jednostavne LIKE varijante (jedno izostavljeno slovo, zamena dva susedna; za ime normalizacija **doo** / **d.o.o.**).
 - **Tablica u pretrazi:** polje `license_plate` koristi zajedničku komponentu `<x-license-plate-input>` (client: uppercase + samo **A–Z0–9**); server: `MontenegroLicensePlate::normalizeAscii()` preko `AdminReservationSearchRequest::applyInputNormalization()`.
+- **Država (pretraga i izmena):** dropdown koristi **`BankartBillingCountry::selectableCountries()`** (isti prioritetni redosled i A–Z ostatak kao guest/agency — v. **`auth-and-guests.md`**); **ne** čitati `config('countries')` direktno za prikaz. Validacija izmene: `AdminReservationUpdateRequest` + `selectableCountryCodes()`.
 - **Povratak sa edit strane:** query parametar **`rq`** čuva enkodiran prethodni query string pretrage; **`Odkaži`** i uspešan **`PUT`** vode na `GET /admin/rezervacije?{rq}`.
 - **Izmena termina po tipu:** `AdminReservationSlotRules` — **paid** i **free + `created_by_admin`** mogu na bilo koje validne termine; **free bez admin kreacije** samo u besplatnom prozoru (`FreeReservationRules::isFreeReservation`, npr. 1/41). **Paid** ostaje paid i pri premještaju u free termine; **`invoice_amount` se ne preračunava**. Status, MTID, `reservation_kind` i fiskalno stanje se **ne** mijenjaju. **Termini duplicate check** pri izmjeni datuma/slotova/tablice (`DuplicateReservationAttemptService`, isključuje trenutnu rezervaciju).
 - **Posle prošlog dolaska (isti dan):** `AdminReservationEditPolicy::isPickUpOnlyMode` — dozvoljena je izmjena samo pick-up termina i ostalih polja (ne datuma ni drop-off).
@@ -177,7 +178,7 @@ Kontroler: **`WarningsController::index`**. Stranica ima tri bloka: **Upozorenja
 
 **Bez izmena na `temp_data`:** ovaj modul ne čita i ne piše `temp_data`.
 
-**Testovi:** `tests/Feature/AdminPanel/AdminPanelReservationTest.php`, `tests/Feature/AdminPanel/AdminReservationEditHardeningTest.php`, `tests/Feature/AdminPanel/AdminReservationKindFilterTest.php`.
+**Testovi:** `tests/Feature/AdminPanel/AdminPanelReservationTest.php`, `tests/Feature/AdminPanel/AdminReservationEditHardeningTest.php`, `tests/Feature/AdminPanel/AdminReservationKindFilterTest.php`, `tests/Feature/AdminPanel/AdminPanelReservationCountryOrderTest.php`.
 
 ---
 
