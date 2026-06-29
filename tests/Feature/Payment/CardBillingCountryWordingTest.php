@@ -20,9 +20,9 @@ final class CardBillingCountryWordingTest extends TestCase
 
     private const LABEL_EN = 'Card billing country';
 
-    private const HELP_CG = 'Odaberite državu koja odgovara naplatnoj adresi kartice kojom će biti izvršeno plaćanje.';
+    private const HELP_CG = 'Odaberite državu u kojoj je izdata platna kartica kojom će biti izvršeno plaćanje.';
 
-    private const HELP_EN = 'Select the country corresponding to the billing address of the payment card.';
+    private const HELP_EN = 'Select the billing country of the payment card you will use.';
 
     private const ADMIN_MSG_EN = 'If your country is not listed, contact the administrator at bus@kotor.me.';
 

@@ -71,7 +71,7 @@
                 </p>
             @endif
             <p class="mt-1 text-sm text-gray-600">
-                {{ $u('country_help', 'Select the country corresponding to the billing address of the payment card.') }}
+                {{ $u('country_help', 'Select the billing country of the payment card you will use.') }}
             </p>
             <select
                 id="user_country"
