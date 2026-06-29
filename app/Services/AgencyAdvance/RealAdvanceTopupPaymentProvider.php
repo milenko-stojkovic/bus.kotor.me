@@ -3,6 +3,8 @@
 namespace App\Services\AgencyAdvance;
 
 use App\Contracts\PaymentSessionResult;
+use App\Services\Payment\BankartBillingCountryAlertService;
+use App\Support\BankartBillingCountry;
 use App\Support\BankartSignature;
 use App\Support\HttpOutboundConfig;
 use App\Support\UiText;
@@ -48,6 +50,26 @@ final class RealAdvanceTopupPaymentProvider
 
         $currency = 'EUR';
 
+        $billingCountry = null;
+        if ($sendCustomer && is_string($email) && $email !== '') {
+            $billingCountry = BankartBillingCountry::resolveForPayload($country);
+            if ($billingCountry === null) {
+                Log::channel('payments')->warning('checkout_billing_country_invalid', [
+                    'stage' => 'advance_topup_create_session',
+                    'merchant_transaction_id' => $merchantTransactionId,
+                    'email' => $email,
+                    'selected_country' => (string) ($country ?? ''),
+                    'normalized_country' => BankartBillingCountry::normalize($country),
+                ]);
+
+                return PaymentSessionResult::unavailable(
+                    app(BankartBillingCountryAlertService::class)->userMessage(),
+                    null,
+                    'invalid_billing_country',
+                );
+            }
+        }
+
         Log::channel('payments')->info('advance_topup_create_session_request', [
             'stage' => 'create_session',
             'merchant_transaction_id' => $merchantTransactionId,
@@ -75,7 +97,7 @@ final class RealAdvanceTopupPaymentProvider
             $payload['customer'] = [
                 'billingAddress1' => (string) (config('services.bankart.billing_address1') ?: ($country ? 'Address '.$country : 'Address')),
                 'billingCity' => (string) (config('services.bankart.billing_city') ?: 'Kotor'),
-                'billingCountry' => (string) ($country ?: 'ME'),
+                'billingCountry' => $billingCountry ?? 'ME',
                 'billingPostcode' => (string) (config('services.bankart.billing_postcode') ?: '85330'),
                 'email' => $email,
             ];

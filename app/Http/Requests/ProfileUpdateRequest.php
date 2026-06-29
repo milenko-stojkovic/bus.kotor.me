@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\User;
+use App\Support\BankartBillingCountry;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -49,7 +50,18 @@ class ProfileUpdateRequest extends FormRequest
                 'max:255',
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
-            'country' => ['required', 'string', 'max:100'],
+            'country' => [
+                'required',
+                'string',
+                'max:100',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (! BankartBillingCountry::isValidForBankart(is_string($value) ? $value : null)) {
+                        $fail(app()->getLocale() === 'cg'
+                            ? 'Izaberite državu iz liste (ISO kod). Vrijednost „Ostalo“ nije dozvoljena za agencijske profile.'
+                            : 'Please select a country from the list (ISO code). “Other” is not allowed for agency profiles.');
+                    }
+                },
+            ],
             'current_password' => $currentPasswordRules,
             'password' => $passwordRules,
         ];

@@ -67,6 +67,9 @@
             <select id="country" name="country" class="mt-1 block w-full rounded-md border-red-200 shadow-sm focus:border-red-500 focus:ring-red-500" required>
                 <option value="">{{ app()->getLocale() === 'cg' ? 'Izaberite državu' : 'Select country' }}</option>
                 @foreach ($countries as $code => $labels)
+                    @if ($code === 'OTHER')
+                        @continue
+                    @endif
                     @php
                         $label = is_array($labels) ? ($labels[app()->getLocale()] ?? ($labels['en'] ?? $code)) : (string) $labels;
                     @endphp

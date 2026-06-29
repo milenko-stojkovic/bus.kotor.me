@@ -9,6 +9,8 @@ use App\Models\AgencyAdvanceTransaction;
 use App\Services\AgencyAdvance\AgencyAdvanceService;
 use App\Services\AgencyAdvance\AdvanceTopupProcessor;
 use App\Services\AgencyAdvance\RealAdvanceTopupPaymentProvider;
+use App\Services\Payment\BankartBillingCountryAlertService;
+use App\Support\BankartBillingCountry;
 use App\Support\UiText;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -50,6 +52,26 @@ final class AdvanceController extends Controller
         $locale = (string) ($request->user()->lang ?? app()->getLocale());
         $amount = (string) $request->validated('amount');
 
+        $bankDriver = (string) config('services.bank.driver', 'fake');
+        $country = (string) ($request->user()->country ?? '');
+        if ($bankDriver !== 'fake' && ! BankartBillingCountry::isValidForBankart($country)) {
+            app(BankartBillingCountryAlertService::class)->notifyAndLog(
+                $country,
+                BankartBillingCountry::normalize($country),
+                $userId,
+                (string) ($request->user()->email ?? ''),
+                null,
+                null,
+                null,
+                null,
+                'advance_topup',
+            );
+
+            return redirect()
+                ->to(route('panel.advance.index', [], false))
+                ->with('error', app(BankartBillingCountryAlertService::class)->userMessage($locale));
+        }
+
         /** @var AgencyAdvanceTopup $topup */
         $topup = AgencyAdvanceTopup::query()->create([
             'agency_user_id' => $userId,
@@ -68,7 +90,6 @@ final class AdvanceController extends Controller
             'topup_id' => $topup->id,
         ]);
 
-        $bankDriver = (string) config('services.bank.driver', 'fake');
         if ($bankDriver === 'fake') {
             app(AdvanceTopupProcessor::class)->markPaid($topup->merchant_transaction_id, ['driver' => 'fake']);
 
@@ -106,12 +127,16 @@ final class AdvanceController extends Controller
             'merchant_transaction_id' => $topup->merchant_transaction_id,
             'amount' => (string) $topup->amount,
             'topup_id' => $topup->id,
-            'reason' => 'unavailable',
+            'reason' => $session->failureReason ?? 'unavailable',
         ]);
+
+        $errorMessage = $session->failureReason === 'invalid_billing_country'
+            ? app(BankartBillingCountryAlertService::class)->userMessage($locale)
+            : UiText::t('panel', 'advance_topup_start_failed', 'Advance top-up could not be started.', $locale);
 
         return redirect()
             ->to(route('panel.advance.index', [], false))
-            ->with('error', UiText::t('panel', 'advance_topup_start_failed', 'Advance top-up could not be started.', $locale));
+            ->with('error', $errorMessage);
     }
 
     /**

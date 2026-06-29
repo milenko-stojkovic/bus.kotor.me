@@ -15,12 +15,14 @@ use App\Models\TempData;
 use App\Models\Vehicle;
 use App\Models\User;
 use App\Models\AgencyAdvanceTransaction;
+use App\Services\Payment\BankartBillingCountryAlertService;
 use App\Services\Payment\CheckoutPaymentInitAlertService;
 use App\Services\Payment\PaymentInitFailureService;
 use App\Services\Payment\PaymentSuccessHandler;
 use App\Services\Reservation\DuplicateReservationAttemptService;
 use App\Services\Reservation\FreeReservationRules;
 use App\Services\Reservation\GuestPaidLowerCategoryCheckoutGuard;
+use App\Support\BankartBillingCountry;
 use App\Support\CheckoutAuditLogger;
 use App\Support\CheckoutResultFlash;
 use App\Support\QueueMode;
@@ -102,6 +104,18 @@ class CheckoutController extends Controller
         );
         if ($lowerCategoryBlock !== null) {
             return $lowerCategoryBlock;
+        }
+
+        $billingCountryBlock = $this->bankartBillingCountryBlockResponse(
+            $request,
+            $snapshot,
+            $date,
+            ReservationKind::TIME_SLOTS,
+            $isFree,
+            $paymentMethod,
+        );
+        if ($billingCountryBlock !== null) {
+            return $billingCountryBlock;
         }
 
         // Agency advance payment (feature-flagged). Only for authenticated panel booking; never for guest.
@@ -249,6 +263,17 @@ class CheckoutController extends Controller
                 return $this->redirectAfterFreeCheckout($request, $created, $existingBySlot->merchant_transaction_id);
             }
 
+            $existingBillingBlock = $this->bankartBillingCountryBlockForExistingTemp(
+                $request,
+                $existingBySlot,
+                $snapshot,
+                $date,
+                ReservationKind::TIME_SLOTS,
+            );
+            if ($existingBillingBlock !== null) {
+                return $existingBillingBlock;
+            }
+
             $session = $this->startBankartCreateSession($paymentService, $existingBySlot, 'checkout_existing_pending');
             if ($session->success && $session->paymentUrl) {
                 return $this->redirectToPaymentUrl($request, $existingBySlot, $session->paymentUrl);
@@ -369,6 +394,17 @@ class CheckoutController extends Controller
                     return $this->redirectAfterFreeCheckout($request, $created, $existingByMtid->merchant_transaction_id);
                 }
 
+                $existingBillingBlock = $this->bankartBillingCountryBlockForExistingTemp(
+                    $request,
+                    $existingByMtid,
+                    $snapshot,
+                    $date,
+                    ReservationKind::TIME_SLOTS,
+                );
+                if ($existingBillingBlock !== null) {
+                    return $existingBillingBlock;
+                }
+
                 $session = $this->startBankartCreateSession($paymentService, $existingByMtid, 'checkout_after_unique_violation');
                 if ($session->success && $session->paymentUrl) {
                     return $this->redirectToPaymentUrl($request, $existingByMtid, $session->paymentUrl);
@@ -472,14 +508,17 @@ class CheckoutController extends Controller
         CheckoutAuditLogger::log('checkout_bankart_create_session_failed', $failureContext, 'warning');
         CheckoutAuditLogger::log('checkout_failed_generic', $failureContext, 'warning');
 
-        $message = UiText::t(
-            'payment',
-            'payment_window_unavailable',
-            $locale === 'cg'
-                ? 'Trenutno nije moguće otvoriti prozor za plaćanje. Molimo pokušajte ponovo za nekoliko minuta. Ako se problem ponovi, pišite na bus@kotor.me.'
-                : 'The payment window cannot be opened at the moment. Please try again in a few minutes. If the problem continues, contact bus@kotor.me.',
-            $locale,
-        );
+        $billingAlert = app(BankartBillingCountryAlertService::class);
+        $message = $session?->failureReason === 'invalid_billing_country'
+            ? $billingAlert->userMessage($locale)
+            : UiText::t(
+                'payment',
+                'payment_window_unavailable',
+                $locale === 'cg'
+                    ? 'Trenutno nije moguće otvoriti prozor za plaćanje. Molimo pokušajte ponovo za nekoliko minuta. Ako se problem ponovi, pišite na bus@kotor.me.'
+                    : 'The payment window cannot be opened at the moment. Please try again in a few minutes. If the problem continues, contact bus@kotor.me.',
+                $locale,
+            );
 
         return $request->expectsJson()
             ? response()->json(['message' => $message], Response::HTTP_SERVICE_UNAVAILABLE)
@@ -559,6 +598,18 @@ class CheckoutController extends Controller
         );
         if ($lowerCategoryBlock !== null) {
             return $lowerCategoryBlock;
+        }
+
+        $billingCountryBlock = $this->bankartBillingCountryBlockResponse(
+            $request,
+            $snapshot,
+            $date,
+            ReservationKind::DAILY_TICKET,
+            false,
+            $paymentMethod,
+        );
+        if ($billingCountryBlock !== null) {
+            return $billingCountryBlock;
         }
 
         if ($panelAuthBooking && $paymentMethod === 'advance') {
@@ -703,6 +754,17 @@ class CheckoutController extends Controller
                 ->where('status', TempData::STATUS_PENDING)
                 ->first();
             if ($existingByMtid) {
+                $existingBillingBlock = $this->bankartBillingCountryBlockForExistingTemp(
+                    $request,
+                    $existingByMtid,
+                    $snapshot,
+                    $date,
+                    ReservationKind::DAILY_TICKET,
+                );
+                if ($existingBillingBlock !== null) {
+                    return $existingBillingBlock;
+                }
+
                 $session = $this->startBankartCreateSession($paymentService, $existingByMtid, 'checkout_daily_ticket_after_unique_violation');
                 if ($session->success && $session->paymentUrl) {
                     return $this->redirectToPaymentUrl($request, $existingByMtid, $session->paymentUrl);
@@ -768,6 +830,112 @@ class CheckoutController extends Controller
             'vehicle_type_id' => (int) $request->validated('vehicle_type_id'),
             'email' => (string) $request->validated('email'),
         ];
+    }
+
+    /**
+     * @param  array{vehicle_id:int|null,user_name:string,country:string,license_plate:string,vehicle_type_id:int,email:string}  $snapshot
+     */
+    private function bankartBillingCountryBlockResponse(
+        CheckoutReservationRequest $request,
+        array $snapshot,
+        string $reservationDate,
+        string $reservationKind,
+        bool $isFreeReservation,
+        string $paymentMethod,
+    ): RedirectResponse|JsonResponse|null {
+        if ($isFreeReservation) {
+            return null;
+        }
+
+        $panelAuthBooking = $request->user() !== null && $request->boolean('auth_panel_booking');
+        if ($panelAuthBooking && $paymentMethod === 'advance') {
+            return null;
+        }
+
+        $rawCountry = (string) ($snapshot['country'] ?? '');
+        if (BankartBillingCountry::isValidForBankart($rawCountry)) {
+            return null;
+        }
+
+        $locale = $request->user()?->lang ?? app()->getLocale();
+        $alert = app(BankartBillingCountryAlertService::class);
+        $alert->notifyAndLog(
+            $rawCountry,
+            BankartBillingCountry::normalize($rawCountry),
+            $request->user()?->id !== null ? (int) $request->user()->id : null,
+            (string) ($snapshot['email'] ?? ''),
+            $reservationKind,
+            $reservationDate,
+            null,
+            null,
+            'checkout',
+            CheckoutAuditLogger::contextFromRequest($request, $snapshot),
+        );
+
+        CheckoutAuditLogger::log('checkout_billing_country_blocked', array_merge(
+            CheckoutAuditLogger::contextFromRequest($request, $snapshot),
+            [
+                'reservation_date' => $reservationDate,
+                'reservation_kind' => $reservationKind,
+                'selected_country' => $rawCountry,
+                'normalized_country' => BankartBillingCountry::normalize($rawCountry),
+            ],
+        ), 'warning');
+
+        $message = $alert->userMessage($locale);
+
+        return $request->expectsJson()
+            ? response()->json(['message' => $message], 422)
+            : back()->withInput()
+                ->with('error', $message)
+                ->withErrors(['country' => $message]);
+    }
+
+    /**
+     * @param  array{vehicle_id:int|null,user_name:string,country:string,license_plate:string,vehicle_type_id:int,email:string}  $snapshot
+     */
+    private function bankartBillingCountryBlockForExistingTemp(
+        CheckoutReservationRequest $request,
+        TempData $temp,
+        array $snapshot,
+        string $reservationDate,
+        string $reservationKind,
+    ): RedirectResponse|JsonResponse|null {
+        if (BankartBillingCountry::isValidForBankart($temp->country)) {
+            return null;
+        }
+
+        if ($temp->status === TempData::STATUS_PENDING) {
+            app(PaymentInitFailureService::class)->failAndRelease(
+                $temp,
+                'checkout_billing_country_invalid',
+                null,
+                'invalid_billing_country',
+            );
+        }
+
+        $locale = $request->user()?->lang ?? app()->getLocale();
+        $alert = app(BankartBillingCountryAlertService::class);
+        $alert->notifyForTempData($temp, 'checkout_existing_pending');
+
+        CheckoutAuditLogger::log('checkout_billing_country_blocked', array_merge(
+            CheckoutAuditLogger::contextFromTemp($temp),
+            [
+                'reservation_date' => $reservationDate,
+                'reservation_kind' => $reservationKind,
+                'selected_country' => (string) ($temp->country ?? ''),
+                'normalized_country' => BankartBillingCountry::normalize($temp->country),
+            ],
+        ), 'warning');
+
+        $message = $alert->userMessage($locale);
+
+        return $request->expectsJson()
+            ? response()->json(['message' => $message], 422)
+            : redirect()->to($this->checkoutReturnUrl($request))
+                ->withInput()
+                ->with('error', $message)
+                ->withErrors(['country' => $message]);
     }
 
     /**

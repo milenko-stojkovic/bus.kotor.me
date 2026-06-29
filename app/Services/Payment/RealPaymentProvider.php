@@ -6,6 +6,7 @@ use App\Contracts\PaymentResult;
 use App\Contracts\PaymentService;
 use App\Contracts\PaymentSessionResult;
 use App\Models\TempData;
+use App\Support\BankartBillingCountry;
 use App\Support\BankartSignature;
 use App\Support\HttpOutboundConfig;
 use App\Support\UiText;
@@ -23,6 +24,11 @@ class RealPaymentProvider implements PaymentService
             'payment_window_unavailable',
             'The payment window cannot be opened at the moment. Please try again in a few minutes. If the problem continues, contact bus@kotor.me.',
         );
+    }
+
+    private function billingCountryInvalidMessage(): string
+    {
+        return app(BankartBillingCountryAlertService::class)->userMessage();
     }
 
     public function createSession(TempData $tempData): PaymentSessionResult
@@ -76,6 +82,20 @@ class RealPaymentProvider implements PaymentService
 
         $currency = 'EUR';
 
+        $billingCountry = null;
+        if ($sendCustomer) {
+            $billingCountry = BankartBillingCountry::resolveForPayload($tempData->country);
+            if ($billingCountry === null) {
+                app(BankartBillingCountryAlertService::class)->notifyForTempData($tempData, 'create_session');
+
+                return PaymentSessionResult::unavailable(
+                    $this->billingCountryInvalidMessage(),
+                    null,
+                    'invalid_billing_country',
+                );
+            }
+        }
+
         Log::channel('payments')->info('bankart_create_session_request', [
             'stage' => 'create_session',
             'merchant_transaction_id' => $tempData->merchant_transaction_id,
@@ -103,7 +123,7 @@ class RealPaymentProvider implements PaymentService
             $payload['customer'] = [
                 'billingAddress1' => (string) (config('services.bankart.billing_address1') ?: ($tempData->country ? 'Address '.$tempData->country : 'Address')),
                 'billingCity' => (string) (config('services.bankart.billing_city') ?: 'Kotor'),
-                'billingCountry' => (string) ($tempData->country ?: 'ME'),
+                'billingCountry' => $billingCountry,
                 'billingPostcode' => (string) (config('services.bankart.billing_postcode') ?: '85330'),
                 'email' => $tempData->email,
             ];
