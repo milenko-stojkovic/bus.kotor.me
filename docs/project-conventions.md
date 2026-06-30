@@ -99,26 +99,7 @@ Svako polje za **registarsku tablicu** (booking, panel, admin pretraga, Control,
 - **Imena PDF priloga / download (V1):** centralizovano u **`App\Support\ReservationPdfFilename`** (i delegirano sa **`Reservation::invoicePdfFilename()`** / **`freeConfirmationPdfFilename()`**) — plaćeni račun **`invoice-{id}-{Y-m-d}.pdf`**; besplatna potvrda **`free-confirmation-{id}-{Y-m-d}.pdf`**. Datum iz **`reservation_date`**, fallback **`created_at`**. **`sanitizeDateSegment()`** uklanja nedozvoljene znakove. **`forReservation()`** bira po **`status === 'free'`**. Isti format na: email jobovima, admin **`GET /admin/rezervacije/{id}/pdf`**, agency **Promjena tablica** / **Realizovane** (`invoice/view`, `invoice`), FZBR fulfill. Testovi: **`ReservationPdfFilenamePathsTest`**, **`ReservationDocumentEmailHardeningTest`**, **`PlateChangePageTest`**, **`FreeReservationPlateChangeEmailTest`**.
 - **Control panel — label tipa vozila:** `VehicleType::formatControlLabel($locale)` — samo naziv/opis, **bez** cijene; kada `vehicle_type_translations.description` već sadrži puni label (npr. poslije migracije opisa), ne duplira se naziv. Ostali user-facing prikazi: **`formatLabel($locale, 'EUR')`** (`Naziv (Opis) - Cena`, sa istom zaštitom od duplog naziva). V. **`docs/control-panel.md`**.
 
----
-
-## 3. Lokalni razvoj (Windows / Laragon)
-
-- **PowerShell u Cursoru:** ne koristiti `&&` za lančanje komandi (stariji PS); koristiti `;` ili posebne linije. Iz korena repoa: `Set-Location c:\laragon\www\bus.kotor.me; .\laragon-artisan.ps1 test` ili **`.\laragon-artisan.cmd test`**.  
-  **`php` često nije u PATH-u** u Cursor terminalu. Za **`php artisan`** koristi **jedno od**:
-  1. **Skripta u rootu repoa:** `.\laragon-artisan.ps1 <artisan-arg>...` — bira najnoviji `php.exe` pod `C:\laragon\bin\php\`. Za test suite: **`.\laragon-artisan.ps1 test`** (ekvivalent `php artisan test`).
-  2. **Ako PowerShell javlja „running scripts is disabled“ (Execution Policy):** koristi **`.\laragon-artisan.cmd <artisan-arg>...`** — isti efekat, **nije** `.ps1` pa politika ne blokira. Alternativa jednokratno:  
-     `powershell -ExecutionPolicy Bypass -File .\laragon-artisan.ps1 queue:work --tries=1`  
-     Trajnije (samo za tvoj nalog): `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
-  3. **Eksplicitna putanja** (primer; folder verzije proveri sa `dir C:\laragon\bin\php`):  
-     `C:\laragon\bin\php\php-8.3.30-Win32-vs16-x64\php.exe artisan ...`
-- **Sintaksa (`php -l`):** ne pokretati gol `php -l` ako Windows nudi „Open with…“ — koristi **`.\laragon-php.ps1 -l putanja\do\fajla.php`** ili **`.\laragon-php.cmd -l putanja\do\fajla.php`**.
-- **AI / automatizacija (Cursor agent, skripte):** iz korena repoa **`.\laragon-artisan.ps1`** ili **`.\laragon-artisan.cmd`** (npr. `test`, `migrate`, `queue:work`) — **ne** `php artisan ...` osim ako je `php` u PATH-u. Isto **`.\laragon-php.ps1`** / **`.\laragon-php.cmd`** umesto `php` za `-l`. Kada korisnik ima strogu Execution Policy, u primerima predložiti **`.cmd`**.
-- **Git / GitHub:** nakon izmjena u kodu i **`docs/`**, uobičajeni tok je `git add`, `git commit` sa jasnom porukom, zatim **`git push origin`** (grana u kojoj radiš, npr. `main`). Prije push-a poželjno pokrenuti **`.\laragon-artisan.cmd test`** (ili ciljani podskup testova).
-- **MySQL test suite (opciono):** podrazumijevani testovi koriste SQLite (`phpunit.xml`). Za pokretanje protiv MySQL baze čije ime **mora završavati na `_test`**, `phpunit.mysql.xml` i Laragon putanje, vidi **[testing-mysql.md](./testing-mysql.md)** — uključujući **`mysql.exe` u `PATH`** na Windowsu i record **Verified local MySQL run**. Puni MySQL suite je preporučena **pre-release** provjera šeme kao u produkciji.
-
----
-
-## 2.1 Feature flags (konvencija)
+### 2.1 Feature flags (konvencija)
 
 - Feature flags su u `config/features.php` i u `.env` kao `*_ENABLED`.
 - Pravilo: feature koji je isključen treba da bude “nevidljiv kao surface” (tipično **404** na rute), ali UI može prikazati disabled stavku ako UX to traži.
@@ -128,7 +109,6 @@ Svako polje za **registarsku tablicu** (booking, panel, admin pretraga, Control,
 - Konfiguracija: `config/services.php` (`services.mega`), tajne samo u **`.env`** (`MEGA_EMAIL`, `MEGA_PASSWORD`, opciono `MEGA_BASE_FOLDER`, `MEGA_NODE_BINARY`, `MEGA_USER_AGENT` default `BusKotorArchive/1.0`, `EXTERNAL_ARCHIVE_PREVIEW_TTL_MINUTES`). **Ne** slati kredencijale u frontend ili logove sa sadržajem fajla.
 - **Deploy:** Node skripta `scripts/mega-archive.js` zahtijeva npm paket **`megajs`** (`package.json` → `dependencies`). Na serveru poslije `git pull` pokrenuti **`npm ci`** (ili `npm install`) u root-u aplikacije, ne samo `npm run build`.
 - Operativni opis: **[external-file-archive.md](./external-file-archive.md)** (tabela `external_file_archives`, komande `files:archive-private`, `files:restore-private`, **`files:mega-diagnose`**, **`files:cleanup-preview-cache`**, Node `scripts/mega-archive.js`; admin **neuspjeli redovi** `/admin/sistemska-arhiva/neuspjeli`). Limo **plate upload** arhiva koristi JPEG derivat (`LimoPlateArchiveDerivativeBuilder`, GD).
-
 - **Limo servis:** `features.limo_service` (ENV `LIMO_SERVICE_ENABLED`) i **mora** imati i `features.advance_payments` ON. Effective rule: \(advance\_payments \land limo\_service\).
 
 ### Rezervacije — `reservation_kind` (Dnevna naknada / Daily fee)
@@ -153,7 +133,22 @@ Svako polje za **registarsku tablicu** (booking, panel, admin pretraga, Control,
 
 ---
 
-## 3.1 Blade napomena (parse error)
+## 3. Lokalni razvoj (Windows / Laragon)
+
+- **PowerShell u Cursoru:** ne koristiti `&&` za lančanje komandi (stariji PS); koristiti `;` ili posebne linije. Iz korena repoa: `Set-Location c:\laragon\www\bus.kotor.me; .\laragon-artisan.ps1 test` ili **`.\laragon-artisan.cmd test`**.  
+  **`php` često nije u PATH-u** u Cursor terminalu. Za **`php artisan`** koristi **jedno od**:
+  1. **Skripta u rootu repoa:** `.\laragon-artisan.ps1 <artisan-arg>...` — bira najnoviji `php.exe` pod `C:\laragon\bin\php\`. Za test suite: **`.\laragon-artisan.ps1 test`** (ekvivalent `php artisan test`).
+  2. **Ako PowerShell javlja „running scripts is disabled“ (Execution Policy):** koristi **`.\laragon-artisan.cmd <artisan-arg>...`** — isti efekat, **nije** `.ps1` pa politika ne blokira. Alternativa jednokratno:  
+     `powershell -ExecutionPolicy Bypass -File .\laragon-artisan.ps1 queue:work --tries=1`  
+     Trajnije (samo za tvoj nalog): `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
+  3. **Eksplicitna putanja** (primer; folder verzije proveri sa `dir C:\laragon\bin\php`):  
+     `C:\laragon\bin\php\php-8.3.30-Win32-vs16-x64\php.exe artisan ...`
+- **Sintaksa (`php -l`):** ne pokretati gol `php -l` ako Windows nudi „Open with…“ — koristi **`.\laragon-php.ps1 -l putanja\do\fajla.php`** ili **`.\laragon-php.cmd -l putanja\do\fajla.php`**.
+- **AI / automatizacija (Cursor agent, skripte):** iz korena repoa **`.\laragon-artisan.ps1`** ili **`.\laragon-artisan.cmd`** (npr. `test`, `migrate`, `queue:work`) — **ne** `php artisan ...` osim ako je `php` u PATH-u. Isto **`.\laragon-php.ps1`** / **`.\laragon-php.cmd`** umesto `php` za `-l`. Kada korisnik ima strogu Execution Policy, u primerima predložiti **`.cmd`**.
+- **Git / GitHub:** nakon izmjena u kodu i **`docs/`**, uobičajeni tok je `git add`, `git commit` sa jasnom porukom, zatim **`git push origin`** (grana u kojoj radiš, npr. `main`). Prije push-a poželjno pokrenuti **`.\laragon-artisan.cmd test`** (ili ciljani podskup testova).
+- **MySQL test suite (opciono):** podrazumijevani testovi koriste SQLite (`phpunit.xml`). Za pokretanje protiv MySQL baze čije ime **mora završavati na `_test`**, `phpunit.mysql.xml` i Laragon putanje, vidi **[testing-mysql.md](./testing-mysql.md)** — uključujući **`mysql.exe` u `PATH`** na Windowsu i record **Verified local MySQL run**. Puni MySQL suite je preporučena **pre-release** provjera šeme kao u produkciji.
+
+### 3.1 Blade napomena (parse error)
 
 - U ovom projektu **izbegavati** Blade shorthand `@php($x = ...)` — u praksi je na Windows okruženju više puta izazvao kompajlirani view sa **ParseError** (`unexpected token "endif"`). Umesto toga koristi blok:
 
@@ -163,9 +158,7 @@ Svako polje za **registarsku tablicu** (booking, panel, admin pretraga, Control,
 @endphp
 ```
 
----
-
-## 3.2 Admin UI: jezik (sr-Latn-ME)
+### 3.2 Admin UI: jezik (sr-Latn-ME)
 
 - U admin panelu koristiti ispravan oblik: **„Izvještaji“** (ne „Izveštaji“).
 - **Queue:** za lokalni QA bez workera, **`QUEUE_CONNECTION=sync`** u `.env` — tada **nema** posebnog workera (jobovi se izvršavaju u istom zahtevu). Za **`database`** / **`redis`** mora da radi **`queue:work`** (npr. **`.\laragon-artisan.cmd queue:work --tries=1`**). **Provera da li worker radi (Windows):** u Task Manageru pogledati **`php.exe`** i komandnu liniju da sadrži `artisan queue:work`, ili u PowerShellu npr. `Get-CimInstance Win32_Process -Filter "Name = 'php.exe'" | Select-Object CommandLine`. Ako se poslovi gomilaju, proveri tabelu **`jobs`** (driver `database`). **Test mejlova:** uz `sync` dovoljno je **`MAIL_MAILER=log`** (ili Mailtrap); uz asinhroni red pokreni worker pre akcije koja dispatchuje mejl.
@@ -216,6 +209,7 @@ Za **fake QA queue** režim (worker + `jobs`): `QUEUE_CONNECTION=database`, **`F
 
 Posle izmene `.env`: `.\laragon-artisan.ps1 config:clear` (ili ista PHP putanja + `artisan config:clear`). Za izmene u Tailwind/JS vidi podsekciju **Frontend** iznad (`npm run dev` tokom rada, **`npm run build` pre provere bez Vite-a ili pre deploy-a).
 
+
 ---
 
 ## 4. Rute i redirect (Laravel)
@@ -235,6 +229,7 @@ Posle izmene `.env`: `.\laragon-artisan.ps1 config:clear` (ili ista PHP putanja 
 - **`merchant_transaction_id` (rezervacije):** jedinstveni **korelacioni** identifikator (temp → plaćanje / status → rezervacija; v. i `payment-concurrency.md`). **Ne koristi se za razlikovanje „tipa“ rezervacije.** Za **plaćeno vs besplatno** koristi se **`reservations.status`**; za **gost/agency vs admin-kreirana besplatna** (oba `free`) koristi se **`reservations.created_by_admin`** uz **`status`**.
 - **Korisnički ishod plaćanja / besplatnog checkout-a (flash):** session ključ **`checkout_banner`** — niz `level` (`success` | `info` | `error`), `title_key`, `message_key`, `group` (uglavnom **`checkout_result`**). Mapiranje ishoda: **`App\Support\CheckoutResultFlash`**; tekstovi u **`ui_translations`** grupi **`checkout_result`** (seed **`UiTranslationsSeeder`**). Plaćena rezervacija: **`paid_success_*`** (JIR gotov), **`paid_processing_*`** (plaćanje ok, fiskal/mejl još u obradi — npr. async queue), **`fiscal_delayed_*`** (nerešen **`post_fiscalization_data`**). Prikaz: **`resources/views/partials/checkout-result-banner.blade.php`** na **`guest.reserve`** i **`panel.reservations`**.
 - **Redirect posle završnog statusa:** **`PaymentReturnController`** za **`success` / `failed` / `late_success`** šalje korisnika na **`guest.reserve`** (gost) ili **`panel.reservations`** (ulogovan), sa odgovarajućim **`checkout_banner`**. **`GET /payment/return`** na ekranu zadržava samo **`pending`** (tekst + polling na **`/payment/result`**); layout: **`x-guest-layout`** ako nema sesije, **`x-app-layout`** ako je korisnik ulogovan (`resources/views/payment/return.blade.php` + **`payment/partials/return-pending-body.blade.php`**).
+
 ### Payment amount integrity
 
 - Nakon kreiranja `temp_data`, cijena se smatra zaključanom (`invoice_amount_snapshot`).
