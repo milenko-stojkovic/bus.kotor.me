@@ -421,7 +421,37 @@ Kolone (izbor):
 
 ### 9.2 Detalj agencije
 
-Kada je `advance_payments` ON, prikazuje:
+Uvijek prikazuje sekciju **Statistika rezervacija** (ne zavisi od `advance_payments`):
+
+**Službena V2 statistika (autoritativno):**
+
+- Period: **tekuća kalendarska godina** (`reservation_date`, timezone `Europe/Podgorica`).
+- Izvor: samo rezervacije sa `reservations.user_id = {agencija}`.
+- Servis: **`AgencyV2ReservationStatisticsService`**.
+- Prikaz: ukupno / plaćene / besplatne; Termini vs dnevna naknada (`reservation_kind`); sume `invoice_amount` po tipu; broj različitih tablica u godini; broj aktivnih vozila agencije; prva/posljednja rezervacija u godini; prosjek rezervacija po mjesecu (do tekućeg mjeseca).
+
+**Procijenjena V1 historija (heuristika, informativno):**
+
+- Vidljiva napomena da su podaci rekonstruisani heurističkim uparivanjem — **ne** koriste se za izvještaje, fakture, dozvole ili poslovnu logiku.
+- **Ne** mijenja `reservations` (nema upisa `user_id`).
+- Pool kandidata: `user_id IS NULL` i `created_at < AGENCY_STATS_V1_CUTOVER_AT` (default `2026-06-19`, config `agency_statistics.v1_cutover_at`) — migrirane V1 rezervacije bez agencijskog linka; post-cut-over guest rezervacije su isključene.
+- Servis: **`AgencyV1HistoricalEstimateService`**; rezultat se kešira po agenciji (`agency_statistics.heuristic_cache_ttl`, default 3600 s).
+- Kandidati se sužavaju SQL-om (email, domen emaila, tablice aktivnih vozila / ponovljenih u V2) prije skoriranja u PHP-u.
+
+**Model pouzdanosti (confidence):**
+
+| Signal | Nivo |
+|--------|------|
+| Email rezervacije = email agencije | Visoka |
+| Domen emaila rezervacije = domen agencije | Srednja |
+| Tablica = aktivno vozilo agencije | Visoka |
+| Tablica se ponavlja u V2 rezervacijama agencije (≥2) | Srednja |
+| Sličnost imena agencije i `user_name` (similar_text ≥ prag) | Niska |
+| ≥2 signala | Visoka („Multiple signals”) |
+
+Prikaz: zbirni brojevi po nivou pouzdanosti, procijenjeni paid/free/prihod, raspon datuma; expandable tabela **Procijenjene povezane rezervacije** (sort `?v1_sort=confidence|date`).
+
+Kada je `advance_payments` ON, dodatno prikazuje:
 - trenutno stanje avansa (`AgencyAdvanceService::balance`)
 - ledger istoriju (`agency_advance_transactions`)
 - topup istoriju (`agency_advance_topups`)

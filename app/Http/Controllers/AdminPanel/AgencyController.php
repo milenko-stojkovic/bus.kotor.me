@@ -16,6 +16,8 @@ use App\Models\VehicleCategoryChangeRequestAttachment;
 use App\Services\AgencyAdvance\AdvanceTopupConfirmationService;
 use App\Services\AgencyAdvance\AgencyAdvanceService;
 use App\Services\AdminPanel\Agency\AdminAgencySearchService;
+use App\Services\AdminPanel\Agency\AgencyV1HistoricalEstimateService;
+use App\Services\AdminPanel\Agency\AgencyV2ReservationStatisticsService;
 use App\Services\VehicleCategoryChange\VehicleCategoryChangeDecisionNotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -51,8 +53,13 @@ final class AgencyController extends Controller
         ]);
     }
 
-    public function show(User $user, AgencyAdvanceService $advance): View
-    {
+    public function show(
+        Request $request,
+        User $user,
+        AgencyAdvanceService $advance,
+        AgencyV2ReservationStatisticsService $v2Stats,
+        AgencyV1HistoricalEstimateService $v1Estimate,
+    ): View {
         $advanceEnabled = (bool) config('features.advance_payments');
 
         $balance = null;
@@ -82,6 +89,10 @@ final class AgencyController extends Controller
             ->orderByDesc('created_at')
             ->get();
 
+        $v1Sort = in_array((string) $request->query('v1_sort'), ['confidence', 'date'], true)
+            ? (string) $request->query('v1_sort')
+            : 'confidence';
+
         return view('admin-panel.agencies.show', [
             'user' => $user,
             'advanceEnabled' => $advanceEnabled,
@@ -89,6 +100,9 @@ final class AgencyController extends Controller
             'ledger' => $ledger,
             'topups' => $topups,
             'pendingVehicleCategoryChangeRequests' => $pendingCategoryRequests,
+            'v2ReservationStats' => $v2Stats->compute($user),
+            'v1HistoricalEstimate' => $v1Estimate->compute($user, $v1Sort),
+            'v1Sort' => $v1Sort,
         ]);
     }
 

@@ -31,6 +31,13 @@
             <a href="{{ route('panel_admin.agencies.index', [], false) }}" class="text-sm text-red-700 underline font-medium">Nazad na listu</a>
         </header>
 
+        @include('admin-panel.agencies.partials.reservation-statistics', [
+            'user' => $user,
+            'v2ReservationStats' => $v2ReservationStats ?? [],
+            'v1HistoricalEstimate' => $v1HistoricalEstimate ?? [],
+            'v1Sort' => $v1Sort ?? 'confidence',
+        ])
+
         @if (! $advanceEnabled)
             <div class="rounded-md bg-red-50 border border-red-100 p-4 text-sm text-gray-700">
                 Avansna funkcionalnost trenutno nije aktivna.
