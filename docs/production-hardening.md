@@ -56,7 +56,7 @@ Strukturisani ključevi (gde je moguće: **`merchant_transaction_id`** + **`rese
 - `queue_worker_booted` — jednom po PHP procesu queue workera u **production** (event `WorkerStarting`)
 - `production_fake_driver_active` — fake bank/fiscal u production (throttle keš)
 
-Callback prima i dalje: `Payment callback received` / `accepted` / itd.
+Callback logovi: `Payment callback received` na ulazu; na **novom** validnom callback-u `accepted` + `job dispatched`; na **ponovljenom processed SUCCESS** samo **`payment_callback_duplicate_terminal_acknowledged`**. HTTP odgovor banke: **200** + **`OK`** (v. §7).
 
 ---
 

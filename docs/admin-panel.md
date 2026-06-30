@@ -367,7 +367,7 @@ Zajedničko: **log timeline** iz `payments-YYYY-MM-DD.log` (linije koje sadrže 
 - **Kontroler:** `App\Http\Controllers\AdminPanel\InsightController`.
 - **Validacija:** `App\Http\Requests\AdminPanel\AdminPanelInsightSearchRequest`.
 - **Servis:** `App\Services\AdminPanel\Insight\AdminInsightService`.
-- **Timeline parser:** `App\Services\AdminPanel\Insight\PaymentLogTimelineService` (labeli uključuju `createSession`, `callback`, `inquiry`, `advance topup`, …).
+- **Timeline parser:** `App\Services\AdminPanel\Insight\PaymentLogTimelineService` — događaji iz `payments-YYYY-MM-DD.log` (retention `config/logging.channels.payments.days`); **sortirano kronološki** po parsiranom timestampu rastuće preko više dana/fajlova (labeli: `createSession`, `callback`, `inquiry`, `advance topup`, …). Neparsabilan timestamp → na kraj.
 
 **Testovi:** `tests/Feature/AdminPanel/AdminPanelInsightTest.php`.
 

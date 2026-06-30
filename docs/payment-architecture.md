@@ -78,7 +78,7 @@ Controller **nikad**:
 - **Machine-to-machine only.** Nikad ne koristiti ovaj endpoint za frontend redirect ili UI flow. **Frontend NIKAD ne sme da poziva bank callback.**
 - Nema web middleware (session, CSRF, redirects) – banka ne šalje cookies/CSRF; stateless.
 - Controller: validacija potpisa, validacija payload-a, **dispatch PaymentCallbackJob(payload)**.
-- Vraća samo **202 Accepted** ili **400 Bad Request**. Nikad redirect.
+- Vraća **HTTP 200** + telo **`OK`** (`text/plain`) na validan postback, ili **400 Bad Request** JSON na grešku. Nikad redirect.
 - User redirect se radi kasnije preko frontend polling-a /payment/result.
 - Za test: fake bank koristi **poseban** endpoint POST /payment/fake-bank/complete (web), ne bank callback.
 
@@ -105,7 +105,7 @@ Controller **nikad**:
 
 1. **POST /checkout** → validacija, dostupnost, temp_data (pending), createSession(sync) → **redirect na payment_url** ili 503.
 2. Korisnik plaća na bank stranici (ili na fake bank stranici bira Success/Fail).
-3. **Ulaz u state machine:** **Put A — webhook:** gateway (ili fake forma) šalje **`POST /api/payment/callback`** → validacija potpisa/payload-a → **`PaymentCallbackJob::dispatch`** → **202**. **Put B — Bankart inquiry:** ako callback ne stigne, **`payment:check-pending-inquiry`** (scheduler) poziva banku; na jasan SUCCESS/ERROR → opet **`PaymentCallbackJob::dispatch`** (v. **`CheckPendingPaymentStatus`**).
+3. **Ulaz u state machine:** **Put A — webhook:** gateway šalje **`POST /api/payment/callback`** → validacija potpisa/payload-a → **`PaymentCallbackJob::dispatch`** (ili duplicate-terminal shortcut) → **200 OK**. **Put B — Bankart inquiry:** ako callback ne stigne, **`payment:check-pending-inquiry`** (scheduler) poziva banku; na jasan SUCCESS/ERROR → opet **`PaymentCallbackJob::dispatch`** (v. **`CheckPendingPaymentStatus`**).
 4. **PaymentCallbackJob**: na success → Reservation, **temp_data.status = processed** (red se **ne briše** — audit); **`ProcessReservationAfterPaymentJob`** iz **`PaymentSuccessHandler`**: za **async** webhook uvek kada treba fiskal/mejl pipeline (uključujući **oba fake** drivera). Izuzetak: **`FakeBankCompleteController`** šalje callback preko **`QueueMode::dispatchPaymentCallbackSyncForFakeQaForm`** (`deferFakeBankFiscalPipeline: true`) — handler tada **ne** dispatchuje pipeline; odmah posle toga forma šalje **`ProcessReservationAfterPaymentJob`** preko **`QueueMode::dispatchForFakeE2e`** (sync vs queue prema **`FAKE_PAYMENT_E2E_SYNC`** i oba fake drivera). Na failed → ažuriranje `temp_data` + **ErrorClassifier**; na timeout (još uvek **pending**) → `late_success` gde je predviđeno. Ako je **`temp_data` već terminalan:** **`processed`** → no-op; **`expired`** + kasni success → **`late_success`**; **`canceled`** + success → ignorisano (**`payment_success_after_canceled_ignored`**).
 5. UI može koristiti **GET /reservation-status/{merchant_transaction_id}** (polling) za status.
 
@@ -142,7 +142,7 @@ Pretpostavka: **`BANK_DRIVER=fake`**, **`FISCALIZATION_DRIVER=fake`**.
 | `App\Jobs\ProcessReservationAfterPaymentJob` | Fiskalizacija + PDF/email posle uspešnog plaćanja (v. success-payment-pipeline.md). |
 | `App\Services\Payment\PaymentInitFailureService` | createSession / inquiry not found → `canceled`, `payment_init_failed`, release lock. |
 | `App\Http\Controllers\CheckoutController` | Validacija, dostupnost, temp_data, createSession, redirect ili 503. |
-| `App\Http\Controllers\Api\PaymentCallbackController` | API callback: validacija potpisa + payload, dispatch job, 202/400. |
+| `App\Http\Controllers\Api\PaymentCallbackController` | API callback: validacija potpisa + payload, dispatch job (ili duplicate-terminal ACK), **200 OK** / **400**. |
 | `config/payment.php` | Bankart/fake driver preko `BANK_DRIVER` i povezane env varijable. |
 | `App\Http\Controllers\ReservationStatusController` | Polling: GET po merchant_transaction_id. |
 | `App\Support\QueueMode` | Centralno: **`useSyncForFake()`** (oba fake + `payment.fake_e2e_sync`); **`dispatchForFakeE2e($job)`** (sync ili `dispatch`); **`dispatchPaymentCallbackSyncForFakeQaForm`** (uvijek sync u fake formi). |

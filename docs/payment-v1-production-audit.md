@@ -113,7 +113,7 @@ Datum provjere: prema checklisti. Cilj: potvrditi da je implementacija stabilna,
 |------|--------|------|
 | init | ✅ | **Dodano:** `CheckoutController` nakon kreiranja temp_data: `Log::channel('payments')->info('Payment init', ['merchant_transaction_id', 'retry_token'])` |
 | job dispatch | N/A | Init flow nema dispatch job-a u V1; callback: job se dispatch-uje u controlleru (nije posebno logirano osim "callback accepted") |
-| callback received | ✅ | `PaymentCallbackController`: "Payment callback accepted" + merchant_transaction_id |
+| callback received | ✅ | `PaymentCallbackController`: validan postback → **HTTP 200** + `OK`; log `Payment callback accepted` + `merchant_transaction_id` (duplicate processed → `payment_callback_duplicate_terminal_acknowledged`) |
 | success / failed / late_success | ✅ | `TempData::logStateTransition` u PaymentSuccessHandler i PaymentCallbackJob; svi prijelazi u payments channel |
 | merchant_transaction_id u svakom logu | ✅ | U init, callback accepted i logStateTransition |
 | Basic audit trail | ✅ | `storage/logs/payments.log`; channel `payments` u `config/logging.php` |
