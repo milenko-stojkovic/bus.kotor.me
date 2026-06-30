@@ -10,7 +10,7 @@ Datum provjere: prema checklisti. Cilj: potvrditi da je implementacija stabilna,
 |--------|--------|----------|
 | Generiše se na backendu u trenutku klika "Plati / Rezerviši" | ✅ | `CheckoutController::store()` – `Str::uuid()` prije transakcije i kreiranja temp_data |
 | Generiše se prije slanja job-a u queue | ✅ | Nema job-a za init u V1 (v. točku 2); ID se generiše prije createSession i redirecta |
-| Svaki pokušaj plaćanja ima novi ID | ✅ | Novi UUID po svakom novom temp_data (dupli klik za isti slot koristi postojeći pending, ne novi ID) |
+| Svaki pokušaj plaćanja ima novi ID | ✅ | Novi UUID po svakom novom `temp_data`; dupli klik za **isti** pending booking **reuse-uje** isti MTID + `payment_redirect_url` (ne novi `createSession`) — v. `workflow-placanje-temp-data.md` §1d |
 | ID se čuva u kontekstu (guest: temp_data; auth: user) | ✅ | temp_data.merchant_transaction_id; auth koristi isti temp_data sa user_id |
 | Callback od banke mapira isključivo preko merchant_transaction_id | ✅ | `PaymentCallbackController` validira payload, `PaymentCallbackJob` traži `TempData::where('merchant_transaction_id', $txId)` |
 

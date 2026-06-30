@@ -4,7 +4,7 @@ Logika mora ostati konzistentna: **temp_data** kao soft lock (samo **Termini**) 
 
 **Povezano:** `docs/payment-states.md`, `docs/payment-callback-handling.md`, `docs/payment-state-machine.md` (canonical), `docs/project-conventions.md`.
 
-**Poslednje ažuriranje:** 2026-06-19 (payment init failure → `canceled` + `payment_init_failed`; `temp_data.status` nema `failed`).
+**Poslednje ažuriranje:** 2026-06-30 (`payment_redirect_url`; ponovni checkout na pending bez duplog `createSession`).
 
 ---
 
@@ -25,7 +25,9 @@ Detalji cijene, PDF i fiskal: `payment-state-machine.md` § snapshot; panel life
 
 #### 1a. Termini (`time_slots`)
 
-- **Pre payment/session dela (business validacija rezervacije):** pre bilo kakvog kreiranja `temp_data` ili `createSession`, checkout proverava da li već postoji konfliktna rezervacija u tabeli **`reservations`** za:
+- **Redosled validacije u `CheckoutController`:** (1) postojeći **pending** za istog korisnika/gosta + isti datum + isti drop **i** pick → v. §1d; (2) dupli Termini konflikt u **`reservations`** + tuđi pending (`DuplicateReservationAttemptService`); (3) ostale blokade; (4) novi `temp_data` + `createSession`.
+
+- **Pre payment/session dela (business validacija rezervacije):** prije kreiranja novog `temp_data`, checkout provjerava konflikt u tabeli **`reservations`** (i tuđi aktivni pending preko duplicate servisa) za:
   - isti `reservation_date`
   - ista (normalizovana) `license_plate` (ALL CAPS, bez razmaka i spec. znakova; samo `[A-Z0-9]`)
   - i **isti drop-off** (`drop_off_time_slot_id`) **ili** **isti pick-up** (`pick_up_time_slot_id`)
@@ -59,7 +61,20 @@ Ako **Bankart `createSession`** padne **prije** nego što korisnik stigne na pay
 - Provider i dalje loguje **`bankart_create_session_failed`** sa detaljima HTTP odgovora.
 - **Retry** istog slot/tablice odmah moguć — red **nije** blocking `pending`.
 
-Ako je **`createSession` uspješan** i korisnik je preusmjeren na banku, **`temp_data`** ostaje **`pending`** do callbacka / inquiry-ja / cron expire-a (v. § Cron).
+Ako je **`createSession` uspješan** i korisnik je preusmjeren na banku, **`temp_data`** ostaje **`pending`** do callbacka / inquiry-ja / cron expire-a (v. § Cron). Bankart **`redirectUrl`** se čuva u **`temp_data.payment_redirect_url`** (v. §1d).
+
+#### 1d. Ponovni klik dok je `temp_data` još `pending` (`checkout_existing_pending`)
+
+Ako korisnik ponovo klikne **Plati** za **isti** booking (isti korisnik/gost email, datum, drop-off i pick-up) dok prethodni pokušaj još čeka banku:
+
+1. **`CheckoutController`** pronalazi postojeći pending red (`findExistingPendingForSlot`, `whereDate` na `reservation_date`).
+2. Ako postoji **`payment_redirect_url`** → **ponovni redirect** na isti Bankart URL; log **`checkout_existing_pending_reused_redirect`**; **nema** drugog `createSession` za isti `merchant_transaction_id`.
+3. Ako URL nije sačuvan (legacy redovi) → jedan `createSession`; ako Bankart vrati **3004** (*transaction already exists*) ili drugi init fail u ovoj grani → **ne** `payment_init_failed` / **ne** `canceled`; korisnik vidi **`payment_existing_session_open`** (prozor je već otvoren / sesija već kreirana).
+4. **`PaymentInitFailureService`** i admin alert **`checkout_payment_init_failed`** primjenjuju se samo na **prvi** pokušaj (`checkout_after_temp_created`) kad redirect **nikad** nije uspio.
+
+Servis: **`PendingBankartRedirectService`**. Testovi: **`CheckoutExistingPendingRedirectTest`**, ažurirani **`CheckoutCreateSessionFailureTest`**.
+
+**Migracija:** `2026_06_30_100000_add_payment_redirect_url_to_temp_data.php` — kolona `payment_redirect_url` (nullable).
 
 #### 1b. Dnevna naknada (`daily_ticket`)
 
@@ -85,7 +100,8 @@ Ako je **`createSession` uspješan** i korisnik je preusmjeren na banku, **`temp
 ### 3. Plaćanje ne uspe / cancel
 
 - Bankovni događaj normalizovan kao **`failed`** u job-u postaje **`temp_data.status` = `canceled`** (ENUM u bazi **nema** `failed`). UI i redirect i dalje govore o „neuspjelom plaćanju“ — v. `PaymentReturnController`, `payment-callback-handling.md`.
-- **`createSession` ne uspe prije banke** → odmah **`canceled`** + **`resolution_reason=payment_init_failed`** (v. §1c) — **ne** ostaje `pending`.
+- **`createSession` ne uspe prije banke (prvi pokušaj)** → odmah **`canceled`** + **`resolution_reason=payment_init_failed`** (v. §1c) — **ne** ostaje `pending`.
+- **Ponovni klik na isti pending bez sačuvanog URL-a** → **ne** `canceled` zbog Bankart **3004** (v. §1d).
 - Ostala terminalna grana po pravilima: npr. **`expired`** (cron za **prave** pending session-e na banci), **`late_success`** (kasni SUCCESS posle `expired`).
 - **Ne oslanjati se na fizičko brisanje** redova za operativni audit.
 - Oslobađanje soft lock-a (**samo Termini**): **decrement `pending`** za oba slota gde je primenjeno.
@@ -124,6 +140,7 @@ Ako je `late_success` za **ulogovanu agenciju** i avans je uključen (`config('f
 | Kolona | Napomena |
 |--------|----------|
 | merchant_transaction_id | UNIQUE |
+| payment_redirect_url | Bankart `redirectUrl` nakon uspješnog prvog `createSession`; reuse na `checkout_existing_pending` |
 | user_id | NULL = guest |
 | reservation_kind | `time_slots` (default) \| `daily_ticket` |
 | drop_off_time_slot_id, pick_up_time_slot_id | NOT NULL za Termini; **NULL** za daily_ticket |

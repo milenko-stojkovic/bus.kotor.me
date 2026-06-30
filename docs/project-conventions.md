@@ -1,6 +1,6 @@
 ﻿# Konvencije projekta (bus.kotor.me)
 
-**Poslednje ažuriranje:** 2026-06-27  
+**Poslednje ažuriranje:** 2026-06-30  
 
 Za AI i ljude: držati se ovoga pri novim izmenama da ostane konzistentno.
 
@@ -228,7 +228,7 @@ Posle izmene `.env`: `.\laragon-artisan.ps1 config:clear` (ili ista PHP putanja 
 
 ## 5. Payment / parking
 
-- **`temp_data`:** životni ciklus plaćanja i audit; ne brisati pri grešci bez operativnog pravila.
+- **`temp_data`:** životni ciklus plaćanja i audit; ne brisati pri grešci bez operativnog pravila. Nakon uspješnog Bankart `createSession`, **`payment_redirect_url`** se čuva na pending redu; ponovni checkout istog bookinga reuse-uje URL umjesto duplog `createSession` (v. **`workflow-placanje-temp-data.md`** §1d).
 - **`daily_parking_data`:** uvek paziti na **oba** slota (`drop_off_time_slot_id`, `pick_up_time_slot_id`); ako su isti ID, brojač jednom.
 - **`reservations.created_by_admin`:** boolean, default **`false`** (kolona u bazi; signal za buduća admin/free poslovna pravila — trenutno svi postojeći i standardni tokovi ostaju `false`). Blokiranje i prilagođavanje u glavnom admin panelu: post-lock validacija slotova, prefiltar datuma u UI, redirect sa query **`_fresh`** — v. **[admin-panel.md](./admin-panel.md)** §2.
 - **Idempotency:** ključ `merchant_transaction_id`.
