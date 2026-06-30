@@ -47,7 +47,7 @@ Model je zavisio od **fizičkog prisustva službenika (evidentičara)** na kontr
 
 Kod, rute, servisi, tabele (`limo_qr_tokens`, `limo_pickup_events`, …) i testovi **namjerno su sačuvani**:
 
-- **Historijski podaci** — postojeći pickup-i, incidenti i analitika.
+- **Istorijski podaci** — postojeći pickup-i, incidenti i analitika.
 - **Mogućnost rollback-a** — ENV flag može ponovo uključiti QR tok bez ponovne implementacije.
 - **Moguća buduća osnova** — ako se operativni model kasnije proširi, postojeća implementacija može poslužiti kao polazna tačka.
 
@@ -59,7 +59,7 @@ Brisanje QR/OCR koda ili tabela **nije predviđeno tokom sezone** bez posebne od
 
 ### Implementirano
 
-> **Operativni model (2026-06):** Novi tok je **dnevna naknada** (agency Rezervacije) + **Control** provjera tablice (`/control/dnevna-naknada`). Sekcije ispod koje opisuju **QR, OCR i evidentičar** su **LEGACY / PRESERVED** — rute postoje, ali su po defaultu **404** (`limo.qr_workflow` / `LIMO_QR_WORKFLOW_ENABLED=false`). Admin **`GET /admin/limo`** i analitika i dalje prikazuju historijske pickup/incident zapise.
+> **Operativni model (2026-06):** Novi tok je **dnevna naknada** (agency Rezervacije) + **Control** provjera tablice (`/control/dnevna-naknada`). Sekcije ispod koje opisuju **QR, OCR i evidentičar** su **LEGACY / PRESERVED** — rute postoje, ali su po defaultu **404** (`limo.qr_workflow` / `LIMO_QR_WORKFLOW_ENABLED=false`). Admin **`GET /admin/limo`** i analitika i dalje prikazuju istorijske pickup/incident zapise.
 
 - **Baza:** tabele `limo_qr_tokens`, `limo_pickup_events`, `limo_pickup_photos`, `limo_plate_uploads` (privremeni upload tablice; vidi sekciju [Implemented tables](#implemented-tables)), **`limo_incidents`** (incidenti — evidencija bez finansijskog efekta; vidi [Incident flow (implementirano)](#incident-flow-implementirano)).
 - **Granica autentifikacije / autorizacije (Limo evidenter):**
@@ -357,6 +357,6 @@ Evidencija incidenta (bez finansijskog efekta, bez pickup događaja).
 
 ---
 
-## Historijska napomena
+## Istorijska napomena
 
 Ranija verzija ovog fajla bila je „inicijalna specifikacija prije implementacije”. Od **2026-05-04** dokument prati **implementaciju + preostale TODO** kao iznad.

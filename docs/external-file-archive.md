@@ -85,7 +85,7 @@ Svi fajlovi iz **`files:archive-private`** (FZBR, Limo plate/pickup) idu **direk
 1. Pokrenuti **`php artisan files:mega-diagnose`** (ili `.\laragon-artisan.cmd files:mega-diagnose` na Windowsu) i pročitati **`login_ok`**, **`folder_found`**, polje **`error`** bez otkrivanja lozinke u logu.
 2. U `.env` provjeriti **`MEGA_EMAIL`** i **`MEGA_PASSWORD`** (bez dijeljenja vrijednosti u tiketima/chatu); uskladiti sa aktivnim nalogom u MEGA web konzoli.
 3. Nakon izmjene env-a: **`php artisan config:clear`** i po potrebi **`php artisan cache:clear`**, zatim ponovo **`files:mega-diagnose`**.
-4. U MEGA **web** interfejsu: historija sesija / sigurnosni događaji / obavještenja o zaključanom ili ograničenom nalogu.
+4. U MEGA **web** interfejsu: istorija sesija / sigurnosni događaji / obavještenja o zaključanom ili ograničenom nalogu.
 
 ### 3. Ako je nalog zaključan ili zaštita blokira API login
 

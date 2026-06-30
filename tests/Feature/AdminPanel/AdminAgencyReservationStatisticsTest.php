@@ -366,8 +366,8 @@ final class AdminAgencyReservationStatisticsTest extends TestCase
             ->assertSee('Statistika rezervacija', false)
             ->assertSee('Službena V2 statistika', false)
             ->assertSee('Aktivnost agencije', false)
-            ->assertSee('Procijenjena V1 historija', false)
-            ->assertSee('Procijenjena historijska aktivnost', false)
+            ->assertSee('Procijenjena V1 istorija', false)
+            ->assertSee('Procijenjena istorijska aktivnost', false)
             ->assertSee('Sažetak pouzdanosti', false)
             ->assertSee('heurističkim uparivanjem', false);
     }

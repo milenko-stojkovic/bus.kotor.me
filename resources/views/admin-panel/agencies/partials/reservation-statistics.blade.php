@@ -70,16 +70,16 @@
 
     <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 sm:p-5 space-y-4">
         <div>
-            <h3 class="text-base font-semibold text-gray-900">Procijenjena V1 historija</h3>
+            <h3 class="text-base font-semibold text-gray-900">Procijenjena V1 istorija</h3>
             <p class="mt-2 text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-md p-3">
-                Procijenjena historijska statistika rekonstruisana iz V1 rezervacija heurističkim uparivanjem.
+                Procijenjena istorijska statistika rekonstruisana iz V1 rezervacija heurističkim uparivanjem.
                 Informativno — ne koristi se za izvještaje, fakture, dozvole ili poslovnu logiku.
             </p>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
             <div class="space-y-1">
-                <div class="font-medium text-gray-800">Procijenjena historijska aktivnost</div>
+                <div class="font-medium text-gray-800">Procijenjena istorijska aktivnost</div>
                 <div>Prva procijenjena rezervacija: <span class="font-semibold">{{ $fmtDate($v1['estimated_first_reservation'] ?? null) }}</span></div>
                 <div>Posljednja procijenjena rezervacija: <span class="font-semibold">{{ $fmtDate($v1['estimated_last_reservation'] ?? null) }}</span></div>
             </div>

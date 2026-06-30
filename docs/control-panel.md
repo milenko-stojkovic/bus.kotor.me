@@ -37,7 +37,7 @@ Tekstovi u view-ima su **hardcoded CG stringovi** (nema `UiText` grupe za contro
 - **Rezultat:** „Plaćena dnevna naknada: DA“ i/ili „Rezervacija termina za danas: DA“ (ili „Važeća rezervacija za danas: NE“) + detalji po pogotku (vrsta, agencija, datum važenja, tip vozila, email, vrijeme kreiranja). Više pogodaka istog dana/tablice — lista.
 - **Lista za danas (dno stranice):** tabela svih **plaćenih** dnevnih naknada za **današnji** `reservation_date` (`Europe/Podgorica`) čiji je `vehicle_type_id` u kategorijama **putničko/limo 4+1–7+1** ili **minibus 8+1** (`ReservationVehicleEligibilityService::controlDailyFeeListVehicleTypeIds()` — ID-jevi iz `vehicle_type_translations`, ne hardkodirani). Kolone: tablica, agencija/korisnik, tip vozila, vrijeme kupovine, datum važenja (**bez** kolone email — štednja prostora na terenu). Naslov sekcije prikazuje **Ukupno vozila** (broj redova na listi). Sort: `license_plate` ASC. Prazno stanje: *Nema vozila sa plaćenom dnevnom naknadom za danas.* **Lista se ne mijenja** kada ručna provjera tablice uključuje i Termine — to su dva odvojena prikaza.
 - **Osvježavanje:** isto kao dashboard Termini — prikaz **Posljednje osvježavanje**, dugme **Osvježi sada** (`window.location.reload()`), automatski reload svakih **5 minuta** (`resources/views/control/daily-fee-control.blade.php`).
-- **Ne provjerava:** historijske Limo QR tabele, druge datume. Lista na dnu stranice i dalje samo plaćene dnevne naknade (v. ispod).
+- **Ne provjerava:** istorijske Limo QR tabele, druge datume. Lista na dnu stranice i dalje samo plaćene dnevne naknade (v. ispod).
 - **Testovi:** `tests/Feature/Control/DailyFeeControlTest.php`.
 
 ---

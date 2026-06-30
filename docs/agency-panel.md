@@ -95,7 +95,7 @@ Backend tok `payment_method=advance`:
 
 ### Kategorije vozila — Termini vs dnevna naknada (2026-06)
 
-Putnička vozila za limo servis (**Putničko vozilo / 4+1–7+1**, baseline `vehicle_type_id = 1`) **nisu** dostupna za nove rezervacije po **Terminima** (gost i agencija). Ista kategorija ostaje dostupna za **Dnevnu naknadu**. Pravilo: `ReservationVehicleEligibilityService` (ID-jevi iz `vehicle_type_translations`, ne hardkodirani). Validacija: `CheckoutReservationRequest` + filtriranje u `ReservationBookingPageData`. Historijske rezervacije, admin i analitika nisu dirani.
+Putnička vozila za limo servis (**Putničko vozilo / 4+1–7+1**, baseline `vehicle_type_id = 1`) **nisu** dostupna za nove rezervacije po **Terminima** (gost i agencija). Ista kategorija ostaje dostupna za **Dnevnu naknadu**. Pravilo: `ReservationVehicleEligibilityService` (ID-jevi iz `vehicle_type_translations`, ne hardkodirani). Validacija: `CheckoutReservationRequest` + filtriranje u `ReservationBookingPageData`. Istorijske rezervacije, admin i analitika nisu dirani.
 
 ### Dnevna naknada (`reservation_kind=daily_ticket`)
 

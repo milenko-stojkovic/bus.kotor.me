@@ -38,7 +38,7 @@ Ovaj fajl je **kratak smerač**. Detalji su podeljeni da bi novi chat mogao da u
 
 **Produkcija (2026-06-19):** HMAC callback potpis i header-i verifikovani sa **pravim** Bankart okruženjem na hostovanom domenu — v. `project-done.md`.
 
-**Staging (historija):** E2E validacija na **`https://bus-v2.kotor.me`** (simulacija, odvojena baza) završena prije produkcijskog starta.
+**Staging (istorija):** E2E validacija na **`https://bus-v2.kotor.me`** (simulacija, odvojena baza) završena prije produkcijskog starta.
 
 **Status inquiry:** implementiran je **GET** `getByMerchantTransactionId` (`RealPaymentStatusInquiryService`) → **`PaymentCallbackJob`**. U produkciji proveriti da **HMAC za GET** (prazno telo / `Content-Type` u potpisu) odgovara Bankart „Signature testing“ alatu ako gateway odbije zahtev.
 
