@@ -156,4 +156,93 @@ final class BackgroundWatchdogTest extends TestCase
         $this->assertStringContainsString('exit code 1', (string) Cache::get(OperationalHeartbeatCache::SCHEDULER_LAST_ERROR));
         $this->assertNull(Cache::get(OperationalHeartbeatCache::SCHEDULER_LAST_OK_AT));
     }
+
+    public function test_fresh_queue_worker_run_with_null_ok_does_not_create_stale_alert(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-06-30 12:46:01', 'Europe/Podgorica'));
+        Cache::put(OperationalHeartbeatCache::QUEUE_WORKER_LAST_RUN_AT, now()->toIso8601String(), 600);
+
+        $snapshot = $this->watchdog->queueWorkerStatusSnapshot();
+
+        $this->assertFalse($snapshot['is_stale']);
+        $this->assertSame('ok', $snapshot['section_status']);
+        $this->assertSame(0, $snapshot['reference_age_minutes']);
+
+        $this->watchdog->evaluateStaleHeartbeats();
+
+        $this->assertSame(0, AdminAlert::query()->where('type', BackgroundWatchdogService::ALERT_TYPE_QUEUE_WORKER_STALE)->count());
+    }
+
+    public function test_clean_queue_worker_exit_writes_last_ok_at(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-06-27 12:00:00', 'Europe/Podgorica'));
+
+        $this->watchdog->recordQueueWorkerStarted();
+        $this->watchdog->recordQueueWorkerFinished(0);
+
+        $expected = now()->toIso8601String();
+        $this->assertSame($expected, Cache::get(OperationalHeartbeatCache::QUEUE_WORKER_LAST_OK_AT));
+    }
+
+    public function test_stale_queue_worker_ok_older_than_threshold_creates_high_alert(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-06-27 12:10:00', 'Europe/Podgorica'));
+        Cache::put(OperationalHeartbeatCache::QUEUE_WORKER_LAST_OK_AT, now()->subMinutes(10)->toIso8601String(), 600);
+
+        $this->watchdog->evaluateStaleHeartbeats();
+
+        $alert = AdminAlert::query()->where('type', BackgroundWatchdogService::ALERT_TYPE_QUEUE_WORKER_STALE)->first();
+        $this->assertNotNull($alert);
+        $this->assertSame('high', $alert->payload_json['severity'] ?? null);
+        $this->assertGreaterThanOrEqual(5, (int) ($alert->payload_json['age_minutes'] ?? 0));
+        $this->assertStringContainsString('stariji je od ~5 min', (string) $alert->message);
+    }
+
+    public function test_stale_queue_worker_run_without_ok_after_grace_creates_warning_alert(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-06-27 12:10:00', 'Europe/Podgorica'));
+        Cache::put(OperationalHeartbeatCache::QUEUE_WORKER_LAST_RUN_AT, now()->subMinutes(10)->toIso8601String(), 600);
+
+        $snapshot = $this->watchdog->queueWorkerStatusSnapshot();
+        $this->assertTrue($snapshot['is_stale']);
+
+        $this->watchdog->evaluateStaleHeartbeats();
+
+        $alert = AdminAlert::query()->where('type', BackgroundWatchdogService::ALERT_TYPE_QUEUE_WORKER_STALE)->first();
+        $this->assertNotNull($alert);
+        $this->assertSame('high', $alert->payload_json['severity'] ?? null);
+        $this->assertGreaterThanOrEqual(5, (int) ($alert->payload_json['age_minutes'] ?? 0));
+        $this->assertStringContainsString('uspješan završetak nije zabilježen', (string) $alert->message);
+    }
+
+    public function test_fresh_queue_worker_ok_resolves_existing_stale_alert(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-06-27 12:10:00', 'Europe/Podgorica'));
+        Cache::put(OperationalHeartbeatCache::QUEUE_WORKER_LAST_OK_AT, now()->subMinutes(10)->toIso8601String(), 600);
+        $this->watchdog->evaluateStaleHeartbeats();
+
+        Carbon::setTestNow(Carbon::parse('2026-06-27 12:11:00', 'Europe/Podgorica'));
+        $this->watchdog->recordQueueWorkerFinished(0);
+        $this->watchdog->evaluateStaleHeartbeats();
+
+        $alert = AdminAlert::query()->where('type', BackgroundWatchdogService::ALERT_TYPE_QUEUE_WORKER_STALE)->first();
+        $this->assertNotNull($alert);
+        $this->assertSame(AdminAlert::STATUS_DONE, $alert->status);
+        $this->assertNotNull($alert->resolved_at);
+    }
+
+    public function test_stale_alert_message_age_is_consistent_with_severity(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-06-27 12:20:00', 'Europe/Podgorica'));
+        Cache::put(OperationalHeartbeatCache::QUEUE_WORKER_LAST_OK_AT, now()->subMinutes(20)->toIso8601String(), 600);
+
+        $this->watchdog->evaluateStaleHeartbeats();
+
+        $alert = AdminAlert::query()->where('type', BackgroundWatchdogService::ALERT_TYPE_QUEUE_WORKER_STALE)->first();
+        $this->assertNotNull($alert);
+        $ageMin = (int) ($alert->payload_json['age_minutes'] ?? 0);
+        $this->assertGreaterThanOrEqual(5, $ageMin);
+        $this->assertStringContainsString('Starost (min): ~'.$ageMin, (string) $alert->message);
+        $this->assertSame('critical', $alert->payload_json['severity'] ?? null);
+    }
 }

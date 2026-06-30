@@ -145,25 +145,23 @@ final class BackgroundWatchdogService
         $okAgeMin = $this->ageMinutes($okAt);
         $runAgeMin = $this->ageMinutes($runAt);
         $staleMinutes = $this->staleThresholdMinutes();
+        $referenceAgeMin = $this->referenceAgeMinutes($okAt, $okAgeMin, $runAt, $runAgeMin);
+        $isStale = $referenceAgeMin !== null && $referenceAgeMin > $staleMinutes;
 
-        $sectionStatus = 'neutral';
-        $sectionLabel = 'Nepoznato';
-        $isStale = false;
-
-        if ($okAt === null && $runAt === null) {
+        if ($runAt === null && $okAt === null) {
             $sectionStatus = 'neutral';
             $sectionLabel = 'Nepoznato';
-        } elseif ($okAt === null) {
-            $sectionStatus = 'warn';
-            $sectionLabel = 'Upozorenje';
-            $isStale = true;
-        } elseif ($okAgeMin !== null && $okAgeMin > $staleMinutes) {
-            $sectionStatus = 'warn';
-            $sectionLabel = 'Upozorenje';
-            $isStale = true;
+        } elseif (! $isStale) {
+            if ($okAt !== null) {
+                $sectionStatus = 'ok';
+                $sectionLabel = 'OK';
+            } else {
+                $sectionStatus = 'ok';
+                $sectionLabel = 'Pokrenut, OK još nije zabilježen';
+            }
         } else {
-            $sectionStatus = 'ok';
-            $sectionLabel = 'OK';
+            $sectionStatus = 'warn';
+            $sectionLabel = 'Upozorenje';
         }
 
         return [
@@ -172,11 +170,29 @@ final class BackgroundWatchdogService
             'last_error' => $error,
             'last_run_age_minutes' => $runAgeMin,
             'last_ok_age_minutes' => $okAgeMin,
+            'reference_age_minutes' => $referenceAgeMin,
             'stale_threshold_minutes' => $staleMinutes,
             'is_stale' => $isStale,
             'section_status' => $sectionStatus,
             'section_label' => $sectionLabel,
         ];
+    }
+
+    private function referenceAgeMinutes(
+        ?string $okAt,
+        ?int $okAgeMin,
+        ?string $runAt,
+        ?int $runAgeMin,
+    ): ?int {
+        if ($okAt !== null && $okAgeMin !== null) {
+            return $okAgeMin;
+        }
+
+        if ($runAt !== null && $runAgeMin !== null) {
+            return $runAgeMin;
+        }
+
+        return null;
     }
 
     private function evaluateSchedulerStale(AdminAlertService $alerts, int $staleMinutes): void
@@ -189,9 +205,13 @@ final class BackgroundWatchdogService
             return;
         }
 
-        $okAge = $snapshot['last_ok_age_minutes'];
-        $runAge = $snapshot['last_run_age_minutes'];
-        $ageMin = $okAge ?? $runAge ?? $staleMinutes + 1;
+        $ageMin = (int) ($snapshot['reference_age_minutes'] ?? ($staleMinutes + 1));
+
+        if ($ageMin < $staleMinutes) {
+            $this->resolveOpenAlert(self::ALERT_TYPE_SCHEDULER_STALE, self::DEDUPE_SCHEDULER_STALE);
+
+            return;
+        }
 
         Log::channel('payments')->warning('scheduler_watchdog_stale', [
             'last_scheduler_run_at' => $snapshot['last_run_at'],
@@ -203,13 +223,7 @@ final class BackgroundWatchdogService
         $alerts->createOnce(
             self::ALERT_TYPE_SCHEDULER_STALE,
             'Sistem: Laravel scheduler nije nedavno potvrdio heartbeat',
-            implode("\n", [
-                'Poslednji uspješan scheduler run nije u poslednjih ~'.$staleMinutes.' min.',
-                'Poslednji run: '.($snapshot['last_run_at'] ?? '—'),
-                'Poslednji OK: '.($snapshot['last_ok_at'] ?? '—'),
-                'Starost (min): ~'.$ageMin,
-                'Provjeriti Plesk cron za schedule-run.php (* * * * *).',
-            ]),
+            $this->schedulerStaleMessage($snapshot, $staleMinutes, $ageMin),
             $ageMin > ($staleMinutes * 3) ? 'critical' : 'high',
             self::DEDUPE_SCHEDULER_STALE,
             [
@@ -231,9 +245,13 @@ final class BackgroundWatchdogService
             return;
         }
 
-        $okAge = $snapshot['last_ok_age_minutes'];
-        $runAge = $snapshot['last_run_age_minutes'];
-        $ageMin = $okAge ?? $runAge ?? $staleMinutes + 1;
+        $ageMin = (int) ($snapshot['reference_age_minutes'] ?? ($staleMinutes + 1));
+
+        if ($ageMin < $staleMinutes) {
+            $this->resolveOpenAlert(self::ALERT_TYPE_QUEUE_WORKER_STALE, self::DEDUPE_QUEUE_WORKER_STALE);
+
+            return;
+        }
 
         Log::channel('payments')->warning('queue_worker_stale', [
             'last_queue_worker_run_at' => $snapshot['last_run_at'],
@@ -245,13 +263,7 @@ final class BackgroundWatchdogService
         $alerts->createOnce(
             self::ALERT_TYPE_QUEUE_WORKER_STALE,
             'Sistem: queue worker nije nedavno potvrdio heartbeat',
-            implode("\n", [
-                'Poslednji uspješan queue-worker.php / queue:work ciklus nije u poslednjih ~'.$staleMinutes.' min.',
-                'Poslednji run: '.($snapshot['last_run_at'] ?? '—'),
-                'Poslednji OK: '.($snapshot['last_ok_at'] ?? '—'),
-                'Starost (min): ~'.$ageMin,
-                'Provjeriti Plesk cron za queue-worker.php (* * * * *). Worker se ne restartuje automatski.',
-            ]),
+            $this->queueWorkerStaleMessage($snapshot, $staleMinutes, $ageMin),
             $ageMin > ($staleMinutes * 3) ? 'critical' : 'high',
             self::DEDUPE_QUEUE_WORKER_STALE,
             [
@@ -261,6 +273,42 @@ final class BackgroundWatchdogService
                 'stale_threshold_minutes' => $staleMinutes,
             ],
         );
+    }
+
+    /**
+     * @param  array<string, mixed>  $snapshot
+     */
+    private function schedulerStaleMessage(array $snapshot, int $staleMinutes, int $ageMin): string
+    {
+        $lines = [
+            $snapshot['last_ok_at'] === null
+                ? 'Scheduler je pokrenut, ali uspješan završetak nije zabilježen u poslednjih ~'.$staleMinutes.' min.'
+                : 'Poslednji uspješan scheduler run stariji je od ~'.$staleMinutes.' min.',
+            'Poslednji run: '.($snapshot['last_run_at'] ?? '—'),
+            'Poslednji OK: '.($snapshot['last_ok_at'] ?? '—'),
+            'Starost (min): ~'.$ageMin,
+            'Provjeriti Plesk cron za schedule-run.php (* * * * *).',
+        ];
+
+        return implode("\n", $lines);
+    }
+
+    /**
+     * @param  array<string, mixed>  $snapshot
+     */
+    private function queueWorkerStaleMessage(array $snapshot, int $staleMinutes, int $ageMin): string
+    {
+        $lines = [
+            $snapshot['last_ok_at'] === null
+                ? 'Queue worker je pokrenut, ali uspješan završetak nije zabilježen u poslednjih ~'.$staleMinutes.' min.'
+                : 'Poslednji uspješan queue-worker.php / queue:work ciklus stariji je od ~'.$staleMinutes.' min.',
+            'Poslednji run: '.($snapshot['last_run_at'] ?? '—'),
+            'Poslednji OK: '.($snapshot['last_ok_at'] ?? '—'),
+            'Starost (min): ~'.$ageMin,
+            'Provjeriti Plesk cron za queue-worker.php (* * * * *). Worker se ne restartuje automatski.',
+        ];
+
+        return implode("\n", $lines);
     }
 
     private function resolveOpenAlert(string $type, string $dedupeKey): void

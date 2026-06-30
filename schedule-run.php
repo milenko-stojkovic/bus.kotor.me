@@ -21,7 +21,7 @@ $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 $watchdog = $app->make(BackgroundWatchdogService::class);
 $watchdog->recordSchedulerRunStarted();
 
-$status = $app->handleCommand(new ArgvInput(['artisan', 'schedule:run']));
+$status = (int) $app->handleCommand(new ArgvInput(['artisan', 'schedule:run']));
 
 $watchdog->recordSchedulerRunFinished($status);
 $watchdog->evaluateStaleHeartbeats();

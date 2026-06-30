@@ -52,7 +52,7 @@ $status = 0;
 $workerError = null;
 
 try {
-    $status = $app->handleCommand(new ArgvInput([
+    $status = (int) $app->handleCommand(new ArgvInput([
         'artisan',
         'queue:work',
         '--max-time=55',
