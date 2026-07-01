@@ -49,7 +49,11 @@ class ReservationController extends Controller
                     'date_to' => ['Krajnji datum mora biti poslije početnog.'],
                 ]);
             }
-            $filters = $this->buildFiltersFromValidatedArray($validated, $request, $searchService);
+            $filters = $searchService->buildFiltersFromValidated(
+                $validated,
+                $request->boolean('use_interval'),
+                $request->boolean('narrow_by_contact'),
+            );
             $results = $searchService->search($filters);
         }
 
@@ -277,55 +281,6 @@ class ReservationController extends Controller
     }
 
     /**
-     * @param  array<string, mixed>  $v
-     * @return array<string, mixed>
-     */
-    private function buildFiltersFromValidatedArray(
-        array $v,
-        Request $request,
-        AdminReservationSearchService $searchService,
-    ): array {
-        $filters = [];
-
-        if (! empty($v['merchant_transaction_id'])) {
-            $filters['merchant_transaction_id'] = trim((string) $v['merchant_transaction_id']);
-        }
-        if (! empty($v['agency_user_id'])) {
-            $filters['user_id'] = (int) $v['agency_user_id'];
-        }
-        if ($request->boolean('use_interval')) {
-            if (! empty($v['date_from']) && ! empty($v['date_to'])) {
-                $filters['date_interval'] = true;
-                $filters['date_from'] = $v['date_from'];
-                $filters['date_to'] = $v['date_to'];
-            }
-        } elseif (! empty($v['date_single'])) {
-            $filters['date_single'] = $v['date_single'];
-        }
-
-        if (! empty($v['vehicle_type_id'])) {
-            $filters['vehicle_type_id'] = (int) $v['vehicle_type_id'];
-        }
-        if (! empty($v['license_plate'])) {
-            $filters['license_plate'] = $v['license_plate'];
-        }
-        if (! empty($v['country'])) {
-            $filters['country'] = $v['country'];
-        }
-        if (! empty($v['status'])) {
-            $filters['status'] = $v['status'];
-        }
-        if (! empty($v['reservation_kind'])) {
-            $filters['reservation_kind'] = (string) $v['reservation_kind'];
-        }
-
-        $heur = $searchService->buildHeuristicPatterns($v['name'] ?? null, $v['email'] ?? null);
-        $filters = array_merge($filters, $heur);
-
-        return $filters;
-    }
-
-    /**
      * @return array<string, mixed>
      */
     private function defaultFilters(): array
@@ -343,6 +298,7 @@ class ReservationController extends Controller
             'country' => '',
             'status' => '',
             'agency_user_id' => '',
+            'narrow_by_contact' => false,
             'reservation_kind' => '',
         ];
     }

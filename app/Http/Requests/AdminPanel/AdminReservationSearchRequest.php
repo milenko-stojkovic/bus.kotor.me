@@ -44,6 +44,7 @@ class AdminReservationSearchRequest extends FormRequest
             'country' => ['nullable', 'string', 'max:100'],
             'status' => ['nullable', 'in:paid,free'],
             'agency_user_id' => ['nullable', 'integer', 'exists:users,id'],
+            'narrow_by_contact' => ['nullable', 'boolean'],
             'reservation_kind' => ['nullable', 'string', Rule::in(ReservationKind::ALL)],
         ];
     }

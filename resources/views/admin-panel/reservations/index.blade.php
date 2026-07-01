@@ -21,7 +21,8 @@
     }">
         <div>
             <h1 class="text-lg font-semibold text-gray-900">Rezervacije</h1>
-            <p class="text-sm text-gray-600 mt-1">Pretraga samo nad tabelom rezervacija (AND između popunjenih kriterijuma).</p>
+            <p class="text-sm text-gray-600 mt-1">Pretraga samo nad tabelom rezervacija (AND između popunjenih kriterijuma). Izbor agencije filtrira po <code class="text-xs">user_id</code>; auto-popunjeno ime/email/država su informativni (ne sužavaju rezultate) dok ručno ne izmijenite ta polja.</p>
+            <input type="hidden" name="narrow_by_contact" x-ref="narrowByContact" value="{{ old('narrow_by_contact', $filters['narrow_by_contact'] ?? false) ? '1' : '0' }}" />
         </div>
 
         @if (session('status'))
@@ -52,6 +53,7 @@
                                 $refs.email.value = o.dataset.email || '';
                                 $refs.country.value = o.dataset.country || '';
                             }
+                            $refs.narrowByContact.value = '0';
                         ">
                         <option value="">—</option>
                         @foreach ($agencies as $u)
@@ -102,11 +104,13 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <x-input-label for="name" value="Ime" />
-                    <x-text-input class="mt-1 block w-full" type="text" name="name" id="name" x-ref="name" :value="old('name', $filters['name'] ?? '')" />
+                    <x-text-input class="mt-1 block w-full" type="text" name="name" id="name" x-ref="name" :value="old('name', $filters['name'] ?? '')"
+                        @input="if ($refs.agency && $refs.agency.value) { $refs.narrowByContact.value = '1'; }" />
                 </div>
                 <div>
                     <x-input-label for="email" value="Email" />
-                    <x-text-input class="mt-1 block w-full" type="text" name="email" id="email" x-ref="email" :value="old('email', $filters['email'] ?? '')" />
+                    <x-text-input class="mt-1 block w-full" type="text" name="email" id="email" x-ref="email" :value="old('email', $filters['email'] ?? '')"
+                        @input="if ($refs.agency && $refs.agency.value) { $refs.narrowByContact.value = '1'; }" />
                 </div>
                 <div>
                     <x-input-label for="vehicle_type_id" value="Tip vozila" />
@@ -126,7 +130,8 @@
                 </div>
                 <div>
                     <x-input-label for="country" value="Država" />
-                    <select name="country" id="country" x-ref="country" class="mt-1 block w-full rounded-md border-red-200 shadow-sm">
+                    <select name="country" id="country" x-ref="country" class="mt-1 block w-full rounded-md border-red-200 shadow-sm"
+                        @change="if ($refs.agency && $refs.agency.value) { $refs.narrowByContact.value = '1'; }">
                         <option value="">—</option>
                         @foreach ($countries as $code => $labels)
                             @php $lab = is_array($labels) ? ($labels['cg'] ?? $code) : $labels; @endphp

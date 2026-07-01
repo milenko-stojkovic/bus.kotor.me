@@ -99,6 +99,74 @@ final class AdminReservationSearchService
     }
 
     /**
+     * Build search filters from validated request input.
+     *
+     * When agency_user_id is set, contact fields (name/email/country) are ignored unless
+     * $narrowByContact is true — they are often auto-filled from the agency account and must
+     * not constrain reservations.user_name / snapshot email.
+     *
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    public function buildFiltersFromValidated(array $validated, bool $useInterval, bool $narrowByContact = false): array
+    {
+        $filters = [];
+        $agencySelected = ! empty($validated['agency_user_id']);
+
+        if (! empty($validated['merchant_transaction_id'])) {
+            $filters['merchant_transaction_id'] = trim((string) $validated['merchant_transaction_id']);
+        }
+
+        if ($agencySelected) {
+            $filters['user_id'] = (int) $validated['agency_user_id'];
+        }
+
+        if ($useInterval) {
+            if (! empty($validated['date_from']) && ! empty($validated['date_to'])) {
+                $filters['date_interval'] = true;
+                $filters['date_from'] = $validated['date_from'];
+                $filters['date_to'] = $validated['date_to'];
+            }
+        } elseif (! empty($validated['date_single'])) {
+            $filters['date_single'] = $validated['date_single'];
+        }
+
+        if (! empty($validated['vehicle_type_id'])) {
+            $filters['vehicle_type_id'] = (int) $validated['vehicle_type_id'];
+        }
+
+        if (! empty($validated['license_plate'])) {
+            $filters['license_plate'] = $validated['license_plate'];
+        }
+
+        if (! empty($validated['status'])) {
+            $filters['status'] = $validated['status'];
+        }
+
+        if (! empty($validated['reservation_kind'])) {
+            $filters['reservation_kind'] = (string) $validated['reservation_kind'];
+        }
+
+        if (! $agencySelected || $narrowByContact) {
+            if (! empty($validated['country'])) {
+                $filters['country'] = $validated['country'];
+            }
+
+            $filters = array_merge(
+                $filters,
+                $this->buildHeuristicPatterns($validated['name'] ?? null, $validated['email'] ?? null),
+            );
+        }
+
+        return $filters;
+    }
+
+    public function shouldApplyContactFilters(bool $agencySelected, bool $narrowByContact): bool
+    {
+        return ! $agencySelected || $narrowByContact;
+    }
+
+    /**
      * @return array{name_patterns?:list<string>,email_patterns?:list<string>}
      */
     public function buildHeuristicPatterns(?string $name, ?string $email): array

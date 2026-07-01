@@ -609,4 +609,299 @@ class AdminPanelReservationTest extends TestCase
             ->assertSee('KO555ZZ', false)
             ->assertSee('MTID Search', false);
     }
+
+    /**
+     * @return array{s1: ListOfTimeSlot, s2: ListOfTimeSlot, vt: VehicleType}
+     */
+    private function seedSlotsForAgencySearch(): array
+    {
+        $s1 = ListOfTimeSlot::query()->create(['time_slot' => '10:00 - 10:20']);
+        $s2 = ListOfTimeSlot::query()->create(['time_slot' => '11:00 - 11:20']);
+        $vt = VehicleType::query()->create(['price' => 15]);
+
+        return ['s1' => $s1, 's2' => $s2, 'vt' => $vt];
+    }
+
+    public function test_agency_search_finds_reservations_by_user_id_when_snapshot_name_differs(): void
+    {
+        $admin = $this->seedAdmin();
+        $agency = User::factory()->create([
+            'name' => 'Guliver Montenegro',
+            'email' => 'milica@guliver.me',
+            'country' => 'ME',
+        ]);
+        $slots = $this->seedSlotsForAgencySearch();
+        $d = Carbon::now()->addDays(4)->toDateString();
+        $mtid = 'mt-agency-mismatch-'.uniqid();
+
+        Reservation::query()->create([
+            'user_id' => $agency->id,
+            'merchant_transaction_id' => $mtid,
+            'drop_off_time_slot_id' => $slots['s1']->id,
+            'pick_up_time_slot_id' => $slots['s2']->id,
+            'reservation_date' => $d,
+            'user_name' => 'Guliver DOO',
+            'country' => 'ME',
+            'license_plate' => 'KO901GM',
+            'vehicle_type_id' => $slots['vt']->id,
+            'email' => 'booking@guliver.me',
+            'status' => 'paid',
+            'invoice_amount' => '15.00',
+            'email_sent' => Reservation::EMAIL_NOT_SENT,
+        ]);
+
+        $this->actingAs($admin, 'panel_admin');
+
+        $this->get(route('panel_admin.reservations', [
+            'agency_user_id' => $agency->id,
+            'name' => 'Guliver Montenegro',
+            'email' => 'milica@guliver.me',
+            'country' => 'ME',
+        ], false))
+            ->assertOk()
+            ->assertSee('Rezultati', false)
+            ->assertSee($mtid, false);
+    }
+
+    public function test_agency_search_does_not_require_clearing_autofilled_name(): void
+    {
+        $admin = $this->seedAdmin();
+        $agency = User::factory()->create([
+            'name' => 'DOO MONTENEGRO CRUSING',
+            'email' => 'office@montenegrocrusing.com',
+        ]);
+        $slots = $this->seedSlotsForAgencySearch();
+        $d = Carbon::now()->addDays(4)->toDateString();
+        $mtid = 'mt-agency-no-clear-'.uniqid();
+
+        Reservation::query()->create([
+            'user_id' => $agency->id,
+            'merchant_transaction_id' => $mtid,
+            'drop_off_time_slot_id' => $slots['s1']->id,
+            'pick_up_time_slot_id' => $slots['s2']->id,
+            'reservation_date' => $d,
+            'user_name' => 'Montenegro Cruising',
+            'country' => 'ME',
+            'license_plate' => 'KO902MC',
+            'vehicle_type_id' => $slots['vt']->id,
+            'email' => 'office@montenegrocrusing.com',
+            'status' => 'paid',
+            'invoice_amount' => '15.00',
+            'email_sent' => Reservation::EMAIL_NOT_SENT,
+        ]);
+
+        $this->actingAs($admin, 'panel_admin');
+
+        $this->get(route('panel_admin.reservations', [
+            'agency_user_id' => $agency->id,
+            'name' => 'DOO MONTENEGRO CRUSING',
+        ], false))
+            ->assertOk()
+            ->assertSee($mtid, false);
+    }
+
+    public function test_agency_search_still_works_when_snapshot_name_matches_account_name(): void
+    {
+        $admin = $this->seedAdmin();
+        $agency = User::factory()->create([
+            'name' => 'Dalmamont',
+            'email' => 'info@dalmamont.me',
+        ]);
+        $slots = $this->seedSlotsForAgencySearch();
+        $d = Carbon::now()->addDays(4)->toDateString();
+        $mtid = 'mt-agency-match-'.uniqid();
+
+        Reservation::query()->create([
+            'user_id' => $agency->id,
+            'merchant_transaction_id' => $mtid,
+            'drop_off_time_slot_id' => $slots['s1']->id,
+            'pick_up_time_slot_id' => $slots['s2']->id,
+            'reservation_date' => $d,
+            'user_name' => 'Dalmamont',
+            'country' => 'ME',
+            'license_plate' => 'KO903DM',
+            'vehicle_type_id' => $slots['vt']->id,
+            'email' => 'info@dalmamont.me',
+            'status' => 'paid',
+            'invoice_amount' => '15.00',
+            'email_sent' => Reservation::EMAIL_NOT_SENT,
+        ]);
+
+        $this->actingAs($admin, 'panel_admin');
+
+        $this->get(route('panel_admin.reservations', [
+            'agency_user_id' => $agency->id,
+            'name' => 'Dalmamont',
+            'email' => 'info@dalmamont.me',
+        ], false))
+            ->assertOk()
+            ->assertSee($mtid, false);
+    }
+
+    public function test_guest_search_by_name_email_and_country_still_works(): void
+    {
+        $admin = $this->seedAdmin();
+        $slots = $this->seedSlotsForAgencySearch();
+        $d = Carbon::now()->addDays(4)->toDateString();
+        $mtid = 'mt-guest-contact-'.uniqid();
+
+        Reservation::query()->create([
+            'user_id' => null,
+            'merchant_transaction_id' => $mtid,
+            'drop_off_time_slot_id' => $slots['s1']->id,
+            'pick_up_time_slot_id' => $slots['s2']->id,
+            'reservation_date' => $d,
+            'user_name' => 'Guest Traveler',
+            'country' => 'HR',
+            'license_plate' => 'KO904GU',
+            'vehicle_type_id' => $slots['vt']->id,
+            'email' => 'guest-traveler@example.com',
+            'status' => 'paid',
+            'invoice_amount' => '15.00',
+            'email_sent' => Reservation::EMAIL_NOT_SENT,
+        ]);
+
+        $this->actingAs($admin, 'panel_admin');
+
+        $this->get(route('panel_admin.reservations', [
+            'name' => 'Guest',
+            'email' => 'guest-traveler@example.com',
+            'country' => 'HR',
+        ], false))
+            ->assertOk()
+            ->assertSee($mtid, false);
+    }
+
+    public function test_manual_filters_without_agency_selection_still_works(): void
+    {
+        $admin = $this->seedAdmin();
+        $slots = $this->seedSlotsForAgencySearch();
+        $d = Carbon::now()->addDays(4)->toDateString();
+        $mtid = 'mt-manual-only-'.uniqid();
+
+        Reservation::query()->create([
+            'merchant_transaction_id' => $mtid,
+            'drop_off_time_slot_id' => $slots['s1']->id,
+            'pick_up_time_slot_id' => $slots['s2']->id,
+            'reservation_date' => $d,
+            'user_name' => 'Manual Filter Only',
+            'country' => 'ME',
+            'license_plate' => 'KO905MF',
+            'vehicle_type_id' => $slots['vt']->id,
+            'email' => 'manual-only@example.com',
+            'status' => 'paid',
+            'invoice_amount' => '15.00',
+            'email_sent' => Reservation::EMAIL_NOT_SENT,
+        ]);
+
+        $this->actingAs($admin, 'panel_admin');
+
+        $this->get(route('panel_admin.reservations', [
+            'name' => 'Manual',
+            'email' => 'manual-only@example.com',
+        ], false))
+            ->assertOk()
+            ->assertSee($mtid, false);
+    }
+
+    public function test_agency_selection_does_not_include_guest_reservation_with_same_email(): void
+    {
+        $admin = $this->seedAdmin();
+        $agency = User::factory()->create([
+            'name' => 'Shared Email Agency',
+            'email' => 'shared@example.com',
+        ]);
+        $slots = $this->seedSlotsForAgencySearch();
+        $d = Carbon::now()->addDays(4)->toDateString();
+
+        $agencyMtid = 'mt-agency-shared-'.uniqid();
+        Reservation::query()->create([
+            'user_id' => $agency->id,
+            'merchant_transaction_id' => $agencyMtid,
+            'drop_off_time_slot_id' => $slots['s1']->id,
+            'pick_up_time_slot_id' => $slots['s2']->id,
+            'reservation_date' => $d,
+            'user_name' => 'Agency Snapshot',
+            'country' => 'ME',
+            'license_plate' => 'KO906AG',
+            'vehicle_type_id' => $slots['vt']->id,
+            'email' => 'shared@example.com',
+            'status' => 'paid',
+            'invoice_amount' => '15.00',
+            'email_sent' => Reservation::EMAIL_NOT_SENT,
+        ]);
+
+        $guestMtid = 'mt-guest-shared-'.uniqid();
+        Reservation::query()->create([
+            'user_id' => null,
+            'merchant_transaction_id' => $guestMtid,
+            'drop_off_time_slot_id' => $slots['s1']->id,
+            'pick_up_time_slot_id' => $slots['s2']->id,
+            'reservation_date' => $d,
+            'user_name' => 'Guest With Shared Email',
+            'country' => 'ME',
+            'license_plate' => 'KO907GU',
+            'vehicle_type_id' => $slots['vt']->id,
+            'email' => 'shared@example.com',
+            'status' => 'paid',
+            'invoice_amount' => '15.00',
+            'email_sent' => Reservation::EMAIL_NOT_SENT,
+        ]);
+
+        $this->actingAs($admin, 'panel_admin');
+
+        $html = $this->get(route('panel_admin.reservations', [
+            'agency_user_id' => $agency->id,
+            'email' => 'shared@example.com',
+        ], false))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString($agencyMtid, $html);
+        $this->assertStringNotContainsString($guestMtid, $html);
+    }
+
+    public function test_migrated_guest_reservation_not_returned_by_agency_user_id_filter(): void
+    {
+        $admin = $this->seedAdmin();
+        $agency = User::factory()->create(['email' => 'agency-only@example.com']);
+        $slots = $this->seedSlotsForAgencySearch();
+        $d = Carbon::now()->addDays(4)->toDateString();
+        $guestMtid = 'mt-v1-guest-only-'.uniqid();
+
+        Reservation::query()->create([
+            'user_id' => null,
+            'merchant_transaction_id' => $guestMtid,
+            'drop_off_time_slot_id' => $slots['s1']->id,
+            'pick_up_time_slot_id' => $slots['s2']->id,
+            'reservation_date' => $d,
+            'user_name' => 'Legacy Guest',
+            'country' => 'ME',
+            'license_plate' => 'KO908V1',
+            'vehicle_type_id' => $slots['vt']->id,
+            'email' => 'agency-only@example.com',
+            'status' => 'paid',
+            'invoice_amount' => '15.00',
+            'email_sent' => Reservation::EMAIL_NOT_SENT,
+            'created_at' => Carbon::parse('2020-01-01'),
+            'updated_at' => Carbon::parse('2020-01-01'),
+        ]);
+
+        $this->actingAs($admin, 'panel_admin');
+
+        $agencyHtml = $this->get(route('panel_admin.reservations', [
+            'agency_user_id' => $agency->id,
+            'email' => 'agency-only@example.com',
+        ], false))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringNotContainsString($guestMtid, $agencyHtml);
+
+        $this->get(route('panel_admin.reservations', [
+            'email' => 'agency-only@example.com',
+        ], false))
+            ->assertOk()
+            ->assertSee($guestMtid, false);
+    }
 }

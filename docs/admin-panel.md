@@ -162,6 +162,7 @@ Kontroler: **`WarningsController::index`**. Stranica ima tri bloka: **Upozorenja
 
 - **Kontroler:** `App\Http\Controllers\AdminPanel\ReservationController`.
 - **Pretraga:** `AdminReservationSearchService` — svi kriterijumi su **AND** između popunjenih polja; polje **MTID** traži **tačno poklapanje** — rezervacije sa **`merchant_transaction_id` = NULL** (ako postoje) ovim kriterijumom se ne nalaze.
+- **Agencija (dropdown):** filter **`reservations.user_id`** je autoritativan; auto-popunjeno ime/email/država iz naloga agencije **ne sužava** rezultate (snapshot `user_name` / email na rezervaciji može se razlikovati od `users.name`). Ručna izmjena kontakt polja nakon izbora agencije (`narrow_by_contact=1`) ponovo uključuje ime/email/država u AND pretragu.
 - **Vrsta rezervacije (filter):** **Sve** (podrazumijevano), **Termini** (`reservation_kind = time_slots`), **Dnevna naknada** (`daily_ticket`); kombinuje se sa ostalim kriterijumima (AND).
 - **Limo putnička vozila (4+1–7+1):** admin pretraga/uredi/PDF/analitika **ne mijenjaju** prikaz istorijskih rezervacija sa tim kategorijama; nova ograničenja važe samo za **booking** (Termini isključuju tip; dnevna naknada u agenciji ga zadržava) — v. `docs/agency-panel.md`.
 - **Heuristika imena/emaila:** `AdminReservationSearchHeuristic` — jednostavne LIKE varijante (jedno izostavljeno slovo, zamena dva susedna; za ime normalizacija **doo** / **d.o.o.**).
