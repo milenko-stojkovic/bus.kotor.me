@@ -292,6 +292,7 @@
                             >
                                 {{ $ui('reserve') }}
                             </button>
+                            @include('partials.bank-cards-logo')
                         </form>
                 </div>
             </div>

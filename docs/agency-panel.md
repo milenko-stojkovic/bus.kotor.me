@@ -12,7 +12,7 @@ Prefiks ruta: **`/panel`**, middleware **`auth`** + **`verified`**. Gornja navig
 
 | Ruta | Naziv rute (izbor) | Opis |
 |------|-------------------|------|
-| `GET /panel/reservations` | `panel.reservations` | Nova rezervacija (`ReservationBookingPageData`) — **Termini** (slotovi) ili **Dnevna naknada** (bez slotova; agencija kartica/avans). GET auto-refresh pri izboru datuma/vrste/vozila/termina; scroll pozicija se čuva u **`sessionStorage`** (v. **`project-conventions.md`** § Rezervacije — step forma). |
+| `GET /panel/reservations` | `panel.reservations` | Nova rezervacija (`ReservationBookingPageData`) — **Termini** (slotovi) ili **Dnevna naknada** (bez slotova; agencija kartica/avans). GET auto-refresh pri izboru datuma/vrste/vozila/termina; scroll pozicija se čuva u **`sessionStorage`** (v. **`project-conventions.md`** § Rezervacije — step forma). Ispod dugmeta **Rezerviši** / **Reserve** — logo prihvaćenih kartica (`karticebanka.png`). |
 | `GET /panel/upcoming` | `panel.upcoming` | **Promjena tablica** — promjena registarske tablice na predstojećim rezervacijama (Termini; dnevna naknada samo za buduće datume); po redu **PDF** link (`panel.reservations.invoice.view`) za `paid`/`free` |
 | `GET /panel/realized` | `panel.realized` | Realizovane, link na PDF u novom tabu |
 | `GET /panel/vehicles` | `panel.vehicles` | Vozila |
