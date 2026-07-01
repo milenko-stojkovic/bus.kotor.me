@@ -93,12 +93,17 @@ final class AdminPanelReservationShowTest extends TestCase
         ]);
 
         $agencyUrl = route('panel_admin.agencies.show', $agency, false);
-        $showUrl = route('panel_admin.reservations.show', $reservation, false);
+        $showUrl = route('panel_admin.reservations.show', [
+            'reservation' => $reservation->id,
+            'back' => 'agency',
+            'agency_id' => $agency->id,
+        ], false);
+        $showUrlHtml = str_replace('&', '&amp;', $showUrl);
 
         $html = $this->actingAs($admin, 'panel_admin')
             ->get($agencyUrl)
             ->assertOk()
-            ->assertSee($showUrl, false)
+            ->assertSee($showUrlHtml, false)
             ->getContent();
 
         $this->assertStringContainsString('#'.$reservation->id, $html);
@@ -107,6 +112,48 @@ final class AdminPanelReservationShowTest extends TestCase
             ->get($showUrl)
             ->assertOk()
             ->assertSee('Rezervacija #'.$reservation->id, false);
+    }
+
+    public function test_b_reservation_show_opened_with_agency_context_shows_nazad_na_listu(): void
+    {
+        $admin = $this->seedAdmin();
+        $agency = User::factory()->create(['name' => 'Back Agency']);
+        $reservation = $this->createPastReservation();
+
+        $showUrl = route('panel_admin.reservations.show', [
+            'reservation' => $reservation->id,
+            'back' => 'agency',
+            'agency_id' => $agency->id,
+        ], false);
+        $expectedBack = route('panel_admin.agencies.show', ['user' => $agency->id], false).'#reservation-statistics';
+
+        $this->actingAs($admin, 'panel_admin')
+            ->get($showUrl)
+            ->assertOk()
+            ->assertSee('Nazad na listu', false)
+            ->assertSee($expectedBack, false);
+    }
+
+    public function test_c_back_link_returns_to_selected_agency_detail_page(): void
+    {
+        $admin = $this->seedAdmin();
+        $agency = User::factory()->create(['name' => 'Back Agency 2']);
+        $reservation = $this->createPastReservation();
+
+        $showUrl = route('panel_admin.reservations.show', [
+            'reservation' => $reservation->id,
+            'back' => 'agency',
+            'agency_id' => $agency->id,
+        ], false);
+        $expectedBack = route('panel_admin.agencies.show', ['user' => $agency->id], false).'#reservation-statistics';
+
+        $resp = $this->actingAs($admin, 'panel_admin')->get($showUrl)->assertOk();
+        $this->assertStringContainsString($expectedBack, (string) $resp->getContent());
+
+        $this->actingAs($admin, 'panel_admin')
+            ->get($expectedBack)
+            ->assertOk()
+            ->assertSee('Agencija:', false);
     }
 
     public function test_b_detail_page_is_read_only_and_shows_main_reservation_data(): void
@@ -128,6 +175,34 @@ final class AdminPanelReservationShowTest extends TestCase
             ->assertSee('Guest', false)
             ->assertDontSee('method="post"', false)
             ->assertDontSee('reservations.update', false);
+    }
+
+    public function test_d_reservation_show_opened_without_agency_context_keeps_nazad_na_pretragu(): void
+    {
+        $admin = $this->seedAdmin();
+        $reservation = $this->createPastReservation();
+
+        $expectedBack = route('panel_admin.reservations', [], false);
+
+        $this->actingAs($admin, 'panel_admin')
+            ->get(route('panel_admin.reservations.show', $reservation, false))
+            ->assertOk()
+            ->assertSee('Nazad na pretragu', false)
+            ->assertSee($expectedBack, false);
+    }
+
+    public function test_e_unsafe_external_return_to_is_ignored(): void
+    {
+        $admin = $this->seedAdmin();
+        $reservation = $this->createPastReservation();
+
+        $url = route('panel_admin.reservations.show', $reservation, false).'?return_to=https://evil.example/steal';
+
+        $this->actingAs($admin, 'panel_admin')
+            ->get($url)
+            ->assertOk()
+            ->assertDontSee('https://evil.example/steal', false)
+            ->assertSee(route('panel_admin.reservations', [], false), false);
     }
 
     public function test_c_admin_can_view_reservation_from_another_agency(): void

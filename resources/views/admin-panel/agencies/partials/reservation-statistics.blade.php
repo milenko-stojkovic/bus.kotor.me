@@ -18,7 +18,7 @@
     $sortUrl = fn (string $sort) => route('panel_admin.agencies.show', ['user' => $user->id, 'v1_sort' => $sort], false);
 @endphp
 
-<section class="bg-white shadow rounded-lg p-4 sm:p-6 space-y-6">
+<section id="reservation-statistics" class="bg-white shadow rounded-lg p-4 sm:p-6 space-y-6">
     <div>
         <h2 class="text-lg font-semibold text-gray-900">Statistika rezervacija</h2>
         <p class="text-sm text-gray-600 mt-1">Pregled operativnih podataka za agenciju.</p>
@@ -133,7 +133,7 @@
                             @forelse ($linked as $row)
                                 <tr class="border-b border-gray-100">
                                     <td class="py-2 pr-4 whitespace-nowrap">
-                                        <a class="text-red-700 underline font-medium" href="{{ route('panel_admin.reservations.show', ['reservation' => $row['id']], false) }}">
+                                        <a class="text-red-700 underline font-medium" href="{{ route('panel_admin.reservations.show', ['reservation' => $row['id'], 'back' => 'agency', 'agency_id' => $user->id], false) }}">
                                             #{{ $row['id'] }}
                                         </a>
                                     </td>

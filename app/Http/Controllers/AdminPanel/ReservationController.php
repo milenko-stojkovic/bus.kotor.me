@@ -71,14 +71,33 @@ class ReservationController extends Controller
         ]);
     }
 
-    public function show(Reservation $reservation): View
+    public function show(Request $request, Reservation $reservation): View
     {
         $reservation->load(['pickUpTimeSlot', 'dropOffTimeSlot', 'vehicleType.translations', 'user']);
+
+        $backUrl = route('panel_admin.reservations', [], false);
+        $backLabel = 'Nazad na pretragu';
+
+        if ((string) $request->query('back') === 'agency') {
+            $agencyId = (int) $request->query('agency_id', 0);
+            if ($agencyId > 0 && User::query()->whereKey($agencyId)->exists()) {
+                $backUrl = route('panel_admin.agencies.show', ['user' => $agencyId], false).'#reservation-statistics';
+                $backLabel = 'Nazad na listu';
+            }
+        } elseif ($request->filled('rq')) {
+            // Only internal query string, never a full URL.
+            $rq = ltrim((string) $request->query('rq'), '?');
+            if ($rq !== '' && ! str_contains($rq, '://')) {
+                $backUrl = route('panel_admin.reservations', [], false).'?'.$rq;
+            }
+        }
 
         return view('admin-panel.reservations.show', [
             'navActive' => 'reservations',
             'pageTitle' => 'Rezervacija #'.$reservation->id,
             'reservation' => $reservation,
+            'backUrl' => $backUrl,
+            'backLabel' => $backLabel,
         ]);
     }
 

@@ -21,8 +21,8 @@
                 <p class="text-sm text-gray-600 mt-1">Samo pregled — bez izmjena na ovoj stranici.</p>
             </div>
             <div class="flex flex-wrap gap-2">
-                <a href="{{ route('panel_admin.reservations', [], false) }}"
-                   class="text-sm text-red-700 underline font-medium">Nazad na pretragu</a>
+                <a href="{{ $backUrl ?? route('panel_admin.reservations', [], false) }}"
+                   class="text-sm text-red-700 underline font-medium">{{ $backLabel ?? 'Nazad na pretragu' }}</a>
                 <a href="{{ route('panel_admin.reservations.pdf', $reservation, false) }}" target="_blank" rel="noopener"
                    class="inline-flex justify-center items-center px-3 py-2 border border-red-200 rounded-md text-xs font-semibold text-gray-700 uppercase tracking-widest hover:bg-red-50">
                     PDF
