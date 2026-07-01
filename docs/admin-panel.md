@@ -176,7 +176,7 @@ Kontroler: **`WarningsController::index`**. Stranica ima tri bloka: **Upozorenja
 - **Kategorija vozila:** u edit formi samo tipovi sa **`price` ≤** cene trenutnog tipa (`vehicle_types` po postojećem poretku cene).
 - **Kalendar:** granice pretrage — `AdminReservationDateBounds` (min = najraniji datum u `reservations`, max = danas + 90 dana); edit — danas … danas + 90.
 - **Email i slanje dokumenta:** račun (paid) i potvrda (free) uvek se šalju na **`reservations.email`** — to je snapshot na rezervaciji, isti izvor kao u PDF-u. **Admin** ima pravo da menja taj snapshot (uključujući email) u toku izmene rezervacije. Posle uspješne izmene: **`SendAdminUpdatedReservationDocumentJob`** regeneriše PDF iz trenutnih podataka rezervacije i šalje ažurirani prilog (predmet/tijelo `paid_invoice_updated_*` / `free_reservation_updated_*` u **`ui_translations`**). **Ne mijenjaju se** MTID, status, `invoice_amount`, JIR/IKOF ni fiskalni zapisi. **`users.email`** se ne koristi kao primalac.
-- **Lista rezultata:** **PDF** + **Izmeni** (aktivan link dok rezervacija nije realizovana po `AdminReservationEditPolicy` / `PanelReservationListService`, vremenska zona **Europe/Podgorica**); realizovane prikazuju sivi „Izmeni” (onemogućen).
+- **Lista rezultata:** **PDF**; **Izmeni** (aktivan link dok rezervacija nije realizovana po `AdminReservationEditPolicy` / `PanelReservationListService`, vremenska zona **Europe/Podgorica**); za **realizovane** — link **Detalj** na **`panel_admin.reservations.show`** (read-only, sa `rq` za povratak na pretragu).
 
 **Bez izmena na `temp_data`:** ovaj modul ne čita i ne piše `temp_data`.
 

@@ -20,7 +20,6 @@ final class AdvancePanelTest extends TestCase
         $user = User::factory()->create(['email_verified_at' => now()]);
         $this->actingAs($user);
 
-        // Nav shows label but no link.
         $html = $this->get(route('panel.reservations', [], false))->assertOk()->getContent();
         $this->assertStringContainsString('Avans', $html);
         $this->assertStringNotContainsString('/panel/avans', $html);
@@ -77,7 +76,8 @@ final class AdvancePanelTest extends TestCase
             ->assertOk()
             ->assertSee('65.00 EUR', false)
             ->assertSee('t1', false)
-            ->assertSee('u1', false);
+            ->assertSee('u1', false)
+            ->assertSee('images/karticebanka.png', false);
 
         $beforeLedger = AgencyAdvanceTransaction::query()->count();
 

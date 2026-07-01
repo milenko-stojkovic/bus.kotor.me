@@ -76,6 +76,7 @@
                             </x-primary-button>
                         </div>
                     </form>
+                    @include('partials.bank-cards-logo')
                 </div>
             </div>
 

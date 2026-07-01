@@ -124,7 +124,7 @@ Svako polje za **registarsku tablicu** (booking, panel, admin pretraga, Control,
 ### Rezervacije — step forma (GET auto-refresh i scroll)
 
 - **Stranice:** **`GET /guest/reserve`** (`#stepForm`) i **`GET /panel/reservations`** (`#panelStepForm`). Izbor datuma, vrste (`reservation_kind`), vozila ili termina **ponovo šalje istu GET formu** da se osvježe slotovi/cijene — **nije** AJAX checkout (`POST /checkout` ostaje nepromijenjen).
-- **Logo banke / kartice:** ispod dugmeta **Rezerviši** / **Reserve** na checkout step formi prikazuje se zajednički partial **`partials/bank-cards-logo.blade.php`** — slika **`public/images/karticebanka.png`** (centrirano). Isti markup na guest i agency panelu.
+- **Logo banke / kartice:** ispod dugmeta koji pokreće **plaćanje karticom** prikazuje se zajednički partial **`partials/bank-cards-logo.blade.php`** — slika **`public/images/karticebanka.png`** (centrirano). Lokacije: guest **`/guest/reserve`**, agency checkout **`/panel/reservations`**, agency avans top-up **`/panel/avans`** (forma „Pokreni avansnu uplatu”). **Ne** na ostalim ekranima (landing, profil, admin, …).
 - **Scroll restore (2026-06-17):** da korisnik ne skače na vrh posle svakog osvježavanja, forma nosi **`data-reservation-auto-scroll`** (`reservation_form_scroll_guest` | `reservation_form_scroll_panel`). Modul **`resources/js/reservationFormScroll.js`** (učitava se iz **`app.js`**):
   - prije submita upisuje **`sessionStorage`** (Y koordinatu, opciono anchor `id`/`name` kontrole, offset ~80px iznad);
   - poslije reloada na **`DOMContentLoaded`** vraća scroll i **briše** ključ;

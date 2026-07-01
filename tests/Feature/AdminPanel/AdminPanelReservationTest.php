@@ -281,6 +281,49 @@ class AdminPanelReservationTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_realized_reservation_in_search_shows_detail_link_to_show_page(): void
+    {
+        $admin = $this->seedAdmin();
+        $past = Carbon::now()->subDay()->toDateString();
+        $slots = $this->seedVehicleAndThreeSlots();
+        $this->seedDailyForDate($past, [$slots['s1'], $slots['s2'], $slots['s3']]);
+
+        $mtid = 'mt-past-detail-link';
+        $r = Reservation::query()->create([
+            'merchant_transaction_id' => $mtid,
+            'drop_off_time_slot_id' => $slots['s1']->id,
+            'pick_up_time_slot_id' => $slots['s2']->id,
+            'reservation_date' => $past,
+            'user_name' => 'Past Detail',
+            'country' => 'ME',
+            'license_plate' => 'AADET1',
+            'vehicle_type_id' => $slots['vt']->id,
+            'email' => 'past-detail@example.com',
+            'status' => 'paid',
+            'invoice_amount' => '15.00',
+            'email_sent' => Reservation::EMAIL_NOT_SENT,
+        ]);
+
+        $showUrl = route('panel_admin.reservations.show', [
+            'reservation' => $r->id,
+            'rq' => 'merchant_transaction_id='.$mtid,
+        ], false);
+        $showUrlHtml = str_replace('&', '&amp;', $showUrl);
+
+        $this->actingAs($admin, 'panel_admin')
+            ->get(route('panel_admin.reservations', ['merchant_transaction_id' => $mtid], false))
+            ->assertOk()
+            ->assertSee('Detalj', false)
+            ->assertSee($showUrlHtml, false)
+            ->assertDontSee('title="Realizovana rezervacija"', false);
+
+        $this->actingAs($admin, 'panel_admin')
+            ->get($showUrl)
+            ->assertOk()
+            ->assertSee('Past Detail', false)
+            ->assertSee('AADET1', false);
+    }
+
     public function test_admin_can_update_reservation_and_dispatch_invoice_job(): void
     {
         Queue::fake();

@@ -226,7 +226,8 @@
                                         <a href="{{ route('panel_admin.reservations.edit', array_filter(['reservation' => $r, 'rq' => $rq ?: null]), false) }}"
                                            class="inline-flex justify-center items-center px-3 py-2 border border-red-300 rounded-md text-xs font-semibold text-red-800 uppercase tracking-widest hover:bg-red-50">Izmeni</a>
                                     @else
-                                        <span class="inline-flex justify-center items-center px-3 py-2 border border-gray-200 rounded-md text-xs font-semibold text-gray-400 uppercase tracking-widest cursor-not-allowed" title="Realizovana rezervacija">Izmeni</span>
+                                        <a href="{{ route('panel_admin.reservations.show', array_filter(['reservation' => $r, 'rq' => $rq ?: null]), false) }}"
+                                           class="inline-flex justify-center items-center px-3 py-2 border border-red-200 rounded-md text-xs font-semibold text-red-800 uppercase tracking-widest hover:bg-red-50">Detalj</a>
                                     @endif
                                 </div>
                             </div>

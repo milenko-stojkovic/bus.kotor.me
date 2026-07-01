@@ -55,6 +55,7 @@ Ako je flag **ON**:
   - istoriju topup pokušaja (poslednjih 50)
 
 **Pokretanje uplate:** `POST /panel/avans/topup`
+- forma na **`GET /panel/avans`**: ispod dugmeta „Pokreni avansnu uplatu” — logo prihvaćenih kartica (`karticebanka.png`, partial **`bank-cards-logo`**)
 - kreira `agency_advance_topups` red (status `pending`, MTID UUID)
 - startuje payment session (Bankart) ili u fake driveru odmah tretira kao `paid`
 - **ne koristi `temp_data`**
