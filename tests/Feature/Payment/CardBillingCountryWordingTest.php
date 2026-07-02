@@ -16,9 +16,15 @@ final class CardBillingCountryWordingTest extends TestCase
 {
     use RefreshDatabase;
 
+    // Guest reserve / registration still use the generic wording from reservation/auth groups.
     private const LABEL_CG = 'Država naplatne adrese kartice';
 
     private const LABEL_EN = 'Card billing country';
+
+    // Agency profile (Korisnik) uses the user.* group and has a shorter label.
+    private const PROFILE_LABEL_CG = 'Država - platna kartica';
+
+    private const PROFILE_LABEL_EN = 'Country - payment card';
 
     private const HELP_CG = 'Odaberite državu u kojoj je izdata platna kartica kojom će biti izvršeno plaćanje.';
 
@@ -63,7 +69,7 @@ final class CardBillingCountryWordingTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString(self::LABEL_EN, $html);
+        $this->assertStringContainsString(self::PROFILE_LABEL_EN, $html);
         $this->assertStringContainsString(self::HELP_EN, $html);
         $this->assertStringNotContainsString('value="OTHER"', $html);
     }

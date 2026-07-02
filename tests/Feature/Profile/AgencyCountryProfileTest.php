@@ -39,7 +39,7 @@ final class AgencyCountryProfileTest extends TestCase
 
         $this->assertStringContainsString('name="country"', $html);
         $this->assertStringContainsString('id="user_country"', $html);
-        $this->assertStringContainsString('Card billing country', $html);
+        $this->assertStringContainsString('Country - payment card', $html);
         $this->assertStringContainsString('Select the billing country of the payment card you will use.', $html);
         $this->assertStringNotContainsString('value="OTHER"', $html);
     }

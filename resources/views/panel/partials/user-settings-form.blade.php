@@ -64,7 +64,7 @@
         </div>
 
         <div>
-            <x-input-label for="user_country" :value="$u('country', 'Card billing country')" />
+            <x-input-label for="user_country" :value="$u('country', app()->getLocale() === 'cg' ? 'Država - platna kartica' : 'Country - payment card')" />
             @if (! $storedCountrySelectable && (string) $storedCountry !== '')
                 <p class="mt-1 text-sm text-amber-800">
                     {{ $u('country_invalid_stored', 'The card billing country on your profile is not valid. Please select a country from the list.') }}
