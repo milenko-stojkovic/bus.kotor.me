@@ -438,18 +438,20 @@ Uvijek prikazuje sekciju **Statistika rezervacija** (ne zavisi od `advance_payme
 - **Ne** mijenja `reservations` (nema upisa `user_id`).
 - Pool kandidata: `user_id IS NULL` i `created_at < AGENCY_STATS_V1_CUTOVER_AT` (default `2026-06-19`, config `agency_statistics.v1_cutover_at`) — migrirane V1 rezervacije bez agencijskog linka; post-cut-over guest rezervacije su isključene.
 - Servis: **`AgencyV1HistoricalEstimateService`**; rezultat se kešira po agenciji (`agency_statistics.heuristic_cache_ttl`, default 3600 s).
-- Kandidati se sužavaju SQL-om (email, domen emaila, tablice aktivnih vozila / ponovljenih u V2) prije skoriranja u PHP-u.
+- Kandidati se sužavaju SQL-om (email, **poslovni** domen emaila, tablice aktivnih vozila / ponovljenih u V2) prije skoriranja u PHP-u. **Public/free domeni** (npr. `gmail.com`) se **ne koriste** za domain prefilter ni kao signal (config `agency_statistics.public_email_domains`).
 
 **Model pouzdanosti (confidence):**
 
 | Signal | Nivo |
 |--------|------|
 | Email rezervacije = email agencije | Visoka |
-| Domen emaila rezervacije = domen agencije | Srednja |
+| Domen emaila rezervacije = domen agencije (**samo non-public/business domeni**) | Srednja |
 | Tablica = aktivno vozilo agencije | Visoka |
 | Tablica se ponavlja u V2 rezervacijama agencije (≥2) | Srednja |
 | Sličnost imena agencije i `user_name` (similar_text ≥ prag) | Niska |
 | ≥2 signala | Visoka („Multiple signals”) |
+
+**Country sanity (anti false-positive):** za kombinacije signala koje su samo Medium/Low, ako agencija ima country i `reservations.country` se razlikuje, match se **ne upgrade-uje** na High. Exact email i exact plate i dalje imaju prioritet čak i ako country ne odgovara (mogući loš unos).
 
 Prikaz: **procijenjena istorijska aktivnost** (prva/posljednja procijenjena rezervacija — samo iz heurističkih pogodaka, `—` ako nema); **sažetak pouzdanosti** (ukupno povezanih + High/Medium/Low); procijenjeni paid/free/prihod; expandable tabela **Procijenjene povezane rezervacije** sa kolonom **Država** (`reservations.country`, iza Email-a; sort `?v1_sort=confidence|date`).
 
